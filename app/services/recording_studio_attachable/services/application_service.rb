@@ -83,10 +83,12 @@ module RecordingStudioAttachable
       def validate_blob!(blob, capability_options: {})
         config = RecordingStudioAttachable.configuration
         validation_options = capability_validation_options(capability_options)
-        raise ArgumentError, "Blob content type is not allowed" unless config.allowed_content_type?(
-          blob.content_type,
-          allowed_content_types: validation_options[:allowed_content_types]
-        )
+        allowed_content_types = validation_options[:allowed_content_types] || config.allowed_content_types
+        unless config.allowed_content_type?(blob.content_type, allowed_content_types: allowed_content_types)
+          raise ArgumentError,
+                "Blob content type #{blob.content_type.inspect} is not allowed. " \
+                "Allowed types: #{allowed_content_types.join(', ')}"
+        end
 
         max_file_size = capability_options[:max_file_size] || config.max_file_size
         raise ArgumentError, "Blob exceeds maximum file size" if max_file_size.present? && blob.byte_size > max_file_size

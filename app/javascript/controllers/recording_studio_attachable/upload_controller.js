@@ -210,9 +210,9 @@ export default class extends Controller {
   }
 
   entryTemplate(entry) {
-    const preview = entry.previewUrl ? `<img src="${entry.previewUrl}" alt="" class="h-12 w-12 rounded object-cover" />` : `<div class="flex h-12 w-12 items-center justify-center rounded bg-[var(--surface-muted-background-color)] text-xs">FILE</div>`
+    const preview = entry.previewUrl ? `<img src="${this.escapeAttribute(entry.previewUrl)}" alt="" class="h-12 w-12 rounded object-cover" />` : `<div class="flex h-12 w-12 items-center justify-center rounded bg-[var(--surface-muted-background-color)] text-xs">FILE</div>`
     const progress = entry.status === "uploading" || entry.progress > 0 ? `<progress class="w-full" value="${entry.progress}" max="100"></progress>` : ""
-    const error = entry.error ? `<p class="text-xs text-red-600">${entry.error}</p>` : ""
+    const error = entry.error ? `<p class="text-xs text-red-600">${this.escapeHtml(entry.error)}</p>` : ""
     const retry = entry.status === "failed" ? `<button type="button" data-action="recording-studio-attachable--upload#retry" data-id="${entry.id}" class="text-xs underline">Retry</button>` : ""
 
     return `
@@ -221,7 +221,7 @@ export default class extends Controller {
           ${preview}
           <div class="min-w-0 flex-1 space-y-2">
             <div>
-              <p class="font-medium">${entry.file.name}</p>
+              <p class="font-medium">${this.escapeHtml(entry.file.name)}</p>
               <p class="text-xs text-[var(--surface-muted-content-color)]">${Math.round(entry.file.size / 1024)} KB · ${entry.status}</p>
             </div>
             ${progress}
@@ -238,5 +238,15 @@ export default class extends Controller {
 
   revokePreview(entry) {
     if (entry?.previewUrl) URL.revokeObjectURL(entry.previewUrl)
+  }
+
+  escapeHtml(value) {
+    const div = document.createElement("div")
+    div.textContent = String(value || "")
+    return div.innerHTML
+  }
+
+  escapeAttribute(value) {
+    return this.escapeHtml(value).replace(/"/g, "&quot;")
   }
 }

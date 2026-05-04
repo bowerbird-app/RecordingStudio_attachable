@@ -57,11 +57,8 @@ class AuthorizationTest < Minitest::Test
       end
     end.new
     studio.instance_variable_set(:@test_configuration, configuration)
-    return if studio.singleton_class.method_defined?(:configuration)
-
-    studio.singleton_class.class_eval do
-      define_method(:configuration) { @test_configuration }
-    end
+    studio.singleton_class.send(:remove_method, :configuration) if studio.singleton_class.method_defined?(:configuration)
+    studio.define_singleton_method(:configuration) { @test_configuration }
   end
 
   def stub_accessible!
@@ -69,7 +66,7 @@ class AuthorizationTest < Minitest::Test
 
     accessible = Module.new
     accessible.singleton_class.class_eval do
-      define_method(:allowed?) { |_actor:, _recording:, _role:| true }
+      define_method(:allowed?) { |actor:, recording:, role:| actor || recording || role || true }
     end
     Object.const_set(:RecordingStudioAccessible, Module.new) unless defined?(RecordingStudioAccessible)
     RecordingStudioAccessible.const_set(:Authorization, accessible)

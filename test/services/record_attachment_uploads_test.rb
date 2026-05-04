@@ -10,11 +10,11 @@ class RecordAttachmentUploadsTest < Minitest::Test
     upload_service = RecordingStudioAttachable::Services::RecordAttachmentUpload
     success_result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: :created)
     failure_result = RecordingStudioAttachable::Services::BaseService::Result.new(success: false, error: "bad file")
-    calls = []
+    signed_blob_ids = []
 
     upload_service.stub(:call, lambda { |**kwargs|
-      calls << kwargs[:signed_blob_id]
-      calls.one? ? success_result : failure_result
+      signed_blob_ids << kwargs[:signed_blob_id]
+      signed_blob_ids.one? ? success_result : failure_result
     }) do
       result = RecordingStudioAttachable::Services::RecordAttachmentUploads.call(
         parent_recording: parent,
@@ -27,7 +27,7 @@ class RecordAttachmentUploadsTest < Minitest::Test
 
       assert result.failure?
       assert_equal "One or more attachments failed to finalize", result.error
-      assert_equal %w[blob-1 blob-2], calls
+      assert_equal %w[blob-1 blob-2], signed_blob_ids
       assert_equal [{ signed_blob_id: "blob-2", name: "two", error: "bad file" }], result.errors
     end
   end

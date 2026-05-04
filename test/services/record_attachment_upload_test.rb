@@ -105,22 +105,24 @@ class RecordAttachmentUploadTest < Minitest::Test
       end
     end.new
     studio.instance_variable_set(:@test_configuration, configuration)
-    studio.singleton_class.class_eval do
-      define_method(:capability_options) { |_name, _for_type: nil, **| {} } unless method_defined?(:capability_options)
-      define_method(:configuration) { @test_configuration } unless method_defined?(:configuration)
-      define_method(:record!) { |**| raise NotImplementedError } unless method_defined?(:record!)
-    end
+    studio.singleton_class.send(:remove_method, :capability_options) if studio.singleton_class.method_defined?(:capability_options)
+    studio.singleton_class.send(:remove_method, :configuration) if studio.singleton_class.method_defined?(:configuration)
+    studio.singleton_class.send(:remove_method, :record!) if studio.singleton_class.method_defined?(:record!)
+    studio.define_singleton_method(:capability_options) { |_name, _for_type: nil, **| {} }
+    studio.define_singleton_method(:configuration) { @test_configuration }
+    studio.define_singleton_method(:record!) { |**| raise NotImplementedError }
   end
 
   def stub_accessible!
-    return if defined?(RecordingStudioAccessible::Authorization)
-
-    accessible = Module.new
-    accessible.singleton_class.class_eval do
-      define_method(:allowed?) { |actor:, recording:, role:| actor.present? && recording.present? && role.present? }
-    end
     Object.const_set(:RecordingStudioAccessible, Module.new) unless defined?(RecordingStudioAccessible)
-    RecordingStudioAccessible.const_set(:Authorization, accessible)
+    accessible =
+      if defined?(RecordingStudioAccessible::Authorization)
+        RecordingStudioAccessible::Authorization
+      else
+        RecordingStudioAccessible.const_set(:Authorization, Module.new)
+      end
+    accessible.singleton_class.send(:remove_method, :allowed?) if accessible.singleton_class.method_defined?(:allowed?)
+    accessible.define_singleton_method(:allowed?) { |actor:, recording:, role:| actor.present? && recording.present? && role.present? }
   end
 
   def stub_active_storage!

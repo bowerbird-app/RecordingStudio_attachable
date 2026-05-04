@@ -4,7 +4,7 @@ require "test_helper"
 
 class DummyHomeDemoTest < Minitest::Test
   def test_dummy_home_page_has_root_and_page_demo_actions
-    home_view = File.read(File.expand_path("../dummy/app/views/home/index.html.erb", __dir__))
+    home_view = File.read(File.expand_path("dummy/app/views/home/index.html.erb", __dir__))
 
     assert_includes home_view, 'title: "Attachment demo"'
     assert_includes home_view, 'subtitle: "Upload images and files"'
@@ -14,19 +14,19 @@ class DummyHomeDemoTest < Minitest::Test
   end
 
   def test_dummy_home_controller_builds_root_and_page_attachment_paths
-    home_controller = File.read(File.expand_path("../dummy/app/controllers/home_controller.rb", __dir__))
+    home_controller = File.read(File.expand_path("dummy/app/controllers/home_controller.rb", __dir__))
 
     assert_includes home_controller, "@page = Page.first"
     assert_includes home_controller, "@page_recording = RecordingStudio::Recording.unscoped.find_by("
     assert_includes home_controller, "@root_attachment_listing_path = attachment_listing_path(@root_recording, scope: :subtree, kind: :all)"
-    assert_includes home_controller, '@page_attachment_upload_path = attachment_upload_path(@page_recording)'
+    assert_includes home_controller, "@page_attachment_upload_path = attachment_upload_path(@page_recording)"
   end
 
   def test_dummy_page_recordable_is_registered_seeded_and_migrated
-    page_model = File.read(File.expand_path("../dummy/app/models/page.rb", __dir__))
-    recording_studio_initializer = File.read(File.expand_path("../dummy/config/initializers/recording_studio.rb", __dir__))
-    seeds = File.read(File.expand_path("../dummy/db/seeds.rb", __dir__))
-    schema = File.read(File.expand_path("../dummy/db/schema.rb", __dir__))
+    page_model = File.read(File.expand_path("dummy/app/models/page.rb", __dir__))
+    recording_studio_initializer = File.read(File.expand_path("dummy/config/initializers/recording_studio.rb", __dir__))
+    seeds = File.read(File.expand_path("dummy/db/seeds.rb", __dir__))
+    schema = File.read(File.expand_path("dummy/db/schema.rb", __dir__))
 
     assert_includes page_model, "class Page < ApplicationRecord"
     assert_includes page_model, "RecordingStudio::Capabilities::Attachable"

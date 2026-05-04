@@ -33,7 +33,7 @@ class EngineTest < Minitest::Test
     app_config = Struct.new(:x).new(Struct.new(:recording_studio_attachable).new(nil))
     app = Struct.new(:config) do
       def config_for(_name)
-        raise RuntimeError, "bad yaml"
+        raise "bad yaml"
       end
     end.new(app_config)
 

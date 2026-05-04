@@ -70,7 +70,10 @@ class InstallGeneratorTest < Minitest::Test
 
   def test_initializer_template_defaults_to_blank_layout_and_mentions_override
     initializer_template = File.read(
-      File.expand_path("../lib/generators/recording_studio_attachable/install/templates/recording_studio_attachable_initializer.rb", __dir__)
+      File.expand_path(
+        "../lib/generators/recording_studio_attachable/install/templates/recording_studio_attachable_initializer.rb",
+        __dir__
+      )
     )
 
     assert_includes initializer_template, "config.layout = :blank"

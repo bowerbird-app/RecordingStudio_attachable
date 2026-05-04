@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require_relative "../app/controllers/recording_studio_attachable/application_controller"
 
 class ApplicationControllerTest < Minitest::Test
   class LayoutProbeController < RecordingStudioAttachable::ApplicationController; end

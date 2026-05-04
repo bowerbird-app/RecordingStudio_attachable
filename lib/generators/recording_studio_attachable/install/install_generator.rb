@@ -68,7 +68,10 @@ module RecordingStudioAttachable
         if File.exist?(application_js_path)
           application_js = File.read(application_js_path)
           unless active_storage_wired?(application_js)
-            append_to_file application_js_path, %(import * as ActiveStorage from "@rails/activestorage"\nActiveStorage.start()\n)
+            append_to_file application_js_path, <<~JS
+              import * as ActiveStorage from "@rails/activestorage"
+              ActiveStorage.start()
+            JS
           end
         end
 
@@ -78,7 +81,7 @@ module RecordingStudioAttachable
         controllers_index = File.read(controllers_index_path)
         return if attachable_controllers_wired?(controllers_index)
 
-        append_to_file controllers_index_path, %(eagerLoadControllersFrom("controllers/recording_studio_attachable", application)\n)
+        append_to_file controllers_index_path, "eagerLoadControllersFrom(\"controllers/recording_studio_attachable\", application)\n"
       end
 
       def active_storage_wired?(application_js)

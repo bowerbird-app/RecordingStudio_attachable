@@ -10,6 +10,5 @@ Rails.application.routes.draw do
   get "methods", to: "docs#methods_reference", as: :methods_docs
   get "gem_views", to: "docs#gem_views", as: :gem_views_docs
 
-  get "up" => "rails/health#show", as: :rails_health_check
   root "home#index"
 end

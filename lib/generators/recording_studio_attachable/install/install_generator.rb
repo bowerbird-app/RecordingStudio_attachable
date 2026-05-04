@@ -59,7 +59,7 @@ module RecordingStudioAttachable
       def tailwind_source_lines
         [
           '@source "../../vendor/bundle/**/recording_studio_attachable/app/views/**/*.erb";',
-          '@source "../../vendor/bundle/**/flat_pack/app/components/**/*.{rb,erb}";'
+          '@source "../../vendor/bundle/**/flat_pack/app/components";'
         ]
       end
 

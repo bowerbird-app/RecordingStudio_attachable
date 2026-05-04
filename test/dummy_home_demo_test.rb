@@ -47,4 +47,16 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes listing_view, "attachment.previewable? && attachment.file.attached?"
     assert_includes listing_view, 'text: "Download"'
   end
+
+  def test_dummy_layouts_reference_propshaft_resolvable_css_assets
+    application_layout = File.read(File.expand_path("dummy/app/views/layouts/application.html.erb", __dir__))
+    sidebar_layout = File.read(File.expand_path("dummy/app/views/layouts/flat_pack_sidebar.html.erb", __dir__))
+
+    [application_layout, sidebar_layout].each do |layout|
+      assert_includes layout, 'stylesheet_link_tag "application.css"'
+      assert_includes layout, 'stylesheet_link_tag "flat_pack/variables"'
+      assert_includes layout, 'stylesheet_link_tag "flat_pack/rich_text"'
+      assert_includes layout, 'stylesheet_link_tag "tailwind.css"'
+    end
+  end
 end

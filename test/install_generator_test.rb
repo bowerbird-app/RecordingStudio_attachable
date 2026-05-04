@@ -46,7 +46,7 @@ class InstallGeneratorTest < Minitest::Test
 
       css = File.read(css_path)
       assert_includes css, "recording_studio_attachable/app/views/**/*.erb"
-      assert_includes css, "flat_pack/app/components/**/*.{rb,erb}"
+      assert_includes css, "flat_pack/app/components"
     end
   end
 

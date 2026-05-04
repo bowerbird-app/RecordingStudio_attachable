@@ -41,10 +41,13 @@ module RecordingStudioAttachable
 
         append_to_file importmap_path, <<~RUBY unless File.read(importmap_path).include?("controllers/recording_studio_attachable")
 
+          pin "@rails/activestorage", to: "activestorage.esm.js"
           pin_all_from RecordingStudioAttachable::Engine.root.join("app/javascript/controllers/recording_studio_attachable"),
             under: "controllers/recording_studio_attachable",
             to: "recording_studio_attachable/controllers"
         RUBY
+
+        wire_javascript_entrypoints
       end
 
       def show_readme
@@ -59,6 +62,24 @@ module RecordingStudioAttachable
           '@source "../../vendor/bundle/**/recording_studio_attachable/app/javascript/**/*.js";',
           '@source "../../vendor/bundle/**/flat_pack/app/components/**/*.{rb,erb}";'
         ]
+      end
+
+      def wire_javascript_entrypoints
+        application_js_path = Rails.root.join("app/javascript/application.js")
+        if File.exist?(application_js_path)
+          application_js = File.read(application_js_path)
+          unless application_js.include?("@rails/activestorage")
+            append_to_file application_js_path, %(import * as ActiveStorage from "@rails/activestorage"\nActiveStorage.start()\n)
+          end
+        end
+
+        controllers_index_path = Rails.root.join("app/javascript/controllers/index.js")
+        return unless File.exist?(controllers_index_path)
+
+        controllers_index = File.read(controllers_index_path)
+        return if controllers_index.include?("controllers/recording_studio_attachable")
+
+        append_to_file controllers_index_path, %(eagerLoadControllersFrom("controllers/recording_studio_attachable", application)\n)
       end
     end
   end

@@ -20,14 +20,17 @@ module RecordingStudioAttachable
 
       def perform
         require_recording_studio!
+        owner_recording = attachment_owner_recording!(attachment_recording)
+        capability_options = capability_options_for(owner_recording)
         resolved_actor = resolve_actor(actor)
-        authorize!(action: :revise, actor: resolved_actor, recording: attachment_recording.parent_recording || attachment_recording)
+        authorize!(action: :revise, actor: resolved_actor, recording: owner_recording, capability_options: capability_options)
 
         current_attachment = attachment_recording.recordable
         replacement = attachment_from_signed_blob!(
           signed_blob_id: signed_blob_id,
           name: name.presence || current_attachment.name,
-          description: description.nil? ? current_attachment.description : description
+          description: description.nil? ? current_attachment.description : description,
+          capability_options: capability_options
         )
         root_recording = root_recording_for(attachment_recording)
         event = RecordingStudio.record!(

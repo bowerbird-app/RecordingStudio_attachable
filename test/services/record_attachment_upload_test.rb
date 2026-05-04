@@ -48,15 +48,48 @@ class RecordAttachmentUploadTest < Minitest::Test
     ActiveStorage::Blob.stub(:find_signed!, blob) do
       RecordingStudioAttachable::Attachment.stub(:build_from_blob, built_attachment) do
         RecordingStudio.stub(:record!, event) do
-        result = RecordingStudioAttachable::Services::RecordAttachmentUpload.call(
-          parent_recording: parent,
-          signed_blob_id: "signed-id",
-          actor: Object.new,
-          name: "Upload name"
-        )
+          result = RecordingStudioAttachable::Services::RecordAttachmentUpload.call(
+            parent_recording: parent,
+            signed_blob_id: "signed-id",
+            actor: Object.new,
+            name: "Upload name"
+          )
 
-        assert result.success?
-        assert_equal created_recording, result.value
+          assert result.success?
+          assert_equal created_recording, result.value
+        end
+      end
+    end
+  end
+
+  def test_uses_per_recordable_upload_constraints_for_server_side_validation
+    blob = FakeBlob.new("text/plain", 1024, FakeFilename.new("notes.txt"))
+    parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: FakeRecording.new(id: "root-1"))
+    built_attachment = Struct.new(:id, :name, :content_type, :byte_size, :attachment_kind, :original_filename).new(
+      "attachment-2", "notes", "text/plain", 1024, "file", "notes.txt"
+    )
+    created_recording = Struct.new(:id, :recordable).new("child-2", built_attachment)
+    event = FakeEvent.new(created_recording)
+    capability_options = { allowed_content_types: ["text/plain"], enabled_attachment_kinds: %i[file], max_file_size: 2.megabytes }
+    captured_validation_options = nil
+
+    ActiveStorage::Blob.stub(:find_signed!, blob) do
+      RecordingStudio.stub(:capability_options, capability_options) do
+        RecordingStudioAttachable::Attachment.stub(:build_from_blob, lambda { |**kwargs|
+          captured_validation_options = kwargs[:validation_options]
+          built_attachment
+        }) do
+          RecordingStudio.stub(:record!, event) do
+            result = RecordingStudioAttachable::Services::RecordAttachmentUpload.call(
+              parent_recording: parent,
+              signed_blob_id: "signed-id",
+              actor: Object.new,
+              name: "notes"
+            )
+
+            assert result.success?
+            assert_equal capability_options.slice(:allowed_content_types, :enabled_attachment_kinds), captured_validation_options
+          end
         end
       end
     end
@@ -66,8 +99,15 @@ class RecordAttachmentUploadTest < Minitest::Test
 
   def stub_recording_studio!
     studio = defined?(RecordingStudio) ? RecordingStudio : Object.const_set(:RecordingStudio, Module.new)
+    configuration = Class.new do
+      def capability_enabled?(*)
+        true
+      end
+    end.new
+    studio.instance_variable_set(:@test_configuration, configuration)
     studio.singleton_class.class_eval do
       define_method(:capability_options) { |_name, _for_type: nil, **| {} } unless method_defined?(:capability_options)
+      define_method(:configuration) { @test_configuration } unless method_defined?(:configuration)
       define_method(:record!) { |**| raise NotImplementedError } unless method_defined?(:record!)
     end
   end

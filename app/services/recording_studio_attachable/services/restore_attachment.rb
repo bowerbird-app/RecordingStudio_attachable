@@ -16,12 +16,14 @@ module RecordingStudioAttachable
 
       def perform
         require_recording_studio!
+        owner_recording = attachment_owner_recording!(attachment_recording)
         unless attachment_recording.respond_to?(:recording_studio_trashable_restore!)
           raise ArgumentError, "Restore requires RecordingStudio Trashable"
         end
 
         resolved_actor = resolve_actor(actor)
-        authorize!(action: :restore, actor: resolved_actor, recording: attachment_recording.parent_recording || attachment_recording)
+        capability_options = capability_options_for(owner_recording)
+        authorize!(action: :restore, actor: resolved_actor, recording: owner_recording, capability_options: capability_options)
 
         attachment_recording.recording_studio_trashable_restore!(actor: resolved_actor, impersonator: impersonator)
         attachment_recording.log_event!(

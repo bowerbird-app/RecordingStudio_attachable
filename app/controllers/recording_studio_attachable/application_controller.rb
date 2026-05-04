@@ -23,7 +23,10 @@ module RecordingStudioAttachable
     end
 
     def find_attachment_recording(id = params[:id])
-      RecordingStudio::Recording.find(id)
+      recording = RecordingStudio::Recording.find(id)
+      raise ActiveRecord::RecordNotFound unless recording.recordable_type == "RecordingStudioAttachable::Attachment"
+
+      recording
     end
 
     def authorize_attachment_action!(action, recording, capability_options: {})
@@ -51,6 +54,17 @@ module RecordingStudioAttachable
         end
         format.json { render json: { error: "Not found" }, status: :not_found }
       end
+    end
+
+    def attachable_owner_recording(recording)
+      RecordingStudioAttachable::Authorization.owner_recording_for(recording)
+    end
+
+    def capability_options_for(recording)
+      owner_type = RecordingStudioAttachable::Authorization.owner_type_for(recording)
+      return {} if owner_type.blank?
+
+      RecordingStudio.capability_options(:attachable, for_type: owner_type) || {}
     end
   end
 end

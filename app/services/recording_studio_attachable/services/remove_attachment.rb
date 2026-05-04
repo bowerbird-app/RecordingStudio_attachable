@@ -16,8 +16,10 @@ module RecordingStudioAttachable
 
       def perform
         require_recording_studio!
+        owner_recording = attachment_owner_recording!(attachment_recording)
         resolved_actor = resolve_actor(actor)
-        authorize!(action: :remove, actor: resolved_actor, recording: attachment_recording.parent_recording || attachment_recording)
+        capability_options = capability_options_for(owner_recording)
+        authorize!(action: :remove, actor: resolved_actor, recording: owner_recording, capability_options: capability_options)
 
         if attachment_recording.respond_to?(:recording_studio_trashable_trash!)
           attachment_recording.log_event!(

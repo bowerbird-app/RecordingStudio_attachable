@@ -19,6 +19,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, "FlatPack::Alert::Component"
     assert_includes view_source, "FlatPack::Card::Component"
     assert_includes view_source, "FlatPack::Button::Component"
+    assert_includes view_source, "rails_direct_uploads_path"
   end
 
   def test_listing_view_includes_scope_and_kind_filters

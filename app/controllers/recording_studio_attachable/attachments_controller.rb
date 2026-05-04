@@ -50,15 +50,5 @@ module RecordingStudioAttachable
     def attachment_params
       params.require(:attachment).permit(:name, :description, :signed_blob_id)
     end
-
-    def capability_options_for(recording)
-      owner_type =
-        if recording.recordable_type == RecordingStudioAttachable::Attachment.name
-          recording.parent_recording&.recordable_type
-        else
-          recording.recordable_type
-        end
-      RecordingStudio.capability_options(:attachable, for_type: owner_type) || {}
-    end
   end
 end

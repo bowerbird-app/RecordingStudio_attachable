@@ -21,11 +21,5 @@ module RecordingStudioAttachable
         capability_options: capability_options_for(@recording)
       )
     end
-
-    private
-
-    def capability_options_for(recording)
-      RecordingStudio.capability_options(:attachable, for_type: recording.recordable_type) || {}
-    end
   end
 end

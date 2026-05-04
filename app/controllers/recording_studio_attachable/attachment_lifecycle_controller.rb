@@ -29,18 +29,8 @@ module RecordingStudioAttachable
     private
 
     def fallback_listing_path(recording)
-      parent = recording.parent_recording
+      parent = attachable_owner_recording(recording)
       parent ? recording_attachments_path(parent) : main_app.root_path
-    end
-
-    def capability_options_for(recording)
-      owner_type =
-        if recording.recordable_type == RecordingStudioAttachable::Attachment.name
-          recording.parent_recording&.recordable_type
-        else
-          recording.recordable_type
-        end
-      RecordingStudio.capability_options(:attachable, for_type: owner_type) || {}
     end
   end
 end

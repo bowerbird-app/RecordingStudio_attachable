@@ -59,7 +59,7 @@ export default class extends Controller {
           entry.status = "attached"
           this.renderEntry(entry)
         })
-        window.location.href = payload.attachments?.[0]?.show_path ? payload.attachments[0].show_path.replace(/\/attachments\/[^/]+$/, "") : this.finalizeUrlValue
+        window.location.href = payload.redirect_path || this.finalizeUrlValue
       })
       .catch((error) => {
         readyEntries.forEach((entry) => {

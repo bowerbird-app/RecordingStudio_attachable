@@ -65,11 +65,12 @@ module RecordingStudioAttachable
       ROLE_ALIASES.fetch(normalized, normalized)
     end
 
-    def attachment_kind_for(content_type)
-      normalize_attachment_kind(classify_attachment_kind.call(content_type))
+    def attachment_kind_for(content_type, classifier: nil)
+      normalize_attachment_kind((classifier || classify_attachment_kind).call(content_type))
     end
 
-    def allowed_content_type?(content_type)
+    def allowed_content_type?(content_type, allowed_content_types: self.allowed_content_types)
+      allowed_content_types ||= self.allowed_content_types
       return true if allowed_content_types.blank?
 
       allowed_content_types.any? do |pattern|
@@ -77,7 +78,8 @@ module RecordingStudioAttachable
       end
     end
 
-    def attachment_kind_enabled?(attachment_kind)
+    def attachment_kind_enabled?(attachment_kind, enabled_attachment_kinds: self.enabled_attachment_kinds)
+      enabled_attachment_kinds ||= self.enabled_attachment_kinds
       enabled_attachment_kinds.map { |kind| normalize_attachment_kind(kind) }.include?(normalize_attachment_kind(attachment_kind))
     end
 

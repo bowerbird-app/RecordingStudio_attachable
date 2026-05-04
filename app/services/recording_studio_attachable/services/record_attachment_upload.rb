@@ -22,9 +22,15 @@ module RecordingStudioAttachable
       def perform
         require_recording_studio!
         resolved_actor = resolve_actor(actor)
-        authorize!(action: :upload, actor: resolved_actor, recording: parent_recording)
+        capability_options = capability_options_for(parent_recording)
+        authorize!(action: :upload, actor: resolved_actor, recording: parent_recording, capability_options: capability_options)
 
-        attachment = attachment_from_signed_blob!(signed_blob_id: signed_blob_id, name: name, description: description)
+        attachment = attachment_from_signed_blob!(
+          signed_blob_id: signed_blob_id,
+          name: name,
+          description: description,
+          capability_options: capability_options
+        )
         root_recording = root_recording_for(parent_recording)
         event = RecordingStudio.record!(
           action: "attachment_uploaded",

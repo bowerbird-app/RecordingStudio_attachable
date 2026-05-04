@@ -32,7 +32,10 @@ module RecordingStudioAttachable
         end
         format.json do
           if result.success?
-            render json: { attachments: Array(result.value).map { |recording| attachment_json(recording) } }, status: :created
+            render json: {
+              attachments: Array(result.value).map { |recording| attachment_json(recording) },
+              redirect_path: recording_attachments_path(@recording)
+            }, status: :created
           else
             render json: { error: result.error, errors: result.errors }, status: :unprocessable_entity
           end

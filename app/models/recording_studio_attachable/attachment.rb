@@ -4,6 +4,8 @@ module RecordingStudioAttachable
   class Attachment < ApplicationRecord
     self.table_name = "recording_studio_attachable_attachments"
 
+    attr_writer :validation_options
+
     has_one_attached :file
 
     validates :name, :attachment_kind, :original_filename, :content_type, :byte_size, presence: true
@@ -15,7 +17,7 @@ module RecordingStudioAttachable
     scope :files, -> { where(attachment_kind: "file") }
 
     class << self
-      def build_from_blob(blob:, name: nil, description: nil)
+      def build_from_blob(blob:, name: nil, description: nil, validation_options: {})
         content_type = blob.content_type.to_s
         new(
           name: name.presence || default_name_for(blob),
@@ -25,6 +27,7 @@ module RecordingStudioAttachable
           content_type: content_type,
           byte_size: blob.byte_size
         ).tap do |attachment|
+          attachment.validation_options = validation_options
           attachment.file.attach(blob)
         end
       end
@@ -46,16 +49,26 @@ module RecordingStudioAttachable
 
     private
 
+    def validation_options
+      @validation_options ||= {}
+    end
+
     def content_type_must_be_allowed
       return if content_type.blank?
-      return if RecordingStudioAttachable.configuration.allowed_content_type?(content_type)
+      return if RecordingStudioAttachable.configuration.allowed_content_type?(
+        content_type,
+        allowed_content_types: validation_options[:allowed_content_types]
+      )
 
       errors.add(:content_type, "is not allowed")
     end
 
     def attachment_kind_must_be_enabled
       return if attachment_kind.blank?
-      return if RecordingStudioAttachable.configuration.attachment_kind_enabled?(attachment_kind)
+      return if RecordingStudioAttachable.configuration.attachment_kind_enabled?(
+        attachment_kind,
+        enabled_attachment_kinds: validation_options[:enabled_attachment_kinds]
+      )
 
       errors.add(:attachment_kind, "is not enabled")
     end

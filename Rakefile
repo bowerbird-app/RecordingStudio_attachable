@@ -14,11 +14,6 @@ namespace :test do
   task :rename_verification do
     ruby "test/rename_verification_test.rb", verbose: true
   end
-
-  desc "Run rename verification tests in verbose mode"
-  task :rename_verification_verbose do
-    ruby "test/rename_verification_test.rb", "--verbose", verbose: true
-  end
 end
 
 namespace :app do

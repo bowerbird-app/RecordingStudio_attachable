@@ -1,0 +1,137 @@
+<div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+  <%= render FlatPack::PageTitle::Component.new(
+    title: "Attachments",
+    subtitle: "Browse files recorded beneath this recording.",
+    variant: :h1
+  ) %>
+
+  <div class="flex flex-wrap items-center gap-3">
+    <%= render FlatPack::Badge::Component.new(text: "Scope: #{@scope}", style: :info, size: :sm) %>
+    <%= render FlatPack::Badge::Component.new(text: "Kind: #{@kind}", style: :warning, size: :sm) %>
+    <% if @can_upload %>
+      <%= link_to recording_attachment_upload_path(@recording), class: "inline-flex" do %>
+        <%= render FlatPack::Button::Component.new(text: "Upload files", style: :primary, size: :md) %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
+    <% card.header do %>
+      <%= render FlatPack::PageTitle::Component.new(
+        title: "Filters",
+        subtitle: "Switch between direct children, subtree results, and attachment kinds.",
+        variant: :h3,
+        class: "mb-0 pb-0"
+      ) %>
+    <% end %>
+
+    <% card.body do %>
+      <div class="flex flex-wrap gap-3 text-sm">
+        <%= link_to recording_attachments_path(@recording, scope: :direct, kind: @kind), class: "inline-flex" do %>
+          <%= render FlatPack::Button::Component.new(text: "Direct", style: @scope.to_sym == :direct ? :primary : :secondary, size: :sm) %>
+        <% end %>
+        <%= link_to recording_attachments_path(@recording, scope: :subtree, kind: @kind), class: "inline-flex" do %>
+          <%= render FlatPack::Button::Component.new(text: "Subtree", style: @scope.to_sym == :subtree ? :primary : :secondary, size: :sm) %>
+        <% end %>
+        <%= link_to recording_attachments_path(@recording, scope: @scope, kind: :all), class: "inline-flex" do %>
+          <%= render FlatPack::Button::Component.new(text: "All", style: @kind.to_sym == :all ? :primary : :secondary, size: :sm) %>
+        <% end %>
+        <%= link_to recording_attachments_path(@recording, scope: @scope, kind: :images), class: "inline-flex" do %>
+          <%= render FlatPack::Button::Component.new(text: "Images", style: @kind.to_sym == :images ? :primary : :secondary, size: :sm) %>
+        <% end %>
+        <%= link_to recording_attachments_path(@recording, scope: @scope, kind: :files), class: "inline-flex" do %>
+          <%= render FlatPack::Button::Component.new(text: "Files", style: @kind.to_sym == :files ? :primary : :secondary, size: :sm) %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <% if @attachments.any? %>
+    <% if @kind.to_sym == :images %>
+      <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <% @attachments.each do |attachment_recording| %>
+          <% attachment = attachment_recording.recordable %>
+          <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
+            <% card.header do %>
+              <%= render FlatPack::PageTitle::Component.new(title: attachment.name, subtitle: attachment.original_filename, variant: :h3, class: "mb-0 pb-0") %>
+            <% end %>
+            <% card.body do %>
+              <div class="space-y-3 text-sm">
+                <div class="rounded-lg border border-dashed border-[var(--surface-border-color)] p-4 text-center text-[var(--surface-muted-content-color)]">
+                  Preview available for image attachments.
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <%= render FlatPack::Badge::Component.new(text: attachment.attachment_kind, style: :info, size: :sm) %>
+                  <%= render FlatPack::Badge::Component.new(text: number_to_human_size(attachment.byte_size), style: :warning, size: :sm) %>
+                </div>
+              </div>
+            <% end %>
+            <% card.footer do %>
+              <%= link_to attachment_path(attachment_recording), class: "inline-flex" do %>
+                <%= render FlatPack::Button::Component.new(text: "View", style: :secondary, size: :sm) %>
+              <% end %>
+            <% end %>
+          <% end %>
+        <% end %>
+      </div>
+    <% else %>
+      <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
+        <% card.header do %>
+          <%= render FlatPack::PageTitle::Component.new(title: "Results", subtitle: "Current attachment revisions for this recording.", variant: :h3, class: "mb-0 pb-0") %>
+        <% end %>
+        <% card.body do %>
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-[var(--surface-border-color)] text-sm">
+              <thead>
+                <tr class="text-left text-[var(--surface-muted-content-color)]">
+                  <th class="px-3 py-2">Name</th>
+                  <th class="px-3 py-2">Kind</th>
+                  <th class="px-3 py-2">Type</th>
+                  <th class="px-3 py-2">Size</th>
+                  <th class="px-3 py-2">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[var(--surface-border-color)]">
+                <% @attachments.each do |attachment_recording| %>
+                  <% attachment = attachment_recording.recordable %>
+                  <tr>
+                    <td class="px-3 py-3">
+                      <div class="font-medium"><%= attachment.name %></div>
+                      <div class="text-xs text-[var(--surface-muted-content-color)]"><%= attachment.original_filename %></div>
+                    </td>
+                    <td class="px-3 py-3"><%= attachment.attachment_kind %></td>
+                    <td class="px-3 py-3"><%= attachment.content_type %></td>
+                    <td class="px-3 py-3"><%= number_to_human_size(attachment.byte_size) %></td>
+                    <td class="px-3 py-3">
+                      <div class="flex gap-2">
+                        <%= link_to attachment_path(attachment_recording), class: "inline-flex" do %>
+                          <%= render FlatPack::Button::Component.new(text: "View", style: :secondary, size: :sm) %>
+                        <% end %>
+                        <%= link_to download_attachment_path(attachment_recording), class: "inline-flex" do %>
+                          <%= render FlatPack::Button::Component.new(text: "Download", style: :ghost, size: :sm) %>
+                        <% end %>
+                      </div>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% else %>
+    <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
+      <% card.body do %>
+        <div class="space-y-4 text-sm">
+          <p>No attachments match the current filters yet.</p>
+          <% if @can_upload %>
+            <%= link_to recording_attachment_upload_path(@recording), class: "inline-flex" do %>
+              <%= render FlatPack::Button::Component.new(text: "Upload the first file", style: :primary, size: :md) %>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

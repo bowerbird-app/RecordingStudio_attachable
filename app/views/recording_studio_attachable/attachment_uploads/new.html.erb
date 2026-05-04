@@ -1,0 +1,49 @@
+<div class="mx-auto flex w-full max-w-6xl flex-col gap-6" data-controller="recording-studio-attachable--upload" data-recording-studio-attachable--upload-direct-upload-url-value="<%= main_app.rails_direct_uploads_url %>" data-recording-studio-attachable--upload-finalize-url-value="<%= @create_path %>" data-recording-studio-attachable--upload-max-file-size-value="<%= @max_file_size %>" data-recording-studio-attachable--upload-allowed-content-types-value="<%= @allowed_content_types.join(',') %>">
+  <%= render FlatPack::PageTitle::Component.new(
+    title: "Upload attachments",
+    subtitle: "Drag and drop files to create child attachment recordings.",
+    variant: :h1
+  ) %>
+
+  <%= render FlatPack::Alert::Component.new(
+    title: "Upload rules",
+    body: "Allowed types: #{@allowed_content_types.join(', ')} · Max size: #{number_to_human_size(@max_file_size)}",
+    style: :info
+  ) %>
+
+  <%= render FlatPack::Card::Component.new(style: :default, class: "min-h-[320px]") do |card| %>
+    <% card.header do %>
+      <%= render FlatPack::PageTitle::Component.new(title: "Drop files here", subtitle: "Multiple uploads, previews, and direct-upload progress are handled in-page.", variant: :h3, class: "mb-0 pb-0") %>
+    <% end %>
+    <% card.body do %>
+      <div class="flex h-full min-h-[220px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-[var(--surface-border-color)] p-10 text-center" data-recording-studio-attachable--upload-target="dropzone">
+        <p class="text-sm text-[var(--surface-muted-content-color)]">Drag files anywhere into this zone or browse from disk.</p>
+        <input type="file" multiple class="hidden" data-recording-studio-attachable--upload-target="input" data-action="change->recording-studio-attachable--upload#filesSelected">
+        <button type="button" data-action="recording-studio-attachable--upload#browse" class="inline-flex">
+          <%= render FlatPack::Button::Component.new(text: "Choose files", style: :primary, size: :md) %>
+        </button>
+      </div>
+    <% end %>
+  <% end %>
+
+  <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
+    <% card.header do %>
+      <%= render FlatPack::PageTitle::Component.new(title: "Queue", subtitle: "Uploads move from pending to uploaded before they are finalized into recordings.", variant: :h3, class: "mb-0 pb-0") %>
+    <% end %>
+    <% card.body do %>
+      <div class="space-y-4" data-recording-studio-attachable--upload-target="queue">
+        <p class="text-sm text-[var(--surface-muted-content-color)]" data-recording-studio-attachable--upload-target="emptyState">No files selected yet.</p>
+      </div>
+    <% end %>
+    <% card.footer do %>
+      <div class="flex flex-wrap justify-end gap-3">
+        <%= link_to recording_attachments_path(@recording), class: "inline-flex" do %>
+          <%= render FlatPack::Button::Component.new(text: "Cancel", style: :secondary, size: :md) %>
+        <% end %>
+        <button type="button" data-recording-studio-attachable--upload-target="finalizeButton" data-action="recording-studio-attachable--upload#finalize" class="inline-flex" disabled>
+          <%= render FlatPack::Button::Component.new(text: "Attach files", style: :primary, size: :md) %>
+        </button>
+      </div>
+    <% end %>
+  <% end %>
+</div>

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Recording Studio Attachable</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" if respond_to?(:stylesheet_link_tag) %>
+    <%= javascript_importmap_tags if respond_to?(:javascript_importmap_tags) %>
+  </head>
+
+  <body class="min-h-screen bg-[var(--surface-background-color)] text-[var(--surface-content-color)]">
+    <main class="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-6 py-10">
+      <% if notice.present? %>
+        <%= render FlatPack::Alert::Component.new(title: "Notice", body: notice, style: :success) %>
+      <% end %>
+      <% if alert.present? %>
+        <%= render FlatPack::Alert::Component.new(title: "Alert", body: alert, style: :error) %>
+      <% end %>
+      <%= yield %>
+    </main>
+  </body>
+</html>

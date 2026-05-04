@@ -4,49 +4,32 @@ require "test_helper"
 
 class ConfigurationTest < Minitest::Test
   def setup
-    @configuration = GemTemplate::Configuration.new
+    @configuration = RecordingStudioAttachable::Configuration.new
   end
 
-  def test_merge_updates_known_attributes
-    @configuration.merge!(api_key: "abc123", timeout: 9, enable_feature_x: true)
-
-    assert_equal "abc123", @configuration.api_key
-    assert_equal 9, @configuration.timeout
-    assert_equal true, @configuration.enable_feature_x
+  def test_defaults_match_attachable_expectations
+    assert_equal ["image/*", "application/pdf"], @configuration.allowed_content_types
+    assert_equal :direct, @configuration.default_listing_scope
+    assert_equal :all, @configuration.default_kind_filter
+    assert_equal :children_only, @configuration.placement
+    assert_equal :view, @configuration.auth_role_for(:view)
+    assert_equal :edit, @configuration.auth_role_for(:upload)
   end
 
-  def test_merge_ignores_unknown_keys
-    @configuration.merge!(unknown_key: "ignored", timeout: 7)
+  def test_merge_normalizes_auth_roles
+    @configuration.merge!(auth_roles: { view: :viewer, upload: :editor })
 
-    refute_respond_to @configuration, :unknown_key
-    assert_equal 7, @configuration.timeout
+    assert_equal :view, @configuration.auth_role_for(:view)
+    assert_equal :edit, @configuration.auth_role_for(:upload)
   end
 
-  def test_merge_with_non_enumerable_is_noop
-    original = @configuration.to_h
-
-    @configuration.merge!(nil)
-
-    assert_nil @configuration.api_key if original[:api_key].nil?
-    assert_equal original[:api_key], @configuration.api_key unless original[:api_key].nil?
-    assert_equal original[:timeout], @configuration.timeout
-    assert_equal original[:enable_feature_x], @configuration.enable_feature_x
+  def test_allowed_content_type_supports_wildcards
+    assert @configuration.allowed_content_type?("image/png")
+    refute @configuration.allowed_content_type?("text/plain")
   end
 
-  def test_to_h_reports_registered_hook_counts
-    @configuration.hooks.before_initialize { nil }
-    @configuration.hooks.before_initialize { nil }
-    @configuration.hooks.after_service { nil }
-
-    result = @configuration.to_h
-
-    assert_equal 2, result.fetch(:hooks_registered).fetch(:before_initialize)
-    assert_equal 1, result.fetch(:hooks_registered).fetch(:after_service)
-  end
-
-  def test_configure_without_block_is_safe
-    GemTemplate.configure
-
-    assert_kind_of GemTemplate::Configuration, GemTemplate.configuration
+  def test_attachment_kind_for_uses_classifier
+    assert_equal "image", @configuration.attachment_kind_for("image/jpeg")
+    assert_equal "file", @configuration.attachment_kind_for("application/pdf")
   end
 end

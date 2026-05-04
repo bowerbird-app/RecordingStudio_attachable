@@ -16,6 +16,30 @@
       ) %>
 
       <%= render FlatPack::Sidebar::Item::Component.new(
+        label: "Setup",
+        href: setup_docs_path,
+        icon: :folder
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
+        label: "Config",
+        href: configuration_docs_path,
+        icon: :activity
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
+        label: "Methods",
+        href: methods_docs_path,
+        icon: :folder
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
+        label: "Gem views",
+        href: gem_views_docs_path,
+        icon: :activity
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
         label: "Recording Studio",
         href: "/recording_studio",
         icon: :folder

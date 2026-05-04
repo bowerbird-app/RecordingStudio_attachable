@@ -67,4 +67,13 @@ class InstallGeneratorTest < Minitest::Test
       assert_includes controllers_index, 'eagerLoadControllersFrom("controllers/recording_studio_attachable", application)'
     end
   end
+
+  def test_initializer_template_defaults_to_blank_layout_and_mentions_override
+    initializer_template = File.read(
+      File.expand_path("../lib/generators/recording_studio_attachable/install/templates/recording_studio_attachable_initializer.rb", __dir__)
+    )
+
+    assert_includes initializer_template, "config.layout = :blank"
+    assert_includes initializer_template, 'host-app layout like "application"'
+  end
 end

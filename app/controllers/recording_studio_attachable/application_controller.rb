@@ -3,6 +3,7 @@
 module RecordingStudioAttachable
   class ApplicationController < (defined?(::ApplicationController) ? ::ApplicationController : ActionController::Base)
     protect_from_forgery with: :exception
+    layout :recording_studio_attachable_layout
 
     rescue_from RecordingStudioAttachable::Authorization::NotAuthorizedError, with: :handle_not_authorized
     rescue_from ActiveRecord::RecordNotFound, with: :handle_record_not_found
@@ -79,6 +80,16 @@ module RecordingStudioAttachable
       capability_options_for(recording).fetch(option_name) do
         RecordingStudioAttachable.configuration.public_send(option_name)
       end
+    end
+
+    def recording_studio_attachable_layout
+      configured_layout = RecordingStudioAttachable.configuration.layout
+      return "recording_studio_attachable/blank" if configured_layout.blank?
+
+      normalized_layout = configured_layout.to_s
+      return "recording_studio_attachable/blank" if %w[blank blank_upload recording_studio_attachable/blank].include?(normalized_layout)
+
+      normalized_layout
     end
   end
 end

@@ -1,0 +1,13 @@
+<div class="mx-auto flex w-full max-w-4xl flex-col gap-6">
+  <%= render FlatPack::PageTitle::Component.new(
+    title: "Config",
+    subtitle: "The generator-backed configuration surface for the gem, including the layout override.",
+    variant: :h1
+  ) %>
+
+  <%= render FlatPack::CodeBlock::Component.new(
+    title: "config/initializers/recording_studio_attachable.rb",
+    code: @config_example,
+    language: :ruby
+  ) %>
+</div>

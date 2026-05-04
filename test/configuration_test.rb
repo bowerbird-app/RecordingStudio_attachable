@@ -12,6 +12,7 @@ class ConfigurationTest < Minitest::Test
     assert_equal 20, @configuration.max_file_count
     assert_equal :direct, @configuration.default_listing_scope
     assert_equal :all, @configuration.default_kind_filter
+    assert_equal :blank, @configuration.layout
     assert_equal :children_only, @configuration.placement
     assert_equal :view, @configuration.auth_role_for(:view)
     assert_equal :edit, @configuration.auth_role_for(:upload)

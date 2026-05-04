@@ -1,0 +1,13 @@
+<div class="mx-auto flex w-full max-w-4xl flex-col gap-6">
+  <%= render FlatPack::PageTitle::Component.new(
+    title: "Setup",
+    subtitle: "The minimum host-app steps for enabling Recording Studio Attachable.",
+    variant: :h1
+  ) %>
+
+  <%= render FlatPack::List::Component.new(ordered: true, divider: true, class: "rounded-xl border border-[var(--surface-border-color)] bg-[var(--surface-background-color)] p-4") do %>
+    <% @setup_steps.each do |step| %>
+      <%= render FlatPack::List::Item.new { step } %>
+    <% end %>
+  <% end %>
+</div>

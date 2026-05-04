@@ -2,8 +2,6 @@
 
 module RecordingStudioAttachable
   class AttachmentUploadsController < ApplicationController
-    layout :recording_studio_attachable_layout
-
     def new
       @recording = find_recording
       capability_options = capability_options_for(@recording)
@@ -48,12 +46,6 @@ module RecordingStudioAttachable
     end
 
     private
-
-    def recording_studio_attachable_layout
-      return "recording_studio_attachable/blank" if RecordingStudioAttachable.configuration.layout.to_sym == :blank_upload
-
-      "application"
-    end
 
     def attachment_payloads
       Array(params.fetch(:attachments, [])).map do |attachment|

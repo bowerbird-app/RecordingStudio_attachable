@@ -91,7 +91,7 @@ RecordingStudioAttachable.configure do |config|
   config.enabled_attachment_kinds = %i[image file]
   config.default_listing_scope = :direct
   config.default_kind_filter = :all
-  config.layout = :blank_upload
+  config.layout = :blank
   config.auth_roles = {
     view: :view,
     upload: :edit,
@@ -118,6 +118,22 @@ The most important per-recordable options are:
 - `auth_roles`
 - `placement`
 - `authorize_with`
+
+### Layouts
+
+Gem views use the bundled blank layout by default:
+
+- centered container
+- no top nav
+- no sidebar
+
+If you want the gem views to render inside your host app shell instead, set `config.layout` to your app layout name:
+
+```ruby
+RecordingStudioAttachable.configure do |config|
+  config.layout = "application"
+end
+```
 
 ## Authorization and lifecycle behavior
 

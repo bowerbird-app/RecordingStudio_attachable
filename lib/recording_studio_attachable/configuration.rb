@@ -29,7 +29,7 @@ module RecordingStudioAttachable
       @enabled_attachment_kinds = %i[image file]
       @default_listing_scope = :direct
       @default_kind_filter = :all
-      @layout = :blank_upload
+      @layout = :blank
       @auth_roles = normalize_auth_roles(
         view: :viewer,
         upload: :editor,

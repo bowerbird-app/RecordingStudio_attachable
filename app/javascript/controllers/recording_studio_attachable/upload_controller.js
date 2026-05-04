@@ -7,6 +7,7 @@ export default class extends Controller {
     directUploadUrl: String,
     finalizeUrl: String,
     maxFileSize: Number,
+    maxFilesCount: Number,
     allowedContentTypes: String
   }
 
@@ -62,9 +63,13 @@ export default class extends Controller {
         window.location.href = payload.redirect_path || this.finalizeUrlValue
       })
       .catch((error) => {
+        const errorsByBlobId = new Map(
+          Array.from(error?.errors || []).map((item) => [item.signed_blob_id, item.error])
+        )
+
         readyEntries.forEach((entry) => {
           entry.status = "failed"
-          entry.error = error?.error || "Finalization failed"
+          entry.error = errorsByBlobId.get(entry.signedBlobId) || error?.error || "Finalization failed"
           this.renderEntry(entry)
         })
       })
@@ -115,7 +120,12 @@ export default class extends Controller {
   }
 
   addFiles(files) {
-    files.forEach((file) => {
+    const availableSlots = this.hasMaxFilesCountValue
+      ? Math.max(this.maxFilesCountValue - this.queueableEntryCount(), 0)
+      : files.length
+
+    files.forEach((file, index) => {
+      const exceedsCount = this.hasMaxFilesCountValue && index >= availableSlots
       const entry = {
         id: crypto.randomUUID(),
         file,
@@ -123,11 +133,13 @@ export default class extends Controller {
         description: "",
         previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
         progress: 0,
-        status: this.validateFile(file),
+        status: exceedsCount ? "invalid" : this.validateFile(file),
         error: null,
         signedBlobId: null
       }
-      if (entry.status === "invalid") {
+      if (exceedsCount) {
+        entry.error = this.maxFilesError()
+      } else if (entry.status === "invalid") {
         entry.error = this.validationError(file)
       }
       this.files.push(entry)
@@ -140,11 +152,14 @@ export default class extends Controller {
     entry.status = "uploading"
     this.renderEntry(entry)
 
-    const upload = new DirectUpload(entry.file, this.directUploadUrlValue, this)
+    const upload = new DirectUpload(entry.file, this.directUploadUrlValue, {
+      directUploadWillStoreFileWithXHR: (request) => this.bindUploadProgress(request, entry)
+    })
+
     upload.create((error, blob) => {
       if (error) {
         entry.status = "failed"
-        entry.error = error
+        entry.error = error?.message || String(error)
       } else {
         entry.status = "uploaded"
         entry.progress = 100
@@ -155,11 +170,10 @@ export default class extends Controller {
     })
   }
 
-  directUploadWillStoreFileWithXHR(request) {
+  bindUploadProgress(request, entry) {
     request.upload.addEventListener("progress", (event) => {
       if (!event.lengthComputable) return
-      const entry = this.files.find((item) => item.status === "uploading")
-      if (!entry) return
+
       entry.progress = Math.round((event.loaded / event.total) * 100)
       this.renderEntry(entry)
     })
@@ -167,19 +181,32 @@ export default class extends Controller {
 
   validateFile(file) {
     if (this.maxFileSizeValue && file.size > this.maxFileSizeValue) return "invalid"
-    const allowed = (this.allowedContentTypesValue || "").split(",").filter(Boolean)
-    if (allowed.length > 0 && !allowed.some((pattern) => this.matchesContentType(pattern.trim(), file.type))) return "invalid"
+    const allowed = this.allowedContentTypePatterns()
+    if (allowed.length > 0 && !allowed.some((pattern) => this.matchesContentType(pattern, file.type))) return "invalid"
     return "pending"
   }
 
   validationError(file) {
     if (this.maxFileSizeValue && file.size > this.maxFileSizeValue) return "File exceeds the maximum allowed size"
-    return `${file.type || "Unknown type"} is not allowed`
+    return `${file.type || "Unknown type"} is not allowed. Allowed types: ${this.allowedContentTypePatterns().join(", ")}`
+  }
+
+  maxFilesError() {
+    const noun = this.maxFilesCountValue === 1 ? "file" : "files"
+    return `You can upload up to ${this.maxFilesCountValue} ${noun} at a time`
   }
 
   matchesContentType(pattern, contentType) {
     if (pattern.endsWith("/*")) return contentType.startsWith(pattern.replace(/\*$/, ""))
     return pattern === contentType
+  }
+
+  allowedContentTypePatterns() {
+    return (this.allowedContentTypesValue || "").split(",").map((value) => value.trim()).filter(Boolean)
+  }
+
+  queueableEntryCount() {
+    return this.files.filter((entry) => entry.status !== "invalid").length
   }
 
   renderQueue() {

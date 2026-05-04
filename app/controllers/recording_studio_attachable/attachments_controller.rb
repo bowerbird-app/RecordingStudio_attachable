@@ -4,15 +4,17 @@ module RecordingStudioAttachable
   class AttachmentsController < ApplicationController
     def show
       @attachment_recording = find_attachment_recording
-      authorize_attachment_action!(:view, @attachment_recording.parent_recording || @attachment_recording,
-                                   capability_options: capability_options_for(@attachment_recording))
+      authorize_attachment_owner_action!(:view, @attachment_recording)
+
       @attachment = @attachment_recording.recordable
+      @replace_allowed_content_types = configured_attachable_option(@attachment_recording, :allowed_content_types)
+      @replace_max_file_size = configured_attachable_option(@attachment_recording, :max_file_size)
+      @owner_recording = attachable_owner_recording(@attachment_recording)
     end
 
     def update
       @attachment_recording = find_attachment_recording
-      authorize_attachment_action!(:revise, @attachment_recording.parent_recording || @attachment_recording,
-                                   capability_options: capability_options_for(@attachment_recording))
+      authorize_attachment_owner_action!(:revise, @attachment_recording)
 
       result = if attachment_params[:signed_blob_id].present?
                  RecordingStudioAttachable::Services::ReplaceAttachmentFile.call(
@@ -40,8 +42,8 @@ module RecordingStudioAttachable
 
     def download
       @attachment_recording = find_attachment_recording
-      authorize_attachment_action!(:download, @attachment_recording.parent_recording || @attachment_recording,
-                                   capability_options: capability_options_for(@attachment_recording))
+      authorize_attachment_owner_action!(:download, @attachment_recording)
+
       redirect_to main_app.rails_blob_path(@attachment_recording.recordable.file, disposition: :attachment)
     end
 

@@ -9,6 +9,7 @@ class ConfigurationTest < Minitest::Test
 
   def test_defaults_match_attachable_expectations
     assert_equal ["image/*", "application/pdf"], @configuration.allowed_content_types
+    assert_equal 20, @configuration.max_file_count
     assert_equal :direct, @configuration.default_listing_scope
     assert_equal :all, @configuration.default_kind_filter
     assert_equal :children_only, @configuration.placement

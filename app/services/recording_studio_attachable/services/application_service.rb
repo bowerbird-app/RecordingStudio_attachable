@@ -22,6 +22,10 @@ module RecordingStudioAttachable
         RecordingStudio.capability_options(:attachable, for_type: owner_type) || {}
       end
 
+      def configured_capability_option(capability_options, option_name)
+        capability_options.fetch(option_name) { RecordingStudioAttachable.configuration.public_send(option_name) }
+      end
+
       def authorize!(action:, actor:, recording:, capability_options: capability_options_for(recording))
         RecordingStudioAttachable::Authorization.authorize!(
           action: action,
@@ -90,7 +94,7 @@ module RecordingStudioAttachable
                 "Allowed types: #{allowed_content_types.join(', ')}"
         end
 
-        max_file_size = capability_options[:max_file_size] || config.max_file_size
+        max_file_size = configured_capability_option(capability_options, :max_file_size)
         raise ArgumentError, "Blob exceeds maximum file size" if max_file_size.present? && blob.byte_size > max_file_size
       end
 

@@ -11,6 +11,19 @@
     <%= render FlatPack::Badge::Component.new(text: number_to_human_size(@attachment.byte_size), style: :success, size: :sm) %>
   </div>
 
+  <% if @attachment.previewable? && @attachment.file.attached? %>
+    <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
+      <% card.header do %>
+        <%= render FlatPack::PageTitle::Component.new(title: "Preview", subtitle: "Current attachment file", variant: :h3, class: "mb-0 pb-0") %>
+      <% end %>
+      <% card.body do %>
+        <div class="overflow-hidden rounded-lg border border-[var(--surface-border-color)] bg-[var(--surface-muted-background-color)]">
+          <%= image_tag @attachment.file, alt: @attachment.name, class: "max-h-[480px] w-full object-contain" %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+
   <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
     <% card.header do %>
       <%= render FlatPack::PageTitle::Component.new(title: "Attachment details", subtitle: "Current immutable recordable revision", variant: :h3, class: "mb-0 pb-0") %>
@@ -22,17 +35,18 @@
           <dd><%= @attachment.description.presence || "No description yet" %></dd>
         </div>
         <div>
-          <dt class="text-[var(--surface-muted-content-color)]">Recording id</dt>
-          <dd class="font-mono text-xs"><%= @attachment_recording.id %></dd>
-        </div>
-        <div>
-          <dt class="text-[var(--surface-muted-content-color)]">Parent recording id</dt>
-          <dd class="font-mono text-xs"><%= @attachment_recording.parent_recording_id %></dd>
+          <dt class="text-[var(--surface-muted-content-color)]">Parent recording</dt>
+          <dd><%= @owner_recording.present? ? "Available in the attachment listing for this recordable" : "Standalone attachment" %></dd>
         </div>
       </dl>
     <% end %>
     <% card.footer do %>
       <div class="flex flex-wrap gap-3">
+        <% if @owner_recording.present? %>
+          <%= link_to recording_attachments_path(@owner_recording), class: "inline-flex" do %>
+            <%= render FlatPack::Button::Component.new(text: "Back to attachments", style: :secondary, size: :md) %>
+          <% end %>
+        <% end %>
         <%= link_to download_attachment_path(@attachment_recording), class: "inline-flex" do %>
           <%= render FlatPack::Button::Component.new(text: "Download", style: :primary, size: :md) %>
         <% end %>
@@ -50,7 +64,7 @@
 
   <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
     <% card.header do %>
-      <%= render FlatPack::PageTitle::Component.new(title: "Revise metadata", subtitle: "Metadata revisions create a new attachment recordable and repoint the child recording.", variant: :h3, class: "mb-0 pb-0") %>
+      <%= render FlatPack::PageTitle::Component.new(title: "Revise attachment", subtitle: "Metadata revisions create a new attachment recordable and repoint the child recording.", variant: :h3, class: "mb-0 pb-0") %>
     <% end %>
     <% card.body do %>
       <%= form_with model: @attachment, url: attachment_path(@attachment_recording), method: :patch, class: "space-y-4" do |form| %>
@@ -60,7 +74,11 @@
             <label class="mb-2 block text-sm font-medium">Description</label>
             <%= form.text_area :description, name: "attachment[description]", value: @attachment.description, class: "min-h-24 w-full rounded-lg border border-[var(--surface-border-color)] bg-transparent px-3 py-2" %>
           </div>
-          <%= render FlatPack::TextInput::Component.new(name: "attachment[signed_blob_id]", label: "Replacement signed blob id (optional)", value: nil, placeholder: "Use the direct-upload flow to replace the file") %>
+          <div class="space-y-2">
+            <label class="block text-sm font-medium" for="attachment_signed_blob_id">Replace file (optional)</label>
+            <%= file_field_tag "attachment[signed_blob_id]", direct_upload: true, accept: @replace_allowed_content_types.join(","), class: "block w-full rounded-lg border border-[var(--surface-border-color)] bg-transparent px-3 py-2" %>
+            <p class="text-xs text-[var(--surface-muted-content-color)]">Allowed types: <%= @replace_allowed_content_types.join(', ') %> · Max size: <%= number_to_human_size(@replace_max_file_size) %></p>
+          </div>
         </div>
         <%= render FlatPack::Button::Component.new(text: "Save revision", style: :primary, size: :md, type: "submit") %>
       <% end %>

@@ -11,6 +11,7 @@ module RecordingStudioAttachable
 
     attr_accessor :allowed_content_types,
                   :max_file_size,
+                  :max_file_count,
                   :enabled_attachment_kinds,
                   :default_listing_scope,
                   :default_kind_filter,
@@ -24,6 +25,7 @@ module RecordingStudioAttachable
     def initialize
       @allowed_content_types = ["image/*", "application/pdf"]
       @max_file_size = 25.megabytes
+      @max_file_count = 20
       @enabled_attachment_kinds = %i[image file]
       @default_listing_scope = :direct
       @default_kind_filter = :all
@@ -95,6 +97,7 @@ module RecordingStudioAttachable
       {
         allowed_content_types: allowed_content_types,
         max_file_size: max_file_size,
+        max_file_count: max_file_count,
         enabled_attachment_kinds: enabled_attachment_kinds,
         default_listing_scope: default_listing_scope,
         default_kind_filter: default_kind_filter,

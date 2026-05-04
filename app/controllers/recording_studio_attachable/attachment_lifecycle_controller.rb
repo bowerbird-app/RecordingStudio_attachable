@@ -4,8 +4,8 @@ module RecordingStudioAttachable
   class AttachmentLifecycleController < ApplicationController
     def destroy
       attachment_recording = find_attachment_recording
-      authorize_attachment_action!(:remove, attachment_recording.parent_recording || attachment_recording,
-                                   capability_options: capability_options_for(attachment_recording))
+      authorize_attachment_owner_action!(:remove, attachment_recording)
+
       result = RecordingStudioAttachable::Services::RemoveAttachment.call(
         attachment_recording: attachment_recording,
         actor: current_attachable_actor
@@ -16,8 +16,8 @@ module RecordingStudioAttachable
 
     def restore
       attachment_recording = find_attachment_recording
-      authorize_attachment_action!(:restore, attachment_recording.parent_recording || attachment_recording,
-                                   capability_options: capability_options_for(attachment_recording))
+      authorize_attachment_owner_action!(:restore, attachment_recording)
+
       result = RecordingStudioAttachable::Services::RestoreAttachment.call(
         attachment_recording: attachment_recording,
         actor: current_attachable_actor

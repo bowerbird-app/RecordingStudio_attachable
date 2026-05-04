@@ -3,16 +3,33 @@
 module RecordingStudioAttachable
   module Queries
     class ForRecording
+      SCOPES = %i[direct subtree].freeze
       KIND_FILTERS = {
         all: nil,
         images: "image",
         files: "file"
       }.freeze
 
+      class << self
+        def normalize_scope(scope)
+          candidate = scope.presence&.to_sym
+          return candidate if SCOPES.include?(candidate)
+
+          RecordingStudioAttachable.configuration.default_listing_scope.to_sym
+        end
+
+        def normalize_kind(kind)
+          candidate = kind.presence&.to_sym
+          return candidate if KIND_FILTERS.key?(candidate)
+
+          RecordingStudioAttachable.configuration.default_kind_filter.to_sym
+        end
+      end
+
       def initialize(recording:, scope: nil, kind: nil, include_trashed: false)
         @recording = recording
-        @scope = (scope || RecordingStudioAttachable.configuration.default_listing_scope).to_sym
-        @kind = (kind || RecordingStudioAttachable.configuration.default_kind_filter).to_sym
+        @scope = self.class.normalize_scope(scope)
+        @kind = self.class.normalize_kind(kind)
         @include_trashed = include_trashed
       end
 

@@ -6,16 +6,20 @@ module RecordingStudioAttachable
 
     def new
       @recording = find_recording
-      authorize_attachment_action!(:upload, @recording, capability_options: capability_options_for(@recording))
-      @allowed_content_types = configured_allowed_content_types(@recording)
-      @max_file_size = configured_max_file_size(@recording)
-      @max_file_count = 20
+      capability_options = capability_options_for(@recording)
+
+      authorize_attachment_action!(:upload, @recording, capability_options: capability_options)
+      @allowed_content_types = configured_attachable_option(@recording, :allowed_content_types)
+      @max_file_size = configured_attachable_option(@recording, :max_file_size)
+      @max_file_count = configured_attachable_option(@recording, :max_file_count)
       @create_path = recording_attachments_path(@recording)
     end
 
     def create
       @recording = find_recording
-      authorize_attachment_action!(:upload, @recording, capability_options: capability_options_for(@recording))
+      capability_options = capability_options_for(@recording)
+
+      authorize_attachment_action!(:upload, @recording, capability_options: capability_options)
       result = RecordingStudioAttachable::Services::RecordAttachmentUploads.call(
         parent_recording: @recording,
         actor: current_attachable_actor,
@@ -66,18 +70,6 @@ module RecordingStudioAttachable
         attachment_kind: recording.recordable.attachment_kind,
         show_path: attachment_path(recording)
       }
-    end
-
-    def capability_options_for(recording)
-      RecordingStudio.capability_options(:attachable, for_type: recording.recordable_type) || {}
-    end
-
-    def configured_allowed_content_types(recording)
-      capability_options_for(recording)[:allowed_content_types] || RecordingStudioAttachable.configuration.allowed_content_types
-    end
-
-    def configured_max_file_size(recording)
-      capability_options_for(recording)[:max_file_size] || RecordingStudioAttachable.configuration.max_file_size
     end
   end
 end

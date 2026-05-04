@@ -19,6 +19,9 @@ module RecordingStudioAttachable
       attr_reader :parent_recording, :attachments, :actor, :impersonator
 
       def perform
+        capability_options = capability_options_for(parent_recording)
+        validate_attachment_count!(capability_options)
+
         batch_id = SecureRandom.uuid
         created = []
         failures = nil
@@ -49,6 +52,14 @@ module RecordingStudioAttachable
         end
 
         success(created)
+      end
+
+      def validate_attachment_count!(capability_options)
+        max_file_count = configured_capability_option(capability_options, :max_file_count)
+        return if max_file_count.blank? || Array(attachments).size <= max_file_count
+
+        noun = max_file_count == 1 ? "file" : "files"
+        raise ArgumentError, "You can upload up to #{max_file_count} #{noun} at a time"
       end
     end
   end

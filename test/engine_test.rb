@@ -27,6 +27,23 @@ class EngineTest < Minitest::Test
     assert_equal 5.megabytes, RecordingStudioAttachable.configuration.max_file_size
   end
 
+  def test_load_config_logs_when_yaml_loading_fails
+    logger = Minitest::Mock.new
+    logger.expect(:warn, true, [String])
+    app_config = Struct.new(:x).new(Struct.new(:recording_studio_attachable).new(nil))
+    app = Struct.new(:config) do
+      def config_for(_name)
+        raise RuntimeError, "bad yaml"
+      end
+    end.new(app_config)
+
+    Rails.stub(:logger, logger) do
+      find_initializer("recording_studio_attachable.load_config").block.call(app)
+    end
+
+    logger.verify
+  end
+
   private
 
   def find_initializer(name)

@@ -20,6 +20,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, "FlatPack::Card::Component"
     assert_includes view_source, "FlatPack::Button::Component"
     assert_includes view_source, "rails_direct_uploads_path"
+    assert_includes view_source, "max-files-count-value"
   end
 
   def test_listing_view_includes_scope_and_kind_filters
@@ -30,5 +31,15 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, "Subtree"
     assert_includes view_source, "Images"
     assert_includes view_source, "Files"
+    assert_includes view_source, "image_tag attachment.file"
+  end
+
+  def test_attachment_show_view_uses_direct_upload_file_field_and_hides_internal_ids
+    view_path = File.expand_path("../app/views/recording_studio_attachable/attachments/show.html.erb", __dir__)
+    view_source = File.read(view_path)
+
+    assert_includes view_source, 'file_field_tag "attachment[signed_blob_id]"'
+    refute_includes view_source, "Recording id"
+    refute_includes view_source, "Parent recording id"
   end
 end

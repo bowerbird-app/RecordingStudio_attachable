@@ -4,9 +4,11 @@ module RecordingStudioAttachable
   class RecordingAttachmentsController < ApplicationController
     def index
       @recording = find_recording
-      authorize_attachment_action!(:view, @recording, capability_options: capability_options_for(@recording))
-      @scope = params[:scope].presence&.to_sym || RecordingStudioAttachable.configuration.default_listing_scope
-      @kind = params[:kind].presence&.to_sym || RecordingStudioAttachable.configuration.default_kind_filter
+      capability_options = capability_options_for(@recording)
+
+      authorize_attachment_action!(:view, @recording, capability_options: capability_options)
+      @scope = RecordingStudioAttachable::Queries::ForRecording.normalize_scope(params[:scope])
+      @kind = RecordingStudioAttachable::Queries::ForRecording.normalize_kind(params[:kind])
       @include_trashed = ActiveModel::Type::Boolean.new.cast(params[:include_trashed])
       @attachments = RecordingStudioAttachable::Queries::ForRecording.new(
         recording: @recording,
@@ -18,7 +20,7 @@ module RecordingStudioAttachable
         action: :upload,
         actor: current_attachable_actor,
         recording: @recording,
-        capability_options: capability_options_for(@recording)
+        capability_options: capability_options
       )
     end
   end

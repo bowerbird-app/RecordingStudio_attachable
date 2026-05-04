@@ -21,4 +21,12 @@ class ForRecordingTest < Minitest::Test
     result = query.send(:recordable_filters)
     assert_equal({ attachment_kind: "image" }, result)
   end
+
+  def test_normalize_scope_falls_back_to_default_for_unknown_values
+    assert_equal :direct, RecordingStudioAttachable::Queries::ForRecording.normalize_scope(:bogus)
+  end
+
+  def test_normalize_kind_falls_back_to_default_for_unknown_values
+    assert_equal :all, RecordingStudioAttachable::Queries::ForRecording.normalize_kind(:bogus)
+  end
 end

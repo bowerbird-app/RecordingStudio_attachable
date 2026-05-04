@@ -38,6 +38,14 @@ module RecordingStudioAttachable
       )
     end
 
+    def authorize_attachment_owner_action!(action, attachment_recording)
+      authorize_attachment_action!(
+        action,
+        attachable_owner_recording(attachment_recording),
+        capability_options: capability_options_for(attachment_recording)
+      )
+    end
+
     def handle_not_authorized(exception)
       respond_to do |format|
         format.html do
@@ -62,9 +70,15 @@ module RecordingStudioAttachable
 
     def capability_options_for(recording)
       owner_type = RecordingStudioAttachable::Authorization.owner_type_for(recording)
-      return {} if owner_type.blank?
+      return {} if owner_type.blank? || !defined?(RecordingStudio)
 
       RecordingStudio.capability_options(:attachable, for_type: owner_type) || {}
+    end
+
+    def configured_attachable_option(recording, option_name)
+      capability_options_for(recording).fetch(option_name) do
+        RecordingStudioAttachable.configuration.public_send(option_name)
+      end
     end
   end
 end

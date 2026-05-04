@@ -1,4 +1,10 @@
-<div class="mx-auto flex w-full max-w-6xl flex-col gap-6" data-controller="recording-studio-attachable--upload" data-recording-studio-attachable--upload-direct-upload-url-value="<%= main_app.rails_direct_uploads_path %>" data-recording-studio-attachable--upload-finalize-url-value="<%= @create_path %>" data-recording-studio-attachable--upload-max-file-size-value="<%= @max_file_size %>" data-recording-studio-attachable--upload-allowed-content-types-value="<%= @allowed_content_types.join(',') %>">
+<div class="mx-auto flex w-full max-w-6xl flex-col gap-6"
+     data-controller="recording-studio-attachable--upload"
+     data-recording-studio-attachable--upload-direct-upload-url-value="<%= main_app.rails_direct_uploads_path %>"
+     data-recording-studio-attachable--upload-finalize-url-value="<%= @create_path %>"
+     data-recording-studio-attachable--upload-max-file-size-value="<%= @max_file_size %>"
+     data-recording-studio-attachable--upload-max-files-count-value="<%= @max_file_count %>"
+     data-recording-studio-attachable--upload-allowed-content-types-value="<%= @allowed_content_types.join(',') %>">
   <%= render FlatPack::PageTitle::Component.new(
     title: "Upload attachments",
     subtitle: "Drag and drop files to create child attachment recordings.",
@@ -7,7 +13,7 @@
 
   <%= render FlatPack::Alert::Component.new(
     title: "Upload rules",
-    body: "Allowed types: #{@allowed_content_types.join(', ')} · Max size: #{number_to_human_size(@max_file_size)}",
+    body: "Allowed types: #{@allowed_content_types.join(', ')} · Max size: #{number_to_human_size(@max_file_size)} · Up to #{@max_file_count} files per batch",
     style: :info
   ) %>
 

@@ -3,6 +3,13 @@
 module RecordingStudioAttachable
   module Services
     class BaseService
+      HANDLED_EXCEPTIONS = [
+        ArgumentError,
+        ActiveRecord::ActiveRecordError,
+        ActiveSupport::MessageVerifier::InvalidSignature,
+        RecordingStudioAttachable::Error
+      ].freeze
+
       class Result
         attr_reader :value, :error, :errors
 
@@ -42,7 +49,7 @@ module RecordingStudioAttachable
         result = perform
         yield(result) if block_given?
         result
-      rescue StandardError => e
+      rescue *HANDLED_EXCEPTIONS => e
         failure(e)
       end
 

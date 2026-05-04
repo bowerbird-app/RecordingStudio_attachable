@@ -20,7 +20,7 @@
         <ol class="space-y-4 text-sm leading-6 text-[var(--surface-content-color)]">
           <li>Ensure Active Storage, RecordingStudio Accessible, and RecordingStudio Trashable are installed.</li>
           <li>Run <code>rails generate recording_studio_attachable:install</code> and <code>rails generate recording_studio_attachable:migrations</code>.</li>
-          <li>Register <code>RecordingStudioAttachable::Attachment</code> and opt parent recordables into the attachable capability.</li>
+          <li>Run your host-app migrations so the engine, Active Storage, and Recording Studio tables are present before checking the UI.</li>
           <li>Validate the dedicated upload page and attachment listing UI before shipping.</li>
         </ol>
       <% end %>
@@ -65,7 +65,38 @@
           <div class="space-y-3 text-sm">
             <p><strong>Recording Studio mount:</strong> <code>/recording_studio</code></p>
             <p><strong>Attachable mount:</strong> <code>/recording_studio_attachable</code></p>
+            <% if @attachment_listing_path.present? %>
+              <div class="flex flex-wrap gap-3 pt-2">
+                <%= link_to @attachment_listing_path, class: "inline-flex" do %>
+                  <%= render FlatPack::Button::Component.new(text: "Open attachment listing", style: :primary, size: :sm) %>
+                <% end %>
+                <%= link_to @attachment_upload_path, class: "inline-flex" do %>
+                  <%= render FlatPack::Button::Component.new(text: "Open upload flow", style: :secondary, size: :sm) %>
+                <% end %>
+              </div>
+            <% else %>
+              <p class="text-[var(--surface-muted-content-color)]">Seed the workspace to activate the direct engine links.</p>
+            <% end %>
           </div>
+        <% end %>
+      <% end %>
+
+      <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
+        <% card.header do %>
+          <%= render FlatPack::PageTitle::Component.new(
+            title: "CI-aligned validation",
+            subtitle: "How the dummy app is prepared before the root suite runs.",
+            variant: :h3,
+            class: "mb-0 pb-0"
+          ) %>
+        <% end %>
+
+        <% card.body do %>
+          <ol class="space-y-3 text-sm leading-6 text-[var(--surface-content-color)]">
+            <li>Run <code>bundle install</code> inside <code>test/dummy</code>.</li>
+            <li>Run <code>bundle exec rake db:migrate RAILS_ENV=test</code> inside <code>test/dummy</code>.</li>
+            <li>Return to the repo root and run <code>bundle exec rubocop</code> and <code>bundle exec rake test</code>.</li>
+          </ol>
         <% end %>
       <% end %>
     </div>

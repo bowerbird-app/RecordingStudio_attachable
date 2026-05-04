@@ -57,8 +57,14 @@
             <% end %>
             <% card.body do %>
               <div class="space-y-3 text-sm">
-                <div class="rounded-lg border border-dashed border-[var(--surface-border-color)] p-4 text-center text-[var(--surface-muted-content-color)]">
-                  Preview available for image attachments.
+                <div class="overflow-hidden rounded-lg border border-[var(--surface-border-color)] bg-[var(--surface-muted-background-color)]">
+                  <% if attachment.file.attached? %>
+                    <%= image_tag attachment.file, alt: attachment.name, class: "h-48 w-full object-cover" %>
+                  <% else %>
+                    <div class="flex h-48 items-center justify-center text-[var(--surface-muted-content-color)]">
+                      Preview unavailable
+                    </div>
+                  <% end %>
                 </div>
                 <div class="flex flex-wrap gap-2">
                   <%= render FlatPack::Badge::Component.new(text: attachment.attachment_kind, style: :info, size: :sm) %>

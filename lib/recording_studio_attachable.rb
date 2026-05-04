@@ -1,12 +1,5 @@
 # frozen_string_literal: true
 
-require "recording_studio_attachable/version"
-require "recording_studio_attachable/configuration"
-require "recording_studio_attachable/authorization"
-require "recording_studio_attachable/services/base_service"
-require "recording_studio_attachable/engine"
-require "recording_studio/capabilities/attachable"
-
 module RecordingStudioAttachable
   class Error < StandardError; end
   class DependencyUnavailableError < Error; end
@@ -21,3 +14,12 @@ module RecordingStudioAttachable
     end
   end
 end
+
+require "active_support/core_ext/numeric/bytes"
+
+require "recording_studio_attachable/version"
+require "recording_studio_attachable/configuration"
+require "recording_studio_attachable/authorization"
+require "recording_studio_attachable/services/base_service"
+require "recording_studio_attachable/engine"
+require "recording_studio/capabilities/attachable"

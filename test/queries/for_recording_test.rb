@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require_relative "../../app/queries/recording_studio_attachable/queries/for_recording"
 
 class ForRecordingTest < Minitest::Test
   RecordingDouble = Struct.new(:id) do

@@ -13,7 +13,7 @@ module RecordingStudioAttachable
       desc "Copy RecordingStudioAttachable migrations to your application"
 
       def copy_migrations
-        Dir.glob(File.join(self.class.source_root, "db/migrate/*.rb")).sort.each do |source_path|
+        Dir[File.join(self.class.source_root, "db/migrate/*.rb")].each do |source_path|
           migration_name = File.basename(source_path).sub(/^\d+_/, "")
           destination_filename = "#{next_migration_number}_#{migration_name}"
           copy_file source_path, File.join("db/migrate", destination_filename)

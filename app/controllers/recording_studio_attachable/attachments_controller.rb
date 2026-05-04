@@ -52,8 +52,12 @@ module RecordingStudioAttachable
     end
 
     def capability_options_for(recording)
-      owner_type = recording.recordable_type == RecordingStudioAttachable::Attachment.name ?
-        recording.parent_recording&.recordable_type : recording.recordable_type
+      owner_type =
+        if recording.recordable_type == RecordingStudioAttachable::Attachment.name
+          recording.parent_recording&.recordable_type
+        else
+          recording.recordable_type
+        end
       RecordingStudio.capability_options(:attachable, for_type: owner_type) || {}
     end
   end

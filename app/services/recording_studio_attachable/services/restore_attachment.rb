@@ -16,7 +16,9 @@ module RecordingStudioAttachable
 
       def perform
         require_recording_studio!
-        raise ArgumentError, "Restore requires RecordingStudio Trashable" unless attachment_recording.respond_to?(:recording_studio_trashable_restore!)
+        unless attachment_recording.respond_to?(:recording_studio_trashable_restore!)
+          raise ArgumentError, "Restore requires RecordingStudio Trashable"
+        end
 
         resolved_actor = resolve_actor(actor)
         authorize!(action: :restore, actor: resolved_actor, recording: attachment_recording.parent_recording || attachment_recording)

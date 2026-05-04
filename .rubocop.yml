@@ -25,6 +25,10 @@ Metrics/MethodLength:
     - 'test/**/*'
     - 'lib/generators/**/*'
     - 'app/javascript/**/*'
+    - 'app/controllers/**/*'
+    - 'app/services/**/*'
+    - 'app/models/**/*'
+    - 'lib/recording_studio_attachable/configuration.rb'
 
 Metrics/AbcSize:
   Exclude:
@@ -49,3 +53,14 @@ Lint/MissingSuper:
   Exclude:
     - 'app/services/**/*'
     - 'test/services/**/*'
+
+Metrics/ParameterLists:
+  Exclude:
+    - 'app/services/**/*'
+
+Naming/PredicatePrefix:
+  Exclude:
+    - 'lib/recording_studio/capabilities/attachable.rb'
+
+Style/ArgumentsForwarding:
+  Enabled: false

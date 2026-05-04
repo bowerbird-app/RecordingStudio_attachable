@@ -35,11 +35,11 @@ module RecordingStudioAttachable
             )
           )
           attachment_recording.recording_studio_trashable_trash!(actor: resolved_actor, impersonator: impersonator)
-          success(attachment_recording)
         else
           attachment_recording.destroy!
-          success(attachment_recording)
         end
+
+        success(attachment_recording)
       end
     end
   end

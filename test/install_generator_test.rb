@@ -39,8 +39,8 @@ class InstallGeneratorTest < Minitest::Test
       Rails.stub(:root, Pathname.new(dir)) { generator.add_tailwind_source }
 
       css = File.read(css_path)
-      assert_includes css, 'recording_studio_attachable/app/views/**/*.erb'
-      assert_includes css, 'flat_pack/app/components/**/*.{rb,erb}'
+      assert_includes css, "recording_studio_attachable/app/views/**/*.erb"
+      assert_includes css, "flat_pack/app/components/**/*.{rb,erb}"
     end
   end
 
@@ -50,8 +50,8 @@ class InstallGeneratorTest < Minitest::Test
       Rails.stub(:root, Pathname.new(dir)) { generator.add_importmap_entries }
 
       importmap = File.read(File.join(dir, "config/importmap.rb"))
-      assert_includes importmap, 'controllers/recording_studio_attachable'
-      assert_includes importmap, 'RecordingStudioAttachable::Engine.root'
+      assert_includes importmap, "controllers/recording_studio_attachable"
+      assert_includes importmap, "RecordingStudioAttachable::Engine.root"
     end
   end
 end

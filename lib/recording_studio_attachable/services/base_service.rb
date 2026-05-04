@@ -42,8 +42,8 @@ module RecordingStudioAttachable
         result = perform
         yield(result) if block_given?
         result
-      rescue StandardError => error
-        failure(error)
+      rescue StandardError => e
+        failure(e)
       end
 
       private

@@ -7,7 +7,7 @@ RecordingStudioAttachable.configure do |config|
   config.enabled_attachment_kinds = %i[image file]
   config.default_listing_scope = :direct
   config.default_kind_filter = :all
-  # Use the gem's blank layout by default, or set a host-app layout like "application".
+  # Use the gem's blank layout by default, or set a host app layout like "application".
   config.layout = :blank
   config.auth_roles = {
     view: :view,

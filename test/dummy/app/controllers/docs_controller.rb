@@ -29,7 +29,7 @@ class DocsController < ApplicationController
         config.default_listing_scope = :direct
         config.default_kind_filter = :all
 
-        # Use the gem's blank layout, or point at a host-app layout like "application".
+        # Use the gem's blank layout, or point at a host app layout like "application".
         config.layout = :blank
 
         # Map attachable actions to the roles your authorization adapter understands.

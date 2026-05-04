@@ -47,7 +47,7 @@
   <% end %>
 
   <% if @attachments.any? %>
-    <% if @kind.to_sym == :images %>
+    <% if @kind.to_sym != :files %>
       <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         <% @attachments.each do |attachment_recording| %>
           <% attachment = attachment_recording.recordable %>
@@ -58,24 +58,30 @@
             <% card.body do %>
               <div class="space-y-3 text-sm">
                 <div class="overflow-hidden rounded-lg border border-[var(--surface-border-color)] bg-[var(--surface-muted-background-color)]">
-                  <% if attachment.file.attached? %>
+                  <% if attachment.previewable? && attachment.file.attached? %>
                     <%= image_tag attachment.file, alt: attachment.name, class: "h-48 w-full object-cover" %>
                   <% else %>
                     <div class="flex h-48 items-center justify-center text-[var(--surface-muted-content-color)]">
-                      Preview unavailable
+                      <span><%= attachment.image? ? "Preview unavailable" : attachment.original_filename %></span>
                     </div>
                   <% end %>
                 </div>
                 <div class="flex flex-wrap gap-2">
                   <%= render FlatPack::Badge::Component.new(text: attachment.attachment_kind, style: :info, size: :sm) %>
                   <%= render FlatPack::Badge::Component.new(text: number_to_human_size(attachment.byte_size), style: :warning, size: :sm) %>
+                  <%= render FlatPack::Badge::Component.new(text: attachment.content_type, style: :secondary, size: :sm) %>
                 </div>
               </div>
             <% end %>
             <% card.footer do %>
-              <%= link_to attachment_path(attachment_recording), class: "inline-flex" do %>
-                <%= render FlatPack::Button::Component.new(text: "View", style: :secondary, size: :sm) %>
-              <% end %>
+              <div class="flex gap-2">
+                <%= link_to attachment_path(attachment_recording), class: "inline-flex" do %>
+                  <%= render FlatPack::Button::Component.new(text: "View", style: :secondary, size: :sm) %>
+                <% end %>
+                <%= link_to download_attachment_path(attachment_recording), class: "inline-flex" do %>
+                  <%= render FlatPack::Button::Component.new(text: "Download", style: :ghost, size: :sm) %>
+                <% end %>
+              </div>
             <% end %>
           <% end %>
         <% end %>

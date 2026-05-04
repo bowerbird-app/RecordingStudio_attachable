@@ -74,6 +74,6 @@ class InstallGeneratorTest < Minitest::Test
     )
 
     assert_includes initializer_template, "config.layout = :blank"
-    assert_includes initializer_template, 'host-app layout like "application"'
+    assert_includes initializer_template, 'host app layout like "application"'
   end
 end

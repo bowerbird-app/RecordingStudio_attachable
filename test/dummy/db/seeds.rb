@@ -10,11 +10,18 @@ end
 
 # Create the workspace recordable
 workspace = Workspace.find_or_create_by!(name: "Studio Workspace")
+page = Page.find_or_create_by!(title: "Home page")
 
 # Create the root recording
 root_recording = RecordingStudio::Recording.unscoped.find_or_create_by!(
   recordable: workspace,
   parent_recording_id: nil
+)
+
+RecordingStudio::Recording.unscoped.find_or_create_by!(
+  root_recording_id: root_recording.id,
+  parent_recording_id: root_recording.id,
+  recordable: page
 )
 
 # Grant root-level admin access to the admin user
@@ -28,3 +35,4 @@ RecordingStudio::Recording.unscoped.find_or_create_by!(
 
 puts "Seeded: admin@admin.com / Password"
 puts "Seeded: Workspace '#{workspace.name}' with root recording ##{root_recording.id}"
+puts "Seeded: Page '#{page.title}' beneath the workspace root recording"

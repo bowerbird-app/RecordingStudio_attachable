@@ -1,104 +1,40 @@
-<div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+<div class="mx-auto flex w-full max-w-4xl flex-col gap-8">
   <%= render FlatPack::PageTitle::Component.new(
-    title: @workspace&.name || "Recording Studio Attachable",
-    subtitle: "Use this dummy app to validate attachable capability wiring, upload routes, and FlatPack-based engine UI.",
+    title: "Attachment demo",
+    subtitle: "Upload images and files",
     variant: :h1
   ) %>
 
-  <div class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
-    <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
-      <% card.header do %>
-        <%= render FlatPack::PageTitle::Component.new(
-          title: "Attachable workflow",
-          subtitle: "The key setup steps for the addon.",
-          variant: :h3,
-          class: "mb-0 pb-0"
-        ) %>
+  <% if @root_attachment_upload_path.present? && @root_attachment_listing_path.present? %>
+    <div class="flex flex-wrap gap-3">
+      <%= link_to @root_attachment_upload_path, class: "inline-flex" do %>
+        <%= render FlatPack::Button::Component.new(text: "Add", style: :primary, size: :md) %>
       <% end %>
-
-      <% card.body do %>
-        <ol class="space-y-4 text-sm leading-6 text-[var(--surface-content-color)]">
-          <li>Ensure Active Storage, RecordingStudio Accessible, and RecordingStudio Trashable are installed.</li>
-          <li>Run <code>rails generate recording_studio_attachable:install</code> and <code>rails generate recording_studio_attachable:migrations</code>.</li>
-          <li>Run your host-app migrations so the engine, Active Storage, and Recording Studio tables are present before checking the UI.</li>
-          <li>Validate the dedicated upload page and attachment listing UI before shipping.</li>
-        </ol>
-      <% end %>
-    <% end %>
-
-    <div class="flex flex-col gap-6">
-      <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
-        <% card.header do %>
-          <%= render FlatPack::PageTitle::Component.new(
-            title: "Workspace state",
-            subtitle: "The seeded root recording for local development.",
-            variant: :h3,
-            class: "mb-0 pb-0"
-          ) %>
-        <% end %>
-
-        <% card.body do %>
-          <dl class="space-y-3 text-sm">
-            <div>
-              <dt class="text-[var(--surface-muted-content-color)]">Workspace</dt>
-              <dd class="font-medium"><%= @workspace&.name || "Not seeded" %></dd>
-            </div>
-            <div>
-              <dt class="text-[var(--surface-muted-content-color)]">Root recording</dt>
-              <dd class="font-mono text-xs"><%= @root_recording&.id || "Missing" %></dd>
-            </div>
-          </dl>
-        <% end %>
-      <% end %>
-
-      <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
-        <% card.header do %>
-          <%= render FlatPack::PageTitle::Component.new(
-            title: "Useful routes",
-            subtitle: "Quick links for checking the mounted engine.",
-            variant: :h3,
-            class: "mb-0 pb-0"
-          ) %>
-        <% end %>
-
-        <% card.body do %>
-          <div class="space-y-3 text-sm">
-            <p><strong>Recording Studio mount:</strong> <code>/recording_studio</code></p>
-            <p><strong>Attachable mount:</strong> <code>/recording_studio_attachable</code></p>
-            <% if @attachment_listing_path.present? %>
-              <div class="flex flex-wrap gap-3 pt-2">
-                <%= link_to @attachment_listing_path, class: "inline-flex" do %>
-                  <%= render FlatPack::Button::Component.new(text: "Open attachment listing", style: :primary, size: :sm) %>
-                <% end %>
-                <%= link_to @attachment_upload_path, class: "inline-flex" do %>
-                  <%= render FlatPack::Button::Component.new(text: "Open upload flow", style: :secondary, size: :sm) %>
-                <% end %>
-              </div>
-            <% else %>
-              <p class="text-[var(--surface-muted-content-color)]">Seed the workspace to activate the direct engine links.</p>
-            <% end %>
-          </div>
-        <% end %>
-      <% end %>
-
-      <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
-        <% card.header do %>
-          <%= render FlatPack::PageTitle::Component.new(
-            title: "CI-aligned validation",
-            subtitle: "How the dummy app is prepared before the root suite runs.",
-            variant: :h3,
-            class: "mb-0 pb-0"
-          ) %>
-        <% end %>
-
-        <% card.body do %>
-          <ol class="space-y-3 text-sm leading-6 text-[var(--surface-content-color)]">
-            <li>Run <code>bundle install</code> inside <code>test/dummy</code>.</li>
-            <li>Run <code>bundle exec rake db:migrate RAILS_ENV=test</code> inside <code>test/dummy</code>.</li>
-            <li>Return to the repo root and run <code>bundle exec rubocop</code> and <code>bundle exec rake test</code>.</li>
-          </ol>
-        <% end %>
+      <%= link_to @root_attachment_listing_path, class: "inline-flex" do %>
+        <%= render FlatPack::Button::Component.new(text: "Library", style: :secondary, size: :md) %>
       <% end %>
     </div>
-  </div>
+  <% else %>
+    <p class="text-sm text-[var(--surface-muted-content-color)]">Seed the workspace recording to enable the demo links.</p>
+  <% end %>
+
+  <section class="space-y-4">
+    <%= render FlatPack::SectionTitle::Component.new(
+      title: "Page attachments",
+      subtitle: @page&.title || "Seeded page demo"
+    ) %>
+
+    <% if @page_attachment_upload_path.present? && @page_attachment_listing_path.present? %>
+      <div class="flex flex-wrap gap-3">
+        <%= link_to @page_attachment_upload_path, class: "inline-flex" do %>
+          <%= render FlatPack::Button::Component.new(text: "Add", style: :primary, size: :md) %>
+        <% end %>
+        <%= link_to @page_attachment_listing_path, class: "inline-flex" do %>
+          <%= render FlatPack::Button::Component.new(text: "Attachments", style: :secondary, size: :md) %>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="text-sm text-[var(--surface-muted-content-color)]">Seed the page recording to enable the page attachment demo.</p>
+    <% end %>
+  </section>
 </div>

@@ -37,10 +37,13 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes schema, 't.string "title"'
   end
 
-  def test_attachment_listing_uses_card_grid_for_non_file_filters
+  def test_attachment_listing_uses_card_grid_with_search_and_bulk_remove_controls
     listing_view = File.read(File.expand_path("../app/views/recording_studio_attachable/recording_attachments/index.html.erb", __dir__))
 
     assert_includes listing_view, "@kind.to_sym != :files"
+    assert_includes listing_view, "Search by attachment name"
+    assert_includes listing_view, "Bulk remove selected"
+    assert_includes listing_view, "attachment_ids[]"
     assert_includes listing_view, "attachment.previewable? && attachment.file.attached?"
     assert_includes listing_view, 'text: "Download"'
   end

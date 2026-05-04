@@ -20,22 +20,27 @@ module RecordingStudio
       module RecordingMethods
         include RecordingStudio::Capability if defined?(RecordingStudio::Capability)
 
-        def attachments(scope: nil, kind: nil, include_trashed: false)
+        def attachments(scope: nil, kind: nil, include_trashed: false, search: nil, page: nil, per_page: nil)
           assert_attachable_capability!
           RecordingStudioAttachable::Queries::ForRecording.new(
             recording: self,
             scope: scope,
             kind: kind,
-            include_trashed: include_trashed
+            include_trashed: include_trashed,
+            search: search,
+            page: page,
+            per_page: per_page
           ).call
         end
 
-        def images(scope: nil, include_trashed: false)
-          attachments(scope: scope, kind: :images, include_trashed: include_trashed)
+        def images(scope: nil, include_trashed: false, search: nil, page: nil, per_page: nil)
+          attachments(scope: scope, kind: :images, include_trashed: include_trashed, search: search, page: page,
+                      per_page: per_page)
         end
 
-        def files(scope: nil, include_trashed: false)
-          attachments(scope: scope, kind: :files, include_trashed: include_trashed)
+        def files(scope: nil, include_trashed: false, search: nil, page: nil, per_page: nil)
+          attachments(scope: scope, kind: :files, include_trashed: include_trashed, search: search, page: page,
+                      per_page: per_page)
         end
 
         def has_attachments?(scope: nil, kind: nil, include_trashed: false)
@@ -65,6 +70,11 @@ module RecordingStudio
         def remove_attachment(**options)
           assert_attachment_recording!
           RecordingStudioAttachable::Services::RemoveAttachment.call(attachment_recording: self, **options).value
+        end
+
+        def remove_attachments(**options)
+          assert_attachable_capability!
+          RecordingStudioAttachable::Services::RemoveAttachments.call(parent_recording: self, **options).value
         end
 
         def restore_attachment(**options)

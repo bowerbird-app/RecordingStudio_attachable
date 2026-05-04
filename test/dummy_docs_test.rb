@@ -32,5 +32,6 @@ class DummyDocsTest < Minitest::Test
     assert_includes config_source, "FlatPack::CodeBlock::Component"
     assert_includes controller_source, "config.layout = :blank"
     assert_includes controller_source, 'host app layout like "application"'
+    assert_includes controller_source, "scope, kind, search, pagination, and bulk remove controls"
   end
 end

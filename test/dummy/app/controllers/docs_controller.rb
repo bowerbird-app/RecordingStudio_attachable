@@ -90,7 +90,7 @@ class DocsController < ApplicationController
     ]
 
     @gem_views = [
-      "recording_studio_attachable/recording_attachments/index.html.erb — attachment listing with scope and kind filters",
+      "recording_studio_attachable/recording_attachments/index.html.erb — attachment listing with scope, kind, search, pagination, and bulk remove controls",
       "recording_studio_attachable/attachment_uploads/new.html.erb — direct-upload queue and finalize screen",
       "recording_studio_attachable/attachments/show.html.erb — preview, metadata revision, and file replacement flow",
       "layouts/recording_studio_attachable/blank.html.erb — centered blank shell with no top nav or sidebar"

@@ -8,6 +8,10 @@
   <div class="flex flex-wrap items-center gap-3">
     <%= render FlatPack::Badge::Component.new(text: "Scope: #{@scope}", style: :info, size: :sm) %>
     <%= render FlatPack::Badge::Component.new(text: "Kind: #{@kind}", style: :warning, size: :sm) %>
+    <%= render FlatPack::Badge::Component.new(text: "#{@total_count} result#{'s' unless @total_count == 1}", style: :secondary, size: :sm) %>
+    <% if @total_pages > 1 %>
+      <%= render FlatPack::Badge::Component.new(text: "Page #{@page} of #{@total_pages}", style: :success, size: :sm) %>
+    <% end %>
     <% if @can_upload %>
       <%= link_to recording_attachment_upload_path(@recording), class: "inline-flex" do %>
         <%= render FlatPack::Button::Component.new(text: "Upload files", style: :primary, size: :md) %>
@@ -46,97 +50,186 @@
     <% end %>
   <% end %>
 
-  <% if @attachments.any? %>
-    <% if @kind.to_sym != :files %>
-      <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        <% @attachments.each do |attachment_recording| %>
-          <% attachment = attachment_recording.recordable %>
-          <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
-            <% card.header do %>
-              <%= render FlatPack::PageTitle::Component.new(title: attachment.name, subtitle: attachment.original_filename, variant: :h3, class: "mb-0 pb-0") %>
-            <% end %>
-            <% card.body do %>
-              <div class="space-y-3 text-sm">
-                <div class="overflow-hidden rounded-lg border border-[var(--surface-border-color)] bg-[var(--surface-muted-background-color)]">
-                  <% if attachment.previewable? && attachment.file.attached? %>
-                    <%= image_tag attachment.file, alt: attachment.name, class: "h-48 w-full object-cover" %>
-                  <% else %>
-                    <div class="flex h-48 items-center justify-center text-[var(--surface-muted-content-color)]">
-                      <span><%= attachment.image? ? "Preview unavailable" : attachment.original_filename %></span>
-                    </div>
-                  <% end %>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                  <%= render FlatPack::Badge::Component.new(text: attachment.attachment_kind, style: :info, size: :sm) %>
-                  <%= render FlatPack::Badge::Component.new(text: number_to_human_size(attachment.byte_size), style: :warning, size: :sm) %>
-                  <%= render FlatPack::Badge::Component.new(text: attachment.content_type, style: :secondary, size: :sm) %>
-                </div>
-              </div>
-            <% end %>
-            <% card.footer do %>
-              <div class="flex gap-2">
-                <%= link_to attachment_path(attachment_recording), class: "inline-flex" do %>
-                  <%= render FlatPack::Button::Component.new(text: "View", style: :secondary, size: :sm) %>
-                <% end %>
-                <%= link_to download_attachment_path(attachment_recording), class: "inline-flex" do %>
-                  <%= render FlatPack::Button::Component.new(text: "Download", style: :ghost, size: :sm) %>
-                <% end %>
-              </div>
-            <% end %>
+  <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
+    <% card.header do %>
+      <%= render FlatPack::PageTitle::Component.new(
+        title: "Search",
+        subtitle: "Find attachments by name before browsing or bulk-removing them.",
+        variant: :h3,
+        class: "mb-0 pb-0"
+      ) %>
+    <% end %>
+
+    <% card.body do %>
+      <%= form_with url: recording_attachments_path(@recording), method: :get, class: "space-y-4" do %>
+        <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
+          <%= render FlatPack::TextInput::Component.new(
+            name: :q,
+            label: "Search by attachment name",
+            value: @query
+          ) %>
+          <div class="inline-flex">
+            <%= render FlatPack::Button::Component.new(text: "Apply search", style: :primary, size: :md, type: "submit") %>
+          </div>
+          <%= link_to recording_attachments_path(@recording, scope: @scope, kind: @kind, include_trashed: @include_trashed.presence), class: "inline-flex" do %>
+            <%= render FlatPack::Button::Component.new(text: "Clear", style: :secondary, size: :md) %>
           <% end %>
-        <% end %>
-      </div>
-    <% else %>
-      <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
-        <% card.header do %>
-          <%= render FlatPack::PageTitle::Component.new(title: "Results", subtitle: "Current attachment revisions for this recording.", variant: :h3, class: "mb-0 pb-0") %>
-        <% end %>
+        </div>
+        <%= hidden_field_tag :scope, @scope %>
+        <%= hidden_field_tag :kind, @kind %>
+        <%= hidden_field_tag :include_trashed, @include_trashed if @include_trashed %>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <% if @attachments.any? %>
+    <%= form_with url: recording_bulk_remove_attachments_path(@recording), method: :post, class: "space-y-6" do %>
+      <%= hidden_field_tag :scope, @scope %>
+      <%= hidden_field_tag :kind, @kind %>
+      <%= hidden_field_tag :q, @query %>
+      <%= hidden_field_tag :page, @page %>
+      <%= hidden_field_tag :include_trashed, @include_trashed if @include_trashed %>
+
+      <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
         <% card.body do %>
-          <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-[var(--surface-border-color)] text-sm">
-              <thead>
-                <tr class="text-left text-[var(--surface-muted-content-color)]">
-                  <th class="px-3 py-2">Name</th>
-                  <th class="px-3 py-2">Kind</th>
-                  <th class="px-3 py-2">Type</th>
-                  <th class="px-3 py-2">Size</th>
-                  <th class="px-3 py-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-[var(--surface-border-color)]">
-                <% @attachments.each do |attachment_recording| %>
-                  <% attachment = attachment_recording.recordable %>
-                  <tr>
-                    <td class="px-3 py-3">
-                      <div class="font-medium"><%= attachment.name %></div>
-                      <div class="text-xs text-[var(--surface-muted-content-color)]"><%= attachment.original_filename %></div>
-                    </td>
-                    <td class="px-3 py-3"><%= attachment.attachment_kind %></td>
-                    <td class="px-3 py-3"><%= attachment.content_type %></td>
-                    <td class="px-3 py-3"><%= number_to_human_size(attachment.byte_size) %></td>
-                    <td class="px-3 py-3">
-                      <div class="flex gap-2">
-                        <%= link_to attachment_path(attachment_recording), class: "inline-flex" do %>
-                          <%= render FlatPack::Button::Component.new(text: "View", style: :secondary, size: :sm) %>
-                        <% end %>
-                        <%= link_to download_attachment_path(attachment_recording), class: "inline-flex" do %>
-                          <%= render FlatPack::Button::Component.new(text: "Download", style: :ghost, size: :sm) %>
-                        <% end %>
-                      </div>
-                    </td>
-                  </tr>
-                <% end %>
-              </tbody>
-            </table>
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <p class="text-sm text-[var(--surface-muted-content-color)]">
+              Select one or more attachments, then use bulk remove to trash them when Trashable is available.
+            </p>
+            <%= render FlatPack::Button::Component.new(
+              text: "Bulk remove selected",
+              style: :secondary,
+              size: :md,
+              type: "submit"
+            ) %>
           </div>
         <% end %>
+      <% end %>
+
+      <% if @kind.to_sym != :files %>
+        <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          <% @attachments.each do |attachment_recording| %>
+            <% attachment = attachment_recording.recordable %>
+            <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
+              <% card.header do %>
+                <div class="flex items-start justify-between gap-3">
+                  <%= render FlatPack::PageTitle::Component.new(title: attachment.name, subtitle: attachment.original_filename, variant: :h3, class: "mb-0 pb-0") %>
+                  <label class="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="attachment_ids[]" value="<%= attachment_recording.id %>" class="h-4 w-4 rounded border-[var(--surface-border-color)]">
+                    <span class="sr-only">Select <%= attachment.name %></span>
+                  </label>
+                </div>
+              <% end %>
+              <% card.body do %>
+                <div class="space-y-3 text-sm">
+                  <div class="overflow-hidden rounded-lg border border-[var(--surface-border-color)] bg-[var(--surface-muted-background-color)]">
+                    <% if attachment.previewable? && attachment.file.attached? %>
+                      <%= image_tag attachment.file, alt: attachment.name, class: "h-48 w-full object-cover" %>
+                    <% else %>
+                      <div class="flex h-48 items-center justify-center text-[var(--surface-muted-content-color)]">
+                        <span><%= attachment.image? ? "Preview unavailable" : attachment.original_filename %></span>
+                      </div>
+                    <% end %>
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    <%= render FlatPack::Badge::Component.new(text: attachment.attachment_kind, style: :info, size: :sm) %>
+                    <%= render FlatPack::Badge::Component.new(text: number_to_human_size(attachment.byte_size), style: :warning, size: :sm) %>
+                    <%= render FlatPack::Badge::Component.new(text: attachment.content_type, style: :secondary, size: :sm) %>
+                  </div>
+                </div>
+              <% end %>
+              <% card.footer do %>
+                <div class="flex gap-2">
+                  <%= link_to attachment_path(attachment_recording), class: "inline-flex" do %>
+                    <%= render FlatPack::Button::Component.new(text: "View", style: :secondary, size: :sm) %>
+                  <% end %>
+                  <%= link_to download_attachment_path(attachment_recording), class: "inline-flex" do %>
+                    <%= render FlatPack::Button::Component.new(text: "Download", style: :ghost, size: :sm) %>
+                  <% end %>
+                </div>
+              <% end %>
+            <% end %>
+          <% end %>
+        </div>
+      <% else %>
+        <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
+          <% card.header do %>
+            <%= render FlatPack::PageTitle::Component.new(title: "Results", subtitle: "Current attachment revisions for this recording.", variant: :h3, class: "mb-0 pb-0") %>
+          <% end %>
+          <% card.body do %>
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-[var(--surface-border-color)] text-sm">
+                <thead>
+                  <tr class="text-left text-[var(--surface-muted-content-color)]">
+                    <th class="px-3 py-2">Select</th>
+                    <th class="px-3 py-2">Name</th>
+                    <th class="px-3 py-2">Kind</th>
+                    <th class="px-3 py-2">Type</th>
+                    <th class="px-3 py-2">Size</th>
+                    <th class="px-3 py-2">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-[var(--surface-border-color)]">
+                  <% @attachments.each do |attachment_recording| %>
+                    <% attachment = attachment_recording.recordable %>
+                    <tr>
+                      <td class="px-3 py-3">
+                        <label class="flex items-center gap-2 text-sm">
+                          <input type="checkbox" name="attachment_ids[]" value="<%= attachment_recording.id %>" class="h-4 w-4 rounded border-[var(--surface-border-color)]">
+                          <span class="sr-only">Select <%= attachment.name %></span>
+                        </label>
+                      </td>
+                      <td class="px-3 py-3">
+                        <div class="font-medium"><%= attachment.name %></div>
+                        <div class="text-xs text-[var(--surface-muted-content-color)]"><%= attachment.original_filename %></div>
+                      </td>
+                      <td class="px-3 py-3"><%= attachment.attachment_kind %></td>
+                      <td class="px-3 py-3"><%= attachment.content_type %></td>
+                      <td class="px-3 py-3"><%= number_to_human_size(attachment.byte_size) %></td>
+                      <td class="px-3 py-3">
+                        <div class="flex gap-2">
+                          <%= link_to attachment_path(attachment_recording), class: "inline-flex" do %>
+                            <%= render FlatPack::Button::Component.new(text: "View", style: :secondary, size: :sm) %>
+                          <% end %>
+                          <%= link_to download_attachment_path(attachment_recording), class: "inline-flex" do %>
+                            <%= render FlatPack::Button::Component.new(text: "Download", style: :ghost, size: :sm) %>
+                          <% end %>
+                        </div>
+                      </td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <% if @total_pages > 1 %>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="text-sm text-[var(--surface-muted-content-color)]">
+            Showing page <%= @page %> of <%= @total_pages %>
+          </div>
+          <div class="flex gap-3">
+            <% if @page > 1 %>
+              <%= link_to recording_attachments_path(@recording, scope: @scope, kind: @kind, q: @query, page: @page - 1, include_trashed: @include_trashed.presence), class: "inline-flex" do %>
+                <%= render FlatPack::Button::Component.new(text: "Previous", style: :secondary, size: :md) %>
+              <% end %>
+            <% end %>
+            <% if @page < @total_pages %>
+              <%= link_to recording_attachments_path(@recording, scope: @scope, kind: @kind, q: @query, page: @page + 1, include_trashed: @include_trashed.presence), class: "inline-flex" do %>
+                <%= render FlatPack::Button::Component.new(text: "Next", style: :secondary, size: :md) %>
+              <% end %>
+            <% end %>
+          </div>
+        </div>
       <% end %>
     <% end %>
   <% else %>
     <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
       <% card.body do %>
         <div class="space-y-4 text-sm">
-          <p>No attachments match the current filters yet.</p>
+          <p>No attachments match the current filters<%= @query.present? ? " or search term" : "" %> yet.</p>
           <% if @can_upload %>
             <%= link_to recording_attachment_upload_path(@recording), class: "inline-flex" do %>
               <%= render FlatPack::Button::Component.new(text: "Upload the first file", style: :primary, size: :md) %>

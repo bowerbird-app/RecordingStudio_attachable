@@ -7,7 +7,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - `RecordingStudio::Capabilities::Attachable.to(...)` opt-in API for parent recordables
 - addon-owned `RecordingStudioAttachable::Attachment` recordable with `has_one_attached :file`
 - child recording identity with append-only recordable revisions
-- FlatPack-based listing and upload UI slice
+- FlatPack-based listing, search, bulk remove, and upload UI slice
 - Stimulus + Active Storage direct upload flow
 - Accessible-backed authorization and Trashable-aware removal when available
 
@@ -158,6 +158,7 @@ Removal is Trashable-aware:
 The engine ships with:
 
 - an attachment listing page with scope and kind filters
+- name search, pagination, and bulk remove from the attachment listing page
 - an upload page with direct uploads, previews, progress, and server-side batch validation
 - an attachment detail page for metadata revision and optional file replacement via direct upload
 

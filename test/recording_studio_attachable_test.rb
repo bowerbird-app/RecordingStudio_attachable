@@ -23,7 +23,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, "max-files-count-value"
   end
 
-  def test_listing_view_includes_scope_and_kind_filters
+  def test_listing_view_includes_search_bulk_remove_and_pagination_controls
     view_path = File.expand_path("../app/views/recording_studio_attachable/recording_attachments/index.html.erb", __dir__)
     view_source = File.read(view_path)
 
@@ -31,6 +31,10 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, "Subtree"
     assert_includes view_source, "Images"
     assert_includes view_source, "Files"
+    assert_includes view_source, "Search by attachment name"
+    assert_includes view_source, "Bulk remove selected"
+    assert_includes view_source, "Previous"
+    assert_includes view_source, "Next"
     assert_includes view_source, "image_tag attachment.file"
   end
 

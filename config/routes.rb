@@ -5,6 +5,7 @@ RecordingStudioAttachable::Engine.routes.draw do
     resources :attachments, only: :index, controller: "recording_attachments"
     get "attachments/upload", to: "attachment_uploads#new", as: :attachment_upload
     post "attachments", to: "attachment_uploads#create"
+    post "attachments/bulk_remove", to: "attachment_lifecycle#bulk_destroy", as: :bulk_remove_attachments
   end
 
   get "attachments/:id", to: "attachments#show", as: :attachment

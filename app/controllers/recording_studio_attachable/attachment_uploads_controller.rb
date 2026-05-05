@@ -21,6 +21,7 @@ module RecordingStudioAttachable
       result = RecordingStudioAttachable::Services::RecordAttachmentUploads.call(
         parent_recording: @recording,
         actor: current_attachable_actor,
+        impersonator: current_attachable_impersonator,
         attachments: attachment_payloads
       )
 

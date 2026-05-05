@@ -58,6 +58,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes listing_view, "Bulk remove selected"
     assert_includes listing_view, "attachment_ids[]"
     assert_includes listing_view, "attachment.previewable? && attachment.file.attached?"
+    assert_includes listing_view, "main_app.rails_blob_path(attachment.file, only_path: true)"
     assert_includes listing_view, 'text: "Download"'
     assert_includes listing_view, "Nothing uplaoded yet"
     refute_includes listing_view, 'title: "Filters"'
@@ -75,6 +76,9 @@ class DummyHomeDemoTest < Minitest::Test
       assert_includes layout, 'stylesheet_link_tag "flat_pack/rich_text"'
       assert_includes layout, 'stylesheet_link_tag "tailwind.css"'
     end
+
+    assert_includes blank_layout, 'style: :danger'
+    refute_includes blank_layout, 'style: :error'
   end
 
   def test_dummy_javascript_boot_enables_turbo_drive_and_active_storage

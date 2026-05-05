@@ -63,7 +63,7 @@
                 <div class="space-y-3 text-sm">
                   <div class="overflow-hidden rounded-lg border border-[var(--surface-border-color)] bg-[var(--surface-muted-background-color)]">
                     <% if attachment.previewable? && attachment.file.attached? %>
-                      <%= image_tag attachment.file, alt: attachment.name, class: "h-48 w-full object-cover" %>
+                      <%= image_tag main_app.rails_blob_path(attachment.file, only_path: true), alt: attachment.name, class: "h-48 w-full object-cover" %>
                     <% else %>
                       <div class="flex h-48 items-center justify-center text-[var(--surface-muted-content-color)]">
                         <span><%= attachment.image? ? "Preview unavailable" : attachment.original_filename %></span>

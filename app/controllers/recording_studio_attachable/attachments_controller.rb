@@ -20,6 +20,7 @@ module RecordingStudioAttachable
                  RecordingStudioAttachable::Services::ReplaceAttachmentFile.call(
                    attachment_recording: @attachment_recording,
                    actor: current_attachable_actor,
+                   impersonator: current_attachable_impersonator,
                    signed_blob_id: attachment_params[:signed_blob_id],
                    name: attachment_params[:name],
                    description: attachment_params[:description]
@@ -28,6 +29,7 @@ module RecordingStudioAttachable
                  RecordingStudioAttachable::Services::ReviseAttachmentMetadata.call(
                    attachment_recording: @attachment_recording,
                    actor: current_attachable_actor,
+                   impersonator: current_attachable_impersonator,
                    name: attachment_params[:name],
                    description: attachment_params[:description]
                  )

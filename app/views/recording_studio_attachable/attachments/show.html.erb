@@ -18,7 +18,7 @@
       <% end %>
       <% card.body do %>
         <div class="overflow-hidden rounded-lg border border-[var(--surface-border-color)] bg-[var(--surface-muted-background-color)]">
-          <%= image_tag @attachment.file, alt: @attachment.name, class: "max-h-[480px] w-full object-contain" %>
+          <%= image_tag main_app.rails_blob_path(@attachment.file, only_path: true), alt: @attachment.name, class: "max-h-[480px] w-full object-contain" %>
         </div>
       <% end %>
     <% end %>

@@ -19,7 +19,7 @@
         <%= render FlatPack::Alert::Component.new(title: "Notice", body: notice, style: :success) %>
       <% end %>
       <% if alert.present? %>
-        <%= render FlatPack::Alert::Component.new(title: "Alert", body: alert, style: :error) %>
+        <%= render FlatPack::Alert::Component.new(title: "Alert", body: alert, style: :danger) %>
       <% end %>
       <%= yield %>
     </main>

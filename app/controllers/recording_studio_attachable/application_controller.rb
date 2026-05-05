@@ -19,6 +19,12 @@ module RecordingStudioAttachable
       nil
     end
 
+    def current_attachable_impersonator
+      return Current.impersonator if defined?(Current) && Current.respond_to?(:impersonator)
+
+      nil
+    end
+
     def find_recording(id = params[:recording_id])
       RecordingStudio::Recording.find(id)
     end

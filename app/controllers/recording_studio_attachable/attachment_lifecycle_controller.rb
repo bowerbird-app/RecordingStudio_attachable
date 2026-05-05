@@ -10,7 +10,8 @@ module RecordingStudioAttachable
       result = RecordingStudioAttachable::Services::RemoveAttachments.call(
         parent_recording: recording,
         attachment_ids: params[:attachment_ids],
-        actor: current_attachable_actor
+        actor: current_attachable_actor,
+        impersonator: current_attachable_impersonator
       )
 
       redirect_to recording_attachments_path(recording, listing_redirect_params),
@@ -23,7 +24,8 @@ module RecordingStudioAttachable
 
       result = RecordingStudioAttachable::Services::RemoveAttachment.call(
         attachment_recording: attachment_recording,
-        actor: current_attachable_actor
+        actor: current_attachable_actor,
+        impersonator: current_attachable_impersonator
       )
 
       redirect_to fallback_listing_path(attachment_recording), result.success? ? { notice: "Attachment removed." } : { alert: result.error }
@@ -35,7 +37,8 @@ module RecordingStudioAttachable
 
       result = RecordingStudioAttachable::Services::RestoreAttachment.call(
         attachment_recording: attachment_recording,
-        actor: current_attachable_actor
+        actor: current_attachable_actor,
+        impersonator: current_attachable_impersonator
       )
 
       redirect_to attachment_path(attachment_recording), result.success? ? { notice: "Attachment restored." } : { alert: result.error }

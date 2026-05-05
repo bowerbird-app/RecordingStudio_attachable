@@ -52,7 +52,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, "Bulk remove selected"
     assert_includes view_source, "Previous"
     assert_includes view_source, "Next"
-    assert_includes view_source, "image_tag attachment.file"
+    assert_includes view_source, "main_app.rails_blob_path(attachment.file, only_path: true)"
     assert_includes view_source, "Nothing uplaoded yet"
     refute_includes view_source, "Scope:"
     refute_includes view_source, "Kind:"
@@ -65,6 +65,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     view_source = File.read(view_path)
 
     assert_includes view_source, 'file_field_tag "attachment[signed_blob_id]"'
+    assert_includes view_source, "main_app.rails_blob_path(@attachment.file, only_path: true)"
     refute_includes view_source, "Recording id"
     refute_includes view_source, "Parent recording id"
   end

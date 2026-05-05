@@ -63,6 +63,25 @@ class ApplicationControllerTest < Minitest::Test
     Object.const_set(:Current, current) if current
   end
 
+  def test_current_attachable_impersonator_returns_nil_when_current_does_not_define_it
+    original_current = Object.send(:remove_const, :Current) if defined?(Current)
+    Object.const_set(:Current, Class.new)
+
+    assert_nil @controller.send(:current_attachable_impersonator)
+  ensure
+    Object.send(:remove_const, :Current) if defined?(Current)
+    Object.const_set(:Current, original_current) if original_current
+  end
+
+  def test_current_attachable_impersonator_prefers_current_impersonator
+    current = ensure_current_class
+    current.define_singleton_method(:impersonator) { :delegate }
+
+    assert_equal :delegate, @controller.send(:current_attachable_impersonator)
+  ensure
+    current.singleton_class.send(:remove_method, :impersonator) if current.respond_to?(:impersonator)
+  end
+
   def test_find_recording_delegates_to_recording_lookup
     record = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
 

@@ -2,6 +2,7 @@
 
 require "test_helper"
 require_relative "../../app/services/recording_studio_attachable/services/application_service"
+require_relative "../../app/services/recording_studio_attachable/services/record_attachment_upload"
 require_relative "../../app/services/recording_studio_attachable/services/record_attachment_uploads"
 
 class RecordAttachmentUploadsTest < Minitest::Test

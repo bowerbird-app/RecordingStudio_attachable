@@ -59,6 +59,56 @@ module RecordingStudioAttachable
       def test_call_re_raises_unexpected_errors
         assert_raises(NoMethodError) { UnexpectedExceptionService.call }
       end
+
+      def test_result_on_success_yields_value_and_returns_self
+        result = BaseService::Result.new(success: true, value: "ok")
+        yielded_value = nil
+
+        returned = result.on_success do |value|
+          yielded_value = value
+        end
+
+        assert_same result, returned
+        assert_equal "ok", yielded_value
+      end
+
+      def test_result_on_failure_yields_error_and_errors_and_returns_self
+        result = BaseService::Result.new(success: false, error: "bad", errors: [:details])
+        yielded = nil
+
+        returned = result.on_failure do |error, errors|
+          yielded = [error, errors]
+        end
+
+        assert_same result, returned
+        assert_equal ["bad", [:details]], yielded
+      end
+
+      def test_call_yields_result_to_block
+        yielded_result = nil
+
+        result = TestService.call(should_succeed: true, value: "ok") do |service_result|
+          yielded_result = service_result
+        end
+
+        assert_same result, yielded_result
+      end
+
+      def test_failure_uses_exception_message
+        result = TestService.call(
+          should_succeed: false,
+          error: ArgumentError.new("invalid")
+        )
+
+        assert result.failure?
+        assert_equal "invalid", result.error
+      end
+
+      def test_base_service_requires_subclasses_to_implement_perform
+        abstract_service = Class.new(BaseService)
+
+        assert_raises(NotImplementedError) { abstract_service.call }
+      end
     end
   end
 end

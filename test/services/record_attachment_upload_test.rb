@@ -95,6 +95,30 @@ class RecordAttachmentUploadTest < Minitest::Test
     end
   end
 
+  def test_rejects_pdf_and_text_uploads_for_page_recordings
+    parent = FakeRecording.new(id: "parent-1", recordable_type: "Page", root_recording: FakeRecording.new(id: "root-1"))
+    capability_options = { allowed_content_types: ["image/*"], enabled_attachment_kinds: %i[image], max_file_size: 2.megabytes }
+
+    [
+      FakeBlob.new("application/pdf", 1024, FakeFilename.new("brief.pdf")),
+      FakeBlob.new("text/plain", 1024, FakeFilename.new("notes.txt"))
+    ].each do |blob|
+      ActiveStorage::Blob.stub(:find_signed!, blob) do
+        RecordingStudio.stub(:capability_options, capability_options) do
+          result = RecordingStudioAttachable::Services::RecordAttachmentUpload.call(
+            parent_recording: parent,
+            signed_blob_id: "signed-id",
+            actor: Object.new,
+            name: "invalid upload"
+          )
+
+          assert result.failure?
+          assert_includes result.error, "is not allowed"
+        end
+      end
+    end
+  end
+
   private
 
   def stub_recording_studio!
@@ -141,13 +165,17 @@ class RecordAttachmentUploadTest < Minitest::Test
   end
 
   def stub_attachment_class!
-    return if defined?(RecordingStudioAttachable::Attachment)
-
-    klass = Class.new do
-      def self.build_from_blob(*)
-        raise NotImplementedError
+    klass =
+      if defined?(RecordingStudioAttachable::Attachment)
+        RecordingStudioAttachable::Attachment
+      else
+        RecordingStudioAttachable.const_set(:Attachment, Class.new)
       end
+
+    return if klass.respond_to?(:build_from_blob)
+
+    klass.define_singleton_method(:build_from_blob) do |*|
+      raise NotImplementedError
     end
-    RecordingStudioAttachable.const_set(:Attachment, klass)
   end
 end

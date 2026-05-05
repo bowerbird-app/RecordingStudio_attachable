@@ -17,6 +17,4 @@ RecordingStudioAttachable.configure do |config|
     restore: :admin,
     download: :view
   }
-  config.placement = :children_only
-  config.trashable_required_for_restore = true
 end

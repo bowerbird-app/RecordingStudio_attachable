@@ -20,16 +20,11 @@ module RecordingStudio
       module RecordingMethods
         include RecordingStudio::Capability if defined?(RecordingStudio::Capability)
 
-        def attachments(scope: nil, kind: nil, include_trashed: false, search: nil, page: nil, per_page: nil)
+        def attachments(**options)
           assert_attachable_capability!
           RecordingStudioAttachable::Queries::ForRecording.new(
             recording: self,
-            scope: scope,
-            kind: kind,
-            include_trashed: include_trashed,
-            search: search,
-            page: page,
-            per_page: per_page
+            **options
           ).call
         end
 

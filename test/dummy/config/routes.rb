@@ -9,6 +9,7 @@ Rails.application.routes.draw do
   get "config", to: "docs#configuration", as: :configuration_docs
   get "methods", to: "docs#methods_reference", as: :methods_docs
   get "gem_views", to: "docs#gem_views", as: :gem_views_docs
+  get "recording_tree", to: "recording_trees#index", as: :recording_tree
 
   root "home#index"
 end

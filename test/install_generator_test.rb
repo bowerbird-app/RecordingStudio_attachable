@@ -62,6 +62,7 @@ class InstallGeneratorTest < Minitest::Test
       assert_includes importmap, "@rails/activestorage"
       assert_includes importmap, "controllers/recording_studio_attachable"
       assert_includes importmap, "RecordingStudioAttachable::Engine.root"
+      assert_includes importmap, 'to: "controllers/recording_studio_attachable"'
       assert_includes application_js, "import * as ActiveStorage from \"@rails/activestorage\"\nActiveStorage.start()\n"
       assert_includes controllers_index, "eagerLoadControllersFrom(\"controllers/recording_studio_attachable\", application)\n"
     end

@@ -1,0 +1,10 @@
+<li class="space-y-2">
+  <p class="font-medium text-(--surface-content-color)"><%= recording_tree_label(recording) %></p>
+
+  <% children = Array(recording_children[recording.id]) %>
+  <% if children.any? %>
+    <ul class="list-disc space-y-3 pl-6 marker:text-(--surface-muted-content-color)">
+      <%= render partial: "recording_node", collection: children, as: :recording, locals: { recording_children: recording_children } %>
+    </ul>
+  <% end %>
+</li>

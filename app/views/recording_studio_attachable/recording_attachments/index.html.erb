@@ -1,86 +1,25 @@
 <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+  <%= render FlatPack::Breadcrumb::Component.new(
+    show_back: true,
+    back_text: "Back",
+    back_icon: "arrow-left",
+    back_href: request.referer.presence || "javascript:history.back()",
+    items: [{ text: "Home", href: main_app.root_path, icon: "home" }]
+  ) %>
+
   <%= render FlatPack::PageTitle::Component.new(
-    title: "Attachments",
+    title: "Library",
     subtitle: "Browse files recorded beneath this recording.",
     variant: :h1
   ) %>
 
   <div class="flex flex-wrap items-center gap-3">
-    <%= render FlatPack::Badge::Component.new(text: "Scope: #{@scope}", style: :info, size: :sm) %>
-    <%= render FlatPack::Badge::Component.new(text: "Kind: #{@kind}", style: :warning, size: :sm) %>
-    <%= render FlatPack::Badge::Component.new(text: "#{@total_count} result#{'s' unless @total_count == 1}", style: :secondary, size: :sm) %>
-    <% if @total_pages > 1 %>
-      <%= render FlatPack::Badge::Component.new(text: "Page #{@page} of #{@total_pages}", style: :success, size: :sm) %>
-    <% end %>
     <% if @can_upload %>
       <%= link_to recording_attachment_upload_path(@recording), class: "inline-flex" do %>
         <%= render FlatPack::Button::Component.new(text: "Upload files", style: :primary, size: :md) %>
       <% end %>
     <% end %>
   </div>
-
-  <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
-    <% card.header do %>
-      <%= render FlatPack::PageTitle::Component.new(
-        title: "Filters",
-        subtitle: "Switch between direct children, subtree results, and attachment kinds.",
-        variant: :h3,
-        class: "mb-0 pb-0"
-      ) %>
-    <% end %>
-
-    <% card.body do %>
-      <div class="flex flex-wrap gap-3 text-sm">
-        <%= link_to recording_attachments_path(@recording, scope: :direct, kind: @kind), class: "inline-flex" do %>
-          <%= render FlatPack::Button::Component.new(text: "Direct", style: @scope.to_sym == :direct ? :primary : :secondary, size: :sm) %>
-        <% end %>
-        <%= link_to recording_attachments_path(@recording, scope: :subtree, kind: @kind), class: "inline-flex" do %>
-          <%= render FlatPack::Button::Component.new(text: "Subtree", style: @scope.to_sym == :subtree ? :primary : :secondary, size: :sm) %>
-        <% end %>
-        <%= link_to recording_attachments_path(@recording, scope: @scope, kind: :all), class: "inline-flex" do %>
-          <%= render FlatPack::Button::Component.new(text: "All", style: @kind.to_sym == :all ? :primary : :secondary, size: :sm) %>
-        <% end %>
-        <%= link_to recording_attachments_path(@recording, scope: @scope, kind: :images), class: "inline-flex" do %>
-          <%= render FlatPack::Button::Component.new(text: "Images", style: @kind.to_sym == :images ? :primary : :secondary, size: :sm) %>
-        <% end %>
-        <%= link_to recording_attachments_path(@recording, scope: @scope, kind: :files), class: "inline-flex" do %>
-          <%= render FlatPack::Button::Component.new(text: "Files", style: @kind.to_sym == :files ? :primary : :secondary, size: :sm) %>
-        <% end %>
-      </div>
-    <% end %>
-  <% end %>
-
-  <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
-    <% card.header do %>
-      <%= render FlatPack::PageTitle::Component.new(
-        title: "Search",
-        subtitle: "Find attachments by name before browsing or bulk-removing them.",
-        variant: :h3,
-        class: "mb-0 pb-0"
-      ) %>
-    <% end %>
-
-    <% card.body do %>
-      <%= form_with url: recording_attachments_path(@recording), method: :get, class: "space-y-4" do %>
-        <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
-          <%= render FlatPack::TextInput::Component.new(
-            name: :q,
-            label: "Search by attachment name",
-            value: @query
-          ) %>
-          <div class="inline-flex">
-            <%= render FlatPack::Button::Component.new(text: "Apply search", style: :primary, size: :md, type: "submit") %>
-          </div>
-          <%= link_to recording_attachments_path(@recording, scope: @scope, kind: @kind, include_trashed: @include_trashed.presence), class: "inline-flex" do %>
-            <%= render FlatPack::Button::Component.new(text: "Clear", style: :secondary, size: :md) %>
-          <% end %>
-        </div>
-        <%= hidden_field_tag :scope, @scope %>
-        <%= hidden_field_tag :kind, @kind %>
-        <%= hidden_field_tag :include_trashed, @include_trashed if @include_trashed %>
-      <% end %>
-    <% end %>
-  <% end %>
 
   <% if @attachments.any? %>
     <%= form_with url: recording_bulk_remove_attachments_path(@recording), method: :post, class: "space-y-6" do %>
@@ -134,7 +73,7 @@
                   <div class="flex flex-wrap gap-2">
                     <%= render FlatPack::Badge::Component.new(text: attachment.attachment_kind, style: :info, size: :sm) %>
                     <%= render FlatPack::Badge::Component.new(text: number_to_human_size(attachment.byte_size), style: :warning, size: :sm) %>
-                    <%= render FlatPack::Badge::Component.new(text: attachment.content_type, style: :secondary, size: :sm) %>
+                    <%= render FlatPack::Badge::Component.new(text: attachment.content_type, style: :default, size: :sm) %>
                   </div>
                 </div>
               <% end %>
@@ -228,13 +167,19 @@
   <% else %>
     <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
       <% card.body do %>
-        <div class="space-y-4 text-sm">
-          <p>No attachments match the current filters<%= @query.present? ? " or search term" : "" %> yet.</p>
-          <% if @can_upload %>
-            <%= link_to recording_attachment_upload_path(@recording), class: "inline-flex" do %>
-              <%= render FlatPack::Button::Component.new(text: "Upload the first file", style: :primary, size: :md) %>
-            <% end %>
-          <% end %>
+        <div class="flex flex-col items-center justify-center gap-4 px-6 py-12 text-center">
+          <div class="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-muted-background-color)] text-[var(--surface-muted-content-color)]">
+            <svg viewBox="0 0 24 24" aria-hidden="true" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4.5 7.5A1.5 1.5 0 0 1 6 6h4.379a1.5 1.5 0 0 1 1.06.44l1.122 1.12a1.5 1.5 0 0 0 1.06.44H18A1.5 1.5 0 0 1 19.5 9.5v8A1.5 1.5 0 0 1 18 19H6a1.5 1.5 0 0 1-1.5-1.5v-10Z" />
+              <path d="M9 12h6" />
+            </svg>
+          </div>
+          <%= render FlatPack::PageTitle::Component.new(
+            title: "Nothing uplaoded yet",
+            subtitle: "Upload files to start building this library.",
+            variant: :h3,
+            class: "mb-0 pb-0"
+          ) %>
         </div>
       <% end %>
     <% end %>

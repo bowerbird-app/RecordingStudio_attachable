@@ -15,6 +15,6 @@ namespace :flat_pack do
   end
 end
 
-%w[tailwindcss:build tailwindcss:watch].each do |task_name|
-  Rake::Task[task_name].enhance(["flat_pack:sync_tailwind_sources"]) if Rake::Task.task_defined?(task_name)
+%w[ tailwindcss:build tailwindcss:watch ].each do |task_name|
+  Rake::Task[task_name].enhance([ "flat_pack:sync_tailwind_sources" ]) if Rake::Task.task_defined?(task_name)
 end

@@ -44,7 +44,7 @@ module RecordingStudioAttachable
           pin "@rails/activestorage", to: "activestorage.esm.js"
           pin_all_from RecordingStudioAttachable::Engine.root.join("app/javascript/controllers/recording_studio_attachable"),
             under: "controllers/recording_studio_attachable",
-            to: "recording_studio_attachable/controllers"
+            to: "controllers/recording_studio_attachable"
         RUBY
 
         wire_javascript_entrypoints

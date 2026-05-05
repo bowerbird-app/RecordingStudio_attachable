@@ -55,8 +55,7 @@ class Workspace < ApplicationRecord
     allowed_content_types: ["image/*", "application/pdf", "text/plain"],
     max_file_size: 25.megabytes,
     max_file_count: 20,
-    enabled_attachment_kinds: %i[image file],
-    placement: :children_only
+    enabled_attachment_kinds: %i[image file]
   )
 end
 ```
@@ -100,8 +99,6 @@ RecordingStudioAttachable.configure do |config|
     restore: :admin,
     download: :view
   }
-  config.placement = :children_only
-  config.trashable_required_for_restore = true
 end
 ```
 
@@ -116,7 +113,6 @@ The most important per-recordable options are:
 - `max_file_count`
 - `enabled_attachment_kinds`
 - `auth_roles`
-- `placement`
 - `authorize_with`
 
 ### Layouts

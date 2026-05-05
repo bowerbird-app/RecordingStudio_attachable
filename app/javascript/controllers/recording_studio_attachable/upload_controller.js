@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import { DirectUpload } from "@rails/activestorage"
 
 export default class extends Controller {
-  static targets = ["dropzone", "input", "queue", "emptyState", "finalizeButton"]
+  static targets = ["dropzone", "input", "queue", "finalizeButton"]
   static values = {
     directUploadUrl: String,
     finalizeUrl: String,
@@ -40,9 +40,11 @@ export default class extends Controller {
 
     fetch(this.finalizeUrlValue, {
       method: "POST",
+      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
         "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.content || "",
+        "X-Requested-With": "XMLHttpRequest",
         Accept: "application/json"
       },
       body: JSON.stringify({
@@ -212,13 +214,12 @@ export default class extends Controller {
   renderQueue() {
     this.queueTarget.innerHTML = ""
     if (this.files.length === 0) {
-      this.queueTarget.appendChild(this.emptyStateTarget)
-      this.emptyStateTarget.classList.remove("hidden")
+      this.queueTarget.classList.add("hidden")
       this.updateFinalizeButton()
       return
     }
 
-    this.emptyStateTarget.classList.add("hidden")
+    this.queueTarget.classList.remove("hidden")
     this.files.forEach((entry) => this.queueTarget.insertAdjacentHTML("beforeend", this.entryTemplate(entry)))
     this.updateFinalizeButton()
   }

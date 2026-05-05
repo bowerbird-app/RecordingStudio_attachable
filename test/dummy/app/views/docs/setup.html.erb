@@ -1,13 +1,71 @@
-<div class="mx-auto flex w-full max-w-4xl flex-col gap-6">
+<div class="mx-auto flex w-full max-w-4xl flex-col gap-8">
   <%= render FlatPack::PageTitle::Component.new(
     title: "Setup",
-    subtitle: "The minimum host-app steps for enabling Recording Studio Attachable.",
+    subtitle: "Install the gem, wire Active Storage, and verify the direct-upload path in the host app.",
     variant: :h1
   ) %>
 
-  <%= render FlatPack::List::Component.new(ordered: true, divider: true, class: "rounded-xl border border-[var(--surface-border-color)] bg-[var(--surface-background-color)] p-4") do %>
-    <% @setup_steps.each do |step| %>
-      <%= render FlatPack::List::Item.new { step } %>
+  <section class="space-y-3">
+    <%= render FlatPack::SectionTitle::Component.new(
+      title: "Prerequisites",
+      subtitle: "Confirm the host app has the supporting Recording Studio pieces in place.",
+      anchor_link: true
+    ) %>
+
+    <%= render FlatPack::List::Component.new(divider: true, class: "rounded-xl border border-[var(--surface-border-color)] bg-[var(--surface-background-color)] p-4") do %>
+      <% @setup_prerequisites.each do |item| %>
+        <%= render FlatPack::List::Item.new do %>
+          <p class="text-sm text-(--surface-content-color)"><%= item %></p>
+        <% end %>
+      <% end %>
     <% end %>
+  </section>
+
+  <% @setup_steps.each do |step| %>
+    <section class="space-y-3">
+      <%= render FlatPack::SectionTitle::Component.new(
+        title: step[:title],
+        subtitle: step[:body],
+        anchor_link: true
+      ) %>
+
+      <%= render FlatPack::CodeBlock::Component.new(
+        title: step[:code_title],
+        code: step[:code],
+        language: step[:code_title].end_with?(".rb") ? :ruby : :shell
+      ) %>
+    </section>
   <% end %>
+
+  <section class="space-y-3">
+    <%= render FlatPack::SectionTitle::Component.new(
+      title: "Verify Active Storage wiring",
+      subtitle: "The install generator handles these changes automatically, but custom entrypoints should still satisfy each requirement.",
+      anchor_link: true
+    ) %>
+
+    <%= render FlatPack::List::Component.new(divider: true, class: "rounded-xl border border-[var(--surface-border-color)] bg-[var(--surface-background-color)] p-4") do %>
+      <% @active_storage_checks.each do |check| %>
+        <%= render FlatPack::List::Item.new do %>
+          <p class="text-sm text-(--surface-content-color)"><%= check %></p>
+        <% end %>
+      <% end %>
+    <% end %>
+  </section>
+
+  <section class="space-y-3">
+    <%= render FlatPack::SectionTitle::Component.new(
+      title: "Next checks",
+      subtitle: "Use these follow-up checks if the page loads but uploads still do not work.",
+      anchor_link: true
+    ) %>
+
+    <%= render FlatPack::List::Component.new(ordered: true, divider: true, class: "rounded-xl border border-[var(--surface-border-color)] bg-[var(--surface-background-color)] p-4") do %>
+      <% @setup_next_steps.each do |step| %>
+        <%= render FlatPack::List::Item.new do %>
+          <p class="text-sm text-(--surface-content-color)"><%= step %></p>
+        <% end %>
+      <% end %>
+    <% end %>
+  </section>
 </div>

@@ -45,14 +45,10 @@ module RecordingStudioAttachable
 
       attr_reader :current_page, :per_page, :search, :total_count
 
-      def initialize(recording:, scope: nil, kind: nil, include_trashed: false, search: nil, page: nil, per_page: nil)
+      def initialize(recording:, **options)
         @recording = recording
-        @scope = self.class.normalize_scope(scope)
-        @kind = self.class.normalize_kind(kind)
-        @include_trashed = include_trashed
-        @search = self.class.normalize_search(search)
-        @current_page = self.class.normalize_page(page)
-        @per_page = self.class.normalize_per_page(per_page)
+        assign_filters(options)
+        assign_pagination(options)
         @total_count = 0
       end
 
@@ -86,10 +82,22 @@ module RecordingStudioAttachable
 
       attr_reader :recording, :scope, :kind, :include_trashed
 
+      def assign_filters(options)
+        @scope = self.class.normalize_scope(options[:scope])
+        @kind = self.class.normalize_kind(options[:kind])
+        @include_trashed = options.fetch(:include_trashed, false)
+        @search = self.class.normalize_search(options[:search])
+      end
+
+      def assign_pagination(options)
+        @current_page = self.class.normalize_page(options[:page])
+        @per_page = self.class.normalize_per_page(options[:per_page])
+      end
+
       def base_relation
         relation = recording.recordings_query(
           include_children: true,
-          type: RecordingStudioAttachable::Attachment.name,
+          type: "RecordingStudioAttachable::Attachment",
           parent_id: direct_scope? ? recording.id : nil,
           recordable_filters: recordable_filters
         )

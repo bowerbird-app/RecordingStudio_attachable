@@ -4,6 +4,12 @@ module RecordingStudioAttachable
   class Engine < ::Rails::Engine
     isolate_namespace RecordingStudioAttachable
 
+    initializer "recording_studio_attachable.assets" do |app|
+      next unless app.config.respond_to?(:assets)
+
+      app.config.assets.paths << root.join("app/javascript")
+    end
+
     initializer "recording_studio_attachable.load_config" do |app|
       RecordingStudioAttachable::Engine.send(:load_yaml_config, app)
       RecordingStudioAttachable::Engine.send(:load_x_config, app)

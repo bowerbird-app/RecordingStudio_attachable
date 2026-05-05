@@ -48,8 +48,10 @@ module RecordingStudioAttachable
     private
 
     def attachment_payloads
-      Array(params.fetch(:attachments, [])).map do |attachment|
-        attachment.to_h.symbolize_keys.slice(:signed_blob_id, :name, :description)
+      permitted = params.permit(attachments: %i[signed_blob_id name description])
+
+      Array(permitted.fetch(:attachments, [])).map do |attachment|
+        attachment.to_h.symbolize_keys
       end
     end
 

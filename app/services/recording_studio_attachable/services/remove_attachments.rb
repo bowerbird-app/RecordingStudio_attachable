@@ -60,21 +60,26 @@ module RecordingStudioAttachable
 
         relation = parent_recording.recordings_query(
           include_children: true,
-          type: RecordingStudioAttachable::Attachment.name
+          type: "RecordingStudioAttachable::Attachment"
         ).where(id: normalized_ids)
         records = relation.to_a
         records_by_id = records.index_by { |record| record.id.to_s }
 
-        raise ArgumentError, "One or more attachments do not belong to this recording" unless normalized_ids.all? { |id| records_by_id.key?(id) }
+        unless normalized_ids.all? { |id| records_by_id.key?(id) }
+          raise ArgumentError, "One or more attachments do not belong to this recording"
+        end
 
         normalized_ids.map { |id| attachment_recording!(records_by_id.fetch(id)) }
       end
 
       def normalize_attachment_ids
-        Array(attachment_recordings).filter_map { |recording| recording.respond_to?(:id) ? recording.id : recording }
-                                  .concat(Array(attachment_ids))
-                                  .filter_map { |id| id.to_s.strip.presence }
-                                  .uniq
+        ids = Array(attachment_recordings).filter_map do |recording|
+          recording.respond_to?(:id) ? recording.id : recording
+        end
+
+        ids.concat(Array(attachment_ids))
+        ids = ids.filter_map { |id| id.to_s.strip.presence }
+        ids.uniq
       end
     end
   end

@@ -17,8 +17,6 @@ module RecordingStudioAttachable
                   :default_kind_filter,
                   :layout,
                   :auth_roles,
-                  :placement,
-                  :trashable_required_for_restore,
                   :classify_attachment_kind,
                   :authorize_with
 
@@ -38,8 +36,6 @@ module RecordingStudioAttachable
         restore: :admin,
         download: :viewer
       )
-      @placement = :children_only
-      @trashable_required_for_restore = true
       @classify_attachment_kind = ->(content_type) { content_type.to_s.start_with?("image/") ? "image" : "file" }
       @authorize_with = nil
     end
@@ -102,9 +98,7 @@ module RecordingStudioAttachable
         default_listing_scope: default_listing_scope,
         default_kind_filter: default_kind_filter,
         layout: layout,
-        auth_roles: auth_roles,
-        placement: placement,
-        trashable_required_for_restore: trashable_required_for_restore
+        auth_roles: auth_roles
       }
     end
   end

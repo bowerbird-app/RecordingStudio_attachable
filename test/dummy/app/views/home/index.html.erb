@@ -1,11 +1,17 @@
 <div class="mx-auto flex w-full max-w-4xl flex-col gap-8">
   <%= render FlatPack::PageTitle::Component.new(
     title: "Attachment demo",
-    subtitle: "Upload images and files",
+    subtitle: "Workspace uploads accept images and files. Page uploads accept images only.",
     variant: :h1
   ) %>
 
   <% if @root_attachment_upload_path.present? && @root_attachment_listing_path.present? %>
+    <%= render FlatPack::SectionTitle::Component.new(
+      title: "Workspace attachments",
+      subtitle: "Upload images, PDFs, and text files to the workspace library.",
+      anchor_link: true
+    ) %>
+
     <div class="flex flex-wrap gap-3">
       <%= link_to @root_attachment_upload_path, class: "inline-flex" do %>
         <%= render FlatPack::Button::Component.new(text: "Add", style: :primary, size: :md) %>
@@ -21,7 +27,8 @@
   <section class="space-y-4">
     <%= render FlatPack::SectionTitle::Component.new(
       title: "Page attachments",
-      subtitle: @page&.title || "Seeded page demo"
+      subtitle: @page&.title || "Seeded page demo",
+      anchor_link: true
     ) %>
 
     <% if @page_attachment_upload_path.present? && @page_attachment_listing_path.present? %>

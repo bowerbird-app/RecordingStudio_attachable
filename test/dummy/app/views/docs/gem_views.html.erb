@@ -6,8 +6,15 @@
   ) %>
 
   <%= render FlatPack::List::Component.new(divider: true, class: "rounded-xl border border-[var(--surface-border-color)] bg-[var(--surface-background-color)] p-4") do %>
-    <% @gem_views.each do |view_name| %>
-      <%= render FlatPack::List::Item.new { view_name } %>
+    <% @gem_views.each do |view| %>
+      <%= render FlatPack::List::Item.new(icon: view[:icon]) do %>
+        <div class="space-y-1">
+          <p class="text-sm font-semibold text-[var(--surface-content-color)]"><%= view[:title] %></p>
+          <p class="text-sm text-[var(--surface-muted-content-color)]"><%= view[:description] %></p>
+          <p class="font-mono text-xs text-[var(--surface-muted-content-color)]"><%= view[:path] %></p>
+          <p class="text-xs text-[var(--surface-muted-content-color)]"><%= view[:example] %></p>
+        </div>
+      <% end %>
     <% end %>
   <% end %>
 </div>

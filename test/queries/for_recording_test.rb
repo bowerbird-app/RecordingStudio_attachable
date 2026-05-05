@@ -67,6 +67,10 @@ class ForRecordingTest < Minitest::Test
     end
   end
 
+  def setup
+    stub_attachment_class!
+  end
+
   def test_call_builds_direct_scope_query_with_kind_filter
     relation = RelationDouble.new(count_value: 2)
     recording = RecordingDouble.new(id: "parent-1", relation: relation)
@@ -151,5 +155,22 @@ class ForRecordingTest < Minitest::Test
     assert_equal 1, RecordingStudioAttachable::Queries::ForRecording.normalize_page(nil)
     assert_equal 24, RecordingStudioAttachable::Queries::ForRecording.normalize_per_page(nil)
     assert_equal 100, RecordingStudioAttachable::Queries::ForRecording.normalize_per_page(250)
+  end
+
+  private
+
+  def stub_attachment_class!
+    klass =
+      if defined?(RecordingStudioAttachable::Attachment)
+        RecordingStudioAttachable::Attachment
+      else
+        RecordingStudioAttachable.const_set(:Attachment, Class.new)
+      end
+
+    return if klass.respond_to?(:where)
+
+    klass.define_singleton_method(:where) do |*|
+      raise NotImplementedError
+    end
   end
 end

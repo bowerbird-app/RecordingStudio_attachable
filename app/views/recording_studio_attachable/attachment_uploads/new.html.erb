@@ -34,41 +34,59 @@
     variant: :h1
   ) %>
 
-  <div class="flex min-h-[320px] flex-col gap-6">
+  <div class="flex min-h-80 flex-col gap-6">
     <div class="flex h-full min-h-[220px] flex-col gap-6">
-      <div class="flex min-h-[220px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-[var(--surface-border-color)] p-10 text-center" data-recording-studio-attachable--upload-target="dropzone">
-      <p class="text-sm text-[var(--surface-muted-content-color)]">Drag and drop, or choose</p>
+      <div class="flex min-h-[220px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-(--surface-border-color) p-10 text-center" data-recording-studio-attachable--upload-target="dropzone">
+      <p class="text-sm text-(--surface-muted-content-color)">Drag and drop, or choose</p>
       <input type="file" multiple class="hidden" data-recording-studio-attachable--upload-target="input" data-action="change->recording-studio-attachable--upload#filesSelected">
-      <%= render FlatPack::Button::Component.new(
-        text: "Choose files",
-        style: :primary,
-        size: :md,
-        type: "button",
-        data: { action: "recording-studio-attachable--upload#browse" }
-      ) %>
-      </div>
-
-      <div class="hidden space-y-4" data-recording-studio-attachable--upload-target="queue"></div>
-
-      <div class="flex flex-wrap justify-end gap-3">
+      <div class="flex w-full max-w-sm flex-col items-stretch gap-3">
         <%= render FlatPack::Button::Component.new(
-          text: "Cancel",
-          style: :secondary,
-          size: :md,
-          url: recording_attachments_path(@recording)
-        ) %>
-        <%= render FlatPack::Button::Component.new(
-          text: "Attach files",
+          text: "Choose files",
           style: :primary,
           size: :md,
           type: "button",
-          disabled: true,
-          data: {
-            action: "recording-studio-attachable--upload#finalize",
-            "recording-studio-attachable--upload-target": "finalizeButton"
-          }
+          icon: "upload",
+          full_width: true,
+          data: { action: "recording-studio-attachable--upload#browse" }
         ) %>
+
+        <% if @upload_providers.any? %>
+          <% @upload_providers.each do |provider| %>
+            <%= render FlatPack::Button::Component.new(
+              **provider.button_options(view_context: self, recording: @recording, query_params: @upload_redirect_params).reverse_merge(full_width: true)
+            ) %>
+          <% end %>
+        <% end %>
       </div>
+      </div>
+
+      <div class="hidden space-y-4" data-recording-studio-attachable--upload-target="queue"></div>
     </div>
   </div>
+
+  <% @upload_providers.select(&:modal?).each do |provider| %>
+    <% modal_id = provider.modal_id(recording: @recording) %>
+    <%= render FlatPack::Modal::Component.new(
+      id: modal_id,
+      title: provider.modal_title(view_context: self, recording: @recording),
+      size: provider.modal_size,
+      body_height_mode: :fixed,
+      body_height: "34rem"
+    ) do |modal| %>
+      <% modal.body do %>
+        <div class="h-full overflow-hidden rounded-lg border border-(--surface-border-color) bg-(--surface-background-color)">
+          <iframe
+            title="<%= provider.iframe_title(view_context: self, recording: @recording) %>"
+            class="h-136 w-full border-0"
+            loading="lazy"
+            data-provider-modal-frame
+            data-provider-modal-id="<%= modal_id %>"></iframe>
+        </div>
+      <% end %>
+
+      <% modal.footer do %>
+        <%= render FlatPack::Button::Component.new(text: "Close", style: :secondary, size: :md, type: "button", data: { action: "flat-pack--modal#close" }) %>
+      <% end %>
+    <% end %>
+  <% end %>
 </div>

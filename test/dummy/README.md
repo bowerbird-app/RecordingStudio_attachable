@@ -8,3 +8,4 @@ Use it to verify:
 - `RecordingStudio::Capabilities::Attachable.to(...)` opt-in behavior
 - `/recording_studio_attachable` mounted engine routes
 - FlatPack layout integration and Stimulus upload UI
+- built-in optional Google Drive addon wiring on the main dummy upload page

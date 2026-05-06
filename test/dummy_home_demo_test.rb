@@ -8,22 +8,42 @@ class DummyHomeDemoTest < Minitest::Test
 
     assert_includes home_view, 'title: "Attachment demo"'
     assert_includes home_view, 'subtitle: "Workspace uploads accept images and files. Page uploads accept images only."'
-    assert_includes home_view, 'title: "Workspace attachments"'
+    assert_operator home_view.scan("FlatPack::Card::Component.new(style: :default)").length, :>=, 2
+    assert_operator home_view.scan("<% card.body do %>").length, :>=, 2
+    assert_includes home_view, 'title: "Workspace"'
     assert_includes home_view, 'subtitle: "Upload images, PDFs, and text files to the workspace library."'
-    assert_includes home_view, 'title: "Workspace attachments",'
-    assert_includes home_view, 'anchor_link: true'
+    assert_includes home_view, 'title: "Workspace",'
+    assert_includes home_view, "anchor_link: true"
     assert_includes home_view, 'text: "Library"'
-    assert_includes home_view, 'title: "Page attachments"'
-    assert_includes home_view, 'text: "Attachments"'
+    assert_includes home_view, 'title: "Page"'
+    assert_includes home_view, 'subtitle: "Add images below page recording"'
+    assert_includes home_view, 'text: "Page library"'
+    assert_includes home_view, 'text: "View"'
+    assert_includes home_view, 'text: "Edit inline"'
+  end
+
+  def test_dummy_sign_in_view_keeps_title_in_card_body_without_header
+    sign_in_view = File.read(File.expand_path("dummy/app/views/devise/sessions/new.html.erb", __dir__))
+
+    assert_includes sign_in_view, "FlatPack::PageTitle::Component.new("
+    assert_includes sign_in_view, 'title: "Sign In"'
+    assert_includes sign_in_view, 'class: "mb-6"'
+    assert_includes sign_in_view, "<% card.body do %>"
+    refute_includes sign_in_view, "<% card.header do %>"
   end
 
   def test_dummy_home_controller_builds_root_and_page_attachment_paths
     home_controller = File.read(File.expand_path("dummy/app/controllers/home_controller.rb", __dir__))
 
     assert_includes home_controller, "@page = Page.first"
+    assert_includes home_controller, "@page_show_path = page_path(@page) if @page.present?"
+    assert_includes home_controller, "@page_edit_path = edit_page_path(@page) if @page.present?"
     assert_includes home_controller, "@page_recording = RecordingStudio::Recording.unscoped.find_by("
     assert_includes home_controller, "@root_attachment_listing_path = attachment_listing_path(@root_recording, scope: :subtree, kind: :all)"
-    assert_includes home_controller, "@page_attachment_upload_path = attachment_upload_path(@page_recording)"
+    assert_includes home_controller, "@page_attachment_upload_path = page_attachment_upload_path"
+    assert_includes home_controller, "recording_studio_attachable.recording_attachment_upload_path("
+    assert_includes home_controller, 'redirect_mode: "return_to"'
+    assert_includes home_controller, "return_to: @page_show_path"
   end
 
   def test_dummy_page_recordable_is_registered_seeded_and_migrated
@@ -36,15 +56,89 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes page_model, "class Page < ApplicationRecord"
     assert_includes page_model, "RecordingStudio::Capabilities::Attachable"
     assert_includes page_model, 'allowed_content_types: [ "image/*" ]'
-    assert_includes page_model, 'enabled_attachment_kinds: %i[ image ]'
+    assert_includes page_model, "enabled_attachment_kinds: %i[ image ]"
+    assert_includes page_model, "before_destroy :raise_page_destroy_immutable_error"
+    assert_includes page_model, "def readonly?"
+    assert_includes page_model, "def raise_immutable_error; end"
+    assert_includes page_model, "def raise_page_destroy_immutable_error"
     assert_includes workspace_model, 'allowed_content_types: [ "image/*", "application/pdf", "text/plain" ]'
-    assert_includes workspace_model, 'enabled_attachment_kinds: %i[ image file ]'
+    assert_includes workspace_model, "enabled_attachment_kinds: %i[ image file ]"
     assert_includes recording_studio_initializer, '"Workspace", "Page", "RecordingStudioAttachable::Attachment"'
+    assert_includes seeds, "user = User.find_or_initialize_by(email: admin_email)"
+    assert_includes seeds, "unless user.persisted? && user.valid_password?(admin_password)"
     assert_includes seeds, 'page = Page.find_or_create_by!(title: "Home page")'
     assert_includes seeds, "recordable: page"
     assert_includes schema, 'create_table "pages"'
+    assert_includes schema, 't.text "body"'
     assert_includes schema, 'create_table "recording_studio_attachable_attachments"'
     assert_includes schema, 't.string "title"'
+    assert_includes page_model, "validates :title, presence: true"
+  end
+
+  def test_dummy_page_routes_controller_and_views_support_show_and_rich_text_editing
+    routes = File.read(File.expand_path("dummy/config/routes.rb", __dir__))
+    controller = File.read(File.expand_path("dummy/app/controllers/pages_controller.rb", __dir__))
+    show_view = File.read(File.expand_path("dummy/app/views/pages/show.html.erb", __dir__))
+    view = File.read(File.expand_path("dummy/app/views/pages/edit.html.erb", __dir__))
+    picker_controller = File.read(File.expand_path("dummy/app/javascript/controllers/page_inline_image_picker_controller.js", __dir__))
+    importmap = File.read(File.expand_path("dummy/config/importmap.rb", __dir__))
+    toolbar_override = File.read(File.expand_path("dummy/app/javascript/page_inline_image_picker/toolbar_override.js", __dir__))
+
+    assert_includes routes, "resources :pages, only: %i[show edit update]"
+    assert_includes controller, "class PagesController < ApplicationController"
+    assert_includes controller, "@page = Page.find(params[:id])"
+    assert_includes controller, "def show; end"
+    assert_includes controller, "@page_recording = RecordingStudio::Recording.unscoped.find_by(recordable: @page)"
+    assert_includes controller,
+                    "@page_attachment_picker_path = recording_studio_attachable.recording_attachment_picker_path(@page_recording)"
+    assert_includes controller, "@page_attachment_create_path = recording_studio_attachable.recording_attachments_path("
+    assert_includes controller, 'redirect_mode: "return_to"'
+    assert_includes controller, "return_to: page_path(@page)"
+    assert_includes show_view, "FlatPack::Breadcrumb::Component.new("
+    assert_includes show_view, 'items: [{ text: "Home", href: root_path, icon: "home" }]'
+    assert_includes show_view, "title: @page.title"
+    assert_includes show_view, 'subtitle: "Review the inline page content and related page actions."'
+    assert_includes show_view, "<%= sanitize("
+    assert_includes show_view, '@page.body.presence || "<p>No page content yet.</p>"'
+    assert_includes show_view, 'text: "Edit inline"'
+    refute_includes show_view, 'text: "Back to home"'
+    refute_includes show_view, "FlatPack::Card::Component.new(style: :default)"
+    assert_includes controller, 'redirect_to edit_page_path(@page), notice: "Page updated."'
+    assert_includes importmap, 'pin "flat_pack/tiptap/original_toolbar", to: "flat_pack/tiptap/toolbar.js"'
+    assert_includes importmap, 'pin "flat_pack/tiptap/toolbar", to: "page_inline_image_picker/toolbar_override.js"'
+    assert_includes view, "FlatPack::PageTitle::Component.new("
+    assert_includes view, "FlatPack::Breadcrumb::Component.new("
+    assert_includes view, "show_back: true"
+    assert_includes view, 'back_text: "Back"'
+    assert_includes view, 'back_icon: "arrow-left"'
+    assert_includes view, 'items: [{ text: "Home", href: root_path, icon: "home" }]'
+    assert_includes view, 'title: "Edit inline"'
+    assert_includes view, 'subtitle: "Update page copy and formatted content for the inline recording demo."'
+    assert_includes view, "FlatPack::TextInput::Component.new("
+    assert_includes view, 'name: "page[title]"'
+    assert_includes view, "FlatPack::TextArea::Component.new("
+    assert_includes view, 'name: "page[body]"'
+    assert_includes view, "rich_text: true"
+    assert_includes view, '"attachmentImage"'
+    assert_includes view, 'data-action="flat-pack:attachment-image-picker->page-inline-image-picker#openPickerFromToolbar"'
+    assert_includes view, "bubble_menu: false"
+    assert_includes view, "floating_menu: false"
+    assert_includes view, 'data-controller="page-inline-image-picker"'
+    assert_includes view, 'title: "Insert image"'
+    assert_includes view, 'text: "Upload image"'
+    assert_includes view, 'data-page-inline-image-picker-target="gallery"'
+    assert_includes view, 'data-page-inline-image-picker-target="fileInput"'
+    assert_includes view, 'text: "Save page"'
+    assert_includes picker_controller, "application.getControllerForElementAndIdentifier"
+    assert_includes picker_controller, "openPickerFromToolbar(event)"
+    refute_includes picker_controller, "ensureToolbarButton()"
+    assert_includes picker_controller, "new DirectUpload(file, this.directUploadUrlValue)"
+    assert_includes picker_controller, "chain.setImage({ src: attachment.insert_url, alt: attachment.alt || attachment.name }).run()"
+    assert_includes toolbar_override, "flat_pack/tiptap/original_toolbar"
+    assert_includes toolbar_override, "attachmentImage"
+    assert_includes toolbar_override, "flat-pack:attachment-image-picker"
+    refute_includes view, "FlatPack::Card::Component.new(style: :default)"
+    refute_includes view, 'text: "Back to demo"'
   end
 
   def test_attachment_listing_uses_card_grid_with_empty_state_when_no_results_exist
@@ -53,16 +147,57 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes listing_view, "FlatPack::Breadcrumb::Component"
     assert_includes listing_view, 'items: [{ text: "Home", href: main_app.root_path, icon: "home" }]'
     assert_includes listing_view, 'title: "Library"'
+    assert_includes listing_view, "parent_recordable.respond_to?(:title) && parent_recordable.title.present?"
+    assert_includes listing_view, "subtitle: parent_recordable_name"
     assert_includes listing_view, "@kind.to_sym != :files"
-    assert_includes listing_view, 'text: "Upload files"'
-    assert_includes listing_view, "Bulk remove selected"
-    assert_includes listing_view, "attachment_ids[]"
+    assert_includes listing_view, 'text: "Upload"'
+    assert_includes listing_view, 'icon: "upload"'
+    assert_includes listing_view, "form_with url: recording_attachments_path(@recording), method: :get"
+    assert_includes listing_view, 'controller: "recording-studio-attachable--live-search"'
+    assert_includes listing_view, "input->recording-studio-attachable--live-search#queueSubmit"
+    assert_includes listing_view, 'turbo_frame: "recording-attachments-results"'
+    assert_includes listing_view, 'turbo_action: "advance"'
+    assert_includes listing_view, "FlatPack::Search::Component.new("
+    assert_includes listing_view, 'placeholder: "Search"'
+    refute_includes listing_view, 'text: "Apply"'
+    refute_includes listing_view, 'text: "Clear"'
+    assert_includes listing_view, 'turbo_frame_tag "recording-attachments-results"'
+    assert_includes listing_view, 'class="grid grid-cols-2 items-stretch gap-6 lg:grid-cols-5"'
+    assert_includes listing_view, "card.media padding: :none"
+    assert_includes listing_view, "card.body do"
+    assert_includes listing_view, 'class: "h-full w-full object-cover"'
+    assert_includes listing_view, 'data-controller="recording-studio-attachable--image-fallback"'
+    assert_includes listing_view, "error->recording-studio-attachable--image-fallback#showFallback"
+    assert_includes listing_view, 'data-recording-studio-attachable--image-fallback-target="fallback"'
+    assert_includes listing_view, "Preview unavailable"
+    assert_includes listing_view, ">IMAGE<"
+    assert_includes listing_view, 'class="relative aspect-4/3 overflow-hidden bg-(--surface-muted-background-color)"'
+    assert_includes listing_view, 'File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || "FILE"'
+    assert_includes listing_view, 'class="aspect-4/3 flex items-center justify-center bg-(--surface-background-color)"'
+    assert_includes listing_view, 'class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)"'
     assert_includes listing_view, "attachment.previewable? && attachment.file.attached?"
     assert_includes listing_view, "main_app.rails_blob_path(attachment.file, only_path: true)"
-    assert_includes listing_view, 'text: "Download"'
+    assert_includes listing_view, 'data: { turbo_action: "advance" }'
+    assert_includes listing_view, 'data: { turbo_frame: "_top" }'
+    assert_includes listing_view, 'attachment.description.presence || "No description yet"'
+    assert_includes listing_view, '<h2 class="text-base font-semibold"><%= attachment.name %></h2>'
+    assert_includes listing_view,
+                    '<p class="text-sm text-(--surface-muted-content-color)"><%= attachment.description.presence || "No description yet" %></p>'
+    assert_includes listing_view, 'title: @query.present? ? "Nothing found" : "Nothing uplaoded yet"'
+    assert_includes listing_view, 'subtitle: @query.present? ? nil : "Upload files to start building this library."'
+    assert_includes listing_view, '<circle cx="11" cy="11" r="6" />'
+    refute_includes listing_view, "No matching attachments"
+    refute_includes listing_view, "Try another image name."
     assert_includes listing_view, "Nothing uplaoded yet"
-    refute_includes listing_view, 'title: "Filters"'
-    refute_includes listing_view, 'title: "Search"'
+    refute_includes listing_view, "FlatPack::Carousel::Component"
+    refute_includes listing_view, "variant: :h4"
+    refute_includes listing_view,
+                    "<div class=\"space-y-1\">\n                <h2 class=\"text-base font-semibold\"><%= attachment.name %></h2>"
+    refute_includes listing_view, 'attachment.image? ? "Preview unavailable" : attachment.original_filename'
+    refute_includes listing_view, "Bulk remove selected"
+    refute_includes listing_view, "attachment_ids[]"
+    refute_includes listing_view, '<div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">'
+    refute_includes listing_view, "<% card.body do %>\n                <%= render FlatPack::PageTitle::Component.new("
   end
 
   def test_dummy_layouts_reference_propshaft_resolvable_css_assets
@@ -77,8 +212,8 @@ class DummyHomeDemoTest < Minitest::Test
       assert_includes layout, 'stylesheet_link_tag "tailwind.css"'
     end
 
-    assert_includes blank_layout, 'style: :danger'
-    refute_includes blank_layout, 'style: :error'
+    assert_includes blank_layout, "style: :danger"
+    refute_includes blank_layout, "style: :error"
   end
 
   def test_dummy_javascript_boot_enables_turbo_drive_and_active_storage
@@ -88,7 +223,37 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes importmap, 'pin "@hotwired/turbo-rails", to: "turbo.min.js"'
     assert_includes application_js, 'import "@hotwired/turbo-rails"'
     assert_includes application_js, 'import * as ActiveStorage from "@rails/activestorage"'
-    assert_includes application_js, 'ActiveStorage.start()'
+    assert_includes application_js, "ActiveStorage.start()"
+  end
+
+  def test_upload_page_supports_optional_registered_upload_providers
+    upload_view = File.read(File.expand_path("../app/views/recording_studio_attachable/attachment_uploads/new.html.erb", __dir__))
+    initializer_template = File.read(
+      File.expand_path(
+        "../lib/generators/recording_studio_attachable/install/templates/recording_studio_attachable_initializer.rb",
+        __dir__
+      )
+    )
+
+    assert_includes upload_view, "@upload_providers.any?"
+    assert_includes upload_view, "max-w-sm flex-col items-stretch gap-3"
+    assert_includes upload_view, "full_width: true"
+    assert_includes upload_view, "reverse_merge(full_width: true)"
+    assert_includes upload_view, "provider.button_options(view_context: self, recording: @recording, query_params: @upload_redirect_params)"
+    assert_includes initializer_template, "config.register_upload_provider("
+    assert_includes initializer_template, 'label: "Google Drive"'
+    assert_includes initializer_template, "config.google_drive.enabled = true"
+    assert_includes initializer_template, "GOOGLE_DRIVE_CLIENT_ID"
+    assert_includes initializer_template, "/recording_studio_attachable/google_drive/oauth/callback"
+  end
+
+  def test_dummy_home_demo_includes_registered_demo_cloud_provider
+    initializer = File.read(File.expand_path("dummy/config/initializers/recording_studio_attachable.rb", __dir__))
+    routes = File.read(File.expand_path("dummy/config/routes.rb", __dir__))
+
+    assert_includes initializer, ":demo_cloud"
+    assert_includes initializer, 'label: "Demo cloud import"'
+    assert_includes routes, "as: :demo_upload_provider"
   end
 
   def test_dummy_schema_includes_active_storage_tables_for_direct_uploads
@@ -97,8 +262,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes schema, 'create_table "active_storage_blobs"'
     assert_includes schema, 'create_table "active_storage_attachments"'
     assert_includes schema, 'create_table "active_storage_variant_records"'
-    assert_includes schema, 'idx_rs_attachable_parent_active'
-    assert_includes schema, 'idx_rs_attachable_root_active'
+    assert_includes schema, "idx_rs_attachable_parent_active"
+    assert_includes schema, "idx_rs_attachable_root_active"
   end
 
   def test_dummy_sidebar_links_to_the_recording_tree_demo_instead_of_recording_studio_root
@@ -115,6 +280,9 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes tree_controller, "RecordingStudio::Recording.unscoped.includes(:recordable).order(:created_at).to_a"
     assert_includes tree_view, 'title: "Recording tree"'
     assert_includes tree_view, 'render partial: "recording_node", collection: @root_recordings'
+    refute_includes tree_view, 'title: "Hierarchy"'
+    refute_includes tree_view, "Indented dot points show each child recording beneath its parent."
+    refute_includes tree_view, "rounded-xl border border-[var(--surface-border-color)] bg-[var(--surface-background-color)] p-5"
     assert_includes tree_node_partial, "recording_tree_label(recording)"
     assert_includes tree_node_partial, 'render partial: "recording_node", collection: children'
   end

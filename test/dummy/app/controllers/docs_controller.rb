@@ -7,9 +7,38 @@ class DocsController < ApplicationController
 
   def methods_reference; end
 
+  def plugins; end
+
   def gem_views; end
 
+  def query; end
+
+  def recordables
+    @recordable_types = configured_recordable_types.map do |recordable_type|
+      {
+        name: recordable_type,
+        recordings_count: RecordingStudio::Recording.unscoped.where(recordable_type: recordable_type).count,
+        recordables_count: recordable_records_count(recordable_type)
+      }
+    end
+  end
+
   private
+
+  def configured_recordable_types
+    return [] unless defined?(RecordingStudio) && RecordingStudio.respond_to?(:configuration)
+
+    Array(RecordingStudio.configuration.recordable_types).uniq
+  end
+
+  def recordable_records_count(recordable_type)
+    model = recordable_type.safe_constantize
+    return 0 unless model.is_a?(Class) && model < ActiveRecord::Base
+
+    model.unscoped.count
+  rescue StandardError
+    0
+  end
 
   def set_doc_examples
     @setup_prerequisites = [
@@ -138,6 +167,90 @@ class DocsController < ApplicationController
       }
     ]
 
+    @plugin_summary = [
+      "Third-party addons register upload sources with config.register_upload_provider(...) so the upload page can discover them without replacing the built-in direct uploader.",
+      "Provider code should usually call the import services directly; the engine-owned recording_attachment_imports_path(recording) endpoint is for browser handoff flows that already run inside the host app.",
+      "The gem owns authorization, Active Storage validation, attachment-recording creation, and provider provenance once the provider hands over a file IO or signed blob id.",
+      "The built-in Google Drive addon in the dummy app demonstrates the same provider registration and import flow that third-party addons can implement in their own engines or services."
+    ]
+
+    @plugin_api_examples = [
+      {
+        title: "Register a provider button",
+        subtitle: "config.register_upload_provider(...)",
+        language: :ruby,
+        code: <<~RUBY
+          RecordingStudioAttachable.configure do |config|
+            config.register_upload_provider(
+              :google_drive,
+              label: "Google Drive",
+              icon: "cloud",
+              url: ->(route_helpers:, recording:) do
+                route_helpers.google_drive_imports_path(recording_id: recording.id)
+              end
+            )
+          end
+        RUBY
+      },
+      {
+        title: "Import a provider file directly",
+        subtitle: "RecordingStudioAttachable::Services::ImportAttachment.call",
+        language: :ruby,
+        code: <<~RUBY
+          result = RecordingStudioAttachable::Services::ImportAttachment.call(
+            parent_recording: recording,
+            io: downloaded_file,
+            filename: remote_file.name,
+            content_type: remote_file.mime_type,
+            actor: Current.actor,
+            impersonator: Current.impersonator,
+            name: remote_file.title,
+            source: "google_drive",
+            metadata: { external_id: remote_file.id }
+          )
+        RUBY
+      },
+      {
+        title: "Post browser handoff payloads to the engine",
+        subtitle: "recording_attachment_imports_path(recording)",
+        language: :ruby,
+        code: <<~RUBY
+          post recording_studio_attachable.recording_attachment_imports_path(recording), params: {
+            attachment_import: {
+              provider_key: "google_drive",
+              attachments: [
+                {
+                  signed_blob_id: blob.signed_id,
+                  name: remote_file.title,
+                  metadata: {
+                    external_id: remote_file.id,
+                    external_url: remote_file.web_view_link
+                  }
+                }
+              ]
+            }
+          }, as: :json
+        RUBY
+      }
+    ]
+
+    @plugin_api_points = [
+      "Upload discovery: config.register_upload_provider(key, label:, url:, icon:, visible:, target:). Prefer route_helpers: in callables instead of reaching into the full view context.",
+      "Direct import services: RecordingStudioAttachable::Services::ImportAttachment.call and ImportAttachments.call.",
+      "Convenience recording helpers exist for trusted internal app code, but addon gems should prefer the explicit service result APIs.",
+      "Browser handoff endpoint: recording_attachment_imports_path(recording) for multipart file uploads or signed_blob_id finalization inside the host app session.",
+      "Provider provenance for the HTTP endpoint comes from provider_key; callers can add metadata, but they do not choose source or storage service."
+    ]
+
+    @plugin_payload_fields = [
+      "file: multipart upload when the provider callback already has a local file in hand.",
+      "signed_blob_id: finalize an existing Active Storage blob without re-uploading it.",
+      "io, filename, content_type: the direct service-level import contract for provider integrations.",
+      "name and description: optional attachment metadata overrides.",
+      "metadata: extra provider details such as external ids or URLs.",
+      "source and identify: trusted direct-service options; the HTTP endpoint stamps source from provider_key and ignores storage-service overrides."
+    ]
+
     @gem_views = [
       {
         title: "Media library",
@@ -168,5 +281,18 @@ class DocsController < ApplicationController
         icon: :layout
       }
     ]
+
+    @query_example = <<~RUBY
+      target_recordable_type = "Page" # e.g. "Workspace", "Project", "Post"
+
+      recordings_with_images = RecordingStudioAttachable::Queries::WithAttachments.new(
+        recordable_type: target_recordable_type,
+        kind: :images
+      ).call
+
+      records_with_images = target_recordable_type.constantize.where(
+        id: recordings_with_images.select(:recordable_id)
+      )
+    RUBY
   end
 end

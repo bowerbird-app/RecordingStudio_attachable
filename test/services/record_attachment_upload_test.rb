@@ -150,18 +150,16 @@ class RecordAttachmentUploadTest < Minitest::Test
   end
 
   def stub_active_storage!
-    return if defined?(ActiveStorage::Blob)
-
-    blob_class = Class.new do
-      class << self
-        def find_signed!(*)
-          raise NotImplementedError
-        end
-      end
+    unless defined?(ActiveStorage::Blob)
+      Object.const_set(:ActiveStorage, Module.new) unless defined?(ActiveStorage)
+      ActiveStorage.const_set(:Blob, Class.new)
     end
 
-    Object.const_set(:ActiveStorage, Module.new) unless defined?(ActiveStorage)
-    ActiveStorage.const_set(:Blob, blob_class)
+    return if ActiveStorage::Blob.respond_to?(:find_signed!)
+
+    ActiveStorage::Blob.define_singleton_method(:find_signed!) do |*|
+      raise NotImplementedError
+    end
   end
 
   def stub_attachment_class!

@@ -2,6 +2,8 @@ class HomeController < ApplicationController
   def index
     @workspace = Workspace.first
     @page = Page.first
+    @page_show_path = page_path(@page) if @page.present?
+    @page_edit_path = edit_page_path(@page) if @page.present?
     @root_recording = RecordingStudio::Recording.unscoped.find_by(
       recordable: @workspace,
       parent_recording_id: nil
@@ -14,7 +16,7 @@ class HomeController < ApplicationController
     @root_attachment_listing_path = attachment_listing_path(@root_recording, scope: :subtree, kind: :all)
     @root_attachment_upload_path = attachment_upload_path(@root_recording)
     @page_attachment_listing_path = attachment_listing_path(@page_recording)
-    @page_attachment_upload_path = attachment_upload_path(@page_recording)
+    @page_attachment_upload_path = page_attachment_upload_path
   end
 
   private
@@ -29,5 +31,15 @@ class HomeController < ApplicationController
     return if recording.blank?
 
     "/recording_studio_attachable/recordings/#{recording.id}/attachments/upload"
+  end
+
+  def page_attachment_upload_path
+    return if @page_recording.blank? || @page.blank?
+
+    recording_studio_attachable.recording_attachment_upload_path(
+      @page_recording,
+      redirect_mode: "return_to",
+      return_to: @page_show_path
+    )
   end
 end

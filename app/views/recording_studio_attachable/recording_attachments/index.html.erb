@@ -1,4 +1,16 @@
 <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+  <% parent_recordable = @recording.recordable %>
+  <% parent_recordable_name =
+       if parent_recordable.respond_to?(:title) && parent_recordable.title.present?
+         parent_recordable.title
+       elsif parent_recordable.respond_to?(:name) && parent_recordable.name.present?
+         parent_recordable.name
+       elsif parent_recordable.respond_to?(:email) && parent_recordable.email.present?
+         parent_recordable.email
+       else
+         @recording.recordable_type.demodulize
+       end %>
+
   <%= render FlatPack::Breadcrumb::Component.new(
     show_back: true,
     back_text: "Back",
@@ -9,129 +21,127 @@
 
   <%= render FlatPack::PageTitle::Component.new(
     title: "Library",
-    subtitle: "Browse files recorded beneath this recording.",
+    subtitle: parent_recordable_name,
     variant: :h1
   ) %>
 
-  <div class="flex flex-wrap items-center gap-3">
-    <% if @can_upload %>
-      <%= link_to recording_attachment_upload_path(@recording), class: "inline-flex" do %>
-        <%= render FlatPack::Button::Component.new(text: "Upload files", style: :primary, size: :md) %>
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div class="flex flex-wrap items-center gap-3">
+      <% if @can_upload %>
+        <%= link_to recording_attachment_upload_path(@recording), class: "inline-flex" do %>
+          <%= render FlatPack::Button::Component.new(text: "Upload", style: :primary, size: :md, icon: "upload") %>
+        <% end %>
       <% end %>
+    </div>
+
+    <%= form_with url: recording_attachments_path(@recording), method: :get, local: true, class: "w-full lg:w-auto", data: { controller: "recording-studio-attachable--live-search", action: "input->recording-studio-attachable--live-search#queueSubmit", turbo_frame: "recording-attachments-results", turbo_action: "advance" } do %>
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <%= hidden_field_tag :scope, @scope %>
+        <%= hidden_field_tag :kind, @kind %>
+        <%= hidden_field_tag :include_trashed, @include_trashed if @include_trashed %>
+        <%= render FlatPack::Search::Component.new(
+          name: :q,
+          value: @query,
+          placeholder: "Search",
+          max_width: :lg,
+          aria: { label: "Search attachments" }
+        ) %>
+      </div>
     <% end %>
   </div>
 
-  <% if @attachments.any? %>
-    <%= form_with url: recording_bulk_remove_attachments_path(@recording), method: :post, class: "space-y-6" do %>
-      <%= hidden_field_tag :scope, @scope %>
-      <%= hidden_field_tag :kind, @kind %>
-      <%= hidden_field_tag :q, @query %>
-      <%= hidden_field_tag :page, @page %>
-      <%= hidden_field_tag :include_trashed, @include_trashed if @include_trashed %>
-
-      <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
-        <% card.body do %>
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <p class="text-sm text-[var(--surface-muted-content-color)]">
-              Select one or more attachments, then use bulk remove to trash them when Trashable is available.
-            </p>
-            <%= render FlatPack::Button::Component.new(
-              text: "Bulk remove selected",
-              style: :secondary,
-              size: :md,
-              type: "submit"
-            ) %>
-          </div>
-        <% end %>
-      <% end %>
-
-      <% if @kind.to_sym != :files %>
-        <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          <% @attachments.each do |attachment_recording| %>
-            <% attachment = attachment_recording.recordable %>
-            <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
-              <% card.header do %>
-                <div class="flex items-start justify-between gap-3">
-                  <%= render FlatPack::PageTitle::Component.new(title: attachment.name, subtitle: attachment.original_filename, variant: :h3, class: "mb-0 pb-0") %>
-                  <label class="flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="attachment_ids[]" value="<%= attachment_recording.id %>" class="h-4 w-4 rounded border-[var(--surface-border-color)]">
-                    <span class="sr-only">Select <%= attachment.name %></span>
-                  </label>
-                </div>
-              <% end %>
-              <% card.body do %>
-                <div class="space-y-3 text-sm">
-                  <div class="overflow-hidden rounded-lg border border-[var(--surface-border-color)] bg-[var(--surface-muted-background-color)]">
+  <%= turbo_frame_tag "recording-attachments-results" do %>
+    <% if @attachments.any? %>
+      <div class="space-y-6">
+        <% if @kind.to_sym != :files %>
+          <div class="grid grid-cols-2 items-stretch gap-6 lg:grid-cols-5">
+            <% @attachments.each do |attachment_recording| %>
+              <% attachment = attachment_recording.recordable %>
+              <div class="space-y-3">
+                <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
+                  <% card.media padding: :none do %>
                     <% if attachment.previewable? && attachment.file.attached? %>
-                      <%= image_tag main_app.rails_blob_path(attachment.file, only_path: true), alt: attachment.name, class: "h-48 w-full object-cover" %>
+                      <div class="relative aspect-4/3 overflow-hidden bg-(--surface-muted-background-color)" data-controller="recording-studio-attachable--image-fallback">
+                        <%= image_tag main_app.rails_blob_path(attachment.file, only_path: true), alt: attachment.name, class: "h-full w-full object-cover", data: { recording_studio_attachable__image_fallback_target: "image", action: "error->recording-studio-attachable--image-fallback#showFallback" } %>
+                        <div class="absolute inset-0 hidden items-center justify-center bg-(--surface-background-color)" data-recording-studio-attachable--image-fallback-target="fallback">
+                          <div class="flex flex-col items-center justify-center gap-3 px-4 text-center">
+                            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-(--surface-background-color) text-(--surface-content-color) shadow-sm ring-1 ring-(--surface-border-color)">
+                              <svg viewBox="0 0 24 24" aria-hidden="true" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 9v4" />
+                                <path d="M12 17h.01" />
+                                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+                              </svg>
+                            </div>
+                            <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)">IMAGE</span>
+                            <span class="text-sm text-(--surface-muted-content-color)">Preview unavailable</span>
+                          </div>
+                        </div>
+                      </div>
                     <% else %>
-                      <div class="flex h-48 items-center justify-center text-[var(--surface-muted-content-color)]">
-                        <span><%= attachment.image? ? "Preview unavailable" : attachment.original_filename %></span>
+                      <% file_extension = File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || "FILE" %>
+                      <div class="aspect-4/3 flex items-center justify-center bg-(--surface-background-color)">
+                        <div class="flex flex-col items-center justify-center gap-3 px-4 text-center">
+                          <div class="flex h-16 w-16 items-center justify-center rounded-full bg-(--surface-background-color) text-(--surface-content-color) shadow-sm ring-1 ring-(--surface-border-color)">
+                            <svg viewBox="0 0 24 24" aria-hidden="true" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                              <path d="M14.25 3.75H7.5A2.25 2.25 0 0 0 5.25 6v12A2.25 2.25 0 0 0 7.5 20.25h9A2.25 2.25 0 0 0 18.75 18V8.25l-4.5-4.5Z" />
+                              <path d="M14.25 3.75V8.25h4.5" />
+                              <path d="M9 12.75h6" />
+                              <path d="M9 16.5h6" />
+                            </svg>
+                          </div>
+                          <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)"><%= file_extension %></span>
+                        </div>
                       </div>
                     <% end %>
-                  </div>
-                  <div class="flex flex-wrap gap-2">
-                    <%= render FlatPack::Badge::Component.new(text: attachment.attachment_kind, style: :info, size: :sm) %>
-                    <%= render FlatPack::Badge::Component.new(text: number_to_human_size(attachment.byte_size), style: :warning, size: :sm) %>
-                    <%= render FlatPack::Badge::Component.new(text: attachment.content_type, style: :default, size: :sm) %>
-                  </div>
-                </div>
-              <% end %>
-              <% card.footer do %>
-                <div class="flex gap-2">
-                  <%= link_to attachment_path(attachment_recording), class: "inline-flex" do %>
-                    <%= render FlatPack::Button::Component.new(text: "View", style: :secondary, size: :sm) %>
                   <% end %>
-                  <%= link_to download_attachment_path(attachment_recording), class: "inline-flex" do %>
-                    <%= render FlatPack::Button::Component.new(text: "Download", style: :ghost, size: :sm) %>
+                  <% card.body do %>
+                    <div class="space-y-1">
+                      <h2 class="text-base font-semibold"><%= attachment.name %></h2>
+                      <p class="text-sm text-(--surface-muted-content-color)"><%= attachment.description.presence || "No description yet" %></p>
+                    </div>
                   <% end %>
-                </div>
-              <% end %>
+                <% end %>
+              </div>
             <% end %>
-          <% end %>
-        </div>
-      <% else %>
-        <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
-          <% card.header do %>
-            <%= render FlatPack::PageTitle::Component.new(title: "Results", subtitle: "Current attachment revisions for this recording.", variant: :h3, class: "mb-0 pb-0") %>
-          <% end %>
-          <% card.body do %>
-            <div class="overflow-x-auto">
-              <table class="min-w-full divide-y divide-[var(--surface-border-color)] text-sm">
-                <thead>
-                  <tr class="text-left text-[var(--surface-muted-content-color)]">
-                    <th class="px-3 py-2">Select</th>
-                    <th class="px-3 py-2">Name</th>
-                    <th class="px-3 py-2">Kind</th>
-                    <th class="px-3 py-2">Type</th>
-                    <th class="px-3 py-2">Size</th>
-                    <th class="px-3 py-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-[var(--surface-border-color)]">
-                  <% @attachments.each do |attachment_recording| %>
-                    <% attachment = attachment_recording.recordable %>
-                    <tr>
-                      <td class="px-3 py-3">
-                        <label class="flex items-center gap-2 text-sm">
-                          <input type="checkbox" name="attachment_ids[]" value="<%= attachment_recording.id %>" class="h-4 w-4 rounded border-[var(--surface-border-color)]">
-                          <span class="sr-only">Select <%= attachment.name %></span>
-                        </label>
-                      </td>
-                      <td class="px-3 py-3">
-                        <div class="font-medium"><%= attachment.name %></div>
-                        <div class="text-xs text-[var(--surface-muted-content-color)]"><%= attachment.original_filename %></div>
-                      </td>
-                      <td class="px-3 py-3"><%= attachment.attachment_kind %></td>
-                      <td class="px-3 py-3"><%= attachment.content_type %></td>
-                      <td class="px-3 py-3"><%= number_to_human_size(attachment.byte_size) %></td>
-                      <td class="px-3 py-3">
-                        <div class="flex gap-2">
-                          <%= link_to attachment_path(attachment_recording), class: "inline-flex" do %>
-                            <%= render FlatPack::Button::Component.new(text: "View", style: :secondary, size: :sm) %>
-                          <% end %>
-                          <%= link_to download_attachment_path(attachment_recording), class: "inline-flex" do %>
-                            <%= render FlatPack::Button::Component.new(text: "Download", style: :ghost, size: :sm) %>
+          </div>
+        <% else %>
+          <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
+            <% card.header do %>
+              <%= render FlatPack::PageTitle::Component.new(title: "Results", subtitle: "Current attachment revisions for this recording.", variant: :h3, class: "mb-0 pb-0") %>
+            <% end %>
+            <% card.body do %>
+              <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-[var(--surface-border-color)] text-sm">
+                  <thead>
+                    <tr class="text-left text-[var(--surface-muted-content-color)]">
+                      <th class="px-3 py-2">Select</th>
+                      <th class="px-3 py-2">Name</th>
+                      <th class="px-3 py-2">Kind</th>
+                      <th class="px-3 py-2">Type</th>
+                      <th class="px-3 py-2">Size</th>
+                      <th class="px-3 py-2">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-[var(--surface-border-color)]">
+                    <% @attachments.each do |attachment_recording| %>
+                      <% attachment = attachment_recording.recordable %>
+                      <tr>
+                        <td class="px-3 py-3 text-[var(--surface-muted-content-color)]">-</td>
+                        <td class="px-3 py-3">
+                          <div class="font-medium"><%= attachment.name %></div>
+                          <div class="text-xs text-[var(--surface-muted-content-color)]"><%= attachment.original_filename %></div>
+                        </td>
+                        <td class="px-3 py-3"><%= attachment.attachment_kind %></td>
+                        <td class="px-3 py-3"><%= attachment.content_type %></td>
+                        <td class="px-3 py-3"><%= number_to_human_size(attachment.byte_size) %></td>
+                        <td class="px-3 py-3">
+                          <div class="flex gap-2">
+                            <%= link_to attachment_path(attachment_recording), class: "inline-flex", data: { turbo_frame: "_top" } do %>
+                              <%= render FlatPack::Button::Component.new(text: "View", style: :secondary, size: :sm) %>
+                            <% end %>
+                            <%= link_to download_attachment_path(attachment_recording), class: "inline-flex", data: { turbo_frame: "_top" } do %>
+                              <%= render FlatPack::Button::Component.new(text: "Download", style: :ghost, size: :sm) %>
+                            <% end %>
                           <% end %>
                         </div>
                       </td>
@@ -142,45 +152,45 @@
             </div>
           <% end %>
         <% end %>
-      <% end %>
 
-      <% if @total_pages > 1 %>
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div class="text-sm text-[var(--surface-muted-content-color)]">
-            Showing page <%= @page %> of <%= @total_pages %>
-          </div>
-          <div class="flex gap-3">
-            <% if @page > 1 %>
-              <%= link_to recording_attachments_path(@recording, scope: @scope, kind: @kind, q: @query, page: @page - 1, include_trashed: @include_trashed.presence), class: "inline-flex" do %>
-                <%= render FlatPack::Button::Component.new(text: "Previous", style: :secondary, size: :md) %>
+        <% if @total_pages > 1 %>
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="text-sm text-[var(--surface-muted-content-color)]">
+              Showing page <%= @page %> of <%= @total_pages %>
+            </div>
+            <div class="flex gap-3">
+              <% if @page > 1 %>
+                <%= link_to recording_attachments_path(@recording, scope: @scope, kind: @kind, q: @query, page: @page - 1, include_trashed: @include_trashed.presence), class: "inline-flex", data: { turbo_action: "advance" } do %>
+                  <%= render FlatPack::Button::Component.new(text: "Previous", style: :secondary, size: :md) %>
+                <% end %>
               <% end %>
-            <% end %>
-            <% if @page < @total_pages %>
-              <%= link_to recording_attachments_path(@recording, scope: @scope, kind: @kind, q: @query, page: @page + 1, include_trashed: @include_trashed.presence), class: "inline-flex" do %>
-                <%= render FlatPack::Button::Component.new(text: "Next", style: :secondary, size: :md) %>
+              <% if @page < @total_pages %>
+                <%= link_to recording_attachments_path(@recording, scope: @scope, kind: @kind, q: @query, page: @page + 1, include_trashed: @include_trashed.presence), class: "inline-flex", data: { turbo_action: "advance" } do %>
+                  <%= render FlatPack::Button::Component.new(text: "Next", style: :secondary, size: :md) %>
+                <% end %>
               <% end %>
-            <% end %>
+            </div>
           </div>
-        </div>
-      <% end %>
-    <% end %>
-  <% else %>
-    <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
-      <% card.body do %>
-        <div class="flex flex-col items-center justify-center gap-4 px-6 py-12 text-center">
-          <div class="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-muted-background-color)] text-[var(--surface-muted-content-color)]">
-            <svg viewBox="0 0 24 24" aria-hidden="true" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4.5 7.5A1.5 1.5 0 0 1 6 6h4.379a1.5 1.5 0 0 1 1.06.44l1.122 1.12a1.5 1.5 0 0 0 1.06.44H18A1.5 1.5 0 0 1 19.5 9.5v8A1.5 1.5 0 0 1 18 19H6a1.5 1.5 0 0 1-1.5-1.5v-10Z" />
-              <path d="M9 12h6" />
-            </svg>
+        <% end %>
+      </div>
+    <% else %>
+      <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
+        <% card.body do %>
+          <div class="flex flex-col items-center justify-center gap-4 px-6 py-12 text-center">
+            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-muted-background-color)] text-[var(--surface-muted-content-color)]">
+              <svg viewBox="0 0 24 24" aria-hidden="true" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m21 21-4.35-4.35" />
+                <circle cx="11" cy="11" r="6" />
+              </svg>
+            </div>
+            <%= render FlatPack::PageTitle::Component.new(
+              title: @query.present? ? "Nothing found" : "Nothing uplaoded yet",
+              subtitle: @query.present? ? nil : "Upload files to start building this library.",
+              variant: :h3,
+              class: "mb-0 pb-0"
+            ) %>
           </div>
-          <%= render FlatPack::PageTitle::Component.new(
-            title: "Nothing uplaoded yet",
-            subtitle: "Upload files to start building this library.",
-            variant: :h3,
-            class: "mb-0 pb-0"
-          ) %>
-        </div>
+        <% end %>
       <% end %>
     <% end %>
   <% end %>

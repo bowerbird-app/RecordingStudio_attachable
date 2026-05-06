@@ -1,0 +1,33 @@
+<div class="mx-auto flex w-full max-w-4xl flex-col gap-6">
+  <%= render FlatPack::Breadcrumb::Component.new(
+    show_back: true,
+    back_text: "Back",
+    back_icon: "arrow-left",
+    back_href: recording_studio_attachable.recording_attachment_upload_path(@recording),
+    items: [{ text: "Home", href: main_app.root_path, icon: "home" }]
+  ) %>
+
+  <%= render FlatPack::PageTitle::Component.new(
+    title: "Demo cloud import",
+    subtitle: "Reference provider flow for recording ##{@recording.id}",
+    variant: :h1
+  ) %>
+
+  <div class="rounded-xl border border-[var(--surface-border-color)] bg-[var(--surface-background-color)] p-6">
+    <div class="space-y-4">
+      <p class="text-sm text-[var(--surface-muted-content-color)]">
+        This dummy page uses the public provider import API to create a sample SVG attachment through the same validation and recording flow as the main uploader.
+      </p>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <%= form_with url: demo_upload_provider_path(recording_id: @recording.id), method: :post, class: "inline-flex" do %>
+          <%= render FlatPack::Button::Component.new(text: "Import sample SVG", style: :primary, size: :md, type: "submit", icon: "cloud") %>
+        <% end %>
+
+        <%= link_to recording_studio_attachable.recording_attachment_upload_path(@recording), class: "inline-flex" do %>
+          <%= render FlatPack::Button::Component.new(text: "Back to upload page", style: :secondary, size: :md) %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

@@ -12,3 +12,5 @@ pin_all_from RecordingStudioAttachable::Engine.root.join("app/javascript/control
 
 # Pin FlatPack controllers
 pin_all_from FlatPack::Engine.root.join("app/javascript/flat_pack/controllers"), under: "controllers/flat_pack", to: "flat_pack/controllers"
+pin "flat_pack/tiptap/original_toolbar", to: "flat_pack/tiptap/toolbar.js"
+pin "flat_pack/tiptap/toolbar", to: "page_inline_image_picker/toolbar_override.js"

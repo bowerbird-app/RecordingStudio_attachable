@@ -1,8 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
 import { DirectUpload } from "@rails/activestorage"
+import { getUploadProviderLauncher } from "controllers/recording_studio_attachable/provider_launchers"
+import "controllers/recording_studio_attachable/google_drive_picker_launcher"
 
 export default class extends Controller {
-  static targets = ["dropzone", "input", "queue", "finalizeButton"]
+  static targets = ["dropzone", "input", "queue"]
   static values = {
     directUploadUrl: String,
     finalizeUrl: String,
@@ -13,15 +15,75 @@ export default class extends Controller {
 
   connect() {
     this.files = []
+    this.finalizeRequestInFlight = false
+    this.providerButtonsByKey = new Map()
+    this.handleProviderMessage = this.handleProviderMessage.bind(this)
     this.bindDropzoneEvents()
+    window.addEventListener("message", this.handleProviderMessage)
   }
 
   disconnect() {
     this.files.forEach((entry) => this.revokePreview(entry))
+    window.removeEventListener("message", this.handleProviderMessage)
   }
 
   browse() {
     this.inputTarget.click()
+  }
+
+  async launchProvider(event) {
+    const button = event.currentTarget
+    const { providerKey, providerStrategy } = button.dataset
+    if (providerKey) this.providerButtonsByKey.set(providerKey, button)
+
+    if (providerStrategy === "modal_page") {
+      this.openProviderModal(button)
+      return
+    }
+
+    if (providerStrategy === "client_picker") {
+      await this.launchClientPicker(button)
+    }
+  }
+
+  openProviderModal(button) {
+    const frameUrl = button.dataset.providerFrameUrl
+    const modalId = button.dataset.providerModalId || button.dataset.modalId
+    if (!frameUrl || !modalId) return
+
+    const frame = document.querySelector(`[data-provider-modal-frame][data-provider-modal-id='${modalId}']`)
+    if (!frame) return
+
+    if (!frame.dataset.sourceUrl) {
+      frame.dataset.sourceUrl = frameUrl
+    }
+
+    if (frame.getAttribute("src") !== frameUrl) {
+      frame.setAttribute("src", frameUrl)
+    }
+  }
+
+  async launchClientPicker(button) {
+    const launcherName = button.dataset.providerLauncher
+    const launcher = getUploadProviderLauncher(launcherName)
+    if (!launcher) {
+      this.setProviderStatus("This upload provider is not available on this page.", "error")
+      return
+    }
+
+    this.clearProviderStatus()
+
+    try {
+      await launcher.launch({
+        button,
+        controller: this,
+        providerKey: button.dataset.providerKey,
+        bootstrapUrl: button.dataset.providerBootstrapUrl,
+        importUrl: button.dataset.providerImportUrl
+      })
+    } catch (error) {
+      this.setProviderStatus(error?.message || "Could not open the provider picker.", "error")
+    }
   }
 
   filesSelected(event) {
@@ -30,9 +92,12 @@ export default class extends Controller {
   }
 
   finalize() {
-    const readyEntries = this.files.filter((entry) => entry.status === "uploaded")
+    if (this.finalizeRequestInFlight || !this.queueSettled()) return
+
+    const readyEntries = this.uploadedEntries()
     if (readyEntries.length === 0) return
 
+    this.finalizeRequestInFlight = true
     readyEntries.forEach((entry) => {
       entry.status = "finalizing"
       this.renderEntry(entry)
@@ -58,6 +123,7 @@ export default class extends Controller {
       .then(async (response) => {
         const payload = await response.json()
         if (!response.ok) throw payload
+
         readyEntries.forEach((entry) => {
           entry.status = "attached"
           this.renderEntry(entry)
@@ -75,6 +141,10 @@ export default class extends Controller {
           this.renderEntry(entry)
         })
       })
+      .finally(() => {
+        this.finalizeRequestInFlight = false
+        this.maybeFinalize()
+      })
   }
 
   retry(event) {
@@ -86,7 +156,7 @@ export default class extends Controller {
     if (entry.signedBlobId) {
       entry.status = "uploaded"
       this.renderEntry(entry)
-      this.updateFinalizeButton()
+      this.maybeFinalize()
     } else {
       this.uploadEntry(entry)
     }
@@ -168,7 +238,7 @@ export default class extends Controller {
         entry.signedBlobId = blob.signed_id
       }
       this.renderEntry(entry)
-      this.updateFinalizeButton()
+      this.maybeFinalize()
     })
   }
 
@@ -215,13 +285,12 @@ export default class extends Controller {
     this.queueTarget.innerHTML = ""
     if (this.files.length === 0) {
       this.queueTarget.classList.add("hidden")
-      this.updateFinalizeButton()
       return
     }
 
     this.queueTarget.classList.remove("hidden")
     this.files.forEach((entry) => this.queueTarget.insertAdjacentHTML("beforeend", this.entryTemplate(entry)))
-    this.updateFinalizeButton()
+    this.maybeFinalize()
   }
 
   renderEntry(entry) {
@@ -233,24 +302,175 @@ export default class extends Controller {
     }
   }
 
-  updateFinalizeButton() {
-    this.finalizeButtonTarget.disabled = this.files.every((entry) => entry.status !== "uploaded")
+  handleProviderMessage(event) {
+    if (event.origin !== window.location.origin) return
+
+    const payload = event.data || {}
+    if (payload.namespace !== "recording-studio-attachable") return
+
+    if (payload.type === "provider-auth-complete") {
+      if (payload.modalId) {
+        this.reloadProviderFrame(payload)
+        return
+      }
+
+      if (payload.providerKey) {
+        this.relaunchProvider(payload.providerKey)
+      }
+      return
+    }
+
+    if (payload.type === "provider-auth-error") {
+      this.setProviderStatus(payload.error || "Authentication failed.", "error")
+      return
+    }
+
+    if (payload.type === "provider-import-complete") {
+      this.closeProviderModal(payload.modalId)
+      if (payload.redirectPath) {
+        window.location.href = payload.redirectPath
+      }
+    }
+  }
+
+  relaunchProvider(providerKey) {
+    const button = this.providerButtonsByKey.get(providerKey)
+    if (!button) return
+
+    this.launchClientPicker(button)
+  }
+
+  reloadProviderFrame(payload) {
+    const frame = document.querySelector(`[data-provider-modal-frame][data-provider-modal-id='${payload.modalId}']`)
+    if (!frame) return
+
+    const nextUrl = payload.reloadUrl || frame.dataset.sourceUrl || frame.getAttribute("src")
+    if (!nextUrl) return
+
+    frame.dataset.sourceUrl = nextUrl
+    frame.setAttribute("src", nextUrl)
+  }
+
+  closeProviderModal(modalId) {
+    if (!modalId) return
+
+    const modal = document.getElementById(modalId)
+    if (!modal) return
+
+    const controller = this.application.getControllerForElementAndIdentifier(modal, "flat-pack--modal")
+    if (controller) {
+      controller.close()
+    }
+  }
+
+  async fetchProviderBootstrap(bootstrapUrl) {
+    const response = await fetch(bootstrapUrl, {
+      credentials: "same-origin",
+      headers: {
+        Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest"
+      }
+    })
+    const payload = await response.json()
+    if (!response.ok) throw new Error(payload.error || "Could not load provider bootstrap data.")
+
+    return payload
+  }
+
+  async submitProviderImport(importUrl, fileIds) {
+    const response = await fetch(importUrl, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.content || "",
+        "X-Requested-With": "XMLHttpRequest"
+      },
+      body: JSON.stringify({ file_ids: fileIds })
+    })
+    const payload = await response.json()
+    if (!response.ok) throw new Error(payload.error || "Could not import selected files.")
+
+    return payload
+  }
+
+  openPopup(url, name = "recording-studio-attachable-provider-auth") {
+    const width = 640
+    const height = 760
+    const left = Math.max(window.screenX + (window.outerWidth - width) / 2, 0)
+    const top = Math.max(window.screenY + (window.outerHeight - height) / 2, 0)
+    const features = [
+      "popup=yes",
+      `width=${width}`,
+      `height=${height}`,
+      `left=${Math.round(left)}`,
+      `top=${Math.round(top)}`,
+      "resizable=yes",
+      "scrollbars=yes"
+    ].join(",")
+
+    const popup = window.open(url, name, features)
+    if (popup) popup.focus()
+    return popup
+  }
+
+  setProviderStatus(message, kind = "info") {
+    let region = this.element.querySelector("[data-provider-status-region]")
+    if (!region) {
+      region = document.createElement("p")
+      region.dataset.providerStatusRegion = "true"
+      region.className = "text-sm"
+      const anchor = this.element.querySelector(".max-w-sm")
+      if (anchor) {
+        anchor.insertAdjacentElement("afterend", region)
+      } else {
+        this.element.appendChild(region)
+      }
+    }
+
+    region.textContent = message
+    region.classList.remove("hidden", "text-red-600", "text-(--surface-muted-content-color)")
+    region.classList.add(kind === "error" ? "text-red-600" : "text-(--surface-muted-content-color)")
+  }
+
+  clearProviderStatus() {
+    const region = this.element.querySelector("[data-provider-status-region]")
+    if (!region) return
+
+    region.textContent = ""
+    region.classList.add("hidden")
+  }
+
+  maybeFinalize() {
+    if (this.finalizeRequestInFlight || !this.queueSettled()) return
+    if (this.uploadedEntries().length === 0) return
+
+    this.finalize()
+  }
+
+  uploadedEntries() {
+    return this.files.filter((entry) => entry.status === "uploaded")
+  }
+
+  queueSettled() {
+    return this.files.every((entry) => !["pending", "uploading", "finalizing"].includes(entry.status))
   }
 
   entryTemplate(entry) {
-    const preview = entry.previewUrl ? `<img src="${this.escapeAttribute(entry.previewUrl)}" alt="" class="h-12 w-12 rounded object-cover" />` : `<div class="flex h-12 w-12 items-center justify-center rounded bg-[var(--surface-muted-background-color)] text-xs">FILE</div>`
+    const preview = entry.previewUrl ? `<img src="${this.escapeAttribute(entry.previewUrl)}" alt="" class="h-12 w-12 rounded object-cover" />` : `<div class="flex h-12 w-12 items-center justify-center rounded bg-(--surface-muted-background-color) text-xs">FILE</div>`
     const progress = entry.status === "uploading" || entry.progress > 0 ? `<progress class="w-full" value="${entry.progress}" max="100"></progress>` : ""
     const error = entry.error ? `<p class="text-xs text-red-600">${this.escapeHtml(entry.error)}</p>` : ""
     const retry = entry.status === "failed" ? `<button type="button" data-action="recording-studio-attachable--upload#retry" data-id="${entry.id}" class="text-xs underline">Retry</button>` : ""
 
     return `
-      <div data-entry-id="${entry.id}" class="rounded-lg border border-[var(--surface-border-color)] p-4">
+      <div data-entry-id="${entry.id}" class="rounded-lg border border-(--surface-border-color) p-4">
         <div class="flex items-start gap-4">
           ${preview}
           <div class="min-w-0 flex-1 space-y-2">
             <div>
               <p class="font-medium">${this.escapeHtml(entry.file.name)}</p>
-              <p class="text-xs text-[var(--surface-muted-content-color)]">${Math.round(entry.file.size / 1024)} KB · ${entry.status}</p>
+              <p class="text-xs text-(--surface-muted-content-color)">${Math.round(entry.file.size / 1024)} KB · ${entry.status}</p>
             </div>
             ${progress}
             ${error}

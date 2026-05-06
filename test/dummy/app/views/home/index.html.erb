@@ -5,43 +5,61 @@
     variant: :h1
   ) %>
 
-  <% if @root_attachment_upload_path.present? && @root_attachment_listing_path.present? %>
-    <%= render FlatPack::SectionTitle::Component.new(
-      title: "Workspace attachments",
-      subtitle: "Upload images, PDFs, and text files to the workspace library.",
-      anchor_link: true
-    ) %>
+  <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
+    <% card.body do %>
+      <div class="space-y-4">
+        <%= render FlatPack::SectionTitle::Component.new(
+          title: "Workspace",
+          subtitle: "Upload images, PDFs, and text files to the workspace library.",
+          anchor_link: true
+        ) %>
 
-    <div class="flex flex-wrap gap-3">
-      <%= link_to @root_attachment_upload_path, class: "inline-flex" do %>
-        <%= render FlatPack::Button::Component.new(text: "Add", style: :primary, size: :md) %>
-      <% end %>
-      <%= link_to @root_attachment_listing_path, class: "inline-flex" do %>
-        <%= render FlatPack::Button::Component.new(text: "Library", style: :secondary, size: :md) %>
-      <% end %>
-    </div>
-  <% else %>
-    <p class="text-sm text-[var(--surface-muted-content-color)]">Seed the workspace recording to enable the demo links.</p>
-  <% end %>
-
-  <section class="space-y-4">
-    <%= render FlatPack::SectionTitle::Component.new(
-      title: "Page attachments",
-      subtitle: @page&.title || "Seeded page demo",
-      anchor_link: true
-    ) %>
-
-    <% if @page_attachment_upload_path.present? && @page_attachment_listing_path.present? %>
-      <div class="flex flex-wrap gap-3">
-        <%= link_to @page_attachment_upload_path, class: "inline-flex" do %>
-          <%= render FlatPack::Button::Component.new(text: "Add", style: :primary, size: :md) %>
-        <% end %>
-        <%= link_to @page_attachment_listing_path, class: "inline-flex" do %>
-          <%= render FlatPack::Button::Component.new(text: "Attachments", style: :secondary, size: :md) %>
+        <% if @root_attachment_upload_path.present? && @root_attachment_listing_path.present? %>
+          <div class="flex flex-wrap gap-3">
+            <%= link_to @root_attachment_upload_path, class: "inline-flex" do %>
+              <%= render FlatPack::Button::Component.new(text: "Add", style: :primary, size: :md) %>
+            <% end %>
+            <%= link_to @root_attachment_listing_path, class: "inline-flex" do %>
+              <%= render FlatPack::Button::Component.new(text: "Library", style: :secondary, size: :md) %>
+            <% end %>
+          </div>
+        <% else %>
+          <p class="text-sm text-(--surface-muted-content-color)">Seed the workspace recording to enable the demo links.</p>
         <% end %>
       </div>
-    <% else %>
-      <p class="text-sm text-[var(--surface-muted-content-color)]">Seed the page recording to enable the page attachment demo.</p>
+    <% end %>
+  <% end %>
+
+  <section>
+    <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
+      <% card.body do %>
+        <div class="space-y-4">
+          <%= render FlatPack::SectionTitle::Component.new(
+            title: "Page",
+            subtitle: "Add images below page recording",
+            anchor_link: true
+          ) %>
+
+          <% if @page_attachment_upload_path.present? && @page_attachment_listing_path.present? %>
+            <div class="flex flex-wrap gap-3">
+              <%= link_to @page_attachment_upload_path, class: "inline-flex" do %>
+                <%= render FlatPack::Button::Component.new(text: "Add", style: :primary, size: :md) %>
+              <% end %>
+              <%= link_to @page_attachment_listing_path, class: "inline-flex" do %>
+                <%= render FlatPack::Button::Component.new(text: "Page library", style: :secondary, size: :md) %>
+              <% end %>
+              <%= link_to @page_show_path, class: "inline-flex" do %>
+                <%= render FlatPack::Button::Component.new(text: "View", style: :secondary, size: :md) %>
+              <% end %>
+              <%= link_to @page_edit_path, class: "inline-flex" do %>
+                <%= render FlatPack::Button::Component.new(text: "Edit inline", style: :secondary, size: :md) %>
+              <% end %>
+            </div>
+          <% else %>
+            <p class="text-sm text-(--surface-muted-content-color)">Seed the page recording to enable the page attachment demo.</p>
+          <% end %>
+        </div>
+      <% end %>
     <% end %>
   </section>
 </div>

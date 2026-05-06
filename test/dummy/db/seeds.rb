@@ -3,10 +3,17 @@
 # The data can then be loaded with the bin/rails db:seed command (or created alongside the database with db:setup).
 
 # Create the admin user
-user = User.find_or_create_by!(email: "admin@admin.com") do |u|
-  u.password = "Password"
-  u.password_confirmation = "Password"
+admin_email = "admin@admin.com"
+admin_password = "Password"
+
+user = User.find_or_initialize_by(email: admin_email)
+
+unless user.persisted? && user.valid_password?(admin_password)
+  user.password = admin_password
+  user.password_confirmation = admin_password
 end
+
+user.save! if user.changed?
 
 # Create the workspace recordable
 workspace = Workspace.find_or_create_by!(name: "Studio Workspace")
@@ -33,6 +40,6 @@ RecordingStudio::Recording.unscoped.find_or_create_by!(
   recordable: access
 )
 
-puts "Seeded: admin@admin.com / Password"
+puts "Seeded: #{admin_email} / #{admin_password}"
 puts "Seeded: Workspace '#{workspace.name}' with root recording ##{root_recording.id}"
 puts "Seeded: Page '#{page.title}' beneath the workspace root recording"

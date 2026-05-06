@@ -52,6 +52,16 @@ module RecordingStudio
           RecordingStudioAttachable::Services::RecordAttachmentUploads.call(parent_recording: self, **options).value
         end
 
+        def import_attachment(**options)
+          assert_attachable_capability!
+          RecordingStudioAttachable::Services::ImportAttachment.call(parent_recording: self, **options).value
+        end
+
+        def import_attachments(**options)
+          assert_attachable_capability!
+          RecordingStudioAttachable::Services::ImportAttachments.call(parent_recording: self, **options).value
+        end
+
         def revise_attachment_metadata(**options)
           assert_attachment_recording!
           RecordingStudioAttachable::Services::ReviseAttachmentMetadata.call(attachment_recording: self, **options).value

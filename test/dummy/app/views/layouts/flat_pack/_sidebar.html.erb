@@ -34,8 +34,26 @@
       ) %>
 
       <%= render FlatPack::Sidebar::Item::Component.new(
+        label: "Plugins",
+        href: plugins_docs_path,
+        icon: :box
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
         label: "Gem views",
         href: gem_views_docs_path,
+        icon: :file
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
+        label: "Recordables",
+        href: recordables_docs_path,
+        icon: :folder
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
+        label: "Query",
+        href: query_docs_path,
         icon: :file
       ) %>
 

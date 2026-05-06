@@ -55,6 +55,34 @@ class RecordAttachmentUploadsTest < Minitest::Test
     end
   end
 
+  def test_passes_provider_metadata_and_source_to_the_upload_service
+    parent = Struct.new(:id, :recordable_type).new("parent-1", "Workspace")
+    captured = nil
+    success_result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: :created)
+
+    RecordingStudioAttachable::Services::RecordAttachmentUpload.stub(:call, lambda { |**kwargs|
+      captured = kwargs
+      success_result
+    }) do
+      result = RecordingStudioAttachable::Services::RecordAttachmentUploads.call(
+        parent_recording: parent,
+        actor: Object.new,
+        default_source: "google_drive",
+        attachments: [
+          {
+            signed_blob_id: "blob-1",
+            name: "drive file",
+            metadata: { external_id: "file-1" }
+          }
+        ]
+      )
+
+      assert result.success?
+    end
+
+    assert_equal({ external_id: "file-1", source: "google_drive" }, captured[:metadata])
+  end
+
   private
 
   def stub_recording_studio!

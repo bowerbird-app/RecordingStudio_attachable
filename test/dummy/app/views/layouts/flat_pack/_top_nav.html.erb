@@ -1,4 +1,4 @@
-<%= render FlatPack::TopNav::Component.new do |nav| %>
+<%= render FlatPack::TopNav::Component.new(style: "--top-nav-background-color: var(--surface-page-background-color);") do |nav| %>
   <% nav.left do %>
     <%= render FlatPack::Button::Component.new(
       icon: "menu",

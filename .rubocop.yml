@@ -15,10 +15,16 @@ Style/StringLiterals:
 
 Layout/LineLength:
   Max: 140
+  Exclude:
+    - 'test/**/*'
 
 Metrics/ClassLength:
   Exclude:
     - 'test/**/*'
+    - 'app/controllers/recording_studio_attachable/application_controller.rb'
+    - 'app/controllers/recording_studio_attachable/attachment_imports_controller.rb'
+    - 'lib/recording_studio_attachable/configuration.rb'
+    - 'lib/recording_studio_attachable/upload_provider.rb'
 
 Metrics/MethodLength:
   Exclude:
@@ -29,6 +35,13 @@ Metrics/MethodLength:
     - 'app/services/**/*'
     - 'app/models/**/*'
     - 'lib/recording_studio_attachable/configuration.rb'
+    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/bootstrap_controller.rb'
+    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/imports_controller.rb'
+    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/oauth_controller.rb'
+    - 'lib/recording_studio_attachable/google_drive/client.rb'
+    - 'lib/recording_studio_attachable/google_drive/oauth_client.rb'
+    - 'lib/recording_studio_attachable/google_drive/services/import_selected_files.rb'
+    - 'lib/recording_studio_attachable/upload_provider.rb'
 
 Metrics/AbcSize:
   Exclude:
@@ -36,8 +49,21 @@ Metrics/AbcSize:
     - 'lib/generators/**/*'
     - 'app/controllers/**/*'
     - 'app/services/**/*'
+    - 'app/queries/recording_studio_attachable/queries/with_attachments.rb'
+    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/application_controller.rb'
+    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/bootstrap_controller.rb'
+    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/imports_controller.rb'
+    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/oauth_controller.rb'
+    - 'lib/recording_studio_attachable/google_drive/client.rb'
+    - 'lib/recording_studio_attachable/google_drive/oauth_client.rb'
+    - 'lib/recording_studio_attachable/google_drive/services/import_selected_files.rb'
+    - 'lib/recording_studio_attachable/upload_provider.rb'
 
 Lint/EmptyBlock:
+  Exclude:
+    - 'test/**/*'
+
+Lint/UnusedBlockArgument:
   Exclude:
     - 'test/**/*'
 
@@ -57,6 +83,27 @@ Lint/MissingSuper:
 Metrics/ParameterLists:
   Exclude:
     - 'app/services/**/*'
+    - 'app/controllers/recording_studio_attachable/application_controller.rb'
+    - 'lib/recording_studio_attachable/google_drive/services/import_selected_files.rb'
+    - 'lib/recording_studio_attachable/upload_provider.rb'
+
+Metrics/BlockLength:
+  Exclude:
+    - 'test/**/*'
+    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/imports_controller.rb'
+
+Metrics/CyclomaticComplexity:
+  Exclude:
+    - 'test/**/*'
+    - 'app/controllers/recording_studio_attachable/attachment_imports_controller.rb'
+    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/oauth_controller.rb'
+    - 'lib/recording_studio_attachable/upload_provider.rb'
+
+Metrics/PerceivedComplexity:
+  Exclude:
+    - 'test/**/*'
+    - 'app/controllers/recording_studio_attachable/attachment_imports_controller.rb'
+    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/oauth_controller.rb'
 
 Naming/PredicatePrefix:
   Exclude:

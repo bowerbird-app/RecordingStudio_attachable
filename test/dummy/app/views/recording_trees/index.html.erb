@@ -5,18 +5,11 @@
     variant: :h1
   ) %>
 
-  <section class="space-y-4 rounded-xl border border-[var(--surface-border-color)] bg-[var(--surface-background-color)] p-5">
-    <%= render FlatPack::SectionTitle::Component.new(
-      title: "Hierarchy",
-      subtitle: "Indented dot points show each child recording beneath its parent."
-    ) %>
-
-    <% if @root_recordings.any? %>
-      <ul class="list-disc space-y-3 pl-6 text-sm text-[var(--surface-content-color)] marker:text-[var(--surface-muted-content-color)]">
-        <%= render partial: "recording_node", collection: @root_recordings, as: :recording, locals: { recording_children: @recording_children } %>
-      </ul>
-    <% else %>
-      <p class="text-sm text-[var(--surface-muted-content-color)]">Seed the dummy app to populate the recordings tree.</p>
-    <% end %>
-  </section>
+  <% if @root_recordings.any? %>
+    <ul class="list-disc space-y-3 pl-6 text-sm text-[var(--surface-content-color)] marker:text-[var(--surface-muted-content-color)]">
+      <%= render partial: "recording_node", collection: @root_recordings, as: :recording, locals: { recording_children: @recording_children } %>
+    </ul>
+  <% else %>
+    <p class="text-sm text-[var(--surface-muted-content-color)]">Seed the dummy app to populate the recordings tree.</p>
+  <% end %>
 </div>

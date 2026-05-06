@@ -359,10 +359,13 @@ class AttachmentRevisionServicesTest < Minitest::Test
   end
 
   def stub_active_storage!
-    return if defined?(ActiveStorage::Blob)
+    unless defined?(ActiveStorage::Blob)
+      Object.const_set(:ActiveStorage, Module.new) unless defined?(ActiveStorage)
+      ActiveStorage.const_set(:Blob, Class.new)
+    end
 
-    Object.const_set(:ActiveStorage, Module.new) unless defined?(ActiveStorage)
-    ActiveStorage.const_set(:Blob, Class.new)
+    return if ActiveStorage::Blob.respond_to?(:find_signed!)
+
     ActiveStorage::Blob.define_singleton_method(:find_signed!) do |*|
       raise NotImplementedError
     end

@@ -122,9 +122,42 @@ class EngineTest < Minitest::Test
     ], capabilities
   end
 
+  def test_google_drive_initializer_registers_provider_when_picker_is_configured
+    RecordingStudioAttachable.configuration.merge!(
+      google_drive: {
+        enabled: true,
+        client_id: "client-id",
+        client_secret: "client-secret",
+        redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
+        api_key: "api-key",
+        app_id: "app-id"
+      }
+    )
+    after_initialize = nil
+    app = Struct.new(:config).new(
+      Object.new.tap do |config|
+        config.define_singleton_method(:after_initialize) { |&block| after_initialize = block }
+      end
+    )
+
+    find_google_drive_initializer("recording_studio_attachable.google_drive.register_upload_provider").block.call(app)
+    after_initialize.call
+
+    provider = RecordingStudioAttachable.configuration.upload_provider(:google_drive)
+    refute_nil provider
+    assert_equal "Google Drive", provider.label
+    assert_equal :google_drive, provider.key
+    assert_equal :client_picker, provider.strategy
+    assert_equal "google_drive", provider.launcher
+  end
+
   private
 
   def find_initializer(name)
     RecordingStudioAttachable::Engine.initializers.find { |initializer| initializer.name == name }
+  end
+
+  def find_google_drive_initializer(name)
+    RecordingStudioAttachable::GoogleDrive::Engine.initializers.find { |initializer| initializer.name == name }
   end
 end

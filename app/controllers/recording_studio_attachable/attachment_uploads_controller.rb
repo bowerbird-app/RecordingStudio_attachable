@@ -5,12 +5,14 @@ module RecordingStudioAttachable
     def new
       @recording = find_recording
       capability_options = capability_options_for(@recording)
+      @upload_redirect_params = attachment_redirect_params(fallback_return_to: request.referer)
 
       authorize_attachment_action!(:upload, @recording, capability_options: capability_options)
       @allowed_content_types = configured_attachable_option(@recording, :allowed_content_types)
       @max_file_size = configured_attachable_option(@recording, :max_file_size)
       @max_file_count = configured_attachable_option(@recording, :max_file_count)
-      @create_path = recording_attachments_path(@recording)
+      @upload_providers = configured_upload_providers(@recording)
+      @create_path = recording_attachments_path(@recording, @upload_redirect_params)
     end
 
     def create
@@ -28,16 +30,16 @@ module RecordingStudioAttachable
       respond_to do |format|
         format.html do
           if result.success?
-            redirect_to recording_attachments_path(@recording), notice: "Uploaded #{result.value.size} attachment(s)."
+            redirect_to resolved_attachment_redirect_path(@recording), notice: "Uploaded #{result.value.size} attachment(s)."
           else
-            redirect_to recording_attachment_upload_path(@recording), alert: result.error
+            redirect_to recording_attachment_upload_path(@recording, attachment_redirect_params), alert: result.error
           end
         end
         format.json do
           if result.success?
             render json: {
               attachments: Array(result.value).map { |recording| attachment_json(recording) },
-              redirect_path: recording_attachments_path(@recording)
+              redirect_path: resolved_attachment_redirect_path(@recording)
             }, status: :created
           else
             render json: { error: result.error, errors: result.errors }, status: :unprocessable_entity
@@ -57,12 +59,19 @@ module RecordingStudioAttachable
     end
 
     def attachment_json(recording)
+      attachment = recording.recordable
+      blob_path = main_app.rails_blob_path(attachment.file, only_path: true)
+
       {
         id: recording.id,
-        name: recording.recordable.name,
-        content_type: recording.recordable.content_type,
-        byte_size: recording.recordable.byte_size,
-        attachment_kind: recording.recordable.attachment_kind,
+        name: attachment.name,
+        description: attachment.description,
+        content_type: attachment.content_type,
+        byte_size: attachment.byte_size,
+        attachment_kind: attachment.attachment_kind,
+        thumbnail_url: blob_path,
+        insert_url: blob_path,
+        alt: attachment.name,
         show_path: attachment_path(recording)
       }
     end

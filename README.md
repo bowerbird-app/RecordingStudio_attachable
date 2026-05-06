@@ -102,6 +102,189 @@ RecordingStudioAttachable.configure do |config|
 end
 ```
 
+### Upload provider addons
+
+Addon gems can register extra upload sources for the upload page without replacing the core direct-upload flow. The button registration API is the discovery layer, and providers can now choose one of three launch strategies:
+
+- `:link` for normal navigation
+- `:modal_page` for a provider-owned page rendered inside the shared upload-page modal
+- `:client_picker` for browser-native or SDK-driven pickers launched directly from the upload page
+
+The public import services remain the provider integration layer.
+
+```ruby
+RecordingStudioAttachable.configure do |config|
+  config.register_upload_provider(
+    :google_drive,
+    label: "Google Drive",
+    icon: "cloud",
+    strategy: :client_picker,
+    launcher: "google_drive",
+    bootstrap_url: ->(route_helpers:, recording:) do
+      route_helpers.google_drive.recording_bootstrap_path(recording, format: :json)
+    end,
+    import_url: ->(route_helpers:, recording:) do
+      route_helpers.google_drive.recording_imports_path(recording, format: :json)
+    end
+  )
+end
+```
+
+Each provider registration supports:
+
+- `key`: stable provider identifier
+- `label`: button text shown on the upload page
+- `strategy`: `:link`, `:modal_page`, or `:client_picker`
+- `url`: string or callable for `:link`
+- `bootstrap_url`: JSON bootstrap endpoint for `:client_picker`
+- `import_url`: JSON import handoff endpoint for `:client_picker`
+- `launcher`: browser launcher name for `:client_picker`
+- `modal_title`: optional modal heading for `:modal_page`
+- `icon`, `style`, `size`, `target`: FlatPack button options
+- `visible`: optional callable receiving `view_context:` and `recording:`
+
+For `:modal_page`, the upload page opens the provider URL inside a shared FlatPack modal. The engine appends `embed=modal`, `provider_key`, and `provider_modal_id` to the provider URL so addon-owned screens can adapt their layout and communicate back to the upload page.
+
+For modal-page providers, the shared browser contract is:
+
+- the upload page opens the provider URL in an iframe modal
+- addon screens can complete auth in a popup and post a `provider-auth-complete` message back to the upload page
+- addon screens can post a `provider-import-complete` message with a `redirectPath` when the import succeeds
+
+For `:client_picker`, the upload page stays in place and calls a registered browser launcher. The launcher fetches provider bootstrap JSON, can open auth in a popup, and can submit selected remote file ids back to the provider's `import_url`.
+
+Client-picker launchers are registered in JavaScript:
+
+```js
+import { registerUploadProviderLauncher } from "controllers/recording_studio_attachable/provider_launchers"
+
+registerUploadProviderLauncher("google_drive", {
+  async launch({ controller, bootstrapUrl, importUrl }) {
+    const bootstrap = await controller.fetchProviderBootstrap(bootstrapUrl)
+    // open auth popup if needed, then launch provider SDK picker
+    // finally post selected file ids back to importUrl
+  }
+})
+```
+
+In your provider controller or service, hand the gem an IO object plus metadata and let it create the blob, enforce attachable validations, and create the child recording:
+
+```ruby
+result = RecordingStudioAttachable::Services::ImportAttachment.call(
+  parent_recording: recording,
+  io: downloaded_file,
+  filename: remote_file.name,
+  content_type: remote_file.mime_type,
+  actor: Current.actor,
+  impersonator: Current.impersonator,
+  name: remote_file.title,
+  description: "Imported from Google Drive",
+  source: "google_drive",
+  metadata: {
+    provider: "google_drive",
+    external_id: remote_file.id,
+    external_url: remote_file.web_view_link
+  }
+)
+
+if result.success?
+  attachment_recording = result.value
+else
+  Rails.logger.warn(result.error)
+end
+```
+
+If your provider flow is browser-driven and you want an HTTP handoff endpoint instead of calling the service directly, the engine now exposes `recording_attachment_imports_path(recording)`. Post either uploaded files or signed blob ids to that endpoint and the engine will route the batch through the correct import/finalize service for you. This endpoint uses the host app's current actor and stamps provider provenance from the registered `provider_key`.
+
+Multipart file imports:
+
+```ruby
+post recording_studio_attachable.recording_attachment_imports_path(recording), params: {
+  attachment_import: {
+    provider_key: "google_drive",
+    attachments: [
+      {
+        file: downloaded_file,
+        name: remote_file.title,
+        description: "Imported from Google Drive"
+      }
+    ]
+  }
+}
+```
+
+Signed blob finalization with provider metadata:
+
+```ruby
+post recording_studio_attachable.recording_attachment_imports_path(recording), params: {
+  attachment_import: {
+    provider_key: "google_drive",
+    attachments: [
+      {
+        signed_blob_id: blob.signed_id,
+        name: remote_file.title,
+        metadata: {
+          external_id: remote_file.id,
+          external_url: remote_file.web_view_link
+        }
+      }
+    ]
+  }
+}, as: :json
+```
+
+For batched provider imports, use `RecordingStudioAttachable::Services::ImportAttachments.call(...)` with an `attachments:` array of hashes using the same keys.
+
+If you are working in trusted internal app code and only want the created recording, the attachable recording also exposes convenience methods:
+
+- `recording.import_attachment(...)`
+- `recording.import_attachments(...)`
+
+### Built-in Google Drive addon
+
+This gem also ships with an optional Google Drive addon that uses the same provider discovery and import services described above. The addon stays dormant until you enable it and provide both OAuth and Google Picker credentials.
+
+```ruby
+RecordingStudioAttachable.configure do |config|
+  config.google_drive.enabled = true
+  config.google_drive.client_id = ENV.fetch("GOOGLE_DRIVE_CLIENT_ID")
+  config.google_drive.client_secret = ENV.fetch("GOOGLE_DRIVE_CLIENT_SECRET")
+  config.google_drive.api_key = ENV.fetch("GOOGLE_DRIVE_API_KEY")
+  config.google_drive.app_id = ENV.fetch("GOOGLE_DRIVE_APP_ID")
+  config.google_drive.redirect_uri = "https://your-app.test/recording_studio_attachable/google_drive/oauth/callback"
+end
+```
+
+Once enabled, the upload page will automatically show a `Google Drive` provider button that opens Google auth and the Google Picker directly from the upload page. There is no provider-owned middle screen in the normal flow. The addon routes remain mounted inside the main engine at `/recording_studio_attachable/google_drive`.
+
+The addon handles:
+
+- Google OAuth browser handoff in a popup launched from the upload page
+- bootstrap JSON for the built-in Google Picker launcher
+- Google Picker selection directly from the upload page
+- downloading selected files from Drive
+- handing those files to `RecordingStudioAttachable::Services::ImportAttachments`
+
+Imported files still go through the gem's normal authorization, Active Storage validation, attachment creation, and recording creation flow. Native Google Docs formats are exported during import using Drive-compatible formats such as PDF, PNG, or CSV where supported.
+
+Each import payload supports:
+
+- `io`: readable IO object for the provider file
+- `filename`: original filename to store in Active Storage
+- `content_type`: MIME type used for validation and attachment kind classification
+- `name`, `description`: optional attachment metadata overrides
+- `actor`, `impersonator`: optional audit actors
+- `source`: metadata source label stored on the recording event, defaults to `provider_import`; use this only in trusted direct service calls
+- `metadata`: extra event metadata merged into the attachment upload event
+- `identify`: optional Active Storage blob creation option
+
+The HTTP endpoint accepts a single `attachment_import` envelope plus either:
+
+- `file`: a multipart uploaded file that the engine should import into Active Storage
+- `signed_blob_id`: an existing Active Storage blob id that the engine should finalize as an attachment
+
+The HTTP endpoint does not accept caller-controlled `source` or `service_name` values. Provider provenance is derived from the registered `provider_key`.
+
 ### Per-recordable overrides
 
 Capability options passed to `RecordingStudio::Capabilities::Attachable.to(...)` override the global defaults for that recordable type.

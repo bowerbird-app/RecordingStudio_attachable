@@ -5,6 +5,8 @@ require_relative "../app/queries/recording_studio_attachable/queries/for_recordi
 require_relative "../app/services/recording_studio_attachable/services/application_service"
 require_relative "../app/services/recording_studio_attachable/services/record_attachment_upload"
 require_relative "../app/services/recording_studio_attachable/services/record_attachment_uploads"
+require_relative "../app/services/recording_studio_attachable/services/import_attachment"
+require_relative "../app/services/recording_studio_attachable/services/import_attachments"
 require_relative "../app/services/recording_studio_attachable/services/revise_attachment_metadata"
 require_relative "../app/services/recording_studio_attachable/services/replace_attachment_file"
 require_relative "../app/services/recording_studio_attachable/services/remove_attachment"
@@ -154,6 +156,42 @@ class RecordingMethodsTest < Minitest::Test
 
       assert_equal expected_kwargs, captured_kwargs
     end
+  end
+
+  def test_import_attachment_delegates_to_import_service
+    recording = FakeRecording.new
+    io = StringIO.new("<svg></svg>")
+    result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: :imported)
+    captured_kwargs = nil
+
+    RecordingStudioAttachable::Services::ImportAttachment.stub(:call, lambda { |**kwargs|
+      captured_kwargs = kwargs
+      result
+    }) do
+      assert_equal :imported, recording.import_attachment(io: io, filename: "demo.svg", content_type: "image/svg+xml")
+    end
+
+    assert_equal recording, captured_kwargs[:parent_recording]
+    assert_equal io, captured_kwargs[:io]
+    assert_equal "demo.svg", captured_kwargs[:filename]
+    assert_equal "image/svg+xml", captured_kwargs[:content_type]
+  end
+
+  def test_import_attachments_delegates_to_batch_import_service
+    recording = FakeRecording.new
+    attachments = [{ filename: "demo.svg", content_type: "image/svg+xml" }]
+    result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: :imported_batch)
+    captured_kwargs = nil
+
+    RecordingStudioAttachable::Services::ImportAttachments.stub(:call, lambda { |**kwargs|
+      captured_kwargs = kwargs
+      result
+    }) do
+      assert_equal :imported_batch, recording.import_attachments(attachments: attachments)
+    end
+
+    assert_equal recording, captured_kwargs[:parent_recording]
+    assert_equal attachments, captured_kwargs[:attachments]
   end
 
   def test_attachment_recording_methods_delegate_to_services

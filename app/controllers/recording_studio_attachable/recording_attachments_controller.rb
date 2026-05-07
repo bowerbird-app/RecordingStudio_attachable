@@ -2,6 +2,8 @@
 
 module RecordingStudioAttachable
   class RecordingAttachmentsController < ApplicationController
+    LISTING_VIEWS = %i[grid list].freeze
+
     def index
       @recording = find_recording
       capability_options = capability_options_for(@recording)
@@ -11,6 +13,7 @@ module RecordingStudioAttachable
       @kind = RecordingStudioAttachable::Queries::ForRecording.normalize_kind(params[:kind])
       @query = RecordingStudioAttachable::Queries::ForRecording.normalize_search(params[:q])
       @include_trashed = ActiveModel::Type::Boolean.new.cast(params[:include_trashed])
+      @view_mode = normalize_listing_view(params[:view], kind: @kind)
       attachment_query = RecordingStudioAttachable::Queries::ForRecording.new(
         recording: @recording,
         scope: @scope,
@@ -29,6 +32,15 @@ module RecordingStudioAttachable
         recording: @recording,
         capability_options: capability_options
       )
+    end
+
+    private
+
+    def normalize_listing_view(value, kind:)
+      normalized_view = value.to_s.strip.downcase.presence&.to_sym
+      return normalized_view if LISTING_VIEWS.include?(normalized_view)
+
+      kind.to_sym == :files ? :list : :grid
     end
   end
 end

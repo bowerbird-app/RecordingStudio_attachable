@@ -11,6 +11,22 @@
       content_type
     end
   end
+
+  remove_button_template = render(
+    FlatPack::Button::Component.new(
+      text: "X",
+      style: :ghost,
+      size: :md,
+      type: "button",
+      class: "absolute right-2 top-2",
+      data: {
+        action: "recording-studio-attachable--upload#remove",
+        id: "__ENTRY_ID__"
+      },
+      aria: { label: "__REMOVE_LABEL__" },
+      title: "__REMOVE_TITLE__"
+    )
+  ).squish
 %>
 
 <div class="mx-auto flex w-full max-w-6xl flex-col gap-6"
@@ -19,6 +35,11 @@
      data-recording-studio-attachable--upload-finalize-url-value="<%= @create_path %>"
      data-recording-studio-attachable--upload-max-file-size-value="<%= @max_file_size %>"
      data-recording-studio-attachable--upload-max-files-count-value="<%= @max_file_count %>"
+  data-recording-studio-attachable--upload-image-processing-enabled-value="<%= @image_processing_enabled %>"
+  data-recording-studio-attachable--upload-image-processing-max-width-value="<%= @image_processing_max_width %>"
+  data-recording-studio-attachable--upload-image-processing-max-height-value="<%= @image_processing_max_height %>"
+  data-recording-studio-attachable--upload-image-processing-quality-value="<%= @image_processing_quality %>"
+      data-recording-studio-attachable--upload-remove-button-template-value="<%= remove_button_template %>"
      data-recording-studio-attachable--upload-allowed-content-types-value="<%= @allowed_content_types.join(',') %>">
   <%= render FlatPack::Breadcrumb::Component.new(
     show_back: true,

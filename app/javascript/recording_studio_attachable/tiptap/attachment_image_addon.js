@@ -151,6 +151,26 @@ const ManagedAttachmentImage = Image.extend({
       const sizeButtons = new Map()
       const alignButtons = new Map()
 
+      const hideToolbar = () => {
+        toolbar.style.display = "none"
+        altPopover.style.display = "none"
+        image.style.outline = "none"
+        image.style.outlineOffset = "0"
+      }
+
+      const showToolbar = () => {
+        toolbar.style.display = "flex"
+        image.style.outline = "2px solid var(--surface-content-color)"
+        image.style.outlineOffset = "4px"
+      }
+
+      const handleDocumentMouseDown = (event) => {
+        const target = event.target
+        if (!(target instanceof Node) || wrapper.contains(target)) return
+
+        hideToolbar()
+      }
+
       wrapper.style.cssText = [
         "position:relative",
         "margin:1rem 0",
@@ -317,6 +337,8 @@ const ManagedAttachmentImage = Image.extend({
       wrapper.appendChild(toolbar)
       wrapper.appendChild(image)
 
+      document.addEventListener("mousedown", handleDocumentMouseDown, true)
+
       render(node)
 
       return {
@@ -329,16 +351,11 @@ const ManagedAttachmentImage = Image.extend({
         },
 
         selectNode() {
-          toolbar.style.display = "flex"
-          image.style.outline = "2px solid var(--surface-content-color)"
-          image.style.outlineOffset = "4px"
+          showToolbar()
         },
 
         deselectNode() {
-          toolbar.style.display = "none"
-          altPopover.style.display = "none"
-          image.style.outline = "none"
-          image.style.outlineOffset = "0"
+          hideToolbar()
         },
 
         stopEvent(event) {
@@ -347,6 +364,10 @@ const ManagedAttachmentImage = Image.extend({
 
         ignoreMutation() {
           return true
+        },
+
+        destroy() {
+          document.removeEventListener("mousedown", handleDocumentMouseDown, true)
         },
       }
     }
@@ -361,7 +382,7 @@ registerTiptapAddon("attachment_image", {
       label: addonOptions.label || "Insert image",
       icon: IMAGE_ICON,
       action: (editor) => {
-        editor.view.dom.dispatchEvent(new CustomEvent(addonOptions.eventName || "flat-pack:attachment-image-picker", {
+        editor.view.dom.dispatchEvent(new CustomEvent(addonOptions.eventName || "recording-studio-inline-picker", {
           bubbles: true,
           detail: { editor }
         }))

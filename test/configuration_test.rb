@@ -28,6 +28,22 @@ class ConfigurationTest < Minitest::Test
   def test_defaults_match_attachable_expectations
     assert_equal ["image/*", "application/pdf"], @configuration.allowed_content_types
     assert_equal 20, @configuration.max_file_count
+    refute @configuration.image_processing_enabled
+    assert_equal 2560, @configuration.image_processing_max_width
+    assert_equal 2560, @configuration.image_processing_max_height
+    assert_equal 0.82, @configuration.image_processing_quality
+    assert_equal(
+      {
+        square_small: { resize_to_fill: [128, 128] },
+        square_med: { resize_to_fill: [400, 400] },
+        square_large: { resize_to_fill: [800, 800] },
+        small: { resize_to_limit: [480, 480] },
+        med: { resize_to_limit: [960, 960] },
+        large: { resize_to_limit: [1600, 1600] },
+        xlarge: { resize_to_limit: [2400, 2400] }
+      },
+      @configuration.image_variants
+    )
     assert_equal :direct, @configuration.default_listing_scope
     assert_equal :all, @configuration.default_kind_filter
     assert_equal :blank, @configuration.layout
@@ -50,6 +66,24 @@ class ConfigurationTest < Minitest::Test
 
     assert_equal provider, @configuration.upload_provider(:google_drive)
     assert_equal [:google_drive], @configuration.upload_providers.map(&:key)
+  end
+
+  def test_register_upload_provider_replaces_existing_provider_with_same_key
+    @configuration.register_upload_provider(:google_drive, label: "Old", url: "/imports/old")
+
+    provider = @configuration.register_upload_provider(:google_drive, label: "New", url: "/imports/new")
+
+    assert_equal [provider], @configuration.upload_providers
+    assert_equal "New", @configuration.upload_provider(:google_drive).label
+  end
+
+  def test_register_upload_provider_accepts_existing_provider_instances
+    provider = RecordingStudioAttachable::UploadProvider.new(key: :dropbox, label: "Dropbox", url: "/imports/dropbox")
+
+    returned = @configuration.register_upload_provider(provider)
+
+    assert_same provider, returned
+    assert_same provider, @configuration.upload_provider(:dropbox)
   end
 
   def test_upload_providers_assignment_normalizes_hashes
@@ -102,12 +136,28 @@ class ConfigurationTest < Minitest::Test
     @configuration.merge!(
       max_file_size: 5.megabytes,
       max_file_count: 8,
+      image_processing_enabled: true,
+      image_processing_max_width: 1600,
+      image_processing_max_height: 1200,
+      image_processing_quality: 0.75,
+      image_variants: {
+        large: { resize_to_limit: [1800, 1800] },
+        square_small: { resize_to_fill: [96, 96] },
+        unknown: { resize_to_limit: [1, 1] }
+      },
       default_listing_scope: :subtree,
       unknown_setting: true
     )
 
     assert_equal 5.megabytes, @configuration.max_file_size
     assert_equal 8, @configuration.max_file_count
+    assert @configuration.image_processing_enabled
+    assert_equal 1600, @configuration.image_processing_max_width
+    assert_equal 1200, @configuration.image_processing_max_height
+    assert_equal 0.75, @configuration.image_processing_quality
+    assert_equal({ resize_to_limit: [1800, 1800] }, @configuration.image_variant(:large))
+    assert_equal({ resize_to_fill: [96, 96] }, @configuration.image_variant(:square_small))
+    assert_nil @configuration.image_variant(:unknown)
     assert_equal :subtree, @configuration.default_listing_scope
   end
 
@@ -129,6 +179,16 @@ class ConfigurationTest < Minitest::Test
     assert @configuration.google_drive.picker_configured?
     assert_equal "client-id", @configuration.google_drive.client_id
     assert_equal 10, @configuration.google_drive.page_size
+  end
+
+  def test_google_drive_merge_returns_self_and_ignores_unknown_keys
+    google_drive = @configuration.google_drive
+
+    returned = google_drive.merge!(enabled: true, unknown: "ignored")
+
+    assert_same google_drive, returned
+    assert google_drive.enabled?
+    refute google_drive.respond_to?(:unknown)
   end
 
   def test_merge_ignores_non_enumerable_inputs
@@ -164,6 +224,17 @@ class ConfigurationTest < Minitest::Test
     refute @configuration.attachment_kind_enabled?("audio", enabled_attachment_kinds: ["image"])
   end
 
+  def test_attachment_kind_enabled_falls_back_to_global_configuration_when_override_is_nil
+    @configuration.enabled_attachment_kinds = %i[file]
+
+    assert @configuration.attachment_kind_enabled?("file", enabled_attachment_kinds: nil)
+    refute @configuration.attachment_kind_enabled?("image", enabled_attachment_kinds: nil)
+  end
+
+  def test_upload_provider_returns_nil_for_missing_keys
+    assert_nil @configuration.upload_provider(:missing)
+  end
+
   def test_normalize_role_maps_aliases_and_custom_roles
     assert_equal :view, @configuration.normalize_role("Viewing")
     assert_equal :edit, @configuration.normalize_role(:editor)
@@ -185,6 +256,19 @@ class ConfigurationTest < Minitest::Test
         allowed_content_types: ["image/*", "application/pdf"],
         max_file_size: 25.megabytes,
         max_file_count: 20,
+        image_processing_enabled: false,
+        image_processing_max_width: 2560,
+        image_processing_max_height: 2560,
+        image_processing_quality: 0.82,
+        image_variants: {
+          square_small: { resize_to_fill: [128, 128] },
+          square_med: { resize_to_fill: [400, 400] },
+          square_large: { resize_to_fill: [800, 800] },
+          small: { resize_to_limit: [480, 480] },
+          med: { resize_to_limit: [960, 960] },
+          large: { resize_to_limit: [1600, 1600] },
+          xlarge: { resize_to_limit: [2400, 2400] }
+        },
         enabled_attachment_kinds: %i[file],
         default_listing_scope: :direct,
         default_kind_filter: :all,

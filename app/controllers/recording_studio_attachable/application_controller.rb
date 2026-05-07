@@ -13,6 +13,7 @@ module RecordingStudioAttachable
     helper_method :current_attachable_actor
     helper_method :embedded_upload_provider_request?
     helper_method :attachment_redirect_params
+    helper_method :attachment_preview_path
 
     private
 
@@ -96,6 +97,15 @@ module RecordingStudioAttachable
       RecordingStudioAttachable.configuration.upload_providers.select do |provider|
         provider.render?(view_context: view_context, recording: recording)
       end
+    end
+
+    def attachment_preview_path(attachment, variant_name)
+      preview_target = attachment.preview_target_named(variant_name)
+      return if preview_target.blank?
+
+      return main_app.rails_representation_path(preview_target, only_path: true) if attachment.file.variable?
+
+      main_app.rails_blob_path(attachment.file, only_path: true)
     end
 
     def attachment_redirect_params(fallback_return_to: nil)

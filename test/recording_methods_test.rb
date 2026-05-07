@@ -120,6 +120,18 @@ class RecordingMethodsTest < Minitest::Test
     assert recording.has_attachments?(scope: :subtree, kind: :images, include_trashed: true)
   end
 
+  def test_has_attachments_returns_false_when_relation_is_empty
+    relation = Struct.new(:value) do
+      def exists?
+        value
+      end
+    end
+    recording = FakeRecording.new
+    recording.define_singleton_method(:attachments) { |**| relation.new(false) }
+
+    refute recording.has_attachments?(scope: :direct, kind: :files)
+  end
+
   def test_recording_level_methods_delegate_to_services
     recording = FakeRecording.new
     assertions = [
@@ -264,5 +276,20 @@ class RecordingMethodsTest < Minitest::Test
 
     fake_query.verify
     assert_equal [[[:attachable], { for_type: "Workspace" }]], recording.capability_assertions
+  end
+
+  def test_attachment_recordings_assert_capability_with_nil_parent_type_when_parent_is_missing
+    recording = FakeRecording.new("RecordingStudioAttachable::Attachment", parent_recording: nil)
+    fake_query = Minitest::Mock.new
+    fake_query.expect(:call, [:attachments])
+
+    RecordingStudioAttachable::Queries::ForRecording.stub(:new, lambda { |**|
+      fake_query
+    }) do
+      recording.attachments
+    end
+
+    fake_query.verify
+    assert_equal [[[:attachable], { for_type: nil }]], recording.capability_assertions
   end
 end

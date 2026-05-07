@@ -1,87 +1,20 @@
 <div class="mx-auto flex w-full max-w-4xl flex-col gap-6">
+  <%= render FlatPack::Breadcrumb::Component.new(
+    show_back: true,
+    back_text: "Back",
+    back_icon: "arrow-left",
+    back_href: request.referer.presence || main_app.root_path,
+    items: [{ text: "Home", href: main_app.root_path, icon: "home" }]
+  ) %>
+
   <%= render FlatPack::PageTitle::Component.new(
     title: @attachment.name,
     subtitle: @attachment.original_filename,
     variant: :h1
   ) %>
 
-  <div class="flex flex-wrap gap-2">
-    <%= render FlatPack::Badge::Component.new(text: @attachment.attachment_kind, style: :info, size: :sm) %>
-    <%= render FlatPack::Badge::Component.new(text: @attachment.content_type, style: :warning, size: :sm) %>
-    <%= render FlatPack::Badge::Component.new(text: number_to_human_size(@attachment.byte_size), style: :success, size: :sm) %>
-  </div>
-
-  <% if @attachment.previewable? && @attachment.file.attached? %>
-    <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
-      <% card.header do %>
-        <%= render FlatPack::PageTitle::Component.new(title: "Preview", subtitle: "Current attachment file", variant: :h3, class: "mb-0 pb-0") %>
-      <% end %>
-      <% card.body do %>
-        <div class="overflow-hidden rounded-lg border border-[var(--surface-border-color)] bg-[var(--surface-muted-background-color)]">
-          <%= image_tag main_app.rails_blob_path(@attachment.file, only_path: true), alt: @attachment.name, class: "max-h-[480px] w-full object-contain" %>
-        </div>
-      <% end %>
-    <% end %>
-  <% end %>
-
-  <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
-    <% card.header do %>
-      <%= render FlatPack::PageTitle::Component.new(title: "Attachment details", subtitle: "Current immutable recordable revision", variant: :h3, class: "mb-0 pb-0") %>
-    <% end %>
-    <% card.body do %>
-      <dl class="space-y-3 text-sm">
-        <div>
-          <dt class="text-[var(--surface-muted-content-color)]">Description</dt>
-          <dd><%= @attachment.description.presence || "No description yet" %></dd>
-        </div>
-        <div>
-          <dt class="text-[var(--surface-muted-content-color)]">Parent recording</dt>
-          <dd><%= @owner_recording.present? ? "Available in the attachment listing for this recordable" : "Standalone attachment" %></dd>
-        </div>
-      </dl>
-    <% end %>
-    <% card.footer do %>
-      <div class="flex flex-wrap gap-3">
-        <% if @owner_recording.present? %>
-          <%= link_to recording_attachments_path(@owner_recording), class: "inline-flex" do %>
-            <%= render FlatPack::Button::Component.new(text: "Back to attachments", style: :secondary, size: :md) %>
-          <% end %>
-        <% end %>
-        <%= link_to download_attachment_path(@attachment_recording), class: "inline-flex" do %>
-          <%= render FlatPack::Button::Component.new(text: "Download", style: :primary, size: :md) %>
-        <% end %>
-        <%= button_to destroy_attachment_path(@attachment_recording), method: :delete, class: "inline-flex" do %>
-          <%= render FlatPack::Button::Component.new(text: "Remove", style: :secondary, size: :md) %>
-        <% end %>
-        <% if @attachment_recording.respond_to?(:trashed_at) && @attachment_recording.trashed_at.present? %>
-          <%= button_to restore_attachment_path(@attachment_recording), method: :post, class: "inline-flex" do %>
-            <%= render FlatPack::Button::Component.new(text: "Restore", style: :ghost, size: :md) %>
-          <% end %>
-        <% end %>
-      </div>
-    <% end %>
-  <% end %>
-
-  <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
-    <% card.header do %>
-      <%= render FlatPack::PageTitle::Component.new(title: "Revise attachment", subtitle: "Metadata revisions create a new attachment recordable and repoint the child recording.", variant: :h3, class: "mb-0 pb-0") %>
-    <% end %>
-    <% card.body do %>
-      <%= form_with model: @attachment, url: attachment_path(@attachment_recording), method: :patch, class: "space-y-4" do |form| %>
-        <div class="space-y-4">
-          <%= render FlatPack::TextInput::Component.new(name: "attachment[name]", label: "Name", value: @attachment.name, required: true) %>
-          <div>
-            <label class="mb-2 block text-sm font-medium">Description</label>
-            <%= form.text_area :description, name: "attachment[description]", value: @attachment.description, class: "min-h-24 w-full rounded-lg border border-[var(--surface-border-color)] bg-transparent px-3 py-2" %>
-          </div>
-          <div class="space-y-2">
-            <label class="block text-sm font-medium" for="attachment_signed_blob_id">Replace file (optional)</label>
-            <%= file_field_tag "attachment[signed_blob_id]", direct_upload: true, accept: @replace_allowed_content_types.join(","), class: "block w-full rounded-lg border border-[var(--surface-border-color)] bg-transparent px-3 py-2" %>
-            <p class="text-xs text-[var(--surface-muted-content-color)]">Allowed types: <%= @replace_allowed_content_types.join(', ') %> · Max size: <%= number_to_human_size(@replace_max_file_size) %></p>
-          </div>
-        </div>
-        <%= render FlatPack::Button::Component.new(text: "Save revision", style: :primary, size: :md, type: "submit") %>
-      <% end %>
-    <% end %>
+  <% preview_path = attachment_preview_path(@attachment, :large) %>
+  <% if preview_path.present? %>
+    <%= image_tag preview_path, alt: @attachment.name, class: "max-h-[480px] w-full object-contain" %>
   <% end %>
 </div>

@@ -2,6 +2,16 @@
 
 module RecordingStudioAttachable
   class Configuration
+    DEFAULT_IMAGE_VARIANTS = {
+      square_small: { resize_to_fill: [128, 128] },
+      square_med: { resize_to_fill: [400, 400] },
+      square_large: { resize_to_fill: [800, 800] },
+      small: { resize_to_limit: [480, 480] },
+      med: { resize_to_limit: [960, 960] },
+      large: { resize_to_limit: [1600, 1600] },
+      xlarge: { resize_to_limit: [2400, 2400] }
+    }.freeze
+
     class GoogleDriveConfiguration
       attr_accessor :enabled,
                     :client_id,
@@ -79,6 +89,10 @@ module RecordingStudioAttachable
     attr_accessor :allowed_content_types,
                   :max_file_size,
                   :max_file_count,
+                  :image_processing_enabled,
+                  :image_processing_max_width,
+                  :image_processing_max_height,
+                  :image_processing_quality,
                   :enabled_attachment_kinds,
                   :default_listing_scope,
                   :default_kind_filter,
@@ -88,26 +102,10 @@ module RecordingStudioAttachable
                   :authorize_with,
                   :google_drive
 
-    attr_reader :upload_providers
+    attr_reader :image_variants, :upload_providers
 
     def initialize
-      @allowed_content_types = ["image/*", "application/pdf"]
-      @max_file_size = 25.megabytes
-      @max_file_count = 20
-      @enabled_attachment_kinds = %i[image file]
-      @default_listing_scope = :direct
-      @default_kind_filter = :all
-      @layout = :blank
-      @auth_roles = normalize_auth_roles(
-        view: :viewer,
-        upload: :editor,
-        revise: :editor,
-        remove: :admin,
-        restore: :admin,
-        download: :viewer
-      )
-      @classify_attachment_kind = ->(content_type) { content_type.to_s.start_with?("image/") ? "image" : "file" }
-      @authorize_with = nil
+      assign_defaults
       @google_drive = GoogleDriveConfiguration.new
       @upload_providers = []
     end
@@ -115,19 +113,7 @@ module RecordingStudioAttachable
     def merge!(hash)
       return unless hash.respond_to?(:each)
 
-      hash.each do |key, value|
-        case key.to_sym
-        when :auth_roles
-          self.auth_roles = normalize_auth_roles(value)
-        when :upload_providers
-          self.upload_providers = value
-        when :google_drive
-          google_drive.merge!(value)
-        else
-          setter = "#{key}="
-          public_send(setter, value) if respond_to?(setter)
-        end
-      end
+      hash.each { |key, value| merge_attribute!(key, value) }
     end
 
     def auth_role_for(action)
@@ -185,11 +171,24 @@ module RecordingStudioAttachable
       upload_providers.find { |provider| provider.key == key.to_sym }
     end
 
+    def image_variant(name)
+      image_variants[name.to_sym]
+    end
+
+    def image_variants=(variants)
+      @image_variants = normalize_image_variants(variants)
+    end
+
     def to_h
       {
         allowed_content_types: allowed_content_types,
         max_file_size: max_file_size,
         max_file_count: max_file_count,
+        image_processing_enabled: image_processing_enabled,
+        image_processing_max_width: image_processing_max_width,
+        image_processing_max_height: image_processing_max_height,
+        image_processing_quality: image_processing_quality,
+        image_variants: image_variants,
         enabled_attachment_kinds: enabled_attachment_kinds,
         default_listing_scope: default_listing_scope,
         default_kind_filter: default_kind_filter,
@@ -201,10 +200,80 @@ module RecordingStudioAttachable
 
     private
 
+    def assign_defaults
+      @allowed_content_types = ["image/*", "application/pdf"]
+      @max_file_size = 25.megabytes
+      @max_file_count = 20
+      @image_processing_enabled = false
+      @image_processing_max_width = 2560
+      @image_processing_max_height = 2560
+      @image_processing_quality = 0.82
+      @image_variants = default_image_variants
+      @enabled_attachment_kinds = %i[image file]
+      @default_listing_scope = :direct
+      @default_kind_filter = :all
+      @layout = :blank
+      @auth_roles = default_auth_roles
+      @classify_attachment_kind = default_attachment_kind_classifier
+      @authorize_with = nil
+    end
+
+    def default_auth_roles
+      normalize_auth_roles(
+        view: :viewer,
+        upload: :editor,
+        revise: :editor,
+        remove: :admin,
+        restore: :admin,
+        download: :viewer
+      )
+    end
+
+    def default_attachment_kind_classifier
+      ->(content_type) { content_type.to_s.start_with?("image/") ? "image" : "file" }
+    end
+
+    def merge_attribute!(key, value)
+      if key.to_sym == :google_drive
+        google_drive.merge!(value)
+        return
+      end
+
+      setter = merge_setter_for(key)
+      public_send(setter, merge_value(key, value)) if respond_to?(setter)
+    end
+
+    def merge_setter_for(key)
+      key.to_sym == :upload_providers ? "upload_providers=" : "#{key}="
+    end
+
+    def merge_value(key, value)
+      key.to_sym == :auth_roles ? normalize_auth_roles(value) : value
+    end
+
     def normalize_upload_provider(provider)
       return provider if provider.is_a?(RecordingStudioAttachable::UploadProvider)
 
       RecordingStudioAttachable::UploadProvider.new(**provider.to_h.symbolize_keys)
+    end
+
+    def default_image_variants
+      DEFAULT_IMAGE_VARIANTS.deep_dup
+    end
+
+    def normalize_image_variants(variants)
+      normalized = default_image_variants
+      return normalized unless variants.respond_to?(:each)
+
+      variants.each do |name, transformations|
+        key = name.to_sym
+        next unless normalized.key?(key)
+        next unless transformations.respond_to?(:to_h)
+
+        normalized[key] = normalized.fetch(key).merge(transformations.to_h.deep_symbolize_keys)
+      end
+
+      normalized
     end
   end
 end

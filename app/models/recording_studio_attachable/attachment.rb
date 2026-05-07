@@ -44,7 +44,24 @@ module RecordingStudioAttachable
     end
 
     def previewable?
-      image?
+      return false unless file.attached? && image?
+
+      file.variable? || file.blob.image?
+    end
+
+    def preview_target_named(name)
+      return unless previewable?
+
+      return variant_named(name) if file.variable?
+
+      file
+    end
+
+    def variant_named(name)
+      transformations = RecordingStudioAttachable.configuration.image_variant(name)
+      raise ArgumentError, "Unknown image variant: #{name}" if transformations.blank?
+
+      file.variant(transformations)
     end
 
     private

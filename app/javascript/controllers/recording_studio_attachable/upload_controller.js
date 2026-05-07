@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import { DirectUpload } from "@rails/activestorage"
 import { getUploadProviderLauncher } from "controllers/recording_studio_attachable/provider_launchers"
+import { preprocessImageFile, shouldPreprocessImageFile } from "controllers/recording_studio_attachable/image_preprocessing"
 import "controllers/recording_studio_attachable/google_drive_picker_launcher"
 
 export default class extends Controller {
@@ -10,6 +11,11 @@ export default class extends Controller {
     finalizeUrl: String,
     maxFileSize: Number,
     maxFilesCount: Number,
+    imageProcessingEnabled: Boolean,
+    imageProcessingMaxWidth: Number,
+    imageProcessingMaxHeight: Number,
+    imageProcessingQuality: Number,
+    removeButtonTemplate: String,
     allowedContentTypes: String
   }
 
@@ -205,7 +211,7 @@ export default class extends Controller {
         description: "",
         previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
         progress: 0,
-        status: exceedsCount ? "invalid" : this.validateFile(file),
+        status: exceedsCount ? "invalid" : this.initialStatusFor(file),
         error: null,
         signedBlobId: null
       }
@@ -220,26 +226,45 @@ export default class extends Controller {
     })
   }
 
-  uploadEntry(entry) {
-    entry.status = "uploading"
-    this.renderEntry(entry)
-
-    const upload = new DirectUpload(entry.file, this.directUploadUrlValue, {
-      directUploadWillStoreFileWithXHR: (request) => this.bindUploadProgress(request, entry)
-    })
-
-    upload.create((error, blob) => {
-      if (error) {
-        entry.status = "failed"
-        entry.error = error?.message || String(error)
-      } else {
-        entry.status = "uploaded"
-        entry.progress = 100
-        entry.signedBlobId = blob.signed_id
-      }
+  async uploadEntry(entry) {
+    try {
+      entry.status = "processing"
       this.renderEntry(entry)
-      this.maybeFinalize()
-    })
+
+      await this.preprocessEntryFile(entry)
+
+      const validationError = this.validationError(entry.file)
+      if (validationError) {
+        entry.status = "invalid"
+        entry.error = validationError
+        this.renderEntry(entry)
+        return
+      }
+
+      entry.status = "uploading"
+      this.renderEntry(entry)
+
+      const upload = new DirectUpload(entry.file, this.directUploadUrlValue, {
+        directUploadWillStoreFileWithXHR: (request) => this.bindUploadProgress(request, entry)
+      })
+
+      upload.create((error, blob) => {
+        if (error) {
+          entry.status = "failed"
+          entry.error = error?.message || String(error)
+        } else {
+          entry.status = "uploaded"
+          entry.progress = 100
+          entry.signedBlobId = blob.signed_id
+        }
+        this.renderEntry(entry)
+        this.maybeFinalize()
+      })
+    } catch (error) {
+      entry.status = "failed"
+      entry.error = error?.message || "Could not prepare file for upload"
+      this.renderEntry(entry)
+    }
   }
 
   bindUploadProgress(request, entry) {
@@ -251,16 +276,36 @@ export default class extends Controller {
     })
   }
 
-  validateFile(file) {
-    if (this.maxFileSizeValue && file.size > this.maxFileSizeValue) return "invalid"
-    const allowed = this.allowedContentTypePatterns()
-    if (allowed.length > 0 && !allowed.some((pattern) => this.matchesContentType(pattern, file.type))) return "invalid"
-    return "pending"
+  initialStatusFor(file) {
+    return this.initialValidationError(file) ? "invalid" : "pending"
   }
 
   validationError(file) {
     if (this.maxFileSizeValue && file.size > this.maxFileSizeValue) return "File exceeds the maximum allowed size"
-    return `${file.type || "Unknown type"} is not allowed. Allowed types: ${this.allowedContentTypePatterns().join(", ")}`
+    if (!this.contentTypeAllowed(file)) {
+      return `${file.type || "Unknown type"} is not allowed. Allowed types: ${this.allowedContentTypePatterns().join(", ")}`
+    }
+
+    return null
+  }
+
+  initialValidationError(file) {
+    if (this.deferSizeValidationUntilAfterProcessing(file)) {
+      return this.contentTypeAllowed(file)
+        ? null
+        : `${file.type || "Unknown type"} is not allowed. Allowed types: ${this.allowedContentTypePatterns().join(", ")}`
+    }
+
+    return this.validationError(file)
+  }
+
+  deferSizeValidationUntilAfterProcessing(file) {
+    return shouldPreprocessImageFile(file, this.imageProcessingOptions())
+  }
+
+  contentTypeAllowed(file) {
+    const allowed = this.allowedContentTypePatterns()
+    return allowed.length === 0 || allowed.some((pattern) => this.matchesContentType(pattern, file.type))
   }
 
   maxFilesError() {
@@ -296,7 +341,18 @@ export default class extends Controller {
   renderEntry(entry) {
     const node = this.queueTarget.querySelector(`[data-entry-id='${entry.id}']`)
     if (node) {
-      node.outerHTML = this.entryTemplate(entry)
+      const template = document.createElement("template")
+      template.innerHTML = this.entryTemplate(entry).trim()
+
+      const nextNode = template.content.firstElementChild
+      const currentContent = node.querySelector("[data-entry-content]")
+      const nextContent = nextNode?.querySelector("[data-entry-content]")
+
+      if (currentContent && nextContent) {
+        currentContent.replaceWith(nextContent)
+      } else if (nextNode) {
+        node.replaceWith(nextNode)
+      }
     } else {
       this.renderQueue()
     }
@@ -454,20 +510,46 @@ export default class extends Controller {
   }
 
   queueSettled() {
-    return this.files.every((entry) => !["pending", "uploading", "finalizing"].includes(entry.status))
+    return this.files.every((entry) => !["pending", "processing", "uploading", "finalizing"].includes(entry.status))
+  }
+
+  async preprocessEntryFile(entry) {
+    const result = await preprocessImageFile(entry.file, this.imageProcessingOptions())
+    if (!result.transformed) return
+
+    this.revokePreview(entry)
+    entry.file = result.file
+    entry.previewUrl = entry.file.type.startsWith("image/") ? URL.createObjectURL(entry.file) : null
+  }
+
+  imageProcessingOptions() {
+    return {
+      enabled: this.imageProcessingEnabledValue,
+      maxWidth: this.imageProcessingMaxWidthValue,
+      maxHeight: this.imageProcessingMaxHeightValue,
+      maxBytes: this.maxFileSizeValue,
+      quality: this.imageProcessingQualityValue
+    }
   }
 
   entryTemplate(entry) {
     const preview = entry.previewUrl ? `<img src="${this.escapeAttribute(entry.previewUrl)}" alt="" class="h-12 w-12 rounded object-cover" />` : `<div class="flex h-12 w-12 items-center justify-center rounded bg-(--surface-muted-background-color) text-xs">FILE</div>`
-    const progress = entry.status === "uploading" || entry.progress > 0 ? `<progress class="w-full" value="${entry.progress}" max="100"></progress>` : ""
+    const progress = entry.status === "processing"
+      ? `<p class="text-xs text-(--surface-muted-content-color)">Optimizing image before upload…</p>`
+      : entry.status === "uploading" || entry.progress > 0
+        ? `<progress class="w-full" value="${entry.progress}" max="100"></progress>`
+        : ""
     const error = entry.error ? `<p class="text-xs text-red-600">${this.escapeHtml(entry.error)}</p>` : ""
     const retry = entry.status === "failed" ? `<button type="button" data-action="recording-studio-attachable--upload#retry" data-id="${entry.id}" class="text-xs underline">Retry</button>` : ""
-    const remove = `<button type="button" data-action="recording-studio-attachable--upload#remove" data-id="${entry.id}" class="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full border border-(--surface-border-color) bg-(--surface-background-color) text-sm leading-none text-(--surface-muted-content-color) transition hover:text-(--surface-content-color)" aria-label="Remove ${this.escapeAttribute(entry.file.name)} from upload queue" title="Remove from upload queue">&times;</button>`
+    const remove = this.removeButtonTemplateValue
+      .replace("__ENTRY_ID__", this.escapeAttribute(entry.id))
+      .replace("__REMOVE_LABEL__", this.escapeAttribute(`Remove ${entry.file.name} from upload queue`))
+      .replace("__REMOVE_TITLE__", this.escapeAttribute("Remove from upload queue"))
 
     return `
       <div data-entry-id="${entry.id}" class="relative rounded-lg border border-(--surface-border-color) p-4 pr-12">
         ${remove}
-        <div class="flex items-start gap-4">
+        <div data-entry-content class="flex items-start gap-4">
           ${preview}
           <div class="min-w-0 flex-1 space-y-2">
             <div>

@@ -90,6 +90,28 @@ RecordingStudioAttachable.configure do |config|
   config.enabled_attachment_kinds = %i[image file]
   config.default_listing_scope = :direct
   config.default_kind_filter = :all
+
+  # Optional browser-side image preprocessing before direct upload. JPEG, PNG,
+  # and WebP files are resized down to fit these bounds before uploading.
+  # GIF, SVG, HEIC/HEIF, and unsupported image types upload unchanged.
+  # config.image_processing_enabled = true
+  # config.image_processing_max_width = 2560
+  # config.image_processing_max_height = 2560
+  # config.image_processing_quality = 0.82
+
+  # Optional server-side image delivery variants. The gem keeps the original
+  # upload and generates delivery variants on demand, storing them in the same
+  # Active Storage service as the source blob.
+  # config.image_variants = {
+  #   square_small: { resize_to_fill: [128, 128] },
+  #   square_med: { resize_to_fill: [400, 400] },
+  #   square_large: { resize_to_fill: [800, 800] },
+  #   small: { resize_to_limit: [480, 480] },
+  #   med: { resize_to_limit: [960, 960] },
+  #   large: { resize_to_limit: [1600, 1600] },
+  #   xlarge: { resize_to_limit: [2400, 2400] }
+  # }
+
   config.layout = :blank
   config.auth_roles = {
     view: :view,
@@ -101,6 +123,10 @@ RecordingStudioAttachable.configure do |config|
   }
 end
 ```
+
+When browser-side image preprocessing is enabled, the gem's built-in direct-upload surfaces resize oversized JPEG, PNG, and WebP files before `DirectUpload` sends them to Active Storage. That includes the main upload page, the bundled attachment-image picker, and attachment file replacements on the revision screen. This is a best-effort optimization layer, not a security boundary: server-side content-type and byte-size validation still runs on the final uploaded blob. GIF, SVG, HEIC/HEIF, and other unsupported image types are uploaded unchanged.
+
+For delivery, the engine uses a stable set of named image variants: `square_small`, `square_med`, `square_large`, `small`, `med`, `large`, and `xlarge`. Host apps can override the transformation sizes through `config.image_variants` while keeping those public names stable across engine views and integrations.
 
 ### Upload provider addons
 

@@ -11,6 +11,10 @@ module RecordingStudioAttachable
       @allowed_content_types = configured_attachable_option(@recording, :allowed_content_types)
       @max_file_size = configured_attachable_option(@recording, :max_file_size)
       @max_file_count = configured_attachable_option(@recording, :max_file_count)
+      @image_processing_enabled = configured_attachable_option(@recording, :image_processing_enabled)
+      @image_processing_max_width = configured_attachable_option(@recording, :image_processing_max_width)
+      @image_processing_max_height = configured_attachable_option(@recording, :image_processing_max_height)
+      @image_processing_quality = configured_attachable_option(@recording, :image_processing_quality)
       @upload_providers = configured_upload_providers(@recording)
       @create_path = recording_attachments_path(@recording, @upload_redirect_params)
     end

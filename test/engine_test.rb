@@ -13,11 +13,11 @@ class EngineTest < Minitest::Test
   end
 
   def test_load_config_merges_yaml_and_x_config
-    xcfg = Struct.new(:recording_studio_attachable).new({ max_file_size: 5.megabytes })
+    xcfg = Struct.new(:recording_studio_attachable).new({ max_file_size: 5.megabytes, image_processing_enabled: true })
     app_config = Struct.new(:x).new(xcfg)
     app = Struct.new(:config) do
       def config_for(_name)
-        { allowed_content_types: ["image/*"] }
+        { allowed_content_types: ["image/*"], image_processing_max_width: 2048 }
       end
     end.new(app_config)
 
@@ -25,6 +25,8 @@ class EngineTest < Minitest::Test
 
     assert_equal ["image/*"], RecordingStudioAttachable.configuration.allowed_content_types
     assert_equal 5.megabytes, RecordingStudioAttachable.configuration.max_file_size
+    assert RecordingStudioAttachable.configuration.image_processing_enabled
+    assert_equal 2048, RecordingStudioAttachable.configuration.image_processing_max_width
   end
 
   def test_assets_initializer_adds_engine_javascript_path
@@ -149,6 +151,82 @@ class EngineTest < Minitest::Test
     assert_equal :google_drive, provider.key
     assert_equal :client_picker, provider.strategy
     assert_equal "google_drive", provider.launcher
+  end
+
+  def test_google_drive_initializer_skips_provider_when_disabled
+    after_initialize = nil
+    app = Struct.new(:config).new(
+      Object.new.tap do |config|
+        config.define_singleton_method(:after_initialize) { |&block| after_initialize = block }
+      end
+    )
+
+    find_google_drive_initializer("recording_studio_attachable.google_drive.register_upload_provider").block.call(app)
+    after_initialize.call
+
+    assert_nil RecordingStudioAttachable.configuration.upload_provider(:google_drive)
+  end
+
+  def test_google_drive_initializer_skips_provider_when_picker_configuration_is_incomplete
+    RecordingStudioAttachable.configuration.merge!(
+      google_drive: {
+        enabled: true,
+        client_id: "client-id",
+        client_secret: "client-secret",
+        redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback"
+      }
+    )
+    after_initialize = nil
+    app = Struct.new(:config).new(
+      Object.new.tap do |config|
+        config.define_singleton_method(:after_initialize) { |&block| after_initialize = block }
+      end
+    )
+
+    find_google_drive_initializer("recording_studio_attachable.google_drive.register_upload_provider").block.call(app)
+    after_initialize.call
+
+    assert_nil RecordingStudioAttachable.configuration.upload_provider(:google_drive)
+  end
+
+  def test_google_drive_initializer_registers_provider_with_route_helper_urls
+    RecordingStudioAttachable.configuration.merge!(
+      google_drive: {
+        enabled: true,
+        client_id: "client-id",
+        client_secret: "client-secret",
+        redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
+        api_key: "api-key",
+        app_id: "app-id"
+      }
+    )
+    after_initialize = nil
+    app = Struct.new(:config).new(
+      Object.new.tap do |config|
+        config.define_singleton_method(:after_initialize) { |&block| after_initialize = block }
+      end
+    )
+
+    find_google_drive_initializer("recording_studio_attachable.google_drive.register_upload_provider").block.call(app)
+    after_initialize.call
+
+    provider = RecordingStudioAttachable.configuration.upload_provider(:google_drive)
+    google_drive_proxy = Object.new
+    google_drive_proxy.define_singleton_method(:recording_bootstrap_path) { |recording, format:| "/google_drive/recordings/#{recording.id}/bootstrap.#{format}" }
+    google_drive_proxy.define_singleton_method(:recording_imports_path) { |recording, format:| "/google_drive/recordings/#{recording.id}/imports.#{format}" }
+    route_helpers = Object.new
+    route_helpers.define_singleton_method(:google_drive) { google_drive_proxy }
+    view_context = Struct.new(:main_app) do
+      def google_drive
+        main_app.google_drive
+      end
+    end.new(route_helpers)
+    recording = Struct.new(:id).new("rec-1")
+
+    options = provider.button_options(view_context: view_context, recording: recording)
+
+    assert_equal "/google_drive/recordings/rec-1/bootstrap.json", options.dig(:data, :provider_bootstrap_url)
+    assert_equal "/google_drive/recordings/rec-1/imports.json", options.dig(:data, :provider_import_url)
   end
 
   private

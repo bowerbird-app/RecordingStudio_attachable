@@ -244,6 +244,118 @@ class GoogleDriveOauthControllerTest < ActionController::TestCase
     assert_redirected_to "/google_drive/recordings/rec-1/imports?redirect_mode=return_to&return_to=%2Fpages%2Fpage-1%23gallery"
   end
 
+  def test_callback_redirects_to_root_when_auth_state_fails_without_a_recording
+    main_app = Object.new
+    main_app.define_singleton_method(:root_path) { "/" }
+    @controller.define_singleton_method(:main_app) { main_app }
+
+    with_routing do |set|
+      set.draw do
+        get "/google_drive/oauth/callback",
+            to: "recording_studio_attachable/google_drive/oauth#callback"
+      end
+
+      @routes = set
+
+      get :callback, params: { state: "wrong-state", code: "auth-code" }
+    end
+
+    assert_redirected_to "/"
+    assert_equal "Google Drive authorization state did not match", flash[:alert]
+  end
+
+  def test_destroy_clears_tokens_and_redirects_back_to_imports
+    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+    route_proxy = Object.new
+    route_proxy.define_singleton_method(:recording_imports_path) do |record, options = {}|
+      suffix = options.compact.to_query
+      path = "/google_drive/recordings/#{record.id}/imports"
+      suffix.present? ? "#{path}?#{suffix}" : path
+    end
+    @controller.define_singleton_method(:google_drive) { route_proxy }
+    @request.session["recording_studio_attachable_google_drive"] = {
+      "tokens" => { "access_token" => "token-1", "expires_at" => Time.current.to_i + 3600 }
+    }
+
+    with_routing do |set|
+      set.draw do
+        delete "/google_drive/recordings/:recording_id/disconnect",
+               to: "recording_studio_attachable/google_drive/oauth#destroy"
+      end
+
+      @routes = set
+
+      RecordingStudio::Recording.stub(:find, recording) do
+        @controller.stub(:protect_against_forgery?, false) do
+          delete :destroy, params: { recording_id: recording.id, redirect_mode: "return_to", return_to: "/pages/page-1" }
+        end
+      end
+    end
+
+    assert_redirected_to "/google_drive/recordings/rec-1/imports?redirect_mode=return_to&return_to=%2Fpages%2Fpage-1"
+    assert_equal "Disconnected Google Drive.", flash[:notice]
+    assert_nil @request.session.dig("recording_studio_attachable_google_drive", "tokens")
+  end
+
+  def test_new_redirects_back_to_upload_page_when_google_drive_is_misconfigured
+    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+    RecordingStudioAttachable.configuration.google_drive.client_id = nil
+    upload_proxy = Object.new
+    upload_proxy.define_singleton_method(:recording_attachment_upload_path) do |record, options = {}|
+      suffix = options.compact.to_query
+      path = "/recordings/#{record.id}/attachments/upload"
+      suffix.present? ? "#{path}?#{suffix}" : path
+    end
+    @controller.define_singleton_method(:recording_studio_attachable) { upload_proxy }
+
+    with_routing do |set|
+      set.draw do
+        get "/google_drive/recordings/:recording_id/connect",
+            to: "recording_studio_attachable/google_drive/oauth#new"
+      end
+
+      @routes = set
+
+      RecordingStudio::Recording.stub(:find, recording) do
+        get :new, params: { recording_id: recording.id, redirect_mode: "return_to", return_to: "/pages/page-1" }
+      end
+    end
+
+    assert_redirected_to "/recordings/rec-1/attachments/upload?redirect_mode=return_to&return_to=%2Fpages%2Fpage-1"
+    assert_equal "Google Drive addon is missing client credentials or redirect URI", flash[:alert]
+  end
+
+  def test_callback_redirects_back_to_imports_when_token_exchange_fails
+    oauth_client = Object.new
+    oauth_client.define_singleton_method(:exchange_code) do |**_kwargs|
+      raise RecordingStudioAttachable::GoogleDrive::OAuthClient::Error, "bad code"
+    end
+    route_proxy = Object.new
+    route_proxy.define_singleton_method(:recording_imports_path) do |recording_id, **_kwargs|
+      "/google_drive/recordings/#{recording_id}/imports"
+    end
+    @controller.define_singleton_method(:google_drive) { route_proxy }
+    @request.session["recording_studio_attachable_google_drive"] = {
+      "oauth_state" => { "value" => "known-state", "recording_id" => "rec-1" }
+    }
+
+    with_routing do |set|
+      set.draw do
+        get "/google_drive/oauth/callback",
+            to: "recording_studio_attachable/google_drive/oauth#callback"
+      end
+
+      @routes = set
+
+      @controller.stub(:oauth_client, oauth_client) do
+        get :callback, params: { state: "known-state", code: "bad-code" }
+      end
+    end
+
+    assert_redirected_to "/google_drive/recordings/rec-1/imports"
+    assert_equal "bad code", flash[:alert]
+  end
+
   private
 
   def ensure_recording_lookup!

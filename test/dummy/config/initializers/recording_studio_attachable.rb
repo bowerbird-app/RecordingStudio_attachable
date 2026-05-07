@@ -1,6 +1,11 @@
 # frozen_string_literal: true
 
 RecordingStudioAttachable.configure do |config|
+  config.max_file_size = 1.megabyte
+  config.image_processing_enabled = true
+  config.image_processing_max_width = 1200
+  config.image_processing_max_height = 1200
+  config.image_processing_quality = 0.75
   config.google_drive.enabled = true
   config.google_drive.client_id = ENV.fetch("DUMMY_GOOGLE_DRIVE_CLIENT_ID", "dummy-google-drive-client-id")
   config.google_drive.client_secret = ENV.fetch("DUMMY_GOOGLE_DRIVE_CLIENT_SECRET", "dummy-google-drive-client-secret")

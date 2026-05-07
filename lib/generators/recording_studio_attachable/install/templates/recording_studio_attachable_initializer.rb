@@ -7,6 +7,30 @@ RecordingStudioAttachable.configure do |config|
   config.enabled_attachment_kinds = %i[image file]
   config.default_listing_scope = :direct
   config.default_kind_filter = :all
+
+  # Optional browser-side image preprocessing before direct upload. JPEG, PNG,
+  # and WebP files are resized down to fit these bounds before uploading.
+  # GIF, SVG, HEIC/HEIF, and unsupported image types upload unchanged.
+  # config.image_processing_enabled = true
+  # config.image_processing_max_width = 2560
+  # config.image_processing_max_height = 2560
+  # config.image_processing_quality = 0.82
+
+  # Optional server-side image delivery variants. The original blob is kept as
+  # uploaded, and generated variants are stored in the same Active Storage
+  # service as the original (for example S3). Keep the public variant names
+  # stable and override only the transformation sizes if your host app needs
+  # different defaults.
+  # config.image_variants = {
+  #   square_small: { resize_to_fill: [128, 128] },
+  #   square_med: { resize_to_fill: [400, 400] },
+  #   square_large: { resize_to_fill: [800, 800] },
+  #   small: { resize_to_limit: [480, 480] },
+  #   med: { resize_to_limit: [960, 960] },
+  #   large: { resize_to_limit: [1600, 1600] },
+  #   xlarge: { resize_to_limit: [2400, 2400] }
+  # }
+
   # Use the gem's blank layout by default, or set a host app layout like "application".
   config.layout = :blank
   config.auth_roles = {

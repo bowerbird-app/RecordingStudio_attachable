@@ -9,6 +9,8 @@ class DocsController < ApplicationController
 
   def plugins; end
 
+  def resizing; end
+
   def gem_views; end
 
   def query; end
@@ -124,6 +126,27 @@ class DocsController < ApplicationController
         config.enabled_attachment_kinds = %i[image file]
         config.default_listing_scope = :direct
         config.default_kind_filter = :all
+
+        # Optional browser-side image preprocessing before direct upload.
+        # JPEG, PNG, and WebP images are resized to fit these bounds.
+        # GIF, SVG, HEIC/HEIF, and unsupported image types upload unchanged.
+        # config.image_processing_enabled = true
+        # config.image_processing_max_width = 2560
+        # config.image_processing_max_height = 2560
+        # config.image_processing_quality = 0.82
+
+        # Optional server-side image delivery variants. The original blob is kept
+        # as uploaded, and generated variants are stored in the same Active Storage
+        # service as the source blob.
+        # config.image_variants = {
+        #   square_small: { resize_to_fill: [128, 128] },
+        #   square_med: { resize_to_fill: [400, 400] },
+        #   square_large: { resize_to_fill: [800, 800] },
+        #   small: { resize_to_limit: [480, 480] },
+        #   med: { resize_to_limit: [960, 960] },
+        #   large: { resize_to_limit: [1600, 1600] },
+        #   xlarge: { resize_to_limit: [2400, 2400] }
+        # }
 
         # Use the gem's blank layout, or point at a host app layout like "application".
         config.layout = :blank
@@ -251,16 +274,47 @@ class DocsController < ApplicationController
       "source and identify: trusted direct-service options; the HTTP endpoint stamps source from provider_key and ignores storage-service overrides."
     ]
 
+    @resizing_config_example = <<~RUBY
+      RecordingStudioAttachable.configure do |config|
+        config.image_processing_enabled = true
+        config.image_processing_max_width = 2560
+        config.image_processing_max_height = 2560
+        config.image_processing_quality = 0.82
+      end
+    RUBY
+
+    @variant_config_example = <<~RUBY
+      RecordingStudioAttachable.configure do |config|
+        config.image_variants = {
+          square_small: { resize_to_fill: [128, 128] },
+          square_med: { resize_to_fill: [400, 400] },
+          square_large: { resize_to_fill: [800, 800] },
+          small: { resize_to_limit: [480, 480] },
+          med: { resize_to_limit: [960, 960] },
+          large: { resize_to_limit: [1600, 1600] },
+          xlarge: { resize_to_limit: [2400, 2400] }
+        }
+
+        # Variants are generated on demand the first time a given size is requested.
+        # After that, Active Storage stores the processed file in the same service
+        # as the original blob, such as S3, and reuses it on later requests.
+
+        # Each size gets its own signed variant URL, so swapping "small" for
+        # "large" is not a matter of guessing a simple filename pattern.
+        # Treat those signed URLs as delivery identifiers, not as your auth layer.
+      end
+    RUBY
+
     @gem_views = [
       {
-        title: "Media library",
+        title: "Library",
         path: "recording_studio_attachable/recording_attachments/index.html.erb",
         description: "Browse the attachment library and manage uploads with bulk remove actions.",
         example: "Use it to review uploaded images, PDFs, and other attached files for a recording.",
-        icon: :folder
+        icon: :grid
       },
       {
-        title: "Upload attachments",
+        title: "Upload",
         path: "recording_studio_attachable/attachment_uploads/new.html.erb",
         description: "Upload images and files with the direct-upload queue and finalize flow.",
         example: "Use it when editors need to drag in screenshots, photos, or documents from the host app.",
@@ -269,9 +323,9 @@ class DocsController < ApplicationController
       {
         title: "Attachment details",
         path: "recording_studio_attachable/attachments/show.html.erb",
-        description: "Preview an attachment, edit metadata, replace the file, and download or remove the current revision.",
-        example: "Use it to inspect a single image or document before revising it.",
-        icon: :activity
+        description: "Show a single attachment with minimal navigation and image preview context.",
+        example: "Use it to inspect an image attachment without extra editing controls.",
+        icon: :eye
       },
       {
         title: "Blank layout",

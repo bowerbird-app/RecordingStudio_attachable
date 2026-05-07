@@ -1,6 +1,7 @@
 import { DirectUpload } from "@rails/activestorage"
 import { Controller } from "@hotwired/stimulus"
 import { application } from "controllers/application"
+import { preprocessImageFile } from "controllers/recording_studio_attachable/image_preprocessing"
 
 export default class extends Controller {
   static targets = ["editorHost", "searchInput", "fileInput", "status", "scrollContainer", "gallery", "emptyState"]
@@ -10,6 +11,11 @@ export default class extends Controller {
     uploadUrl: String,
     directUploadUrl: String,
     modalId: String,
+    maxFileSize: Number,
+    imageProcessingEnabled: Boolean,
+    imageProcessingMaxWidth: Number,
+    imageProcessingMaxHeight: Number,
+    imageProcessingQuality: Number,
     searchDelay: { type: Number, default: 250 }
   }
 
@@ -154,10 +160,12 @@ export default class extends Controller {
     return application.getControllerForElementAndIdentifier(fieldWrapper, "flat-pack--text-area")
   }
 
-  directUpload(file) {
-    this.showStatus(`Uploading ${file.name}…`)
+  async directUpload(file) {
+    const processed = await preprocessImageFile(file, this.imageProcessingOptions())
+    const uploadFile = processed.file
+    this.showStatus(processed.transformed ? `Optimizing complete. Uploading ${uploadFile.name}…` : `Uploading ${uploadFile.name}…`)
 
-    const upload = new DirectUpload(file, this.directUploadUrlValue)
+    const upload = new DirectUpload(uploadFile, this.directUploadUrlValue)
 
     upload.create(async (error, blob) => {
       if (error) {
@@ -166,7 +174,7 @@ export default class extends Controller {
       }
 
       try {
-        const attachment = await this.createAttachmentFromBlob(file, blob)
+        const attachment = await this.createAttachmentFromBlob(uploadFile, blob)
         this.insertAttachment(attachment)
         this.showStatus(`Inserted ${attachment.name}`)
         this.currentPage = 1
@@ -236,6 +244,7 @@ export default class extends Controller {
       const button = document.createElement("button")
       button.type = "button"
       button.className = "group flex h-full flex-col overflow-hidden rounded-xl border border-(--surface-border-color) bg-(--surface-background-color) text-left shadow-sm transition hover:border-(--surface-content-color) hover:shadow-md focus:outline-none focus:ring-2 focus:ring-ring"
+      button.setAttribute("aria-label", attachment.name || "Untitled image")
       button.addEventListener("click", () => this.insertAttachment(attachment))
 
       const media = document.createElement("div")
@@ -249,16 +258,7 @@ export default class extends Controller {
         media.appendChild(image)
       }
 
-      const body = document.createElement("div")
-      body.className = "space-y-1 p-3"
-
-      const title = document.createElement("p")
-      title.className = "truncate text-sm font-semibold text-(--surface-content-color)"
-      title.textContent = attachment.name || "Untitled image"
-
-      body.appendChild(title)
       button.appendChild(media)
-      button.appendChild(body)
       this.galleryTarget.appendChild(button)
     })
 
@@ -306,5 +306,15 @@ export default class extends Controller {
 
   csrfToken() {
     return document.querySelector('meta[name="csrf-token"]')?.content || ""
+  }
+
+  imageProcessingOptions() {
+    return {
+      enabled: this.imageProcessingEnabledValue,
+      maxWidth: this.imageProcessingMaxWidthValue,
+      maxHeight: this.imageProcessingMaxHeightValue,
+      maxBytes: this.maxFileSizeValue,
+      quality: this.imageProcessingQualityValue
+    }
   }
 }

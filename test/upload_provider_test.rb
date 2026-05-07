@@ -152,4 +152,133 @@ class UploadProviderTest < Minitest::Test
 
     assert_equal "Dropbox", provider.modal_title(view_context: FakeViewContext.new("/root"), recording: FakeRecording.new("rec-1"))
   end
+
+  def test_iframe_title_uses_custom_value_and_falls_back_to_label
+    custom_provider = RecordingStudioAttachable::UploadProvider.new(
+      key: :google_drive,
+      label: "Google Drive",
+      url: "/imports/google_drive",
+      iframe_title: ->(recording:) { "Picker for #{recording.id}" }
+    )
+    default_provider = RecordingStudioAttachable::UploadProvider.new(
+      key: :dropbox,
+      label: "Dropbox",
+      url: "/imports/dropbox"
+    )
+
+    assert_equal "Picker for rec-1",
+                 custom_provider.iframe_title(view_context: FakeViewContext.new("/root"), recording: FakeRecording.new("rec-1"))
+    assert_equal "Dropbox picker",
+                 default_provider.iframe_title(view_context: FakeViewContext.new("/root"), recording: FakeRecording.new("rec-2"))
+  end
+
+  def test_initialize_rejects_unknown_strategies
+    error = assert_raises(ArgumentError) do
+      RecordingStudioAttachable::UploadProvider.new(
+        key: :google_drive,
+        label: "Google Drive",
+        url: "/imports/google_drive",
+        strategy: :drawer
+      )
+    end
+
+    assert_equal "Unknown upload provider strategy: :drawer", error.message
+  end
+
+  def test_render_supports_client_picker_and_legacy_callable_arities
+    two_arg_provider = RecordingStudioAttachable::UploadProvider.new(
+      key: :legacy_two,
+      label: "Legacy two",
+      url: ->(route_helpers, recording) { "#{route_helpers.prefix}/legacy/#{recording.id}" },
+      strategy: :client_picker
+    )
+    one_arg_provider = RecordingStudioAttachable::UploadProvider.new(
+      key: :legacy_one,
+      label: "Legacy one",
+      url: ->(recording) { "/legacy/#{recording.id}" }
+    )
+    zero_arg_provider = RecordingStudioAttachable::UploadProvider.new(
+      key: :legacy_zero,
+      label: "Legacy zero",
+      url: -> { "/legacy/static" }
+    )
+    view_context = FakeViewContext.new("/root")
+    recording = FakeRecording.new("rec-1")
+
+    assert two_arg_provider.render?(view_context: view_context, recording: recording)
+    assert_equal "/root/legacy/rec-1",
+                 two_arg_provider.button_options(view_context: view_context, recording: recording)[:data][:provider_bootstrap_url]
+    assert_equal "/legacy/rec-1", one_arg_provider.button_options(view_context: view_context, recording: recording)[:url]
+    assert_equal "/legacy/static", zero_arg_provider.button_options(view_context: view_context, recording: recording)[:url]
+  end
+
+  def test_route_helpers_proxy_uses_main_app_and_raises_for_unknown_methods
+    main_app = Object.new
+    main_app.define_singleton_method(:demo_path) { "/main/demo" }
+    view_context = Struct.new(:main_app).new(main_app)
+    proxy = RecordingStudioAttachable::UploadProvider::RouteHelpersProxy.new(view_context)
+
+    assert_equal "/main/demo", proxy.demo_path
+    assert proxy.respond_to?(:demo_path)
+    refute proxy.respond_to?(:missing_path)
+    assert_raises(NoMethodError) { proxy.missing_path }
+  end
+
+  def test_route_helpers_proxy_prefers_view_context_methods_over_main_app
+    main_app = Object.new
+    main_app.define_singleton_method(:demo_path) { "/main/demo" }
+    view_context = Struct.new(:main_app).new(main_app)
+    view_context.define_singleton_method(:demo_path) { "/view/demo" }
+
+    proxy = RecordingStudioAttachable::UploadProvider::RouteHelpersProxy.new(view_context)
+
+    assert_equal "/view/demo", proxy.demo_path
+  end
+
+  def test_modal_button_options_merge_existing_actions_and_rewrite_invalid_modal_urls
+    provider = RecordingStudioAttachable::UploadProvider.new(
+      key: :google_drive,
+      label: "Google Drive",
+      url: "https://example.test/%zz",
+      strategy: :modal_page,
+      data: { action: "analytics#track", source: "toolbar" },
+      class: "provider-button"
+    )
+
+    options = provider.button_options(view_context: FakeViewContext.new("/root"), recording: FakeRecording.new("rec-1"))
+
+    assert_equal "analytics#track recording-studio-attachable--upload#launchProvider", options.dig(:data, :action)
+    assert_equal "toolbar", options.dig(:data, :source)
+    assert_equal "provider-button", options[:class]
+    assert_includes options.dig(:data, :provider_frame_url), "embed=modal"
+    assert_includes options.dig(:data, :provider_frame_url), "provider_key=google_drive"
+  end
+
+  def test_button_options_append_query_params_for_invalid_urls_without_parsing
+    provider = RecordingStudioAttachable::UploadProvider.new(
+      key: :dropbox,
+      label: "Dropbox",
+      url: "https://example.test/%zz"
+    )
+
+    options = provider.button_options(
+      view_context: FakeViewContext.new("/root"),
+      recording: FakeRecording.new("rec-1"),
+      query_params: { redirect_mode: "return_to", return_to: "/pages/page-1" }
+    )
+
+    assert_includes options[:url], "redirect_mode=return_to"
+    assert_includes options[:url], "return_to=%2Fpages%2Fpage-1"
+  end
+
+  def test_modal_button_options_allow_blank_urls_without_rendering_frame_url
+    provider = RecordingStudioAttachable::UploadProvider.new(
+      key: :google_drive,
+      label: "Google Drive",
+      url: ->(**) {},
+      strategy: :modal_page
+    )
+
+    refute provider.render?(view_context: FakeViewContext.new("/root"), recording: FakeRecording.new("rec-1"))
+  end
 end

@@ -40,6 +40,12 @@
       ) %>
 
       <%= render FlatPack::Sidebar::Item::Component.new(
+        label: "Resizing",
+        href: resizing_docs_path,
+        icon: :image
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
         label: "Gem views",
         href: gem_views_docs_path,
         icon: :file

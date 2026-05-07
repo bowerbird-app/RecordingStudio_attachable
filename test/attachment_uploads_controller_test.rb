@@ -2,6 +2,7 @@
 
 require "test_helper"
 require_relative "../app/controllers/recording_studio_attachable/application_controller"
+require_relative "../app/controllers/recording_studio_attachable/attachments_controller"
 require_relative "../app/controllers/recording_studio_attachable/attachment_uploads_controller"
 require_relative "../lib/recording_studio_attachable/services/base_service"
 require_relative "../app/services/recording_studio_attachable/services/application_service"
@@ -70,7 +71,11 @@ module RecordingStudioAttachable
                 {
                   allowed_content_types: ["image/*"],
                   max_file_size: 25.megabytes,
-                  max_file_count: 20
+                  max_file_count: 20,
+                  image_processing_enabled: true,
+                  image_processing_max_width: 2048,
+                  image_processing_max_height: 2048,
+                  image_processing_quality: 0.8
                 }.fetch(option_name)
               }
 
@@ -93,6 +98,54 @@ module RecordingStudioAttachable
 
       assert_response :success
       assert_equal "Google Drive", @response.body
+    end
+
+    def test_show_assigns_replacement_image_processing_options
+      @controller = AttachmentsController.new
+      recording = FakeRecording.new(id: "rec-1", recordable_type: "RecordingStudioAttachable::Attachment")
+      attachment = Struct.new(:name, :description, :original_filename).new("Hero", "", "hero.png")
+      recording.define_singleton_method(:recordable) { attachment }
+
+      with_routing do |set|
+        set.draw do
+          get "/attachments/:id", to: "recording_studio_attachable/attachments#show"
+        end
+
+        @routes = set
+
+        RecordingStudio::Recording.stub(:find, recording) do
+          @controller.stub(:authorize_attachment_owner_action!, true) do
+            configured_option = lambda { |_recording, option_name|
+              {
+                allowed_content_types: ["image/*"],
+                max_file_size: 25.megabytes,
+                image_processing_enabled: true,
+                image_processing_max_width: 1600,
+                image_processing_max_height: 1200,
+                image_processing_quality: 0.72
+              }.fetch(option_name)
+            }
+
+            @controller.stub(:configured_attachable_option, configured_option) do
+              @controller.stub(:attachable_owner_recording, nil) do
+                @controller.define_singleton_method(:default_render) do
+                  render plain: [
+                    @image_processing_enabled,
+                    @image_processing_max_width,
+                    @image_processing_max_height,
+                    @image_processing_quality
+                  ].join(":")
+                end
+
+                get :show, params: { id: recording.id }
+              end
+            end
+          end
+        end
+      end
+
+      assert_response :success
+      assert_equal "true:1600:1200:0.72", @response.body
     end
 
     def test_new_resolves_a_mounted_provider_button_url
@@ -166,7 +219,11 @@ module RecordingStudioAttachable
                             {
                               allowed_content_types: ["image/*"],
                               max_file_size: 25.megabytes,
-                              max_file_count: 20
+                              max_file_count: 20,
+                              image_processing_enabled: true,
+                              image_processing_max_width: 2048,
+                              image_processing_max_height: 2048,
+                              image_processing_quality: 0.8
                             }.fetch(option_name)
                           }
 

@@ -92,6 +92,15 @@ class AuthorizationTest < Minitest::Test
     assert_equal adapter, RecordingStudioAttachable::Authorization.authorization_adapter({})
   end
 
+  def test_authorization_adapter_prefers_capability_option_over_global_configuration
+    global_adapter = ->(**) { true }
+    local_adapter = ->(**) { false }
+    RecordingStudioAttachable.configuration.authorize_with = global_adapter
+
+    assert_equal local_adapter,
+                 RecordingStudioAttachable::Authorization.authorization_adapter(authorize_with: local_adapter)
+  end
+
   def test_required_role_for_prefers_capability_role_overrides
     role = RecordingStudioAttachable::Authorization.required_role_for(
       :download,
@@ -144,6 +153,41 @@ class AuthorizationTest < Minitest::Test
     object = Object.new
 
     assert_same object, RecordingStudioAttachable::Authorization.owner_recording_for(object)
+  end
+
+  def test_owner_recording_for_returns_parent_for_attachment_recordings
+    parent = FakeRecording.new(recordable_type: "Workspace")
+    recording = FakeRecording.new(recordable_type: "RecordingStudioAttachable::Attachment", parent_recording: parent)
+
+    assert_same parent, RecordingStudioAttachable::Authorization.owner_recording_for(recording)
+  end
+
+  def test_allowed_is_false_when_required_role_is_blank
+    recording = FakeRecording.new(recordable_type: "Workspace")
+
+    RecordingStudio.configuration.stub(:capability_enabled?, true) do
+      refute RecordingStudioAttachable::Authorization.allowed?(
+        action: :view,
+        actor: Object.new,
+        recording: recording,
+        capability_options: { auth_roles: { view: nil } }
+      )
+    end
+  end
+
+  def test_authorize_raises_when_custom_adapter_denies_access
+    recording = FakeRecording.new(recordable_type: "Workspace")
+
+    error = assert_raises(RecordingStudioAttachable::Authorization::NotAuthorizedError) do
+      RecordingStudioAttachable::Authorization.authorize!(
+        action: :view,
+        actor: :user,
+        recording: recording,
+        capability_options: { authorize_with: ->(**) { false } }
+      )
+    end
+
+    assert_equal "Not authorized to view attachments for Workspace", error.message
   end
 
   private

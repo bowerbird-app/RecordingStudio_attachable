@@ -5,11 +5,15 @@
     variant: :h1
   ) %>
 
-  <% if @root_recordings.any? %>
-    <ul class="list-disc space-y-3 pl-6 text-sm text-[var(--surface-content-color)] marker:text-[var(--surface-muted-content-color)]">
-      <%= render partial: "recording_node", collection: @root_recordings, as: :recording, locals: { recording_children: @recording_children } %>
-    </ul>
-  <% else %>
-    <p class="text-sm text-[var(--surface-muted-content-color)]">Seed the dummy app to populate the recordings tree.</p>
+  <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
+    <% card.body do %>
+      <% if @root_recordings.any? %>
+        <%= render FlatPack::Tree::Component.new do |tree| %>
+          <% build_recording_tree_nodes(tree, @root_recordings, @recording_children) %>
+        <% end %>
+      <% else %>
+        <p class="text-sm text-(--surface-muted-content-color)">Seed the dummy app to populate the recordings tree.</p>
+      <% end %>
+    <% end %>
   <% end %>
 </div>

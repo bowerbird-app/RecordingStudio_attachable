@@ -10,6 +10,7 @@ class DummyDocsTest < Minitest::Test
     assert_includes routes_source, 'get "config", to: "docs#configuration"'
     assert_includes routes_source, 'get "methods", to: "docs#methods_reference"'
     assert_includes routes_source, 'get "plugins", to: "docs#plugins"'
+    assert_includes routes_source, 'get "resizing", to: "docs#resizing"'
     assert_includes routes_source, 'get "gem_views", to: "docs#gem_views"'
     assert_includes routes_source, 'get "recordables", to: "docs#recordables"'
     assert_includes routes_source, 'get "query", to: "docs#query"'
@@ -26,6 +27,8 @@ class DummyDocsTest < Minitest::Test
     assert_includes sidebar_source, "methods_docs_path"
     assert_includes sidebar_source, 'label: "Plugins"'
     assert_includes sidebar_source, "plugins_docs_path"
+    assert_includes sidebar_source, 'label: "Resizing"'
+    assert_includes sidebar_source, "resizing_docs_path"
     assert_includes sidebar_source, 'label: "Gem views"'
     assert_includes sidebar_source, "gem_views_docs_path"
     assert_includes sidebar_source, 'label: "Recordables"'
@@ -34,6 +37,7 @@ class DummyDocsTest < Minitest::Test
     assert_includes sidebar_source, "query_docs_path"
     assert_match(/label: "Config"[\s\S]*icon: :settings/, sidebar_source)
     assert_match(/label: "Plugins"[\s\S]*icon: :box/, sidebar_source)
+    assert_match(/label: "Resizing"[\s\S]*icon: :image/, sidebar_source)
     assert_match(/label: "Gem views"[\s\S]*icon: :file/, sidebar_source)
     assert_match(/label: "Recordables"[\s\S]*icon: :folder/, sidebar_source)
     assert_match(/label: "Query"[\s\S]*icon: :file/, sidebar_source)
@@ -45,6 +49,10 @@ class DummyDocsTest < Minitest::Test
 
     assert_includes config_source, "FlatPack::CodeBlock::Component"
     assert_includes controller_source, "config.layout = :blank"
+    assert_includes controller_source, "config.image_processing_enabled = true"
+    assert_includes controller_source, "config.image_processing_max_width = 2560"
+    assert_includes controller_source, "config.image_variants = {"
+    assert_includes controller_source, "square_small: { resize_to_fill: [128, 128] }"
     assert_includes controller_source, 'host app layout like "application"'
     assert_includes controller_source, "Browse the attachment library and manage uploads with bulk remove actions."
   end
@@ -74,6 +82,29 @@ class DummyDocsTest < Minitest::Test
                     "The built-in Google Drive addon in the dummy app demonstrates the same provider registration and import flow"
   end
 
+  def test_dummy_resizing_page_documents_browser_side_resizing
+    resizing_source = File.read(File.expand_path("dummy/app/views/docs/resizing.html.erb", __dir__))
+    controller_source = File.read(File.expand_path("dummy/app/controllers/docs_controller.rb", __dir__))
+
+    assert_includes resizing_source, 'title: "Resizing"'
+    assert_includes resizing_source, 'title: "Browser side resezing"'
+    assert_includes resizing_source, 'title: "Size variants"'
+    assert_includes resizing_source, 'subtitle: "Summarise how they work"'
+    assert_includes resizing_source, "FlatPack::PageTitle::Component"
+    assert_includes resizing_source, "FlatPack::SectionTitle::Component"
+    assert_includes resizing_source, "FlatPack::CodeBlock::Component"
+    assert_includes controller_source, "def resizing"
+    assert_includes controller_source, "@resizing_config_example = <<~RUBY"
+    assert_includes controller_source, "@variant_config_example = <<~RUBY"
+    assert_includes controller_source, "config.image_processing_enabled = true"
+    assert_includes controller_source, "config.image_processing_max_width = 2560"
+    assert_includes controller_source, "config.image_processing_max_height = 2560"
+    assert_includes controller_source, "config.image_processing_quality = 0.82"
+    assert_includes controller_source, "config.image_variants = {"
+    assert_includes controller_source, "Variants are generated on demand the first time a given size is requested."
+    assert_includes controller_source, "Each size gets its own signed variant URL"
+  end
+
   def test_dummy_setup_page_covers_active_storage_and_install_flow
     setup_source = File.read(File.expand_path("dummy/app/views/docs/setup.html.erb", __dir__))
     controller_source = File.read(File.expand_path("dummy/app/controllers/docs_controller.rb", __dir__))
@@ -90,15 +121,22 @@ class DummyDocsTest < Minitest::Test
   def test_dummy_gem_views_page_lists_the_gem_ui_surfaces
     gem_views_source = File.read(File.expand_path("dummy/app/views/docs/gem_views.html.erb", __dir__))
     controller_source = File.read(File.expand_path("dummy/app/controllers/docs_controller.rb", __dir__))
+    icon_sprite_source = File.read(File.expand_path("dummy/app/views/layouts/_icon_sprite.html.erb", __dir__))
 
     assert_includes gem_views_source, "FlatPack::List::Component"
     assert_includes gem_views_source, "FlatPack::List::Item.new"
-    assert_includes controller_source, 'title: "Media library"'
-    assert_includes controller_source, 'title: "Upload attachments"'
+    assert_includes controller_source, 'title: "Library"'
+    assert_includes controller_source, 'title: "Upload"'
     assert_includes controller_source, 'title: "Attachment details"'
     assert_includes controller_source, 'title: "Blank layout"'
+    assert_includes controller_source, "icon: :grid"
+    assert_includes controller_source, "icon: :eye"
+    assert_includes controller_source, "icon: :layout"
     assert_includes controller_source, "Upload images and files"
     assert_includes controller_source, "Browse the attachment library and manage uploads with bulk remove actions."
+    assert_includes icon_sprite_source, 'symbol id="icon-grid"'
+    assert_includes icon_sprite_source, 'symbol id="icon-eye"'
+    assert_includes icon_sprite_source, 'symbol id="icon-layout"'
   end
 
   def test_dummy_recordables_page_lists_recordable_type_counts

@@ -3,7 +3,7 @@ import { Controller } from "@hotwired/stimulus"
 import { application } from "controllers/application"
 
 export default class extends Controller {
-  static targets = ["editorHost", "searchInput", "fileInput", "status", "gallery", "emptyState", "previousButton", "nextButton", "paginationLabel"]
+  static targets = ["editorHost", "searchInput", "fileInput", "status", "scrollContainer", "gallery", "emptyState"]
 
   static values = {
     pickerUrl: String,
@@ -16,8 +16,15 @@ export default class extends Controller {
   connect() {
     this.currentPage = 1
     this.totalPages = 1
+    this.hasNextPage = false
+    this.isLoading = false
     this.searchTimeoutId = null
     this.activeEditor = null
+    this.boundHandleScroll = this.handleScroll.bind(this)
+
+    if (this.hasScrollContainerTarget) {
+      this.scrollContainerTarget.addEventListener("scroll", this.boundHandleScroll)
+    }
   }
 
   disconnect() {
@@ -25,15 +32,19 @@ export default class extends Controller {
       window.clearTimeout(this.searchTimeoutId)
       this.searchTimeoutId = null
     }
+
+    if (this.hasScrollContainerTarget) {
+      this.scrollContainerTarget.removeEventListener("scroll", this.boundHandleScroll)
+    }
   }
 
   openPickerFromToolbar(event) {
     event.preventDefault()
 
     this.activeEditor = event.detail?.editor || this.editorController()?.editor || null
-    this.currentPage = 1
-    this.loadAttachments()
     this.modalController()?.open?.()
+    this.currentPage = 1
+    this.loadAttachments({ reset: true })
   }
 
   browseUpload() {
@@ -47,22 +58,8 @@ export default class extends Controller {
 
     this.searchTimeoutId = window.setTimeout(() => {
       this.currentPage = 1
-      this.loadAttachments()
+      this.loadAttachments({ reset: true })
     }, this.searchDelayValue)
-  }
-
-  previousPage() {
-    if (this.currentPage <= 1) return
-
-    this.currentPage -= 1
-    this.loadAttachments()
-  }
-
-  nextPage() {
-    if (this.currentPage >= this.totalPages) return
-
-    this.currentPage += 1
-    this.loadAttachments()
   }
 
   uploadSelected() {
@@ -72,10 +69,31 @@ export default class extends Controller {
     this.directUpload(file)
   }
 
-  async loadAttachments() {
-    if (!this.hasPickerUrlValue) return
+  handleScroll() {
+    if (!this.hasScrollContainerTarget || this.isLoading || !this.hasNextPage) return
 
-    this.showStatus("Loading images…")
+    const { scrollTop, clientHeight, scrollHeight } = this.scrollContainerTarget
+    if (scrollTop + clientHeight < scrollHeight - 120) return
+
+    this.currentPage += 1
+    this.loadAttachments({ append: true })
+  }
+
+  async loadAttachments({ append = false, reset = false } = {}) {
+    if (!this.hasPickerUrlValue || this.isLoading) return
+
+    if (reset) {
+      this.currentPage = 1
+      this.totalPages = 1
+      this.hasNextPage = false
+
+      if (this.hasScrollContainerTarget) {
+        this.scrollContainerTarget.scrollTop = 0
+      }
+    }
+
+    this.showStatus("")
+    this.isLoading = true
 
     try {
       const response = await fetch(this.pickerRequestUrl(), {
@@ -88,13 +106,18 @@ export default class extends Controller {
       }
 
       const payload = await response.json()
-      this.renderGallery(payload.attachments || [])
+      this.renderGallery(payload.attachments || [], { append })
       this.updatePagination(payload.pagination || {})
       this.showStatus("")
+      this.isLoading = false
+      this.fillScrollContainer()
     } catch (error) {
-      this.renderGallery([])
+      this.renderGallery([], { append: false })
       this.updatePagination({ current_page: 1, total_pages: 1, previous_page: false, next_page: false })
       this.showStatus(error.message || "Unable to load image library")
+      this.isLoading = false
+    } finally {
+      this.searchTimeoutId = null
     }
   }
 
@@ -102,7 +125,14 @@ export default class extends Controller {
     const editor = this.activeEditor || this.editorController()?.editor
     if (!editor) return
 
-    editor.chain().focus().setImage({ src: attachment.insert_url, alt: attachment.alt || attachment.name }).run()
+    editor.chain().focus().setImage({
+      src: attachment.insert_url,
+      alt: attachment.alt || attachment.name,
+      attachmentId: attachment.id,
+      showPath: attachment.show_path,
+      display: "medium",
+      align: "center",
+    }).run()
     this.modalController()?.close?.()
   }
 
@@ -140,7 +170,7 @@ export default class extends Controller {
         this.insertAttachment(attachment)
         this.showStatus(`Inserted ${attachment.name}`)
         this.currentPage = 1
-        this.loadAttachments()
+        this.loadAttachments({ reset: true })
       } catch (uploadError) {
         this.showStatus(uploadError.message || "Unable to add image")
       } finally {
@@ -195,10 +225,12 @@ export default class extends Controller {
     return url.toString()
   }
 
-  renderGallery(attachments) {
+  renderGallery(attachments, { append = false } = {}) {
     if (!this.hasGalleryTarget) return
 
-    this.galleryTarget.innerHTML = ""
+    if (!append) {
+      this.galleryTarget.innerHTML = ""
+    }
 
     attachments.forEach((attachment) => {
       const button = document.createElement("button")
@@ -224,12 +256,7 @@ export default class extends Controller {
       title.className = "truncate text-sm font-semibold text-(--surface-content-color)"
       title.textContent = attachment.name || "Untitled image"
 
-      const meta = document.createElement("p")
-      meta.className = "text-xs text-(--surface-muted-content-color)"
-      meta.textContent = attachment.description || "Insert inline"
-
       body.appendChild(title)
-      body.appendChild(meta)
       button.appendChild(media)
       button.appendChild(body)
       this.galleryTarget.appendChild(button)
@@ -243,18 +270,17 @@ export default class extends Controller {
   updatePagination(pagination) {
     this.currentPage = Number(pagination.current_page || 1)
     this.totalPages = Number(pagination.total_pages || 1)
+    this.hasNextPage = Boolean(pagination.next_page)
+  }
 
-    if (this.hasPaginationLabelTarget) {
-      this.paginationLabelTarget.textContent = `Page ${this.currentPage} of ${this.totalPages}`
-    }
+  fillScrollContainer() {
+    if (!this.hasScrollContainerTarget || this.isLoading || !this.hasNextPage) return
 
-    if (this.hasPreviousButtonTarget) {
-      this.previousButtonTarget.disabled = !pagination.previous_page
-    }
+    const { clientHeight, scrollHeight } = this.scrollContainerTarget
+    if (scrollHeight > clientHeight + 8) return
 
-    if (this.hasNextButtonTarget) {
-      this.nextButtonTarget.disabled = !pagination.next_page
-    }
+    this.currentPage += 1
+    this.loadAttachments({ append: true })
   }
 
   showStatus(message) {

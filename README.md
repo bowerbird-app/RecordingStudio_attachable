@@ -352,6 +352,7 @@ The dummy app in `test/dummy` mounts both Recording Studio and this engine so yo
 - the dummy app is a validation shell, not a production template
 - CI installs the dummy app bundle and runs dummy-app migrations before the root checks
 - make sure engine, Active Storage, and Recording Studio tables are migrated in the dummy app before validating upload flows locally
+- set `DUMMY_ACTIVE_STORAGE_SERVICE=amazon` plus `DUMMY_AWS_ACCESS_KEY_ID`, `DUMMY_AWS_SECRET_ACCESS_KEY`, `DUMMY_AWS_REGION`, and `DUMMY_AWS_BUCKET` to exercise S3-backed uploads in the dummy app; `DUMMY_AWS_BUCKET` may be either the plain bucket name or a bucket ARN
 
 ### CI-aligned validation
 

@@ -81,8 +81,10 @@ class DummyHomeDemoTest < Minitest::Test
     show_view = File.read(File.expand_path("dummy/app/views/pages/show.html.erb", __dir__))
     view = File.read(File.expand_path("dummy/app/views/pages/edit.html.erb", __dir__))
     picker_controller = File.read(File.expand_path("../app/javascript/controllers/recording_studio_attachable/attachment_image_picker_controller.js", __dir__))
+    html_preview_controller = File.read(File.expand_path("dummy/app/javascript/controllers/page_html_preview_controller.js", __dir__))
     importmap = File.read(File.expand_path("dummy/config/importmap.rb", __dir__))
     addon = File.read(File.expand_path("../app/javascript/recording_studio_attachable/tiptap/attachment_image_addon.js", __dir__))
+    html_preview_addon = File.read(File.expand_path("dummy/app/javascript/page_html_preview_addon.js", __dir__))
 
     assert_includes routes, "resources :pages, only: %i[show edit update]"
     assert_includes controller, "class PagesController < ApplicationController"
@@ -98,12 +100,17 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes show_view, 'items: [{ text: "Home", href: root_path, icon: "home" }]'
     assert_includes show_view, "title: @page.title"
     assert_includes show_view, 'subtitle: "Review the inline page content and related page actions."'
+    assert_includes show_view, 'class="page-inline-content prose max-w-none text-(--surface-content-color)"'
     assert_includes show_view, "<%= sanitize("
     assert_includes show_view, '@page.body.presence || "<p>No page content yet.</p>"'
+    assert_includes show_view, 'attributes: %w[href src alt title data-display data-align]'
+    assert_includes show_view, '.page-inline-content img[data-display="small"] {'
+    assert_includes show_view, '.page-inline-content img[data-align="right"] {'
     assert_includes show_view, 'text: "Edit inline"'
     refute_includes show_view, 'text: "Back to home"'
     refute_includes show_view, "FlatPack::Card::Component.new(style: :default)"
     assert_includes controller, 'redirect_to edit_page_path(@page), notice: "Page updated."'
+    assert_includes importmap, 'pin "page_html_preview_addon"'
     assert_includes importmap, 'pin "recording_studio_attachable/tiptap/attachment_image_addon"'
     assert_includes view, "FlatPack::PageTitle::Component.new("
     assert_includes view, "FlatPack::Breadcrumb::Component.new("
@@ -113,13 +120,20 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes view, 'items: [{ text: "Home", href: root_path, icon: "home" }]'
     assert_includes view, 'title: "Edit inline"'
     assert_includes view, 'subtitle: "Update page copy and formatted content for the inline recording demo."'
+    assert_includes view, '<%= link_to page_path(@page), class: "inline-flex" do %>'
+    assert_includes view, 'text: "View"'
     assert_includes view, "FlatPack::TextInput::Component.new("
     assert_includes view, 'name: "page[title]"'
     assert_includes view, "FlatPack::TextArea::Component.new("
     assert_includes view, 'name: "page[body]"'
     assert_includes view, "rich_text: true"
-    assert_includes view, "addons: [{ name: :attachment_image }]"
+    assert_includes view, "addons: [{ name: :attachment_image }, { name: :html_preview }]"
     assert_includes view, '"attachmentImage"'
+    assert_includes view, '"htmlPreview"'
+    assert_includes view, 'data-controller="page-html-preview"'
+    assert_includes view, 'data-action="flat-pack:html-preview->page-html-preview#openFromToolbar"'
+    assert_includes view, 'title: "HTML output"'
+    assert_includes view, 'data-page-html-preview-target="output"'
     assert_includes view, 'data-action="flat-pack:attachment-image-picker->recording-studio-attachable--attachment-image-picker#openPickerFromToolbar"'
     assert_includes view, "bubble_menu: false"
     assert_includes view, "floating_menu: false"
@@ -136,13 +150,29 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes view, 'text: "Save page"'
     assert_includes picker_controller, "application.getControllerForElementAndIdentifier"
     assert_includes picker_controller, "openPickerFromToolbar(event)"
-    assert_includes picker_controller, "loadAttachments()"
+    assert_includes picker_controller, "async loadAttachments({ append = false, reset = false } = {}) {"
     assert_includes picker_controller, "createAttachmentFromBlob(file, blob)"
     assert_includes picker_controller, "new DirectUpload(file, this.directUploadUrlValue)"
-    assert_includes picker_controller, "setImage({ src: attachment.insert_url, alt: attachment.alt || attachment.name }).run()"
+    assert_includes picker_controller, 'attachmentId: attachment.id'
+    assert_includes picker_controller, 'showPath: attachment.show_path'
+    assert_includes picker_controller, 'display: "medium"'
+    assert_includes picker_controller, 'align: "center"'
     assert_includes addon, 'registerTiptapAddon("attachment_image"'
+    assert_includes addon, 'const ManagedAttachmentImage = Image.extend({'
+    assert_includes addon, 'data-attachment-id'
+    assert_includes addon, 'updateAttachmentImageAttrs'
+    assert_includes addon, 'removeSelectedAttachmentImage'
+    assert_includes addon, 'label: "Remove"'
+    assert_includes addon, 'label: "Alt"'
     assert_includes addon, 'name: "attachmentImage"'
     assert_includes addon, "flat-pack:attachment-image-picker"
+    assert_includes html_preview_addon, 'registerTiptapAddon("html_preview"'
+    assert_includes html_preview_addon, 'name: "htmlPreview"'
+    assert_includes html_preview_addon, 'label: addonOptions.label || "View HTML"'
+    assert_includes html_preview_addon, 'flat-pack:html-preview'
+    assert_includes html_preview_controller, 'openFromToolbar(event)'
+    assert_includes html_preview_controller, 'this.outputTarget.value = editor.getHTML()'
+    assert_includes html_preview_controller, 'application.getControllerForElementAndIdentifier'
     refute_includes view, "FlatPack::Card::Component.new(style: :default)"
     refute_includes view, 'text: "Back to demo"'
   end
@@ -228,6 +258,7 @@ class DummyHomeDemoTest < Minitest::Test
 
     assert_includes importmap, 'pin "@hotwired/turbo-rails", to: "turbo.min.js"'
     assert_includes application_js, 'import "@hotwired/turbo-rails"'
+    assert_includes application_js, 'import "page_html_preview_addon"'
     assert_includes application_js, 'import * as ActiveStorage from "@rails/activestorage"'
     assert_includes application_js, "ActiveStorage.start()"
   end
@@ -270,6 +301,21 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes schema, 'create_table "active_storage_variant_records"'
     assert_includes schema, "idx_rs_attachable_parent_active"
     assert_includes schema, "idx_rs_attachable_root_active"
+  end
+
+  def test_dummy_active_storage_can_be_switched_to_amazon_via_environment
+    storage = File.read(File.expand_path("dummy/config/storage.yml", __dir__))
+    development = File.read(File.expand_path("dummy/config/environments/development.rb", __dir__))
+    production = File.read(File.expand_path("dummy/config/environments/production.rb", __dir__))
+
+    assert_includes storage, "amazon:"
+    assert_includes storage, 'service: S3'
+    assert_includes storage, 'ENV["DUMMY_AWS_ACCESS_KEY_ID"]'
+    assert_includes storage, 'ENV["DUMMY_AWS_SECRET_ACCESS_KEY"]'
+    assert_includes storage, 'ENV.fetch("DUMMY_AWS_REGION", "us-east-1")'
+    assert_includes storage, 'ENV["DUMMY_AWS_BUCKET"].to_s.sub(/\Aarn:[^:]+:s3:::+/, "")'
+    assert_includes development, 'ENV.fetch("DUMMY_ACTIVE_STORAGE_SERVICE", "local").to_sym'
+    assert_includes production, 'ENV.fetch("DUMMY_ACTIVE_STORAGE_SERVICE", "local").to_sym'
   end
 
   def test_dummy_sidebar_links_to_the_recording_tree_demo_instead_of_recording_studio_root

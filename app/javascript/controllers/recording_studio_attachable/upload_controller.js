@@ -462,9 +462,11 @@ export default class extends Controller {
     const progress = entry.status === "uploading" || entry.progress > 0 ? `<progress class="w-full" value="${entry.progress}" max="100"></progress>` : ""
     const error = entry.error ? `<p class="text-xs text-red-600">${this.escapeHtml(entry.error)}</p>` : ""
     const retry = entry.status === "failed" ? `<button type="button" data-action="recording-studio-attachable--upload#retry" data-id="${entry.id}" class="text-xs underline">Retry</button>` : ""
+    const remove = `<button type="button" data-action="recording-studio-attachable--upload#remove" data-id="${entry.id}" class="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full border border-(--surface-border-color) bg-(--surface-background-color) text-sm leading-none text-(--surface-muted-content-color) transition hover:text-(--surface-content-color)" aria-label="Remove ${this.escapeAttribute(entry.file.name)} from upload queue" title="Remove from upload queue">&times;</button>`
 
     return `
-      <div data-entry-id="${entry.id}" class="rounded-lg border border-(--surface-border-color) p-4">
+      <div data-entry-id="${entry.id}" class="relative rounded-lg border border-(--surface-border-color) p-4 pr-12">
+        ${remove}
         <div class="flex items-start gap-4">
           ${preview}
           <div class="min-w-0 flex-1 space-y-2">
@@ -475,9 +477,8 @@ export default class extends Controller {
             ${progress}
             ${error}
           </div>
-          <div class="flex flex-col items-end gap-2">
+          <div class="flex flex-col items-end gap-2 pt-6">
             ${retry}
-            <button type="button" data-action="recording-studio-attachable--upload#remove" data-id="${entry.id}" class="text-xs underline">Remove</button>
           </div>
         </div>
       </div>

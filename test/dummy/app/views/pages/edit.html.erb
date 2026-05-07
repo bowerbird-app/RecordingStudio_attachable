@@ -13,6 +13,12 @@
     variant: :h1
   ) %>
 
+  <div class="flex flex-wrap gap-3">
+    <%= link_to page_path(@page), class: "inline-flex" do %>
+      <%= render FlatPack::Button::Component.new(text: "View", style: :secondary, size: :md) %>
+    <% end %>
+  </div>
+
   <%= form_with model: @page, class: "space-y-4" do %>
     <%= render FlatPack::TextInput::Component.new(
       name: "page[title]",
@@ -22,6 +28,7 @@
     ) %>
 
     <% editor_modal_id = "page-image-picker-modal-#{@page.id}" %>
+    <% html_preview_modal_id = "page-html-preview-modal-#{@page.id}" %>
     <% body_field = capture do %>
       <%= render FlatPack::TextArea::Component.new(
         name: "page[body]",
@@ -31,7 +38,7 @@
         rich_text: true,
         rich_text_options: {
           preset: :content,
-          addons: [{ name: :attachment_image }],
+          addons: [{ name: :attachment_image }, { name: :html_preview }],
           toolbar: [
             "bold",
             "italic",
@@ -41,6 +48,7 @@
             "code",
             "sep2",
             "attachmentImage",
+            "htmlPreview",
             "h1",
             "h2",
             "h3",
@@ -60,92 +68,91 @@
       ) %>
     <% end %>
 
-    <% if @page_recording.present? %>
-      <div
-        data-controller="recording-studio-attachable--attachment-image-picker"
-        data-action="flat-pack:attachment-image-picker->recording-studio-attachable--attachment-image-picker#openPickerFromToolbar"
-        data-recording-studio-attachable--attachment-image-picker-picker-url-value="<%= @page_attachment_picker_path %>"
-        data-recording-studio-attachable--attachment-image-picker-upload-url-value="<%= @page_attachment_create_path %>"
-        data-recording-studio-attachable--attachment-image-picker-direct-upload-url-value="<%= main_app.rails_direct_uploads_path %>"
-        data-recording-studio-attachable--attachment-image-picker-modal-id-value="<%= editor_modal_id %>">
-        <div data-recording-studio-attachable--attachment-image-picker-target="editorHost">
-          <%= body_field %>
-        </div>
+    <div
+      data-controller="page-html-preview"
+      data-action="flat-pack:html-preview->page-html-preview#openFromToolbar"
+      data-page-html-preview-modal-id-value="<%= html_preview_modal_id %>">
+      <% if @page_recording.present? %>
+        <div
+          data-controller="recording-studio-attachable--attachment-image-picker"
+          data-action="flat-pack:attachment-image-picker->recording-studio-attachable--attachment-image-picker#openPickerFromToolbar"
+          data-recording-studio-attachable--attachment-image-picker-picker-url-value="<%= @page_attachment_picker_path %>"
+          data-recording-studio-attachable--attachment-image-picker-upload-url-value="<%= @page_attachment_create_path %>"
+          data-recording-studio-attachable--attachment-image-picker-direct-upload-url-value="<%= main_app.rails_direct_uploads_path %>"
+          data-recording-studio-attachable--attachment-image-picker-modal-id-value="<%= editor_modal_id %>">
+          <div data-recording-studio-attachable--attachment-image-picker-target="editorHost">
+            <%= body_field %>
+          </div>
 
-        <%= render FlatPack::Modal::Component.new(id: editor_modal_id, title: "Insert image", size: :xl, body_height_mode: :fixed, body_height: "32rem") do |modal| %>
-          <% modal.body do %>
-            <div class="space-y-4">
-              <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                <div class="flex flex-wrap items-center gap-3">
-                  <%= render FlatPack::Button::Component.new(
-                    text: "Upload",
-                    style: :primary,
-                    size: :md,
-                    icon: "upload",
-                    type: "button",
-                    data: { action: "recording-studio-attachable--attachment-image-picker#browseUpload" }
-                  ) %>
+          <%= render FlatPack::Modal::Component.new(id: editor_modal_id, title: "Insert image", size: :xl, body_height_mode: :fixed, body_height: "32rem") do |modal| %>
+            <% modal.body do %>
+              <div class="space-y-4">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                  <div class="flex flex-wrap items-center gap-3">
+                    <%= render FlatPack::Button::Component.new(
+                      text: "Upload",
+                      style: :primary,
+                      size: :md,
+                      icon: "upload",
+                      type: "button",
+                      data: { action: "recording-studio-attachable--attachment-image-picker#browseUpload" }
+                    ) %>
+                  </div>
+
+                  <div class="w-full lg:w-auto">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+                      <%= render FlatPack::Search::Component.new(
+                        input_id: "#{editor_modal_id}-search",
+                        name: :picker_search,
+                        value: nil,
+                        placeholder: "Search",
+                        max_width: :lg,
+                        aria: { label: "Search images" },
+                        data: {
+                          recording_studio_attachable__attachment_image_picker_target: "searchInput",
+                          action: "input->recording-studio-attachable--attachment-image-picker#searchChanged"
+                        }
+                      ) %>
+                    </div>
+                  </div>
                 </div>
 
-                <div class="w-full lg:w-auto">
-                  <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
-                    <%= render FlatPack::Search::Component.new(
-                      input_id: "#{editor_modal_id}-search",
-                      name: :picker_search,
-                      value: nil,
-                      placeholder: "Search",
-                      max_width: :lg,
-                      aria: { label: "Search images" },
-                      data: {
-                        recording_studio_attachable__attachment_image_picker_target: "searchInput",
-                        action: "input->recording-studio-attachable--attachment-image-picker#searchChanged"
-                      }
-                    ) %>
+                <input
+                  type="file"
+                  accept="image/*"
+                  class="hidden"
+                  data-recording-studio-attachable--attachment-image-picker-target="fileInput"
+                  data-action="change->recording-studio-attachable--attachment-image-picker#uploadSelected">
+
+                <p class="hidden text-sm text-(--surface-muted-content-color)" data-recording-studio-attachable--attachment-image-picker-target="status"></p>
+
+                <div class="max-h-96 overflow-y-auto pr-1" data-recording-studio-attachable--attachment-image-picker-target="scrollContainer">
+                  <div class="grid grid-cols-2 gap-4 lg:grid-cols-4" data-recording-studio-attachable--attachment-image-picker-target="gallery"></div>
+
+                  <div class="hidden rounded-lg border border-dashed border-(--surface-border-color) px-4 py-8 text-center text-sm text-(--surface-muted-content-color)" data-recording-studio-attachable--attachment-image-picker-target="emptyState">
+                    No images found for this page yet.
                   </div>
                 </div>
               </div>
-
-              <input
-                type="file"
-                accept="image/*"
-                class="hidden"
-                data-recording-studio-attachable--attachment-image-picker-target="fileInput"
-                data-action="change->recording-studio-attachable--attachment-image-picker#uploadSelected">
-
-              <p class="hidden text-sm text-(--surface-muted-content-color)" data-recording-studio-attachable--attachment-image-picker-target="status"></p>
-
-              <div class="grid grid-cols-2 gap-4 lg:grid-cols-4" data-recording-studio-attachable--attachment-image-picker-target="gallery"></div>
-
-              <div class="hidden rounded-lg border border-dashed border-(--surface-border-color) px-4 py-8 text-center text-sm text-(--surface-muted-content-color)" data-recording-studio-attachable--attachment-image-picker-target="emptyState">
-                No images found for this page yet.
-              </div>
-
-              <div class="flex items-center justify-between gap-3">
-                <button
-                  type="button"
-                  class="rounded-md border border-(--surface-border-color) px-3 py-2 text-sm text-(--surface-content-color) disabled:cursor-not-allowed disabled:opacity-50"
-                  data-recording-studio-attachable--attachment-image-picker-target="previousButton"
-                  data-action="recording-studio-attachable--attachment-image-picker#previousPage">
-                  Previous
-                </button>
-
-                <p class="text-sm text-(--surface-muted-content-color)" data-recording-studio-attachable--attachment-image-picker-target="paginationLabel">Page 1 of 1</p>
-
-                <button
-                  type="button"
-                  class="rounded-md border border-(--surface-border-color) px-3 py-2 text-sm text-(--surface-content-color) disabled:cursor-not-allowed disabled:opacity-50"
-                  data-recording-studio-attachable--attachment-image-picker-target="nextButton"
-                  data-action="recording-studio-attachable--attachment-image-picker#nextPage">
-                  Next
-                </button>
-              </div>
-            </div>
+            <% end %>
           <% end %>
+        </div>
+      <% else %>
+        <%= body_field %>
+      <% end %>
+
+      <%= render FlatPack::Modal::Component.new(id: html_preview_modal_id, title: "HTML output", size: :xl, body_height_mode: :fixed, body_height: "28rem") do |modal| %>
+        <% modal.body do %>
+          <div class="space-y-3">
+            <p class="text-sm text-(--surface-muted-content-color)">Current HTML generated by the editor.</p>
+            <textarea
+              readonly
+              class="min-h-[22rem] w-full rounded-md border border-(--surface-border-color) bg-(--surface-background-color) px-[var(--form-control-padding)] py-[var(--form-control-padding)] font-mono text-xs text-(--surface-content-color)"
+              data-page-html-preview-target="output"></textarea>
+          </div>
         <% end %>
-      </div>
-    <% else %>
-      <%= body_field %>
-    <% end %>
+      <% end %>
+    </div>
 
     <div class="flex flex-wrap gap-3">
       <%= render FlatPack::Button::Component.new(text: "Save page", style: :primary, size: :md, type: "submit") %>

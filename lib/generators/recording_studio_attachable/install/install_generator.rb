@@ -45,6 +45,8 @@ module RecordingStudioAttachable
           pin_all_from RecordingStudioAttachable::Engine.root.join("app/javascript/controllers/recording_studio_attachable"),
             under: "controllers/recording_studio_attachable",
             to: "controllers/recording_studio_attachable"
+          pin "recording_studio_attachable/tiptap/attachment_image_addon",
+            to: "recording_studio_attachable/tiptap/attachment_image_addon.js"
         RUBY
 
         wire_javascript_entrypoints
@@ -73,6 +75,10 @@ module RecordingStudioAttachable
               ActiveStorage.start()
             JS
           end
+
+          unless attachment_image_addon_wired?(application_js)
+            append_to_file application_js_path, %(import "recording_studio_attachable/tiptap/attachment_image_addon"\n)
+          end
         end
 
         controllers_index_path = Rails.root.join("app/javascript/controllers/index.js")
@@ -91,6 +97,10 @@ module RecordingStudioAttachable
 
       def attachable_controllers_wired?(controllers_index)
         controllers_index.match?(%r{controllers/recording_studio_attachable})
+      end
+
+      def attachment_image_addon_wired?(application_js)
+        application_js.match?(%r{recording_studio_attachable/tiptap/attachment_image_addon})
       end
     end
   end

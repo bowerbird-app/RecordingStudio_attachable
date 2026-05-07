@@ -80,9 +80,9 @@ class DummyHomeDemoTest < Minitest::Test
     controller = File.read(File.expand_path("dummy/app/controllers/pages_controller.rb", __dir__))
     show_view = File.read(File.expand_path("dummy/app/views/pages/show.html.erb", __dir__))
     view = File.read(File.expand_path("dummy/app/views/pages/edit.html.erb", __dir__))
-    picker_controller = File.read(File.expand_path("dummy/app/javascript/controllers/page_inline_image_picker_controller.js", __dir__))
+    picker_controller = File.read(File.expand_path("../app/javascript/controllers/recording_studio_attachable/attachment_image_picker_controller.js", __dir__))
     importmap = File.read(File.expand_path("dummy/config/importmap.rb", __dir__))
-    toolbar_override = File.read(File.expand_path("dummy/app/javascript/page_inline_image_picker/toolbar_override.js", __dir__))
+    addon = File.read(File.expand_path("../app/javascript/recording_studio_attachable/tiptap/attachment_image_addon.js", __dir__))
 
     assert_includes routes, "resources :pages, only: %i[show edit update]"
     assert_includes controller, "class PagesController < ApplicationController"
@@ -104,8 +104,7 @@ class DummyHomeDemoTest < Minitest::Test
     refute_includes show_view, 'text: "Back to home"'
     refute_includes show_view, "FlatPack::Card::Component.new(style: :default)"
     assert_includes controller, 'redirect_to edit_page_path(@page), notice: "Page updated."'
-    assert_includes importmap, 'pin "flat_pack/tiptap/original_toolbar", to: "flat_pack/tiptap/toolbar.js"'
-    assert_includes importmap, 'pin "flat_pack/tiptap/toolbar", to: "page_inline_image_picker/toolbar_override.js"'
+    assert_includes importmap, 'pin "recording_studio_attachable/tiptap/attachment_image_addon"'
     assert_includes view, "FlatPack::PageTitle::Component.new("
     assert_includes view, "FlatPack::Breadcrumb::Component.new("
     assert_includes view, "show_back: true"
@@ -119,24 +118,31 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes view, "FlatPack::TextArea::Component.new("
     assert_includes view, 'name: "page[body]"'
     assert_includes view, "rich_text: true"
+    assert_includes view, "addons: [{ name: :attachment_image }]"
     assert_includes view, '"attachmentImage"'
-    assert_includes view, 'data-action="flat-pack:attachment-image-picker->page-inline-image-picker#openPickerFromToolbar"'
+    assert_includes view, 'data-action="flat-pack:attachment-image-picker->recording-studio-attachable--attachment-image-picker#openPickerFromToolbar"'
     assert_includes view, "bubble_menu: false"
     assert_includes view, "floating_menu: false"
-    assert_includes view, 'data-controller="page-inline-image-picker"'
+    assert_includes view, 'data-controller="recording-studio-attachable--attachment-image-picker"'
     assert_includes view, 'title: "Insert image"'
-    assert_includes view, 'text: "Upload image"'
-    assert_includes view, 'data-page-inline-image-picker-target="gallery"'
-    assert_includes view, 'data-page-inline-image-picker-target="fileInput"'
+    assert_includes view, 'text: "Upload"'
+    assert_includes view, 'icon: "upload"'
+    assert_includes view, 'class="w-full lg:w-auto"'
+    assert_includes view, 'FlatPack::Search::Component.new('
+    assert_includes view, 'placeholder: "Search"'
+    assert_includes view, 'data-recording-studio-attachable--attachment-image-picker-target="gallery"'
+    assert_includes view, 'data-recording-studio-attachable--attachment-image-picker-target="fileInput"'
+    refute_includes view, 'text: "Close"'
     assert_includes view, 'text: "Save page"'
     assert_includes picker_controller, "application.getControllerForElementAndIdentifier"
     assert_includes picker_controller, "openPickerFromToolbar(event)"
-    refute_includes picker_controller, "ensureToolbarButton()"
+    assert_includes picker_controller, "loadAttachments()"
+    assert_includes picker_controller, "createAttachmentFromBlob(file, blob)"
     assert_includes picker_controller, "new DirectUpload(file, this.directUploadUrlValue)"
-    assert_includes picker_controller, "chain.setImage({ src: attachment.insert_url, alt: attachment.alt || attachment.name }).run()"
-    assert_includes toolbar_override, "flat_pack/tiptap/original_toolbar"
-    assert_includes toolbar_override, "attachmentImage"
-    assert_includes toolbar_override, "flat-pack:attachment-image-picker"
+    assert_includes picker_controller, "setImage({ src: attachment.insert_url, alt: attachment.alt || attachment.name }).run()"
+    assert_includes addon, 'registerTiptapAddon("attachment_image"'
+    assert_includes addon, 'name: "attachmentImage"'
+    assert_includes addon, "flat-pack:attachment-image-picker"
     refute_includes view, "FlatPack::Card::Component.new(style: :default)"
     refute_includes view, 'text: "Back to demo"'
   end

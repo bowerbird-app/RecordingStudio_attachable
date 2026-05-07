@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Bumped the dummy app FlatPack dependency from `0.1.41` to `0.1.49`
+
+### Added
+- Added a FlatPack TipTap attachment-image addon, reusable image picker endpoint, and dummy app integration for inserting recording-scoped images inline in rich text editors
+
 ## [0.1.1] - 2026-04-28
 
 ### Changed

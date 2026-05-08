@@ -19,7 +19,7 @@ class AddChatMessageStatusAndAttachmentLinks < ActiveRecord::Migration[8.1]
     end
 
     add_index :chat_message_attachments,
-              [:chat_message_id, :attachment_recording_id],
+              [ :chat_message_id, :attachment_recording_id ],
               unique: true,
               name: "index_chat_message_attachments_on_message_and_attachment"
   end

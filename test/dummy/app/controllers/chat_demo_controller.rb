@@ -86,7 +86,7 @@ class ChatDemoController < ApplicationController
   def chat_threads
     return [] if @chat_thread.blank?
 
-    [build_chat_thread(@chat_thread)]
+    [ build_chat_thread(@chat_thread) ]
   end
 
   def build_chat_thread(chat_thread)
@@ -94,7 +94,7 @@ class ChatDemoController < ApplicationController
 
     {
       chat_group_name: chat_thread.title,
-      avatar_items: [{ initials: "RS" }],
+      avatar_items: [ { initials: "RS" } ],
       latest_sender: latest_message&.direction == "outgoing" ? "You" : "Attachable",
       latest_preview: latest_message&.body.presence || "Reuse the picker inside the composer.",
       latest_at: latest_message&.timestamp || chat_thread.created_at,
@@ -109,7 +109,7 @@ class ChatDemoController < ApplicationController
     @chat_thread.chat_messages
       .sent
       .timeline_order
-      .includes(chat_message_attachments: { attachment_recording: { recordable: [{ file_attachment: :blob }] } })
+      .includes(chat_message_attachments: { attachment_recording: { recordable: [ { file_attachment: :blob } ] } })
       .to_a
   end
 
@@ -181,7 +181,7 @@ class ChatDemoController < ApplicationController
   def attachment_recordings_for(message)
     return [] if message.blank?
 
-    message.attachment_recordings.includes(recordable: [{ file_attachment: :blob }]).to_a
+    message.attachment_recordings.includes(recordable: [ { file_attachment: :blob } ]).to_a
   end
 
   def find_attachment_recording_for_message!(id)

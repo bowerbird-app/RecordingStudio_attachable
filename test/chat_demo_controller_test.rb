@@ -3,11 +3,11 @@
 require "test_helper"
 require_relative "dummy/app/models/current"
 
-class ActionController::Base
-  def self.allow_browser(...)
-  end
+module ActionController
+  class Base
+    def self.allow_browser(...) = nil
 
-  def self.stale_when_importmap_changes
+    def self.stale_when_importmap_changes = nil
   end
 end
 
@@ -125,7 +125,7 @@ class ChatDemoControllerTest < ActionController::TestCase
     )
     recorded = nil
 
-    @controller.stub(:ensure_message_recording!, lambda { |message| recorded = message }) do
+    @controller.stub(:ensure_message_recording!, ->(message) { recorded = message }) do
       @controller.stub(:destroy_message!, lambda { |message|
         events << :destroy_draft
         assert_same draft_message, message
@@ -147,7 +147,7 @@ class ChatDemoControllerTest < ActionController::TestCase
       chat_messages.created_attributes
     )
     assert_instance_of Time, chat_messages.created_attributes[:sent_at]
-    assert_equal [:destroy_draft, :create_sent_message], events
+    assert_equal %i[destroy_draft create_sent_message], events
     assert_equal [attachment_a, attachment_b], sent_message.chat_message_attachments.created_attachment_recordings
     assert_same sent_message, recorded
   end

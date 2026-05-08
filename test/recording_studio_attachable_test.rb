@@ -97,7 +97,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes upload_controller_source, 'window.addEventListener("storage", this.handleProviderStorage)'
     assert_includes upload_controller_source, 'payload.type === "provider-auth-complete"'
     assert_includes upload_controller_source, 'payload.type === "provider-import-complete"'
-    assert_includes upload_controller_source, 'event.key !== PROVIDER_EVENT_STORAGE_KEY'
+    assert_includes upload_controller_source, "event.key !== PROVIDER_EVENT_STORAGE_KEY"
     assert_not_includes upload_controller_source, "node.outerHTML = this.entryTemplate(entry)"
     assert_not_includes view_source, '<button type="button" data-action="recording-studio-attachable--upload#browse"'
     assert_not_includes view_source, 'text: "Attach files"'

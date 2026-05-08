@@ -13,6 +13,6 @@ class CreateChatThreadsAndMessages < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :chat_messages, [:chat_thread_id, :position], unique: true
+    add_index :chat_messages, [ :chat_thread_id, :position ], unique: true
   end
 end

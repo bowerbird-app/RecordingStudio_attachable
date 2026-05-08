@@ -62,4 +62,30 @@
       <% end %>
     <% end %>
   </section>
+
+  <section>
+    <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
+      <% card.body do %>
+        <div class="space-y-4">
+          <%= render FlatPack::SectionTitle::Component.new(
+            title: "Chat demo",
+            subtitle: "Try the reusable image picker inside a FlatPack chat composer.",
+            anchor_link: true
+          ) %>
+
+          <div class="flex flex-wrap gap-3">
+            <%= link_to @chat_demo_path, class: "inline-flex" do %>
+              <%= render FlatPack::Button::Component.new(text: "Open chat demo", style: :primary, size: :md) %>
+            <% end %>
+
+            <% if @root_attachment_listing_path.present? %>
+              <%= link_to @root_attachment_listing_path, class: "inline-flex" do %>
+                <%= render FlatPack::Button::Component.new(text: "Workspace library", style: :secondary, size: :md) %>
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+  </section>
 </div>

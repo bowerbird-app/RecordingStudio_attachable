@@ -1,0 +1,90 @@
+<%
+  direction = message.direction.to_sym
+  body = message.body.to_s
+  state = direction == :incoming ? :read : :sent
+  timestamp = message.timestamp
+  attachments = Array(message.attachment_recordings)
+  image_attachments = attachments.select { |attachment_recording| attachment_recording.recordable.image? }
+  file_attachments = attachments.reject { |attachment_recording| attachment_recording.recordable.image? }
+  message_component_class = direction == :outgoing ? FlatPack::Chat::SentMessage::Component : FlatPack::Chat::ReceivedMessage::Component
+%>
+
+<% if image_attachments.any? && file_attachments.empty? %>
+  <%= render FlatPack::Chat::Images::Component.new(
+    direction: direction,
+    state: state,
+    timestamp: timestamp,
+    body: body.presence,
+    carousel: {
+      slides: image_attachments.map do |attachment_recording|
+        {
+          type: :image,
+          src: recording_studio_attachable.attachment_file_path(attachment_recording),
+          thumb_src: recording_studio_attachable.attachment_preview_file_path(attachment_recording, variant_name: :med),
+          alt: attachment_recording.recordable.name,
+          lightbox: true
+        }
+      end,
+      show_controls: image_attachments.length > 1,
+      show_indicators: image_attachments.length > 1,
+      show_thumbs: image_attachments.length > 1,
+      show_captions: false,
+      aspect_ratio: "4/3"
+    }
+  ) %>
+<% elsif file_attachments.one? && image_attachments.empty? %>
+  <% attachment_recording = file_attachments.first %>
+  <% attachment = attachment_recording.recordable %>
+  <%= render FlatPack::Chat::FileMessage::Component.new(
+    file_name: attachment.name,
+    file_meta: [attachment.content_type, number_to_human_size(attachment.byte_size)].compact.join(" · "),
+    file_href: recording_studio_attachable.download_attachment_path(attachment_recording),
+    direction: direction,
+    state: state,
+    timestamp: timestamp,
+    body: body.presence
+  ) %>
+<% else %>
+  <%= render message_component_class.new(state: state) do |chat_message| %>
+    <% if file_attachments.any? %>
+      <% file_attachments.each do |attachment_recording| %>
+        <% attachment = attachment_recording.recordable %>
+        <% chat_message.attachment do %>
+          <%= render FlatPack::Chat::Attachment::Component.new(
+            type: :file,
+            name: attachment.name,
+            meta: [attachment.content_type, number_to_human_size(attachment.byte_size)].compact.join(" · "),
+            href: recording_studio_attachable.download_attachment_path(attachment_recording)
+          ) %>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <% if image_attachments.any? %>
+      <% chat_message.media_attachment do %>
+        <%= render FlatPack::Carousel::Component.new(
+          slides: image_attachments.map do |attachment_recording|
+            {
+              type: :image,
+              src: recording_studio_attachable.attachment_file_path(attachment_recording),
+              thumb_src: recording_studio_attachable.attachment_preview_file_path(attachment_recording, variant_name: :med),
+              alt: attachment_recording.recordable.name,
+              lightbox: true
+            }
+          end,
+          show_controls: image_attachments.length > 1,
+          show_indicators: image_attachments.length > 1,
+          show_thumbs: image_attachments.length > 1,
+          show_captions: false,
+          aspect_ratio: "4/3"
+        ) %>
+      <% end %>
+    <% end %>
+
+    <% chat_message.meta do %>
+      <%= render FlatPack::Chat::MessageMeta::Component.new(timestamp: timestamp, state: state) %>
+    <% end %>
+
+    <%= body.presence || " " %>
+  <% end %>
+<% end %>

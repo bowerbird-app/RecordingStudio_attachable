@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_06_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_08_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -41,6 +41,37 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_06_000001) do
     t.uuid "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "chat_message_attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "attachment_recording_id", null: false
+    t.uuid "chat_message_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["attachment_recording_id"], name: "index_chat_message_attachments_on_attachment_recording_id"
+    t.index ["chat_message_id", "attachment_recording_id"], name: "index_chat_message_attachments_on_message_and_attachment", unique: true
+    t.index ["chat_message_id"], name: "index_chat_message_attachments_on_chat_message_id"
+  end
+
+  create_table "chat_messages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.text "body"
+    t.uuid "chat_thread_id", null: false
+    t.datetime "created_at", null: false
+    t.string "direction", null: false
+    t.integer "position", null: false
+    t.boolean "seeded", default: false, null: false
+    t.datetime "sent_at"
+    t.string "status", default: "draft", null: false
+    t.datetime "updated_at", null: false
+    t.index ["chat_thread_id", "position"], name: "index_chat_messages_on_chat_thread_id_and_position", unique: true
+    t.index ["chat_thread_id"], name: "index_chat_messages_on_chat_thread_id"
+    t.index ["status"], name: "index_chat_messages_on_status"
+  end
+
+  create_table "chat_threads", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "pages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -146,6 +177,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_06_000001) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "chat_message_attachments", "chat_messages"
+  add_foreign_key "chat_message_attachments", "recording_studio_recordings", column: "attachment_recording_id"
+  add_foreign_key "chat_messages", "chat_threads"
   add_foreign_key "recording_studio_device_sessions", "recording_studio_recordings", column: "root_recording_id"
   add_foreign_key "recording_studio_events", "recording_studio_recordings", column: "recording_id"
   add_foreign_key "recording_studio_recordings", "recording_studio_recordings", column: "parent_recording_id"

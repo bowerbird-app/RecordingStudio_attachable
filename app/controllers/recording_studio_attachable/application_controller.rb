@@ -4,6 +4,8 @@ require "uri"
 
 module RecordingStudioAttachable
   class ApplicationController < (defined?(::ApplicationController) ? ::ApplicationController : ActionController::Base)
+    PROVIDER_EVENT_STORAGE_KEY = "recording-studio-attachable:provider-event"
+
     protect_from_forgery with: :exception
     layout :recording_studio_attachable_layout
 
@@ -113,6 +115,16 @@ module RecordingStudioAttachable
       attachment_preview_file_path(recording, variant_name: variant_name)
     end
 
+    def authorized_attachment_inline_variant_urls(recording)
+      original_url = authorized_attachment_file_path(recording)
+
+      {
+        small: authorized_attachment_preview_path(recording, :small) || original_url,
+        medium: authorized_attachment_preview_path(recording, :med) || original_url,
+        large: authorized_attachment_preview_path(recording, :large) || original_url
+      }
+    end
+
     def attachment_redirect_params(fallback_return_to: nil)
       mode = params[:redirect_mode].to_s.presence
       return {} if mode.blank?
@@ -200,6 +212,7 @@ module RecordingStudioAttachable
             <script>
               (() => {
                 const payload = JSON.parse("#{payload_json}");
+                const storageKey = "#{PROVIDER_EVENT_STORAGE_KEY}";
                 const targets = [];
 
                 if (window.opener) targets.push(window.opener);
@@ -211,6 +224,11 @@ module RecordingStudioAttachable
                   } catch (_error) {
                   }
                 });
+
+                try {
+                  window.localStorage.setItem(storageKey, JSON.stringify({ payload, sentAt: Date.now() }));
+                } catch (_error) {
+                }
 
                 #{'window.close();' if close_window}
               })();

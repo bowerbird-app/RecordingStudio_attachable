@@ -44,13 +44,18 @@ export default class extends Controller {
     }
   }
 
+  openPicker(event) {
+    if (event) event.preventDefault()
+
+    this.activeEditor = null
+    this.openModalAndLoad()
+  }
+
   openPickerFromToolbar(event) {
     event.preventDefault()
 
     this.activeEditor = event.detail?.editor || this.editorController()?.editor || null
-    this.modalController()?.open?.()
-    this.currentPage = 1
-    this.loadAttachments({ reset: true })
+    this.openModalAndLoad()
   }
 
   browseUpload() {
@@ -127,19 +132,38 @@ export default class extends Controller {
     }
   }
 
-  insertAttachment(attachment) {
-    const editor = this.activeEditor || this.editorController()?.editor
-    if (!editor) return
+  selectAttachment(attachment) {
+    this.dispatch("selected", { detail: { attachment } })
 
-    editor.chain().focus().setImage({
-      src: attachment.insert_url,
-      alt: attachment.alt || attachment.name,
-      attachmentId: attachment.id,
-      showPath: attachment.show_path,
-      display: "medium",
-      align: "center",
-    }).run()
+    const editor = this.activeEditor || this.editorController()?.editor
+    if (editor) {
+      const variantUrls = attachment.variant_urls || {}
+      const originalSrc = attachment.insert_url
+      const smallSrc = variantUrls.small || originalSrc
+      const mediumSrc = variantUrls.medium || originalSrc
+      const largeSrc = variantUrls.large || originalSrc
+
+      editor.chain().focus().setImage({
+        src: smallSrc,
+        alt: attachment.alt || attachment.name,
+        attachmentId: attachment.id,
+        showPath: attachment.show_path,
+        originalSrc,
+        smallSrc,
+        mediumSrc,
+        largeSrc,
+        display: "small",
+        align: "left",
+      }).run()
+    }
+
     this.modalController()?.close?.()
+  }
+
+  openModalAndLoad() {
+    this.modalController()?.open?.()
+    this.currentPage = 1
+    this.loadAttachments({ reset: true })
   }
 
   modalController() {
@@ -175,8 +199,8 @@ export default class extends Controller {
 
       try {
         const attachment = await this.createAttachmentFromBlob(uploadFile, blob)
-        this.insertAttachment(attachment)
-        this.showStatus(`Inserted ${attachment.name}`)
+        this.selectAttachment(attachment)
+        this.showStatus(`Added ${attachment.name}`)
         this.currentPage = 1
         this.loadAttachments({ reset: true })
       } catch (uploadError) {
@@ -245,7 +269,7 @@ export default class extends Controller {
       button.type = "button"
       button.className = "group flex h-full flex-col overflow-hidden rounded-xl border border-(--surface-border-color) bg-(--surface-background-color) text-left shadow-sm transition hover:border-(--surface-content-color) hover:shadow-md focus:outline-none focus:ring-2 focus:ring-ring"
       button.setAttribute("aria-label", attachment.name || "Untitled image")
-      button.addEventListener("click", () => this.insertAttachment(attachment))
+      button.addEventListener("click", () => this.selectAttachment(attachment))
 
       const media = document.createElement("div")
       media.className = "relative aspect-4/3 overflow-hidden bg-(--surface-muted-background-color)"

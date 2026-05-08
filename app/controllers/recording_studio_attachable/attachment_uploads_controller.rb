@@ -64,6 +64,7 @@ module RecordingStudioAttachable
 
     def attachment_json(recording)
       attachment = recording.recordable
+      insert_url = authorized_attachment_file_path(recording)
 
       {
         id: recording.id,
@@ -72,8 +73,9 @@ module RecordingStudioAttachable
         content_type: attachment.content_type,
         byte_size: attachment.byte_size,
         attachment_kind: attachment.attachment_kind,
-        thumbnail_url: authorized_attachment_preview_path(recording, :square_small) || authorized_attachment_file_path(recording),
-        insert_url: authorized_attachment_file_path(recording),
+        thumbnail_url: authorized_attachment_preview_path(recording, :square_small) || insert_url,
+        insert_url: insert_url,
+        variant_urls: authorized_attachment_inline_variant_urls(recording),
         alt: attachment.name,
         show_path: attachment_path(recording)
       }

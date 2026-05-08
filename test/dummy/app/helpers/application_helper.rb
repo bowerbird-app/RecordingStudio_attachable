@@ -15,6 +15,8 @@ module ApplicationHelper
       :lock
     when "Attachment"
       recording.recordable.image? ? :image : :file
+    when "ChatThread", "ChatMessage"
+      "message-circle"
     when "Page"
       "document-text"
     end
@@ -27,6 +29,8 @@ module ApplicationHelper
         recordable.title
       elsif recordable.respond_to?(:name) && recordable.name.present?
         recordable.name
+      elsif recordable.respond_to?(:body) && recordable.body.present?
+        recordable.body.to_s.truncate(60)
       elsif recordable.respond_to?(:email) && recordable.email.present?
         recordable.email
       else

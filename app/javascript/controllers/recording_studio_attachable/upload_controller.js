@@ -4,6 +4,8 @@ import { getUploadProviderLauncher } from "controllers/recording_studio_attachab
 import { preprocessImageFile, shouldPreprocessImageFile } from "controllers/recording_studio_attachable/image_preprocessing"
 import "controllers/recording_studio_attachable/google_drive_picker_launcher"
 
+const PROVIDER_EVENT_STORAGE_KEY = "recording-studio-attachable:provider-event"
+
 export default class extends Controller {
   static targets = ["dropzone", "input", "queue"]
   static values = {
@@ -24,13 +26,16 @@ export default class extends Controller {
     this.finalizeRequestInFlight = false
     this.providerButtonsByKey = new Map()
     this.handleProviderMessage = this.handleProviderMessage.bind(this)
+    this.handleProviderStorage = this.handleProviderStorage.bind(this)
     this.bindDropzoneEvents()
     window.addEventListener("message", this.handleProviderMessage)
+    window.addEventListener("storage", this.handleProviderStorage)
   }
 
   disconnect() {
     this.files.forEach((entry) => this.revokePreview(entry))
     window.removeEventListener("message", this.handleProviderMessage)
+    window.removeEventListener("storage", this.handleProviderStorage)
   }
 
   browse() {
@@ -362,6 +367,20 @@ export default class extends Controller {
     if (event.origin !== window.location.origin) return
 
     const payload = event.data || {}
+    this.handleProviderPayload(payload)
+  }
+
+  handleProviderStorage(event) {
+    if (event.key !== PROVIDER_EVENT_STORAGE_KEY || !event.newValue) return
+
+    try {
+      const parsed = JSON.parse(event.newValue)
+      this.handleProviderPayload(parsed?.payload || {})
+    } catch (_error) {
+    }
+  }
+
+  handleProviderPayload(payload) {
     if (payload.namespace !== "recording-studio-attachable") return
 
     if (payload.type === "provider-auth-complete") {

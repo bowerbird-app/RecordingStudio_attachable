@@ -14,6 +14,13 @@ Rails.application.routes.draw do
   get "recordables", to: "docs#recordables", as: :recordables_docs
   get "query", to: "docs#query", as: :query_docs
   get "recording_tree", to: "recording_trees#index", as: :recording_tree
+  get "chat/demo", to: "chat_demo#show", as: :chat_demo
+  post "chat/demo/messages", to: "chat_demo#create", as: :chat_demo_messages
+    post "chat/demo/messages/:id/attachments", to: "chat_demo#attach_attachment", as: :chat_demo_message_attachments
+    delete "chat/demo/messages/:id/attachments/:attachment_recording_id",
+      to: "chat_demo#detach_attachment",
+      as: :chat_demo_message_attachment
+  delete "chat/demo", to: "chat_demo#destroy", as: :reset_chat_demo
   get "upload_providers/demo", to: "upload_providers#show", as: :demo_upload_provider
   post "upload_providers/demo", to: "upload_providers#create"
   resources :pages, only: %i[show edit update]

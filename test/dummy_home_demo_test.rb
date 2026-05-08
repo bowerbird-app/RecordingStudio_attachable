@@ -20,6 +20,10 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes home_view, 'text: "Page library"'
     assert_includes home_view, 'text: "View"'
     assert_includes home_view, 'text: "Edit inline"'
+    assert_includes home_view, 'title: "Chat demo"'
+    assert_includes home_view, 'subtitle: "Try the reusable image picker inside a FlatPack chat composer."'
+    assert_includes home_view, 'text: "Open chat demo"'
+    assert_includes home_view, 'text: "Workspace library"'
   end
 
   def test_dummy_sign_in_view_keeps_title_in_card_body_without_header
@@ -36,6 +40,7 @@ class DummyHomeDemoTest < Minitest::Test
     home_controller = File.read(File.expand_path("dummy/app/controllers/home_controller.rb", __dir__))
 
     assert_includes home_controller, "@page = Page.first"
+    assert_includes home_controller, "@chat_demo_path = chat_demo_path"
     assert_includes home_controller, "@page_show_path = page_path(@page) if @page.present?"
     assert_includes home_controller, "@page_edit_path = edit_page_path(@page) if @page.present?"
     assert_includes home_controller, "@page_recording = RecordingStudio::Recording.unscoped.find_by("
@@ -49,6 +54,9 @@ class DummyHomeDemoTest < Minitest::Test
   def test_dummy_page_recordable_is_registered_seeded_and_migrated
     page_model = File.read(File.expand_path("dummy/app/models/page.rb", __dir__))
     workspace_model = File.read(File.expand_path("dummy/app/models/workspace.rb", __dir__))
+    chat_thread_model = File.read(File.expand_path("dummy/app/models/chat_thread.rb", __dir__))
+    chat_message_model = File.read(File.expand_path("dummy/app/models/chat_message.rb", __dir__))
+    chat_message_attachment_model = File.read(File.expand_path("dummy/app/models/chat_message_attachment.rb", __dir__))
     recording_studio_initializer = File.read(File.expand_path("dummy/config/initializers/recording_studio.rb", __dir__))
     seeds = File.read(File.expand_path("dummy/db/seeds.rb", __dir__))
     schema = File.read(File.expand_path("dummy/db/schema.rb", __dir__))
@@ -63,12 +71,49 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes page_model, "def raise_page_destroy_immutable_error"
     assert_includes workspace_model, 'allowed_content_types: [ "image/*", "application/pdf", "text/plain" ]'
     assert_includes workspace_model, "enabled_attachment_kinds: %i[ image file ]"
-    assert_includes recording_studio_initializer, '"Workspace", "Page", "RecordingStudioAttachable::Attachment"'
+    assert_includes chat_thread_model, "class ChatThread < ApplicationRecord"
+    assert_includes chat_thread_model, "has_many :chat_messages, dependent: :destroy"
+    assert_includes chat_thread_model, "validates :title, presence: true"
+    assert_includes chat_thread_model, "def latest_message"
+    assert_includes chat_message_model, "class ChatMessage < ApplicationRecord"
+    assert_includes chat_message_model, "belongs_to :chat_thread"
+    assert_includes chat_message_model, "has_many :chat_message_attachments, dependent: :destroy"
+    assert_includes chat_message_model, "has_many :attachment_recordings, through: :chat_message_attachments"
+    assert_includes chat_message_model, "scope :drafts"
+    assert_includes chat_message_model, "scope :sent"
+    assert_includes chat_message_model, "scope :timeline_order"
+    assert_includes chat_message_model, "validates :body, presence: true, unless: :draft_or_has_attachments?"
+    assert_includes chat_message_model, "validates :position, presence: true"
+    assert_includes chat_message_model, 'validates :status, inclusion: { in: %w[draft sent] }'
+    assert_includes chat_message_model, 'validates :direction, inclusion: { in: %w[incoming outgoing] }'
+    assert_includes chat_message_model, "def readonly?"
+    assert_includes chat_message_model, "false"
+    assert_includes chat_message_model, "def draft_or_has_attachments?"
+    assert_includes chat_message_model, "def timestamp"
+    assert_includes chat_message_attachment_model, "class ChatMessageAttachment < ApplicationRecord"
+    assert_includes chat_message_attachment_model, 'belongs_to :attachment_recording, class_name: "RecordingStudio::Recording"'
+    assert_includes chat_message_attachment_model, "validates :attachment_recording_id, uniqueness: { scope: :chat_message_id }"
+    assert_includes recording_studio_initializer, '"ChatThread"'
+    assert_includes recording_studio_initializer, '"ChatMessage"'
     assert_includes seeds, "user = User.find_or_initialize_by(email: admin_email)"
     assert_includes seeds, "unless user.persisted? && user.valid_password?(admin_password)"
     assert_includes seeds, 'page = Page.find_or_create_by!(title: "Home page")'
+    assert_includes seeds, 'chat_thread = ChatThread.find_or_create_by!(title: "Workspace conversation")'
+    assert_includes seeds, 'ChatMessage.find_or_create_by!(chat_thread: chat_thread, position: attributes[:position])'
+    assert_includes seeds, 'message.status = "sent"'
+    assert_includes seeds, 'message.seeded = true'
     assert_includes seeds, "recordable: page"
+    assert_includes seeds, "recordable: chat_thread"
+    assert_includes seeds, "recordable: chat_message"
+    assert_includes schema, 'create_table "chat_message_attachments"'
+    assert_includes schema, 't.string "status", default: "draft", null: false'
+    assert_includes schema, 't.boolean "seeded", default: false, null: false'
+    assert_includes schema, 't.datetime "sent_at"'
+    assert_includes schema, 't.uuid "attachment_recording_id", null: false'
     assert_includes schema, 'create_table "pages"'
+    assert_includes schema, 'create_table "chat_threads"'
+    assert_includes schema, 'create_table "chat_messages"'
+    assert_includes schema, 't.integer "position", null: false'
     assert_includes schema, 't.text "body"'
     assert_includes schema, 'create_table "recording_studio_attachable_attachments"'
     assert_includes schema, 't.string "title"'
@@ -168,15 +213,15 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes picker_controller, 'button.setAttribute("aria-label", attachment.name || "Untitled image")'
     assert_includes picker_controller, "attachmentId: attachment.id"
     assert_includes picker_controller, "showPath: attachment.show_path"
-    assert_includes picker_controller, 'display: "medium"'
-    assert_includes picker_controller, 'align: "center"'
+    assert_includes picker_controller, 'display: "small"'
+    assert_includes picker_controller, 'align: "left"'
     assert_not_includes picker_controller, 'const body = document.createElement("div")'
     assert_includes addon, 'registerTiptapAddon("attachment_image"'
     assert_includes addon, "const ManagedAttachmentImage = Image.extend({"
     assert_includes addon, "data-attachment-id"
     assert_includes addon, "updateAttachmentImageAttrs"
     assert_includes addon, "removeSelectedAttachmentImage"
-    assert_includes addon, 'label: "Remove"'
+    assert_includes addon, 'label: "Remove image"'
     assert_includes addon, 'label: "Alt"'
     assert_includes addon, 'name: "attachmentImage"'
     assert_includes addon, "recording-studio-inline-picker"
@@ -189,6 +234,100 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes html_preview_controller, "application.getControllerForElementAndIdentifier"
     assert_not_includes view, "FlatPack::Card::Component.new(style: :default)"
     assert_not_includes view, 'text: "Back to demo"'
+  end
+
+  def test_dummy_chat_demo_routes_controller_and_view_reuse_attachment_picker
+    routes = File.read(File.expand_path("dummy/config/routes.rb", __dir__))
+    controller = File.read(File.expand_path("dummy/app/controllers/chat_demo_controller.rb", __dir__))
+    view = File.read(File.expand_path("dummy/app/views/chat_demo/show.html.erb", __dir__))
+    partial = File.read(File.expand_path("dummy/app/views/chat_demo/_message.html.erb", __dir__))
+    picker_controller = File.read(File.expand_path("../app/javascript/controllers/recording_studio_attachable/attachment_image_picker_controller.js", __dir__))
+    chat_controller = File.read(File.expand_path("dummy/app/javascript/controllers/chat_demo_controller.js", __dir__))
+
+    assert_includes routes, 'get "chat/demo", to: "chat_demo#show", as: :chat_demo'
+    assert_includes routes, 'post "chat/demo/messages", to: "chat_demo#create", as: :chat_demo_messages'
+  assert_includes routes, 'post "chat/demo/messages/:id/attachments", to: "chat_demo#attach_attachment", as: :chat_demo_message_attachments'
+  assert_includes routes, 'delete "chat/demo/messages/:id/attachments/:attachment_recording_id"'
+    assert_includes routes, 'delete "chat/demo", to: "chat_demo#destroy", as: :reset_chat_demo'
+    assert_includes controller, "class ChatDemoController < ApplicationController"
+  assert_includes controller, "before_action :set_chat_thread_context"
+  assert_includes controller, "@draft_message = current_draft_message"
+  assert_includes controller, "@draft_attachments = attachment_recordings_for(@draft_message)"
+  assert_includes controller, "@messages = persisted_messages"
+    assert_includes controller, "@chat_attachment_picker_path = recording_studio_attachable.recording_attachment_picker_path("
+    assert_includes controller, "@chat_attachment_create_path = recording_studio_attachable.recording_attachments_path("
+    assert_includes controller, "@chat_attachment_upload_path = recording_studio_attachable.recording_attachment_upload_path("
+  assert_includes controller, 'draft_message = find_draft_message!(chat_demo_params[:draft_message_id])'
+  assert_includes controller, 'send_draft_message!(draft_message, body.presence)'
+  assert_includes controller, 'def attach_attachment'
+  assert_includes controller, 'def detach_attachment'
+  assert_includes controller, 'def current_draft_message'
+  assert_includes controller, 'def create_draft_message!'
+  assert_includes controller, 'def send_draft_message!(draft_message, body)'
+  assert_includes controller, 'draft_message.class.transaction do'
+  assert_includes controller, 'attachment_recordings = draft_message.attachment_recordings.to_a'
+  assert_includes controller, 'destroy_message!(draft_message)'
+  assert_includes controller, 'sent_message = draft_message.chat_thread.chat_messages.create!('
+  assert_includes controller, 'sent_message.chat_message_attachments.create!(attachment_recording: attachment_recording)'
+  assert_includes controller, 'ensure_message_recording!(sent_message)'
+  assert_includes controller, 'RecordingStudio::Recording.unscoped.find_or_create_by!(recordable: message)'
+    assert_includes controller, 'redirect_to chat_demo_path, alert: "Add a message or choose at least one image."'
+    assert_includes controller, 'redirect_to chat_demo_path, notice: "Chat demo reset."'
+    assert_includes view, 'title: "Chat demo"'
+    assert_includes view, 'FlatPack::Chat::Layout::Component.new('
+    assert_includes view, 'variant: :single'
+        assert_not_includes view, 'class: "rounded-lg border"'
+        assert_not_includes view, 'style: "height: 620px; border-color: var(--surface-border-color); background-color: var(--surface-background-color);"'
+    assert_includes view, 'chat_modal_id = "chat-demo-image-picker"'
+    assert_includes view, 'render "panel", chat_modal_id: chat_modal_id'
+    assert_not_includes view, 'render "sidebar"'
+    assert_not_includes view, 'lg:hidden'
+    assert_not_includes view, 'lg:grid'
+    assert_includes partial, 'FlatPack::Chat::Images::Component.new('
+    assert_includes partial, 'FlatPack::Chat::FileMessage::Component.new('
+    assert_includes partial, 'FlatPack::Chat::Attachment::Component.new('
+    assert_includes partial, 'FlatPack::Carousel::Component.new('
+    panel_partial = File.read(File.expand_path("dummy/app/views/chat_demo/_panel.html.erb", __dir__))
+    assert_includes panel_partial, 'FlatPack::Chat::Panel::Component.new'
+    assert_includes panel_partial, 'FlatPack::Chat::Header::Component.new('
+    assert_includes panel_partial, 'title: "Chat"'
+    assert_includes panel_partial, 'FlatPack::Chat::MessageList::Component.new'
+    assert_includes panel_partial, 'FlatPack::Chat::Composer::Component.new'
+    assert_includes panel_partial, 'FlatPack::Chat::DateDivider::Component.new(label: "Today")'
+    assert_includes panel_partial, 'FlatPack::Chat::TypingIndicator::Component.new(label: "Attachable is typing")'
+    assert_includes panel_partial, 'data-controller="chat-demo recording-studio-attachable--attachment-image-picker"'
+    assert_includes panel_partial, 'recording-studio-attachable--attachment-image-picker:selected->chat-demo#attachmentSelected'
+    assert_includes panel_partial, 'data-chat-demo-attach-url-value="<%= chat_demo_message_attachments_path(@draft_message) %>"'
+    assert_includes panel_partial, 'data-chat-demo-detach-url-template-value="<%= chat_demo_message_attachment_path(@draft_message, "__ATTACHMENT_ID__") %>"'
+    assert_includes panel_partial, 'name="chat_demo[draft_message_id]"'
+    assert_includes panel_partial, 'value: @draft_message.body'
+    assert_includes panel_partial, 'recording-studio-attachable--attachment-image-picker#openPicker'
+    assert_includes panel_partial, 'title: "Add images"'
+    assert_not_includes panel_partial, 'flex min-h-full flex-col justify-end gap-4'
+    assert_not_includes panel_partial, 'class: "min-h-0"'
+    assert_not_includes panel_partial, 'class: "shrink-0 border-t border-(--surface-border-color) p-4"'
+    assert_not_includes panel_partial, 'class: "inline-flex"'
+    assert_not_includes panel_partial, 'class: "min-h-[var(--chat-composer-control-height)] rounded-lg border-[var(--chat-input-border-color)] bg-[var(--chat-input-background-color)] px-4 py-2 text-sm leading-5 text-[var(--chat-input-text-color)] placeholder:text-[var(--chat-input-placeholder-color)] focus:ring-[var(--chat-input-focus-ring-color)] max-h-32"'
+    assert_not_includes panel_partial, 'title: "Workspace conversation"'
+    assert_not_includes panel_partial, 'subtitle: "Uploads use the existing attachable APIs and workspace image library."'
+    assert_not_includes panel_partial, 'back_href: root_path'
+    assert_not_includes panel_partial, 'text: "Reset"'
+    assert_not_includes panel_partial, 'text: "Upload page"'
+    assert_includes controller, '@chat_threads = chat_threads'
+    assert_includes controller, 'def chat_threads'
+    assert_includes picker_controller, 'openPicker(event) {'
+    assert_includes picker_controller, 'this.dispatch("selected", { detail: { attachment } })'
+    assert_includes picker_controller, 'this.openModalAndLoad()'
+    assert_includes chat_controller, 'static targets = ["attachments", "emptyState"]'
+    assert_includes chat_controller, 'static values = {'
+    assert_includes chat_controller, 'async attachmentSelected(event) {'
+    assert_includes chat_controller, 'await this.persistAttachment(attachment.id)'
+    assert_includes chat_controller, 'async removeAttachment(event) {'
+    assert_includes chat_controller, 'await this.removePersistedAttachment(id)'
+    assert_includes chat_controller, 'async persistAttachment(id) {'
+    assert_includes chat_controller, 'async removePersistedAttachment(id) {'
+    assert_includes chat_controller, 'return this.detachUrlTemplateValue.replace("__ATTACHMENT_ID__", encodeURIComponent(String(id)))'
+    assert_includes chat_controller, 'button.dataset.action = "chat-demo#removeAttachment"'
   end
 
   def test_attachment_listing_uses_card_grid_with_empty_state_when_no_results_exist
@@ -382,8 +521,12 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes tree_helper, 'when "Access", "AccessBoundary"'
     assert_includes tree_helper, ":lock"
     assert_includes tree_helper, "recording.recordable.image? ? :image : :file"
+    assert_includes tree_helper, 'when "ChatThread", "ChatMessage"'
+    assert_includes tree_helper, '"message-circle"'
     assert_includes tree_helper, 'when "Page"'
     assert_includes tree_helper, '"document-text"'
+    assert_includes tree_helper, 'elsif recordable.respond_to?(:body) && recordable.body.present?'
+    assert_includes tree_helper, 'recordable.body.to_s.truncate(60)'
     assert_includes tree_view, 'title: "Recording tree"'
     assert_includes tree_view, "render FlatPack::Card::Component.new(style: :default) do |card|"
     assert_includes tree_view, "card.body do"

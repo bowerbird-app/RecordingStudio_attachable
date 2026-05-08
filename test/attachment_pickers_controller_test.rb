@@ -87,6 +87,14 @@ module RecordingStudioAttachable
       assert_equal "image", attachment_payload.fetch("attachment_kind")
       assert_equal "/attachments/attachment-1/preview/square_small", attachment_payload.fetch("thumbnail_url")
       assert_equal "/attachments/attachment-1/file", attachment_payload.fetch("insert_url")
+      assert_equal(
+        {
+          "small" => "/attachments/attachment-1/preview/small",
+          "medium" => "/attachments/attachment-1/preview/med",
+          "large" => "/attachments/attachment-1/preview/large"
+        },
+        attachment_payload.fetch("variant_urls")
+      )
       assert_equal "Hero image", attachment_payload.fetch("alt")
       assert_equal "/attachments/attachment-1", attachment_payload.fetch("show_path")
     end

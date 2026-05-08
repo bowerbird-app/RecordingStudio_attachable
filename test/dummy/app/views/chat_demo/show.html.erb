@@ -1,0 +1,38 @@
+<div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+  <%= render FlatPack::Breadcrumb::Component.new(
+    show_back: true,
+    back_text: "Back",
+    back_icon: "arrow-left",
+    back_href: root_path,
+    items: [{ text: "Home", href: root_path, icon: "home" }]
+  ) %>
+
+  <%= render FlatPack::PageTitle::Component.new(
+    title: "Chat demo",
+    subtitle: "Reuse the attachment picker inside a FlatPack chat composer and send uploaded images as messages.",
+    variant: :h1
+  ) %>
+
+  <% if @root_recording.present? %>
+    <% chat_modal_id = "chat-demo-image-picker" %>
+
+    <%= render FlatPack::Chat::Layout::Component.new(variant: :single) do |layout| %>
+      <% layout.panel do %>
+        <%= render "panel", chat_modal_id: chat_modal_id %>
+      <% end %>
+    <% end %>
+  <% else %>
+    <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
+      <% card.body do %>
+        <div class="space-y-3">
+          <%= render FlatPack::SectionTitle::Component.new(
+            title: "Workspace recording unavailable",
+            subtitle: "Seed the dummy workspace recording before using the chat demo.",
+            anchor_link: true
+          ) %>
+          <p class="text-sm text-(--surface-muted-content-color)">The chat composer uses the workspace recording as its attachment owner.</p>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

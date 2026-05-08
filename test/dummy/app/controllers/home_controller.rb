@@ -2,6 +2,7 @@ class HomeController < ApplicationController
   def index
     @workspace = Workspace.first
     @page = Page.first
+    @chat_demo_path = chat_demo_path
     @page_show_path = page_path(@page) if @page.present?
     @page_edit_path = edit_page_path(@page) if @page.present?
     @root_recording = RecordingStudio::Recording.unscoped.find_by(

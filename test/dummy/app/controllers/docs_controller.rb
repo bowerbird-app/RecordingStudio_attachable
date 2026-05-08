@@ -97,6 +97,7 @@ class DocsController < ApplicationController
             include RecordingStudio::Capabilities::Attachable.to(
               allowed_content_types: ["image/*", "application/pdf", "text/plain"],
               max_file_size: 25.megabytes,
+              # Maximum files allowed in one upload or import batch.
               max_file_count: 20,
               enabled_attachment_kinds: %i[image file]
             )
@@ -122,6 +123,7 @@ class DocsController < ApplicationController
       RecordingStudioAttachable.configure do |config|
         config.allowed_content_types = ["image/*", "application/pdf"]
         config.max_file_size = 25.megabytes
+        # Maximum files allowed in one upload or import batch.
         config.max_file_count = 20
         config.enabled_attachment_kinds = %i[image file]
         config.default_listing_scope = :direct
@@ -208,8 +210,13 @@ class DocsController < ApplicationController
               :google_drive,
               label: "Google Drive",
               icon: "cloud",
-              url: ->(route_helpers:, recording:) do
-                route_helpers.google_drive_imports_path(recording_id: recording.id)
+              strategy: :client_picker,
+              launcher: "google_drive",
+              bootstrap_url: ->(route_helpers:, recording:) do
+                route_helpers.google_drive.recording_bootstrap_path(recording, format: :json)
+              end,
+              import_url: ->(route_helpers:, recording:) do
+                route_helpers.google_drive.recording_imports_path(recording, format: :json)
               end
             )
           end
@@ -228,6 +235,8 @@ class DocsController < ApplicationController
             actor: Current.actor,
             impersonator: Current.impersonator,
             name: remote_file.title,
+            # identify defaults to true; only disable it for trusted providers
+            # that already verified the file metadata out of band.
             source: "google_drive",
             metadata: { external_id: remote_file.id }
           )
@@ -258,11 +267,12 @@ class DocsController < ApplicationController
     ]
 
     @plugin_api_points = [
-      "Upload discovery: config.register_upload_provider(key, label:, url:, icon:, visible:, target:). Prefer route_helpers: in callables instead of reaching into the full view context.",
+      "Upload discovery: config.register_upload_provider(key, label:, strategy:, bootstrap_url:, import_url:, launcher:, icon:, visible:, target:). Prefer route_helpers: in callables instead of reaching into the full view context.",
       "Direct import services: RecordingStudioAttachable::Services::ImportAttachment.call and ImportAttachments.call.",
       "Convenience recording helpers exist for trusted internal app code, but addon gems should prefer the explicit service result APIs.",
       "Browser handoff endpoint: recording_attachment_imports_path(recording) for multipart file uploads or signed_blob_id finalization inside the host app session.",
-      "Provider provenance for the HTTP endpoint comes from provider_key; callers can add metadata, but they do not choose source or storage service."
+      "Provider provenance for the HTTP endpoint comes from provider_key; callers can add metadata, but they do not choose source or storage service.",
+      "max_file_count is enforced per upload/import batch. If you need a total-per-recording quota, add that policy in host app code."
     ]
 
     @plugin_payload_fields = [
@@ -271,7 +281,7 @@ class DocsController < ApplicationController
       "io, filename, content_type: the direct service-level import contract for provider integrations.",
       "name and description: optional attachment metadata overrides.",
       "metadata: extra provider details such as external ids or URLs.",
-      "source and identify: trusted direct-service options; the HTTP endpoint stamps source from provider_key and ignores storage-service overrides."
+      "source and identify: trusted direct-service options; identify defaults to true, and the HTTP endpoint stamps source from provider_key and ignores storage-service overrides."
     ]
 
     @resizing_config_example = <<~RUBY

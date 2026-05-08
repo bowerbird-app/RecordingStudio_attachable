@@ -65,8 +65,6 @@ module RecordingStudioAttachable
       created_recording = FakeRecording.new(id: "att-1", recordable_type: "RecordingStudioAttachable::Attachment", recordable: attachment)
       parent_recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
       result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [created_recording])
-      main_app = Object.new
-      main_app.define_singleton_method(:rails_blob_path) { |_file, only_path:| "/rails/active_storage/blobs/hero.png" if only_path }
 
       with_routing do |set|
         set.draw do
@@ -80,8 +78,11 @@ module RecordingStudioAttachable
         RecordingStudio::Recording.stub(:find, parent_recording) do
           @controller.stub(:authorize_attachment_action!, true) do
             @controller.stub(:capability_options_for, {}) do
-              @controller.define_singleton_method(:main_app) { main_app }
               @controller.define_singleton_method(:attachment_path) { |recording| "/attachments/#{recording.id}" }
+              @controller.define_singleton_method(:authorized_attachment_preview_path) do |recording, variant_name|
+                "/attachments/#{recording.id}/preview/#{variant_name}"
+              end
+              @controller.define_singleton_method(:authorized_attachment_file_path) { |recording| "/attachments/#{recording.id}/file" }
               @controller.define_singleton_method(:recording_attachments_path) { |recording| "/recordings/#{recording.id}/attachments" }
               RecordingStudioAttachable::Services::RecordAttachmentUploads.stub(:call, result) do
                 @controller.stub(:protect_against_forgery?, false) do
@@ -100,8 +101,8 @@ module RecordingStudioAttachable
       attachment_payload = payload.fetch("attachments").first
       assert_equal "att-1", attachment_payload.fetch("id")
       assert_equal "Hero image", attachment_payload.fetch("name")
-      assert_equal "/rails/active_storage/blobs/hero.png", attachment_payload.fetch("thumbnail_url")
-      assert_equal "/rails/active_storage/blobs/hero.png", attachment_payload.fetch("insert_url")
+      assert_equal "/attachments/att-1/preview/square_small", attachment_payload.fetch("thumbnail_url")
+      assert_equal "/attachments/att-1/file", attachment_payload.fetch("insert_url")
       assert_equal "/attachments/att-1", attachment_payload.fetch("show_path")
     end
 

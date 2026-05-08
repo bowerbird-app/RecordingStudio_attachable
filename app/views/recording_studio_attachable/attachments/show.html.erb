@@ -13,7 +13,7 @@
     variant: :h1
   ) %>
 
-  <% preview_path = attachment_preview_path(@attachment, :large) %>
+  <% preview_path = authorized_attachment_preview_path(@attachment_recording, :large) %>
   <% if preview_path.present? %>
     <%= image_tag preview_path, alt: @attachment.name, class: "max-h-[480px] w-full object-contain" %>
   <% end %>

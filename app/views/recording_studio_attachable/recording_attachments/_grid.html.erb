@@ -1,12 +1,12 @@
 <div class="grid grid-cols-2 items-stretch gap-6 lg:grid-cols-5">
   <% attachments.each do |attachment_recording| %>
     <% attachment = attachment_recording.recordable %>
-    <% download_path = main_app.rails_blob_path(attachment.file, only_path: true) %>
+    <% download_path = authorized_attachment_file_path(attachment_recording) %>
     <div>
       <%= link_to download_path, class: "block rounded-xl focus:outline-none focus:ring-2 focus:ring-(--brand-color)", data: { turbo_frame: "_top" } do %>
         <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
           <% card.media padding: :none do %>
-            <% preview_path = attachment_preview_path(attachment, :med) %>
+            <% preview_path = authorized_attachment_preview_path(attachment_recording, :med) %>
             <% if preview_path.present? %>
               <div class="relative aspect-4/3 overflow-hidden bg-(--surface-muted-background-color)" data-controller="recording-studio-attachable--image-fallback">
                 <%= image_tag preview_path, alt: attachment.name, class: "h-full w-full object-cover", data: { recording_studio_attachable__image_fallback_target: "image", action: "error->recording-studio-attachable--image-fallback#showFallback" } %>

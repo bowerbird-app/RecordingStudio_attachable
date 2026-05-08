@@ -29,7 +29,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes sign_in_view, 'title: "Sign In"'
     assert_includes sign_in_view, 'class: "mb-6"'
     assert_includes sign_in_view, "<% card.body do %>"
-    refute_includes sign_in_view, "<% card.header do %>"
+    assert_not_includes sign_in_view, "<% card.header do %>"
   end
 
   def test_dummy_home_controller_builds_root_and_page_attachment_paths
@@ -107,8 +107,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes show_view, '.page-inline-content img[data-display="small"] {'
     assert_includes show_view, '.page-inline-content img[data-align="right"] {'
     assert_includes show_view, 'text: "Edit inline"'
-    refute_includes show_view, 'text: "Back to home"'
-    refute_includes show_view, "FlatPack::Card::Component.new(style: :default)"
+    assert_not_includes show_view, 'text: "Back to home"'
+    assert_not_includes show_view, "FlatPack::Card::Component.new(style: :default)"
     assert_includes controller, 'redirect_to edit_page_path(@page), notice: "Page updated."'
     assert_includes importmap, 'pin "page_html_preview_addon"'
     assert_includes importmap, 'pin "recording_studio_attachable/tiptap/attachment_image_addon"'
@@ -153,9 +153,9 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes view, 'data-recording-studio-attachable--attachment-image-picker-target="gallery"'
     assert_includes view, 'data-recording-studio-attachable--attachment-image-picker-target="fileInput"'
     assert_includes view, "data-recording-studio-attachable--attachment-image-picker-max-file-size-value="
-    refute_includes view, 'class="-mb-4 flex h-[calc(100%+1rem)] min-h-0 flex-col gap-4"'
-    refute_includes view, 'class="max-h-96 overflow-y-auto pr-1"'
-    refute_includes view, 'text: "Close"'
+    assert_not_includes view, 'class="-mb-4 flex h-[calc(100%+1rem)] min-h-0 flex-col gap-4"'
+    assert_not_includes view, 'class="max-h-96 overflow-y-auto pr-1"'
+    assert_not_includes view, 'text: "Close"'
     assert_includes view, 'text: "Save page"'
     assert_includes picker_controller, "application.getControllerForElementAndIdentifier"
     assert_includes picker_controller, "openPickerFromToolbar(event)"
@@ -170,7 +170,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes picker_controller, "showPath: attachment.show_path"
     assert_includes picker_controller, 'display: "medium"'
     assert_includes picker_controller, 'align: "center"'
-    refute_includes picker_controller, 'const body = document.createElement("div")'
+    assert_not_includes picker_controller, 'const body = document.createElement("div")'
     assert_includes addon, 'registerTiptapAddon("attachment_image"'
     assert_includes addon, "const ManagedAttachmentImage = Image.extend({"
     assert_includes addon, "data-attachment-id"
@@ -187,8 +187,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes html_preview_controller, "openFromToolbar(event)"
     assert_includes html_preview_controller, "this.outputTarget.value = editor.getHTML()"
     assert_includes html_preview_controller, "application.getControllerForElementAndIdentifier"
-    refute_includes view, "FlatPack::Card::Component.new(style: :default)"
-    refute_includes view, 'text: "Back to demo"'
+    assert_not_includes view, "FlatPack::Card::Component.new(style: :default)"
+    assert_not_includes view, 'text: "Back to demo"'
   end
 
   def test_attachment_listing_uses_card_grid_with_empty_state_when_no_results_exist
@@ -212,9 +212,9 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes listing_view, 'icon: "list-bullet"'
     assert_includes listing_view, "icon_only: true"
     assert_includes listing_view, "size: :md"
-    refute_includes listing_view, ">View<"
-    refute_includes listing_view, 'text: "Grid"'
-    refute_includes listing_view, 'text: "List"'
+    assert_not_includes listing_view, ">View<"
+    assert_not_includes listing_view, 'text: "Grid"'
+    assert_not_includes listing_view, 'text: "List"'
     assert_includes listing_view, "form_with url: recording_attachments_path(@recording), method: :get"
     assert_includes listing_view, 'controller: "recording-studio-attachable--live-search"'
     assert_includes listing_view, "input->recording-studio-attachable--live-search#queueSubmit"
@@ -223,8 +223,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes listing_view, "hidden_field_tag :view, @view_mode"
     assert_includes listing_view, "FlatPack::Search::Component.new("
     assert_includes listing_view, 'placeholder: "Search"'
-    refute_includes listing_view, 'text: "Apply"'
-    refute_includes listing_view, 'text: "Clear"'
+    assert_not_includes listing_view, 'text: "Apply"'
+    assert_not_includes listing_view, 'text: "Clear"'
     assert_includes listing_view, 'turbo_frame_tag "recording-attachments-results"'
     assert_includes listing_view, 'render "grid", attachments: @attachments'
     assert_includes listing_view, 'render "list", attachments: @attachments'
@@ -237,9 +237,9 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes grid_partial, 'class="grid grid-cols-2 items-stretch gap-6 lg:grid-cols-5"'
     assert_includes grid_partial, "card.media padding: :none"
     assert_includes grid_partial, 'data-controller="recording-studio-attachable--image-fallback"'
-    assert_includes grid_partial, "preview_path = attachment_preview_path(attachment, :med)"
+    assert_includes grid_partial, "preview_path = authorized_attachment_preview_path(attachment_recording, :med)"
     assert_includes grid_partial, "image_tag preview_path"
-    assert_includes grid_partial, "main_app.rails_blob_path(attachment.file, only_path: true)"
+    assert_includes grid_partial, "authorized_attachment_file_path(attachment_recording)"
     assert_includes list_partial, 'number_to_human_size(attachment.byte_size, strip_insignificant_zeros: true).downcase.delete(" ")'
     assert_includes list_partial, "<%= display_content_type %> <%= display_size %>"
     assert_includes list_partial, 'data: { turbo_frame: "_top" }'
@@ -249,26 +249,26 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes list_partial, 'FlatPack::Tooltip::Component.new(text: "Trash")'
     assert_includes list_partial, "destroy_attachment_path(attachment_recording)"
     assert_includes list_partial, 'icon: "trash", icon_only: true'
-    refute_includes list_partial, 'text: "View"'
-    refute_includes list_partial, ">Type<"
-    refute_includes list_partial, ">Size<"
-    refute_includes list_partial, "<%= attachment.original_filename %>"
-    refute_includes listing_view, "No matching attachments"
-    refute_includes listing_view, "Try another image name."
+    assert_not_includes list_partial, 'text: "View"'
+    assert_not_includes list_partial, ">Type<"
+    assert_not_includes list_partial, ">Size<"
+    assert_not_includes list_partial, "<%= attachment.original_filename %>"
+    assert_not_includes listing_view, "No matching attachments"
+    assert_not_includes listing_view, "Try another image name."
     assert_includes listing_view, "Nothing uplaoded yet"
-    refute_includes listing_view, "FlatPack::Carousel::Component"
-    refute_includes listing_view, "variant: :h4"
-    refute_includes grid_partial, "card.body do"
-    refute_includes grid_partial, '<h2 class="text-base font-semibold"><%= attachment.name %></h2>'
-    refute_includes listing_view,
-                    "<div class=\"space-y-1\">\n                <h2 class=\"text-base font-semibold\"><%= attachment.name %></h2>"
-    refute_includes listing_view, 'attachment.description.presence || "No description yet"'
-    refute_includes listing_view, "No description yet"
-    refute_includes listing_view, 'attachment.image? ? "Preview unavailable" : attachment.original_filename'
-    refute_includes listing_view, "Bulk remove selected"
-    refute_includes listing_view, "attachment_ids[]"
-    refute_includes listing_view, '<div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">'
-    refute_includes listing_view, "<% card.body do %>\n                <%= render FlatPack::PageTitle::Component.new("
+    assert_not_includes listing_view, "FlatPack::Carousel::Component"
+    assert_not_includes listing_view, "variant: :h4"
+    assert_not_includes grid_partial, "card.body do"
+    assert_not_includes grid_partial, '<h2 class="text-base font-semibold"><%= attachment.name %></h2>'
+    assert_not_includes listing_view,
+                        "<div class=\"space-y-1\">\n                <h2 class=\"text-base font-semibold\"><%= attachment.name %></h2>"
+    assert_not_includes listing_view, 'attachment.description.presence || "No description yet"'
+    assert_not_includes listing_view, "No description yet"
+    assert_not_includes listing_view, 'attachment.image? ? "Preview unavailable" : attachment.original_filename'
+    assert_not_includes listing_view, "Bulk remove selected"
+    assert_not_includes listing_view, "attachment_ids[]"
+    assert_not_includes listing_view, '<div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">'
+    assert_not_includes listing_view, "<% card.body do %>\n                <%= render FlatPack::PageTitle::Component.new("
   end
 
   def test_dummy_layouts_reference_propshaft_resolvable_css_assets
@@ -284,7 +284,7 @@ class DummyHomeDemoTest < Minitest::Test
     end
 
     assert_includes blank_layout, "style: :danger"
-    refute_includes blank_layout, "style: :error"
+    assert_not_includes blank_layout, "style: :error"
   end
 
   def test_dummy_javascript_boot_enables_turbo_drive_and_active_storage
@@ -371,7 +371,7 @@ class DummyHomeDemoTest < Minitest::Test
     tree_helper = File.read(File.expand_path("dummy/app/helpers/application_helper.rb", __dir__))
     tree_view = File.read(File.expand_path("dummy/app/views/recording_trees/index.html.erb", __dir__))
 
-    refute_includes sidebar_partial, 'href: "/recording_studio"'
+    assert_not_includes sidebar_partial, 'href: "/recording_studio"'
     assert_includes sidebar_partial, 'label: "Recording tree"'
     assert_includes sidebar_partial, "href: recording_tree_path"
     assert_includes routes, 'get "recording_tree", to: "recording_trees#index", as: :recording_tree'
@@ -381,7 +381,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes tree_helper, "def recording_tree_icon(recording)"
     assert_includes tree_helper, 'when "Access", "AccessBoundary"'
     assert_includes tree_helper, ":lock"
-    assert_includes tree_helper, 'recording.recordable.image? ? :image : :file'
+    assert_includes tree_helper, "recording.recordable.image? ? :image : :file"
     assert_includes tree_helper, 'when "Page"'
     assert_includes tree_helper, '"document-text"'
     assert_includes tree_view, 'title: "Recording tree"'
@@ -389,8 +389,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes tree_view, "card.body do"
     assert_includes tree_view, "render FlatPack::Tree::Component.new do |tree|"
     assert_includes tree_view, "build_recording_tree_nodes(tree, @root_recordings, @recording_children)"
-    refute_includes tree_view, 'title: "Hierarchy"'
-    refute_includes tree_view, "Indented dot points show each child recording beneath its parent."
-    refute_includes tree_view, "rounded-xl border border-[var(--surface-border-color)] bg-[var(--surface-background-color)] p-5"
+    assert_not_includes tree_view, 'title: "Hierarchy"'
+    assert_not_includes tree_view, "Indented dot points show each child recording beneath its parent."
+    assert_not_includes tree_view, "rounded-xl border border-[var(--surface-border-color)] bg-[var(--surface-background-color)] p-5"
   end
 end

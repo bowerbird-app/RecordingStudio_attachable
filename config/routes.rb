@@ -13,6 +13,8 @@ RecordingStudioAttachable::Engine.routes.draw do
   end
 
   get "attachments/:id", to: "attachments#show", as: :attachment
+  get "attachments/:id/file", to: "attachments#file", as: :attachment_file
+  get "attachments/:id/preview/:variant_name", to: "attachments#preview", as: :attachment_preview_file
   patch "attachments/:id", to: "attachments#update"
   delete "attachments/:id", to: "attachment_lifecycle#destroy", as: :destroy_attachment
   post "attachments/:id/restore", to: "attachment_lifecycle#restore", as: :restore_attachment

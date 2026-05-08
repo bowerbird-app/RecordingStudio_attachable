@@ -177,6 +177,25 @@ class ApplicationControllerTest < Minitest::Test
     end
   end
 
+  def test_authorized_attachment_file_path_uses_engine_route
+    recording = FakeRecording.new(id: "att-1", recordable_type: "RecordingStudioAttachable::Attachment")
+    @controller.define_singleton_method(:attachment_file_path) { |value| "/attachments/#{value.id}/file" }
+
+    assert_equal "/attachments/att-1/file", @controller.send(:authorized_attachment_file_path, recording)
+  end
+
+  def test_authorized_attachment_preview_path_uses_engine_preview_route
+    attachment = Object.new
+    attachment.define_singleton_method(:preview_target_named) { |_variant_name| :preview }
+    recording = FakeRecording.new(id: "att-1", recordable_type: "RecordingStudioAttachable::Attachment")
+    recording.define_singleton_method(:recordable) { attachment }
+    @controller.define_singleton_method(:attachment_preview_file_path) do |value, variant_name:|
+      "/attachments/#{value.id}/preview/#{variant_name}"
+    end
+
+    assert_equal "/attachments/att-1/preview/large", @controller.send(:authorized_attachment_preview_path, recording, :large)
+  end
+
   private
 
   def ensure_current_class

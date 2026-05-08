@@ -46,7 +46,7 @@ module RecordingStudioAttachable
               redirect_path: resolved_attachment_redirect_path(@recording)
             }, status: :created
           else
-            render json: { error: result.error, errors: result.errors }, status: :unprocessable_entity
+            render json: { error: result.error, errors: result.errors }, status: :unprocessable_content
           end
         end
       end
@@ -64,7 +64,6 @@ module RecordingStudioAttachable
 
     def attachment_json(recording)
       attachment = recording.recordable
-      blob_path = main_app.rails_blob_path(attachment.file, only_path: true)
 
       {
         id: recording.id,
@@ -73,8 +72,8 @@ module RecordingStudioAttachable
         content_type: attachment.content_type,
         byte_size: attachment.byte_size,
         attachment_kind: attachment.attachment_kind,
-        thumbnail_url: blob_path,
-        insert_url: blob_path,
+        thumbnail_url: authorized_attachment_preview_path(recording, :square_small) || authorized_attachment_file_path(recording),
+        insert_url: authorized_attachment_file_path(recording),
         alt: attachment.name,
         show_path: attachment_path(recording)
       }

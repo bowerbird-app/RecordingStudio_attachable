@@ -7,6 +7,15 @@ require_relative "../../app/services/recording_studio_attachable/services/import
 
 class ImportAttachmentsTest < Minitest::Test
   FakeRecording = Struct.new(:id, :recordable_type, :root_recording, keyword_init: true)
+  FakeBlob = Struct.new(:purged, keyword_init: true) do
+    def purge
+      self.purged = true
+    end
+  end
+
+  FakeFile = Struct.new(:blob, keyword_init: true)
+  FakeAttachment = Struct.new(:file, keyword_init: true)
+  FakeCreatedRecording = Struct.new(:recordable, keyword_init: true)
 
   def setup
     @original_configuration = RecordingStudioAttachable.instance_variable_get(:@configuration)
@@ -48,6 +57,8 @@ class ImportAttachmentsTest < Minitest::Test
     assert_equal "demo_cloud", captured_calls.first[:source]
     assert_equal({ batch_id: "batch-1" }, captured_calls.last[:metadata])
     assert_equal "dropbox", captured_calls.last[:source]
+    assert_equal true, captured_calls.first[:identify]
+    assert_equal true, captured_calls.last[:identify]
   end
 
   def test_import_attachments_rejects_batches_larger_than_the_configured_limit
@@ -63,6 +74,33 @@ class ImportAttachmentsTest < Minitest::Test
       assert result.failure?
       assert_equal "You can import up to 1 file at a time", result.error
     end
+  end
+
+  def test_import_attachments_purges_previously_created_blobs_when_a_later_item_fails
+    parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: FakeRecording.new(id: "root-1"))
+    first_blob = FakeBlob.new(purged: false)
+    first_created = FakeCreatedRecording.new(recordable: FakeAttachment.new(file: FakeFile.new(blob: first_blob)))
+    success_result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: first_created)
+    failure_result = RecordingStudioAttachable::Services::BaseService::Result.new(success: false, error: "bad file")
+    calls = 0
+
+    RecordingStudioAttachable::Services::ImportAttachment.stub(:call, lambda { |**|
+      calls += 1
+      calls == 1 ? success_result : failure_result
+    }) do
+      result = RecordingStudioAttachable::Services::ImportAttachments.call(
+        parent_recording: parent,
+        attachments: [
+          { io: StringIO.new("1"), filename: "one.svg", content_type: "image/svg+xml" },
+          { io: StringIO.new("2"), filename: "two.svg", content_type: "image/svg+xml" }
+        ]
+      )
+
+      assert result.failure?
+      assert_equal "One or more attachments failed to import", result.error
+    end
+
+    assert first_blob.purged
   end
 
   private

@@ -155,21 +155,30 @@ module RecordingStudioAttachable
       assert_equal "New description", captured[:description]
     end
 
-    def test_download_redirects_to_attachment_blob_path
-      file = Object.new
-      attachment = Struct.new(:file).new(file)
+    FakeVariant = Struct.new(:processed_data, keyword_init: true) do
+      def processed
+        self
+      end
+
+      def download
+        processed_data
+      end
+    end
+
+    FakeFile = Struct.new(:downloaded_data, keyword_init: true) do
+      def download
+        downloaded_data
+      end
+    end
+
+    def test_download_streams_attachment_data
+      file = FakeFile.new(downloaded_data: "blob-bytes")
+      attachment = Struct.new(:file, :original_filename, :content_type).new(file, "hero.png", "image/png")
       attachment_recording = FakeRecording.new(
         id: "att-1",
         recordable_type: "RecordingStudioAttachable::Attachment",
         recordable: attachment
       )
-      main_app = Object.new
-      main_app.define_singleton_method(:rails_blob_path) do |passed_file, disposition:|
-        raise "wrong file" unless passed_file.equal?(file)
-        raise "wrong disposition" unless disposition == :attachment
-
-        "/rails/active_storage/blobs/download"
-      end
 
       with_routing do |set|
         set.draw do
@@ -180,13 +189,68 @@ module RecordingStudioAttachable
 
         RecordingStudio::Recording.stub(:find, attachment_recording) do
           @controller.stub(:authorize_attachment_owner_action!, true) do
-            @controller.define_singleton_method(:main_app) { main_app }
             get :download, params: { id: attachment_recording.id }
           end
         end
       end
 
-      assert_redirected_to "/rails/active_storage/blobs/download"
+      assert_response :success
+      assert_equal "blob-bytes", @response.body
+      assert_equal "attachment; filename=\"hero.png\"; filename*=UTF-8''hero.png", @response.headers["Content-Disposition"]
+      assert_equal "image/png", @response.media_type
+    end
+
+    def test_file_streams_attachment_data_inline
+      file = FakeFile.new(downloaded_data: "blob-bytes")
+      attachment = Struct.new(:file, :original_filename, :content_type).new(file, "hero.png", "image/png")
+      attachment_recording = FakeRecording.new(id: "att-1", recordable_type: "RecordingStudioAttachable::Attachment", recordable: attachment)
+
+      with_routing do |set|
+        set.draw do
+          get "/attachments/:id/file", to: "recording_studio_attachable/attachments#file"
+        end
+
+        @routes = set
+
+        RecordingStudio::Recording.stub(:find, attachment_recording) do
+          @controller.stub(:authorize_attachment_owner_action!, true) do
+            get :file, params: { id: attachment_recording.id }
+          end
+        end
+      end
+
+      assert_response :success
+      assert_equal "blob-bytes", @response.body
+      assert_equal "inline; filename=\"hero.png\"; filename*=UTF-8''hero.png", @response.headers["Content-Disposition"]
+    end
+
+    def test_preview_streams_processed_variant_inline
+      FakeVariant.new(processed_data: "preview-bytes")
+      file = Struct.new(:variable?).new(true)
+      attachment = Struct.new(:file, :original_filename, :content_type) do
+        def preview_target_named(_variant_name)
+          FakeVariant.new(processed_data: "preview-bytes")
+        end
+      end.new(file, "hero.png", "image/png")
+      attachment_recording = FakeRecording.new(id: "att-1", recordable_type: "RecordingStudioAttachable::Attachment", recordable: attachment)
+
+      with_routing do |set|
+        set.draw do
+          get "/attachments/:id/preview/:variant_name", to: "recording_studio_attachable/attachments#preview"
+        end
+
+        @routes = set
+
+        RecordingStudio::Recording.stub(:find, attachment_recording) do
+          @controller.stub(:authorize_attachment_owner_action!, true) do
+            get :preview, params: { id: attachment_recording.id, variant_name: "large" }
+          end
+        end
+      end
+
+      assert_response :success
+      assert_equal "preview-bytes", @response.body
+      assert_equal "inline; filename=\"hero.png\"; filename*=UTF-8''hero.png", @response.headers["Content-Disposition"]
     end
 
     private

@@ -76,7 +76,9 @@ class DummyDocsTest < Minitest::Test
     assert_includes controller_source, "config.register_upload_provider("
     assert_includes controller_source, "RecordingStudioAttachable::Services::ImportAttachment.call"
     assert_includes controller_source, "recording_attachment_imports_path(recording)"
-    assert_includes controller_source, "route_helpers.google_drive_imports_path(recording_id: recording.id)"
+    assert_includes controller_source, "route_helpers.google_drive.recording_bootstrap_path(recording, format: :json)"
+    assert_includes controller_source, "route_helpers.google_drive.recording_imports_path(recording, format: :json)"
+    assert_includes controller_source, "strategy: :client_picker"
     assert_includes controller_source, "signed_blob_id: blob.signed_id"
     assert_includes controller_source,
                     "The built-in Google Drive addon in the dummy app demonstrates the same provider registration and import flow"

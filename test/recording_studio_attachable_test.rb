@@ -4,7 +4,7 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_exists
-    refute_nil RecordingStudioAttachable::VERSION
+    assert_not_nil RecordingStudioAttachable::VERSION
   end
 
   def test_engine_exists
@@ -96,17 +96,17 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes upload_controller_source, 'window.addEventListener("message", this.handleProviderMessage)'
     assert_includes upload_controller_source, 'payload.type === "provider-auth-complete"'
     assert_includes upload_controller_source, 'payload.type === "provider-import-complete"'
-    refute_includes upload_controller_source, "node.outerHTML = this.entryTemplate(entry)"
-    refute_includes view_source, '<button type="button" data-action="recording-studio-attachable--upload#browse"'
-    refute_includes view_source, 'text: "Attach files"'
-    refute_includes view_source, 'text: "Cancel"'
-    refute_includes upload_controller_source, "finalizeButton"
-    refute_includes view_source, "FlatPack::Card::Component"
-    refute_includes view_source, 'title: "Drop files here"'
-    refute_includes view_source, "Multiple uploads, previews, and direct-upload progress are handled in-page."
-    refute_includes view_source, "Drag files anywhere into this zone or browse from disk."
-    refute_includes view_source, "Upload rules"
-    refute_includes view_source, 'title: "Queue"'
+    assert_not_includes upload_controller_source, "node.outerHTML = this.entryTemplate(entry)"
+    assert_not_includes view_source, '<button type="button" data-action="recording-studio-attachable--upload#browse"'
+    assert_not_includes view_source, 'text: "Attach files"'
+    assert_not_includes view_source, 'text: "Cancel"'
+    assert_not_includes upload_controller_source, "finalizeButton"
+    assert_not_includes view_source, "FlatPack::Card::Component"
+    assert_not_includes view_source, 'title: "Drop files here"'
+    assert_not_includes view_source, "Multiple uploads, previews, and direct-upload progress are handled in-page."
+    assert_not_includes view_source, "Drag files anywhere into this zone or browse from disk."
+    assert_not_includes view_source, "Upload rules"
+    assert_not_includes view_source, 'title: "Queue"'
   end
 
   def test_attachment_show_view_uses_flatpack_breadcrumb_above_title
@@ -137,18 +137,18 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes model_source, "def preview_target_named(name)"
     assert_includes model_source, "RecordingStudioAttachable.configuration.image_variant(name)"
     assert_includes model_source, "return variant_named(name) if file.variable?"
-    assert_includes controller_source, "helper_method :attachment_preview_path"
-    assert_includes controller_source, "def attachment_preview_path(attachment, variant_name)"
-    assert_includes controller_source, "main_app.rails_representation_path(preview_target, only_path: true)"
-    assert_includes controller_source, "main_app.rails_blob_path(attachment.file, only_path: true)"
-    assert_includes view_source, "preview_path = attachment_preview_path(@attachment, :large)"
+    assert_includes controller_source, "helper_method :authorized_attachment_preview_path"
+    assert_includes controller_source, "def authorized_attachment_preview_path(recording, variant_name)"
+    assert_includes controller_source, "attachment_preview_file_path(recording, variant_name: variant_name)"
+    assert_includes controller_source, "helper_method :authorized_attachment_file_path"
+    assert_includes view_source, "preview_path = authorized_attachment_preview_path(@attachment_recording, :large)"
     assert_includes view_source, "image_tag preview_path"
-    refute_includes view_source, "overflow-hidden rounded-lg border border-[var(--surface-border-color)] bg-[var(--surface-muted-background-color)]"
-    refute_includes view_source, "FlatPack::Badge::Component"
-    refute_includes view_source, 'title: "Attachment details"'
-    refute_includes view_source, 'title: "Revise attachment"'
-    refute_includes view_source, 'text: "Download"'
-    refute_includes view_source, 'text: "Save revision"'
+    assert_not_includes view_source, "overflow-hidden rounded-lg border border-[var(--surface-border-color)] bg-[var(--surface-muted-background-color)]"
+    assert_not_includes view_source, "FlatPack::Badge::Component"
+    assert_not_includes view_source, 'title: "Attachment details"'
+    assert_not_includes view_source, 'title: "Revise attachment"'
+    assert_not_includes view_source, 'text: "Download"'
+    assert_not_includes view_source, 'text: "Save revision"'
   end
 
   def test_image_fallback_controller_toggles_preview_state
@@ -172,8 +172,8 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes utility_source, "return bestBlob"
     assert_includes utility_source, "canvas.toBlob(resolve, contentType, encoderQuality)"
     assert_includes utility_source, "new File([processedBlob], file.name"
-    refute_includes utility_source, '"image/gif"'
-    refute_includes utility_source, '"image/svg+xml"'
+    assert_not_includes utility_source, '"image/gif"'
+    assert_not_includes utility_source, '"image/svg+xml"'
   end
 
   def test_live_search_controller_debounces_search_form_submission
@@ -210,9 +210,9 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, "size: :md"
     assert_includes view_source, 'aria: { label: "Grid view" }'
     assert_includes view_source, 'aria: { label: "List view" }'
-    refute_includes view_source, ">View<"
-    refute_includes view_source, 'text: "Grid"'
-    refute_includes view_source, 'text: "List"'
+    assert_not_includes view_source, ">View<"
+    assert_not_includes view_source, 'text: "Grid"'
+    assert_not_includes view_source, 'text: "List"'
     assert_includes view_source, "form_with url: recording_attachments_path(@recording), method: :get"
     assert_includes view_source, 'controller: "recording-studio-attachable--live-search"'
     assert_includes view_source, "input->recording-studio-attachable--live-search#queueSubmit"
@@ -224,8 +224,8 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, "FlatPack::Search::Component.new("
     assert_includes view_source, 'placeholder: "Search"'
     assert_includes view_source, 'aria: { label: "Search attachments" }'
-    refute_includes view_source, 'text: "Apply"'
-    refute_includes view_source, 'text: "Clear"'
+    assert_not_includes view_source, 'text: "Apply"'
+    assert_not_includes view_source, 'text: "Clear"'
     assert_includes view_source, 'turbo_frame_tag "recording-attachments-results"'
     assert_includes view_source, 'render "grid", attachments: @attachments'
     assert_includes view_source, 'render "list", attachments: @attachments'
@@ -239,7 +239,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, '<circle cx="11" cy="11" r="6" />'
     assert_includes grid_partial_source, 'class="grid grid-cols-2 items-stretch gap-6 lg:grid-cols-5"'
     assert_includes grid_partial_source, "card.media padding: :none"
-    refute_includes grid_partial_source, "card.body do"
+    assert_not_includes grid_partial_source, "card.body do"
     assert_includes grid_partial_source, 'class: "h-full w-full object-cover"'
     assert_includes grid_partial_source, 'data-controller="recording-studio-attachable--image-fallback"'
     assert_includes grid_partial_source, "error->recording-studio-attachable--image-fallback#showFallback"
@@ -250,18 +250,18 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes grid_partial_source, 'File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || "FILE"'
     assert_includes grid_partial_source, 'class="aspect-4/3 flex items-center justify-center bg-(--surface-background-color)"'
     assert_includes grid_partial_source, 'class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)"'
-    assert_includes grid_partial_source, "preview_path = attachment_preview_path(attachment, :med)"
+    assert_includes grid_partial_source, "preview_path = authorized_attachment_preview_path(attachment_recording, :med)"
     assert_includes grid_partial_source, "image_tag preview_path"
-    refute_includes grid_partial_source, '<h2 class="text-base font-semibold"><%= attachment.name %></h2>'
+    assert_not_includes grid_partial_source, '<h2 class="text-base font-semibold"><%= attachment.name %></h2>'
     assert_includes list_partial_source, ">Preview<"
-    refute_includes list_partial_source, ">Kind<"
-    refute_includes list_partial_source, ">Type<"
-    refute_includes list_partial_source, ">Size<"
+    assert_not_includes list_partial_source, ">Kind<"
+    assert_not_includes list_partial_source, ">Type<"
+    assert_not_includes list_partial_source, ">Size<"
     assert_includes list_partial_source, 'number_to_human_size(attachment.byte_size, strip_insignificant_zeros: true).downcase.delete(" ")'
     assert_includes list_partial_source, "<%= display_content_type %> <%= display_size %>"
     assert_includes list_partial_source, 'data: { turbo_frame: "_top" }'
     assert_operator list_partial_source.scan("attachment_path(attachment_recording)").length, :>=, 2
-    assert_includes list_partial_source, "preview_path = attachment_preview_path(attachment, :square_small)"
+    assert_includes list_partial_source, "preview_path = authorized_attachment_preview_path(attachment_recording, :square_small)"
     assert_includes list_partial_source, "image_tag preview_path"
     assert_includes list_partial_source, 'FlatPack::Tooltip::Component.new(text: "Download")'
     assert_includes list_partial_source, 'icon: "arrow-down-tray", icon_only: true'
@@ -270,42 +270,42 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes list_partial_source, "destroy_attachment_path(attachment_recording)"
     assert_includes list_partial_source, 'icon: "trash", icon_only: true'
     assert_includes list_partial_source, 'aria: { label: "Trash attachment" }'
-    refute_includes list_partial_source, 'text: "View"'
-    refute_includes list_partial_source, "<%= attachment.original_filename %>"
-    refute_includes view_source, "No matching attachments"
-    refute_includes view_source, "Try another image name."
+    assert_not_includes list_partial_source, 'text: "View"'
+    assert_not_includes list_partial_source, "<%= attachment.original_filename %>"
+    assert_not_includes view_source, "No matching attachments"
+    assert_not_includes view_source, "Try another image name."
     assert_includes view_source, "Nothing uplaoded yet"
-    refute_includes view_source, "FlatPack::Carousel::Component"
-    refute_includes view_source, "variant: :h4"
-    refute_includes view_source,
-                    "<div class=\"space-y-1\">\n                <h2 class=\"text-base font-semibold\"><%= attachment.name %></h2>"
-    refute_includes view_source, 'attachment.description.presence || "No description yet"'
-    refute_includes view_source, "No description yet"
-    refute_includes view_source, 'attachment.image? ? "Preview unavailable" : attachment.original_filename'
-    refute_includes view_source, "Scope:"
-    refute_includes view_source, "Kind:"
-    refute_includes view_source, "Search by attachment name"
-    refute_includes view_source, "Bulk remove selected"
-    refute_includes view_source, "attachment_ids[]"
-    refute_includes view_source, '<div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">'
-    refute_includes view_source, "<% card.body do %>\n                <%= render FlatPack::PageTitle::Component.new("
-    refute_match(/FlatPack::Badge::Component\.new\([^\n]+style:\s*:secondary/, view_source)
+    assert_not_includes view_source, "FlatPack::Carousel::Component"
+    assert_not_includes view_source, "variant: :h4"
+    assert_not_includes view_source,
+                        "<div class=\"space-y-1\">\n                <h2 class=\"text-base font-semibold\"><%= attachment.name %></h2>"
+    assert_not_includes view_source, 'attachment.description.presence || "No description yet"'
+    assert_not_includes view_source, "No description yet"
+    assert_not_includes view_source, 'attachment.image? ? "Preview unavailable" : attachment.original_filename'
+    assert_not_includes view_source, "Scope:"
+    assert_not_includes view_source, "Kind:"
+    assert_not_includes view_source, "Search by attachment name"
+    assert_not_includes view_source, "Bulk remove selected"
+    assert_not_includes view_source, "attachment_ids[]"
+    assert_not_includes view_source, '<div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">'
+    assert_not_includes view_source, "<% card.body do %>\n                <%= render FlatPack::PageTitle::Component.new("
+    assert_no_match(/FlatPack::Badge::Component\.new\([^\n]+style:\s*:secondary/, view_source)
   end
 
   def test_attachment_show_view_hides_edit_controls_and_internal_ids
     view_path = File.expand_path("../app/views/recording_studio_attachable/attachments/show.html.erb", __dir__)
     view_source = File.read(view_path)
 
-    assert_includes view_source, "preview_path = attachment_preview_path(@attachment, :large)"
+    assert_includes view_source, "preview_path = authorized_attachment_preview_path(@attachment_recording, :large)"
     assert_includes view_source, "image_tag preview_path"
-    refute_includes view_source, "FlatPack::Badge::Component"
-    refute_includes view_source, 'controller: "recording-studio-attachable--attachment-revision-upload"'
-    refute_includes view_source, 'hidden_field_tag "attachment[signed_blob_id]"'
-    refute_includes view_source, 'file_field_tag "attachment[file]"'
-    refute_includes view_source, 'text: "Download"'
-    refute_includes view_source, 'text: "Save revision"'
-    refute_includes view_source, "Recording id"
-    refute_includes view_source, "Parent recording id"
+    assert_not_includes view_source, "FlatPack::Badge::Component"
+    assert_not_includes view_source, 'controller: "recording-studio-attachable--attachment-revision-upload"'
+    assert_not_includes view_source, 'hidden_field_tag "attachment[signed_blob_id]"'
+    assert_not_includes view_source, 'file_field_tag "attachment[file]"'
+    assert_not_includes view_source, 'text: "Download"'
+    assert_not_includes view_source, 'text: "Save revision"'
+    assert_not_includes view_source, "Recording id"
+    assert_not_includes view_source, "Parent recording id"
   end
 
   def test_google_drive_addon_files_are_wired_through_the_main_engine

@@ -40,7 +40,7 @@ module RecordingStudioAttachable
                end
 
       if result.success?
-        redirect_to attachment_path(result.value), notice: "Attachment updated."
+        redirect_to attachment_path(result.value), notice: I18n.t("recording_studio_attachable.attachments.updated")
       else
         redirect_to attachment_path(@attachment_recording), alert: result.error
       end
@@ -50,13 +50,49 @@ module RecordingStudioAttachable
       @attachment_recording = find_attachment_recording
       authorize_attachment_owner_action!(:download, @attachment_recording)
 
-      redirect_to main_app.rails_blob_path(@attachment_recording.recordable.file, disposition: :attachment)
+      send_attachment_data(@attachment_recording, disposition: :attachment)
+    end
+
+    def file
+      @attachment_recording = find_attachment_recording
+      authorize_attachment_owner_action!(:view, @attachment_recording)
+
+      send_attachment_data(@attachment_recording, disposition: :inline)
+    end
+
+    def preview
+      @attachment_recording = find_attachment_recording
+      authorize_attachment_owner_action!(:view, @attachment_recording)
+
+      preview_target = @attachment_recording.recordable.preview_target_named(params[:variant_name])
+      raise ActiveRecord::RecordNotFound if preview_target.blank?
+
+      send_preview_data(@attachment_recording.recordable, preview_target)
     end
 
     private
 
     def attachment_params
-      params.require(:attachment).permit(:name, :description, :signed_blob_id)
+      params.expect(attachment: %i[name description signed_blob_id])
+    end
+
+    def send_attachment_data(attachment_recording, disposition:)
+      attachment = attachment_recording.recordable
+      send_data \
+        attachment.file.download,
+        filename: attachment.original_filename,
+        type: attachment.content_type,
+        disposition: disposition
+    end
+
+    def send_preview_data(attachment, preview_target)
+      data = if attachment.file.variable?
+               preview_target.processed.download
+             else
+               attachment.file.download
+             end
+
+      send_data data, filename: attachment.original_filename, type: attachment.content_type, disposition: :inline
     end
   end
 end

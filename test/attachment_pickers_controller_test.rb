@@ -38,9 +38,6 @@ module RecordingStudioAttachable
       query = FakeQuery.new(call_result: [attachment_recording], current_page: 2, total_pages: 4, total_count: 7)
       query_options = nil
 
-      main_app = Object.new
-      main_app.define_singleton_method(:rails_blob_path) { |_file, only_path:| "/rails/active_storage/blobs/hero.png" if only_path }
-
       with_routing do |set|
         set.draw do
           get "/recordings/:recording_id/attachments/picker",
@@ -52,8 +49,11 @@ module RecordingStudioAttachable
         RecordingStudio::Recording.stub(:find, recording) do
           @controller.stub(:authorize_attachment_action!, true) do
             @controller.stub(:capability_options_for, {}) do
-              @controller.define_singleton_method(:main_app) { main_app }
               @controller.define_singleton_method(:attachment_path) { |attachment_rec| "/attachments/#{attachment_rec.id}" }
+              @controller.define_singleton_method(:authorized_attachment_preview_path) do |attachment_rec, variant_name|
+                "/attachments/#{attachment_rec.id}/preview/#{variant_name}"
+              end
+              @controller.define_singleton_method(:authorized_attachment_file_path) { |attachment_rec| "/attachments/#{attachment_rec.id}/file" }
 
               RecordingStudioAttachable::Queries::ForRecording.stub(:new, lambda { |**kwargs|
                 query_options = kwargs
@@ -85,8 +85,8 @@ module RecordingStudioAttachable
       assert_equal "image/png", attachment_payload.fetch("content_type")
       assert_equal 1024, attachment_payload.fetch("byte_size")
       assert_equal "image", attachment_payload.fetch("attachment_kind")
-      assert_equal "/rails/active_storage/blobs/hero.png", attachment_payload.fetch("thumbnail_url")
-      assert_equal "/rails/active_storage/blobs/hero.png", attachment_payload.fetch("insert_url")
+      assert_equal "/attachments/attachment-1/preview/square_small", attachment_payload.fetch("thumbnail_url")
+      assert_equal "/attachments/attachment-1/file", attachment_payload.fetch("insert_url")
       assert_equal "Hero image", attachment_payload.fetch("alt")
       assert_equal "/attachments/attachment-1", attachment_payload.fetch("show_path")
     end

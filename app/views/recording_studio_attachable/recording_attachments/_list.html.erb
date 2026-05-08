@@ -18,7 +18,7 @@
             <tr>
               <td class="px-3 py-3 text-(--surface-muted-content-color)">
                 <%= link_to attachment_path(attachment_recording), class: "inline-flex rounded-lg focus:outline-none focus:ring-2 focus:ring-(--brand-color)", data: { turbo_frame: "_top" } do %>
-                  <% preview_path = attachment_preview_path(attachment, :square_small) %>
+                  <% preview_path = authorized_attachment_preview_path(attachment_recording, :square_small) %>
                   <% if preview_path.present? %>
                     <div class="relative h-12 w-12 overflow-hidden rounded-lg bg-(--surface-muted-background-color)" data-controller="recording-studio-attachable--image-fallback">
                       <%= image_tag preview_path, alt: attachment.name, class: "h-full w-full object-cover", data: { recording_studio_attachable__image_fallback_target: "image", action: "error->recording-studio-attachable--image-fallback#showFallback" } %>

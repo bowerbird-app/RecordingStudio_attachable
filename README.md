@@ -86,6 +86,7 @@ The generator creates `config/initializers/recording_studio_attachable.rb` with 
 RecordingStudioAttachable.configure do |config|
   config.allowed_content_types = ["image/*", "application/pdf"]
   config.max_file_size = 25.megabytes
+  # Maximum number of files accepted in a single upload or import request.
   config.max_file_count = 20
   config.enabled_attachment_kinds = %i[image file]
   config.default_listing_scope = :direct
@@ -193,7 +194,7 @@ registerUploadProviderLauncher("google_drive", {
 })
 ```
 
-In your provider controller or service, hand the gem an IO object plus metadata and let it create the blob, enforce attachable validations, and create the child recording:
+In your provider controller or service, hand the gem an IO object plus metadata and let it create the blob, identify the file content by default, enforce attachable validations, and create the child recording:
 
 ```ruby
 result = RecordingStudioAttachable::Services::ImportAttachment.call(
@@ -291,7 +292,7 @@ The addon handles:
 - downloading selected files from Drive
 - handing those files to `RecordingStudioAttachable::Services::ImportAttachments`
 
-Imported files still go through the gem's normal authorization, Active Storage validation, attachment creation, and recording creation flow. Native Google Docs formats are exported during import using Drive-compatible formats such as PDF, PNG, or CSV where supported.
+Imported files still go through the gem's normal authorization, blob identification, Active Storage validation, attachment creation, and recording creation flow. Native Google Docs formats are exported during import using Drive-compatible formats such as PDF, PNG, or CSV where supported.
 
 Each import payload supports:
 
@@ -302,7 +303,7 @@ Each import payload supports:
 - `actor`, `impersonator`: optional audit actors
 - `source`: metadata source label stored on the recording event, defaults to `provider_import`; use this only in trusted direct service calls
 - `metadata`: extra event metadata merged into the attachment upload event
-- `identify`: optional Active Storage blob creation option
+- `identify`: optional Active Storage blob creation option. Defaults to `true`; only disable it in trusted integrations that already know the file metadata is accurate.
 
 The HTTP endpoint accepts a single `attachment_import` envelope plus either:
 
@@ -319,10 +320,14 @@ The most important per-recordable options are:
 
 - `allowed_content_types`
 - `max_file_size`
-- `max_file_count`
+- `max_file_count` for a single upload or import batch, not the total lifetime attachment count on a recording
 - `enabled_attachment_kinds`
 - `auth_roles`
 - `authorize_with`
+
+## Delivery
+
+Attachment previews, editor insert URLs, and downloads are served through engine-owned endpoints so each request stays behind the gem's authorization checks. Host apps should link to the engine paths returned by the gem instead of generating raw Active Storage blob URLs for attachment delivery.
 
 ### Layouts
 

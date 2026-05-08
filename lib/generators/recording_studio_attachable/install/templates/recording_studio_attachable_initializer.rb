@@ -3,6 +3,7 @@
 RecordingStudioAttachable.configure do |config|
   config.allowed_content_types = ["image/*", "application/pdf"]
   config.max_file_size = 25.megabytes
+  # Maximum number of files accepted in a single upload or import request.
   config.max_file_count = 20
   config.enabled_attachment_kinds = %i[image file]
   config.default_listing_scope = :direct
@@ -74,6 +75,8 @@ RecordingStudioAttachable.configure do |config|
   #   io: downloaded_file,
   #   filename: remote_file.name,
   #   content_type: remote_file.mime_type,
+  #   # identify defaults to true; only disable it for trusted providers that
+  #   # already know the file metadata is accurate.
   #   source: "google_drive",
   #   metadata: { provider: "google_drive", external_id: remote_file.id }
   # )

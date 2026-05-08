@@ -4,7 +4,7 @@ module RecordingStudioAttachable
   module Services
     class ImportAttachment < ApplicationService
       def initialize(parent_recording:, io:, filename:, content_type:, actor: nil, impersonator: nil, name: nil,
-                     description: nil, identify: false, metadata: {}, source: "provider_import", service_name: nil)
+                     description: nil, identify: true, metadata: {}, source: "provider_import", service_name: nil)
         @parent_recording = parent_recording
         @io = io
         @filename = filename
@@ -74,7 +74,7 @@ module RecordingStudioAttachable
       end
 
       def purge_blob(blob)
-        return unless blob.present?
+        return if blob.blank?
 
         blob.purge if blob.respond_to?(:purge)
       end

@@ -1,14 +1,25 @@
 > **Architecture Documentation**
 > *   **Canonical Source:** [bowerbird-app/gem_template](https://github.com/bowerbird-app/gem_template/tree/main/docs/gem_template)
-> *   **Last Updated:** December 11, 2025
+> *   **Last Updated:** May 7, 2026
 >
 > *Maintainers: Please update the date above when modifying this file.*
 
 ---
 
-# Installing in a Host Application
+# Installing From The Template Docs
 
-This guide explains how to install the GemTemplate engine in your Rails application.
+This file is preserved as template reference material. It does not describe how to install Recording Studio Attachable.
+
+For the current gem, use the top-level README and the dummy app docs instead:
+
+- `README.md` for the supported host-app install flow
+- `test/dummy/app/controllers/docs_controller.rb` for the maintained dummy-app examples
+
+If you are working on the template architecture itself, read this file as historical reference only. Do not copy the `GemTemplate` commands, mount paths, or initializer names into a Recording Studio Attachable host app.
+
+---
+
+The remaining content below refers to the original template and is intentionally left in place for architectural comparison.
 
 ---
 

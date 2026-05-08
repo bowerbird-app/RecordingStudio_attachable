@@ -13,7 +13,8 @@ module RecordingStudioAttachable
     helper_method :current_attachable_actor
     helper_method :embedded_upload_provider_request?
     helper_method :attachment_redirect_params
-    helper_method :attachment_preview_path
+    helper_method :authorized_attachment_file_path
+    helper_method :authorized_attachment_preview_path
 
     private
 
@@ -61,7 +62,7 @@ module RecordingStudioAttachable
     def handle_not_authorized(exception)
       respond_to do |format|
         format.html do
-          redirect_back fallback_location: main_app.root_path, alert: exception.message
+          redirect_back_or_to(main_app.root_path, alert: exception.message)
         end
         format.json { render json: { error: exception.message }, status: :forbidden }
       end
@@ -70,7 +71,7 @@ module RecordingStudioAttachable
     def handle_record_not_found
       respond_to do |format|
         format.html do
-          redirect_back fallback_location: main_app.root_path, alert: "Attachment resource not found"
+          redirect_back_or_to(main_app.root_path, alert: "Attachment resource not found")
         end
         format.json { render json: { error: "Not found" }, status: :not_found }
       end
@@ -99,13 +100,17 @@ module RecordingStudioAttachable
       end
     end
 
-    def attachment_preview_path(attachment, variant_name)
-      preview_target = attachment.preview_target_named(variant_name)
-      return if preview_target.blank?
+    def authorized_attachment_file_path(recording)
+      attachment_file_path(recording)
+    end
 
-      return main_app.rails_representation_path(preview_target, only_path: true) if attachment.file.variable?
+    def authorized_attachment_preview_path(recording, variant_name)
+      attachment = recording&.recordable
+      return if attachment.blank?
+      return unless attachment.respond_to?(:preview_target_named)
+      return if attachment.preview_target_named(variant_name).blank?
 
-      main_app.rails_blob_path(attachment.file, only_path: true)
+      attachment_preview_file_path(recording, variant_name: variant_name)
     end
 
     def attachment_redirect_params(fallback_return_to: nil)

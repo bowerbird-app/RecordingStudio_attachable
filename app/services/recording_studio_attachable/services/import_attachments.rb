@@ -39,7 +39,7 @@ module RecordingStudioAttachable
                 content_type: attachment.fetch(:content_type),
                 name: attachment[:name],
                 description: attachment[:description],
-                identify: attachment.fetch(:identify, false),
+                identify: attachment.fetch(:identify, true),
                 metadata: attachment.fetch(:metadata, {}).merge(batch_id: batch_id),
                 source: attachment[:source] || source,
                 service_name: attachment[:service_name]
@@ -54,6 +54,7 @@ module RecordingStudioAttachable
             end
           end
         rescue BatchFailure
+          purge_created_attachments(created)
           return failure("One or more attachments failed to import", errors: failures)
         end
 
@@ -66,6 +67,21 @@ module RecordingStudioAttachable
 
         noun = max_file_count == 1 ? "file" : "files"
         raise ArgumentError, "You can import up to #{max_file_count} #{noun} at a time"
+      end
+
+      def purge_created_attachments(created)
+        Array(created).each do |recording|
+          attachment = recording&.recordable
+          next unless attachment.respond_to?(:file)
+
+          file = attachment.file
+          blob = file&.blob
+          next unless blob.respond_to?(:purge)
+
+          blob.purge
+        rescue StandardError
+          next
+        end
       end
     end
   end

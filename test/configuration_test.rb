@@ -28,7 +28,7 @@ class ConfigurationTest < Minitest::Test
   def test_defaults_match_attachable_expectations
     assert_equal ["image/*", "application/pdf"], @configuration.allowed_content_types
     assert_equal 20, @configuration.max_file_count
-    refute @configuration.image_processing_enabled
+    assert_not @configuration.image_processing_enabled
     assert_equal 2560, @configuration.image_processing_max_width
     assert_equal 2560, @configuration.image_processing_max_height
     assert_equal 0.82, @configuration.image_processing_quality
@@ -50,9 +50,9 @@ class ConfigurationTest < Minitest::Test
     assert_empty @configuration.upload_providers
     assert_equal :view, @configuration.auth_role_for(:view)
     assert_equal :edit, @configuration.auth_role_for(:upload)
-    refute @configuration.google_drive.enabled?
-    refute @configuration.google_drive.configured?
-    refute @configuration.google_drive.picker_configured?
+    assert_not @configuration.google_drive.enabled?
+    assert_not @configuration.google_drive.configured?
+    assert_not @configuration.google_drive.picker_configured?
     assert_equal ["https://www.googleapis.com/auth/drive.readonly"], @configuration.google_drive.scopes
   end
 
@@ -98,10 +98,10 @@ class ConfigurationTest < Minitest::Test
     provider = @configuration.register_upload_provider(
       :google_drive,
       label: "Google Drive",
-      url: ->(route_helpers:, recording:) { route_helpers.google_drive_imports_path(recording_id: recording.id) }
+      url: ->(route_helpers:, recording:) { route_helpers.recording_imports_path(recording_id: recording.id) }
     )
     route_helpers = Object.new
-    route_helpers.define_singleton_method(:google_drive_imports_path) { |recording_id:| "/imports/#{recording_id}" }
+    route_helpers.define_singleton_method(:recording_imports_path) { |recording_id:| "/imports/#{recording_id}" }
     view_context = ViewContextWithRoutes.new(route_helpers)
     recording = Struct.new(:id).new("rec-1")
 
@@ -162,17 +162,15 @@ class ConfigurationTest < Minitest::Test
   end
 
   def test_merge_updates_google_drive_configuration
-    @configuration.merge!(
-      google_drive: {
-        enabled: true,
-        client_id: "client-id",
-        client_secret: "client-secret",
-        api_key: "api-key",
-        app_id: "app-id",
-        redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
-        page_size: 10
-      }
-    )
+    @configuration.merge!(google_drive: {
+                            enabled: true,
+                            client_id: "client-id",
+                            client_secret: "client-secret",
+                            api_key: "api-key",
+                            app_id: "app-id",
+                            redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
+                            page_size: 10
+                          })
 
     assert @configuration.google_drive.enabled?
     assert @configuration.google_drive.configured?
@@ -188,7 +186,7 @@ class ConfigurationTest < Minitest::Test
 
     assert_same google_drive, returned
     assert google_drive.enabled?
-    refute google_drive.respond_to?(:unknown)
+    assert_not google_drive.respond_to?(:unknown)
   end
 
   def test_merge_ignores_non_enumerable_inputs
@@ -201,7 +199,7 @@ class ConfigurationTest < Minitest::Test
 
   def test_allowed_content_type_supports_wildcards
     assert @configuration.allowed_content_type?("image/png")
-    refute @configuration.allowed_content_type?("text/plain")
+    assert_not @configuration.allowed_content_type?("text/plain")
   end
 
   def test_allowed_content_type_accepts_blank_overrides
@@ -221,14 +219,14 @@ class ConfigurationTest < Minitest::Test
 
   def test_attachment_kind_enabled_normalizes_values
     assert @configuration.attachment_kind_enabled?("IMAGE", enabled_attachment_kinds: ["image"])
-    refute @configuration.attachment_kind_enabled?("audio", enabled_attachment_kinds: ["image"])
+    assert_not @configuration.attachment_kind_enabled?("audio", enabled_attachment_kinds: ["image"])
   end
 
   def test_attachment_kind_enabled_falls_back_to_global_configuration_when_override_is_nil
     @configuration.enabled_attachment_kinds = %i[file]
 
     assert @configuration.attachment_kind_enabled?("file", enabled_attachment_kinds: nil)
-    refute @configuration.attachment_kind_enabled?("image", enabled_attachment_kinds: nil)
+    assert_not @configuration.attachment_kind_enabled?("image", enabled_attachment_kinds: nil)
   end
 
   def test_upload_provider_returns_nil_for_missing_keys

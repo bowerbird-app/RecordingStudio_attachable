@@ -69,7 +69,33 @@ class ImportAttachmentTest < Minitest::Test
     assert_equal "demo-cloud-import", captured_upload_kwargs[:name]
     assert_equal :actor, captured_upload_kwargs[:actor]
     assert_equal({ provider: "demo_cloud", source: "demo_cloud" }, captured_upload_kwargs[:metadata])
-    refute blob.purged
+    assert_not blob.purged
+  end
+
+  def test_import_attachment_identifies_content_by_default
+    parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: FakeRecording.new(id: "root-1"))
+    blob = FakeBlob.new(signed_id: "signed-blob", content_type: "image/svg+xml", byte_size: 512)
+    captured_blob_kwargs = nil
+    finalized = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: :attachment_recording)
+
+    ActiveStorage::Blob.stub(:create_and_upload!, lambda { |**kwargs|
+      captured_blob_kwargs = kwargs
+      blob
+    }) do
+      RecordingStudioAttachable::Services::RecordAttachmentUpload.stub(:call, finalized) do
+        result = RecordingStudioAttachable::Services::ImportAttachment.call(
+          parent_recording: parent,
+          io: StringIO.new("<svg></svg>"),
+          filename: "demo-cloud-import.svg",
+          content_type: "image/svg+xml",
+          actor: :actor
+        )
+
+        assert result.success?
+      end
+    end
+
+    assert_equal true, captured_blob_kwargs[:identify]
   end
 
   def test_import_attachment_rejects_invalid_content_types_and_purges_blob

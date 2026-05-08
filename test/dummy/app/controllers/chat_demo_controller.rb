@@ -161,7 +161,7 @@ class ChatDemoController < ApplicationController
 
       destroy_message!(draft_message)
 
-      sent_message = draft_message.chat_thread.chat_messages.create!(
+      sent_message = draft_message.chat_thread.chat_messages.new(
         body: body,
         direction: direction,
         position: position,
@@ -170,9 +170,10 @@ class ChatDemoController < ApplicationController
       )
 
       attachment_recordings.each do |attachment_recording|
-        sent_message.chat_message_attachments.create!(attachment_recording: attachment_recording)
+        sent_message.chat_message_attachments.build(attachment_recording: attachment_recording)
       end
 
+      sent_message.save!
       ensure_message_recording!(sent_message)
       sent_message
     end

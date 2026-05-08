@@ -40,6 +40,12 @@
       ) %>
 
       <%= render FlatPack::Sidebar::Item::Component.new(
+        label: "Picker",
+        href: picker_docs_path,
+        icon: :image
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
         label: "Resizing",
         href: resizing_docs_path,
         icon: :image

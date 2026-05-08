@@ -73,7 +73,6 @@ function controlButton({ label, icon, isActive = false, onMouseDown }) {
   if (icon) {
     button.innerHTML = icon
     button.setAttribute("aria-label", label)
-    button.title = label
     button.style.minWidth = "1.95rem"
     button.style.display = "inline-flex"
     button.style.alignItems = "center"
@@ -115,6 +114,53 @@ function controlsRow() {
     "gap:0.35rem",
   ].join(";")
   return row
+}
+
+function tooltipClasses() {
+  return [
+    "fixed",
+    "z-50",
+    "hidden",
+    "px-[var(--tooltip-padding-x)]",
+    "py-[var(--tooltip-padding-y)]",
+    "text-[length:var(--tooltip-font-size)]",
+    "leading-snug",
+    "font-medium",
+    "text-[var(--tooltip-text-color)]",
+    "bg-[var(--tooltip-background-color)]",
+    "border",
+    "border-[var(--tooltip-border-color)]",
+    "rounded-[var(--tooltip-radius)]",
+    "shadow-[var(--tooltip-shadow)]",
+    "max-w-[var(--tooltip-max-width)]",
+    "whitespace-normal",
+    "break-words",
+    "pointer-events-none",
+    "opacity-0",
+    "transition-opacity",
+    "duration-200",
+  ].join(" ")
+}
+
+function withTooltip(element, text, placement = "top") {
+  const container = document.createElement("div")
+  const tooltip = document.createElement("div")
+
+  container.className = "relative inline-flex"
+  container.dataset.controller = "flat-pack--tooltip"
+  container.dataset.action = "mouseenter->flat-pack--tooltip#show mouseleave->flat-pack--tooltip#hide focusin->flat-pack--tooltip#show focusout->flat-pack--tooltip#hide"
+  container.dataset.flatPackTooltipPlacementValue = placement
+
+  tooltip.setAttribute("role", "tooltip")
+  tooltip.className = tooltipClasses()
+  tooltip.style.cssText = "background-color: var(--tooltip-background-color, var(--surface-content-color)); color: var(--tooltip-text-color, var(--surface-background-color)); border-color: var(--tooltip-border-color, var(--surface-border-color));"
+  tooltip.dataset.flatPackTooltipTarget = "tooltip"
+  tooltip.textContent = text
+
+  container.appendChild(element)
+  container.appendChild(tooltip)
+
+  return container
 }
 
 const ManagedAttachmentImage = Image.extend({
@@ -231,6 +277,7 @@ const ManagedAttachmentImage = Image.extend({
         toolbar.style.display = "flex"
         image.style.outline = "2px solid var(--surface-content-color)"
         image.style.outlineOffset = "4px"
+        positionToolbar()
       }
 
       const handleDocumentMouseDown = (event) => {
@@ -262,11 +309,27 @@ const ManagedAttachmentImage = Image.extend({
       wrapper.draggable = false
       wrapper.setAttribute("draggable", "false")
 
+      const positionToolbar = () => {
+        const wrapperRect = wrapper.getBoundingClientRect()
+        const imageRect = image.getBoundingClientRect()
+        const toolbarWidth = toolbar.offsetWidth
+
+        if (wrapperRect.width <= 0 || imageRect.width <= 0 || toolbarWidth <= 0) return
+
+        const centerX = imageRect.left - wrapperRect.left + (imageRect.width / 2)
+        const minLeft = 0
+        const maxLeft = Math.max(0, wrapperRect.width - toolbarWidth)
+        const left = Math.min(Math.max(centerX - (toolbarWidth / 2), minLeft), maxLeft)
+
+        toolbar.style.left = `${left}px`
+        toolbar.style.transform = "none"
+      }
+
       toolbar.style.cssText = [
         "position:absolute",
         "top:0.75rem",
-        "left:50%",
-        "transform:translateX(-50%)",
+        "left:0",
+        "transform:none",
         "z-index:10",
         "display:none",
         "flex-direction:column",
@@ -337,6 +400,10 @@ const ManagedAttachmentImage = Image.extend({
         image.className = toolbar.style.display === "none" ? "" : "is-selected"
         altInput.value = currentNode.attrs.alt || ""
 
+        if (toolbar.style.display !== "none") {
+          requestAnimationFrame(positionToolbar)
+        }
+
         sizeButtons.forEach((button, value) => applyButtonState(button, normalizedDisplay(currentNode.attrs.display) === value))
         alignButtons.forEach((button, value) => applyButtonState(button, currentNode.attrs.align === value))
       }
@@ -389,7 +456,7 @@ const ManagedAttachmentImage = Image.extend({
           },
         })
         sizeButtons.set(value, button)
-        sizeRow.appendChild(button)
+        sizeRow.appendChild(withTooltip(button, `${value.charAt(0).toUpperCase() + value.slice(1)} image size`))
       })
 
       ;[
@@ -404,10 +471,10 @@ const ManagedAttachmentImage = Image.extend({
           onMouseDown: () => updateAttrs({ align: value }),
         })
         alignButtons.set(value, button)
-        sizeRow.appendChild(button)
+        sizeRow.appendChild(withTooltip(button, label))
       })
 
-      sizeRow.appendChild(controlButton({
+      sizeRow.appendChild(withTooltip(controlButton({
         label: "Alt",
         onMouseDown: () => {
           altPopover.style.display = altPopover.style.display === "none" ? "flex" : "none"
@@ -416,13 +483,13 @@ const ManagedAttachmentImage = Image.extend({
             altInput.select()
           }
         },
-      }))
+      }), "Edit alt text"))
 
-      sizeRow.appendChild(controlButton({
+      sizeRow.appendChild(withTooltip(controlButton({
         label: "Remove image",
         icon: REMOVE_ICON,
         onMouseDown: removeImage,
-      }))
+      }), "Remove image"))
 
       toolbar.addEventListener("dragstart", preventControlDrag)
       altPopover.addEventListener("dragstart", preventControlDrag)

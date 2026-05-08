@@ -34,6 +34,7 @@
         data-recording-studio-attachable--attachment-image-picker-image-processing-max-width-value="<%= RecordingStudioAttachable.configuration.image_processing_max_width %>"
         data-recording-studio-attachable--attachment-image-picker-image-processing-max-height-value="<%= RecordingStudioAttachable.configuration.image_processing_max_height %>"
         data-recording-studio-attachable--attachment-image-picker-image-processing-quality-value="<%= RecordingStudioAttachable.configuration.image_processing_quality %>"
+        data-recording-studio-attachable--attachment-image-picker-multiple-selection-value="false"
         data-recording-studio-attachable--attachment-image-picker-modal-id-value="<%= chat_modal_id %>">
         <input type="hidden" name="chat_demo[draft_message_id]" value="<%= @draft_message.id %>">
 
@@ -70,14 +71,31 @@
           <% end %>
 
           <% composer.left do %>
-            <%= render FlatPack::Button::Component.new(
-              text: "+",
-              style: :secondary,
-              size: :md,
-              type: "button",
-              aria: { label: "Add image" },
-              data: { action: "recording-studio-attachable--attachment-image-picker#openPicker" }
-            ) %>
+            <details class="relative">
+              <summary class="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full border border-(--surface-border-color) bg-(--surface-background-color) text-base font-medium text-(--surface-content-color) shadow-sm transition hover:bg-(--surface-muted-background-color) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden" aria-label="Add image">
+                +
+              </summary>
+
+              <div class="absolute bottom-full left-0 z-10 mb-2 w-56 rounded-xl border border-(--surface-border-color) bg-(--surface-background-color) p-2 shadow-lg">
+                <div class="space-y-1">
+                  <button
+                    type="button"
+                    class="flex w-full flex-col rounded-lg px-3 py-2 text-left transition hover:bg-(--surface-muted-background-color)"
+                    data-action="recording-studio-attachable--attachment-image-picker#openSinglePicker">
+                    <span class="text-sm font-medium text-(--surface-content-color)">Single select</span>
+                    <span class="text-xs text-(--surface-muted-content-color)">Attach one image immediately.</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="flex w-full flex-col rounded-lg px-3 py-2 text-left transition hover:bg-(--surface-muted-background-color)"
+                    data-action="recording-studio-attachable--attachment-image-picker#openMultiplePicker">
+                    <span class="text-sm font-medium text-(--surface-content-color)">Multiple select</span>
+                    <span class="text-xs text-(--surface-muted-content-color)">Stage several images, then add them together.</span>
+                  </button>
+                </div>
+              </div>
+            </details>
           <% end %>
 
           <% composer.center do %>
@@ -121,7 +139,7 @@
                     input_id: "#{chat_modal_id}-search",
                     name: :picker_search,
                     value: nil,
-                    placeholder: "Search images",
+                    placeholder: "Search",
                     max_width: :lg,
                     aria: { label: "Search chat images" },
                     data: {
@@ -141,7 +159,37 @@
 
               <p class="hidden text-sm text-(--surface-muted-content-color)" data-recording-studio-attachable--attachment-image-picker-target="status"></p>
 
-              <div class="min-h-0 flex-1 overflow-y-auto pr-1" data-recording-studio-attachable--attachment-image-picker-target="scrollContainer">
+              <p class="text-sm text-(--surface-muted-content-color)" data-recording-studio-attachable--attachment-image-picker-target="modeSummary">
+                Choose one image to attach it immediately.
+              </p>
+
+              <div class="hidden rounded-xl border border-(--surface-border-color) bg-(--surface-muted-background-color) px-4 py-3" data-recording-studio-attachable--attachment-image-picker-target="selectionActions">
+                <div class="flex items-center justify-between gap-3">
+                  <p class="text-sm text-(--surface-content-color)" data-recording-studio-attachable--attachment-image-picker-target="selectionCount">Select one or more images</p>
+
+                  <div class="flex items-center gap-2">
+                    <%= render FlatPack::Button::Component.new(
+                      text: "Clear",
+                      style: :secondary,
+                      size: :sm,
+                      type: "button",
+                      data: { action: "recording-studio-attachable--attachment-image-picker#clearSelection" }
+                    ) %>
+                    <%= render FlatPack::Button::Component.new(
+                      text: "Add selected",
+                      style: :primary,
+                      size: :sm,
+                      type: "button",
+                      data: {
+                        action: "recording-studio-attachable--attachment-image-picker#confirmSelection",
+                        recording_studio_attachable__attachment_image_picker_target: "confirmButton"
+                      }
+                    ) %>
+                  </div>
+                </div>
+              </div>
+
+              <div class="min-h-0 flex-1 overflow-y-auto p-1" data-recording-studio-attachable--attachment-image-picker-target="scrollContainer">
                 <div class="grid grid-cols-2 gap-4 lg:grid-cols-4" data-recording-studio-attachable--attachment-image-picker-target="gallery"></div>
 
                 <div class="hidden rounded-lg border border-dashed border-(--surface-border-color) px-4 py-8 text-center text-sm text-(--surface-muted-content-color)" data-recording-studio-attachable--attachment-image-picker-target="emptyState">

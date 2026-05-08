@@ -16,22 +16,28 @@ require_relative "dummy/app/controllers/chat_demo_controller"
 
 class ChatDemoControllerTest < ActionController::TestCase
   class FakeAttachmentCollection
-    attr_reader :created_attachment_recordings
+    attr_reader :built_attachment_recordings
 
     def initialize
-      @created_attachment_recordings = []
+      @built_attachment_recordings = []
     end
 
-    def create!(attachment_recording:)
-      @created_attachment_recordings << attachment_recording
+    def build(attachment_recording:)
+      @built_attachment_recordings << attachment_recording
     end
   end
 
   class FakeSentMessage
     attr_reader :chat_message_attachments
+    attr_accessor :saved
 
     def initialize
       @chat_message_attachments = FakeAttachmentCollection.new
+      @saved = false
+    end
+
+    def save!
+      @saved = true
     end
   end
 
@@ -43,9 +49,9 @@ class ChatDemoControllerTest < ActionController::TestCase
       @events = events
     end
 
-    def create!(attributes)
+    def new(attributes)
       @created_attributes = attributes
-      @events << :create_sent_message
+      @events << :build_sent_message
       @sent_message
     end
   end
@@ -110,7 +116,7 @@ class ChatDemoControllerTest < ActionController::TestCase
     assert_equal [draft_message, "This seeded chat thread appears in the recording tree."], captured
   end
 
-  def test_send_draft_message_replaces_draft_with_sent_snapshot_after_destroying_draft
+  def test_send_draft_message_builds_attachment_only_sent_snapshot_before_saving
     events = []
     sent_message = FakeSentMessage.new
     chat_messages = FakeChatMessages.new(sent_message, events)
@@ -147,8 +153,9 @@ class ChatDemoControllerTest < ActionController::TestCase
       chat_messages.created_attributes
     )
     assert_instance_of Time, chat_messages.created_attributes[:sent_at]
-    assert_equal %i[destroy_draft create_sent_message], events
-    assert_equal [attachment_a, attachment_b], sent_message.chat_message_attachments.created_attachment_recordings
+    assert_equal %i[destroy_draft build_sent_message], events
+    assert_equal [attachment_a, attachment_b], sent_message.chat_message_attachments.built_attachment_recordings
+    assert sent_message.saved
     assert_same sent_message, recorded
   end
 end

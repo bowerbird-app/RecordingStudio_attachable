@@ -129,6 +129,40 @@ When browser-side image preprocessing is enabled, the gem's built-in direct-uplo
 
 For delivery, the engine uses a stable set of named image variants: `square_small`, `square_med`, `square_large`, `small`, `med`, `large`, and `xlarge`. Host apps can override the transformation sizes through `config.image_variants` while keeping those public names stable across engine views and integrations.
 
+### Attachment image picker
+
+The gem ships with a reusable image picker for browser-driven surfaces such as inline editors, chat composers, and custom attachment chips. The picker endpoint is `recording_attachment_picker_path(recording)` and always returns image attachments plus pagination metadata for the chosen parent recording.
+
+In the browser, the bundled `recording-studio-attachable--attachment-image-picker` Stimulus controller loads that JSON into a FlatPack modal, supports search and direct uploads, and dispatches a `selected` event each time the user chooses an attachment. Consumers receive the selected attachment in `event.detail.attachment`.
+
+```erb
+<div
+  data-controller="chat-demo recording-studio-attachable--attachment-image-picker"
+  data-action="recording-studio-attachable--attachment-image-picker:selected->chat-demo#attachmentSelected"
+  data-recording-studio-attachable--attachment-image-picker-picker-url-value="<%= recording_studio_attachable.recording_attachment_picker_path(@recording) %>"
+  data-recording-studio-attachable--attachment-image-picker-upload-url-value="<%= recording_studio_attachable.recording_attachments_path(@recording) %>"
+  data-recording-studio-attachable--attachment-image-picker-direct-upload-url-value="<%= main_app.rails_direct_uploads_path %>">
+</div>
+```
+
+```js
+async attachmentSelected(event) {
+  const { attachment } = event.detail || {}
+  if (!attachment) return
+
+  await this.persistAttachment(attachment.id)
+  this.renderAttachmentChip({
+    id: attachment.id,
+    name: attachment.name,
+    thumbnailUrl: attachment.thumbnail_url,
+    fileUrl: attachment.insert_url,
+    showPath: attachment.show_path
+  })
+}
+```
+
+The selection payload includes `id`, `name`, `thumbnail_url`, `insert_url`, `variant_urls`, `alt`, and `show_path`. If you are integrating with the FlatPack rich-text editor, the same controller can also listen for the toolbar event and insert the chosen image directly into Tiptap. For non-editor flows, prefer the event-driven integration so your app stays responsible for what happens after selection.
+
 ### Upload provider addons
 
 Addon gems can register extra upload sources for the upload page without replacing the core direct-upload flow. The button registration API is the discovery layer, and providers can now choose one of three launch strategies:

@@ -1,9 +1,8 @@
 <div class="grid grid-cols-2 items-stretch gap-6 lg:grid-cols-5">
   <% attachments.each do |attachment_recording| %>
     <% attachment = attachment_recording.recordable %>
-    <% download_path = authorized_attachment_file_path(attachment_recording) %>
     <div>
-      <%= link_to download_path, class: "block rounded-xl focus:outline-none focus:ring-2 focus:ring-(--brand-color)", data: { turbo_frame: "_top" } do %>
+      <%= link_to attachment_path(attachment_recording), class: "block rounded-xl focus:outline-none focus:ring-2 focus:ring-(--brand-color)", data: { turbo_frame: "_top" } do %>
         <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
           <% card.media padding: :none do %>
             <% preview_path = authorized_attachment_preview_path(attachment_recording, :med) %>

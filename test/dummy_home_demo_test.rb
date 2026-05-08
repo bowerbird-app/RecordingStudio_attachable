@@ -194,10 +194,15 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes view, 'class="w-full lg:w-auto"'
     assert_includes view, "FlatPack::Search::Component.new("
     assert_includes view, 'placeholder: "Search"'
-    assert_includes view, 'class="min-h-0 flex-1 overflow-y-auto pr-1"'
+    assert_includes view, 'class="min-h-0 flex-1 overflow-y-auto p-1"'
     assert_includes view, 'data-recording-studio-attachable--attachment-image-picker-target="gallery"'
     assert_includes view, 'data-recording-studio-attachable--attachment-image-picker-target="fileInput"'
+    assert_includes view, 'data-recording-studio-attachable--attachment-image-picker-target="selectionActions"'
+    assert_includes view, 'data-recording-studio-attachable--attachment-image-picker-target="selectionCount"'
+    assert_includes view, "recording-studio-attachable--attachment-image-picker#confirmSelection"
+    assert_includes view, "recording-studio-attachable--attachment-image-picker#clearSelection"
     assert_includes view, "data-recording-studio-attachable--attachment-image-picker-max-file-size-value="
+    assert_not_includes view, "data-recording-studio-attachable--attachment-image-picker-multiple-selection-value=\"true\""
     assert_not_includes view, 'class="-mb-4 flex h-[calc(100%+1rem)] min-h-0 flex-col gap-4"'
     assert_not_includes view, 'class="max-h-96 overflow-y-auto pr-1"'
     assert_not_includes view, 'text: "Close"'
@@ -205,16 +210,29 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes picker_controller, "application.getControllerForElementAndIdentifier"
     assert_includes picker_controller, "openPickerFromToolbar(event)"
     assert_includes picker_controller, "async loadAttachments({ append = false, reset = false } = {}) {"
-    assert_includes picker_controller, "createAttachmentFromBlob(file, blob)"
+    assert_includes picker_controller, "openSinglePicker(event) {"
+    assert_includes picker_controller, "openMultiplePicker(event) {"
+    assert_includes picker_controller, "multipleSelection: Boolean"
+    assert_includes picker_controller, "this.selectedAttachments = new Map()"
+    assert_includes picker_controller, "this.syncFileInputMode()"
+    assert_includes picker_controller, "confirmSelection() {"
+    assert_includes picker_controller, "clearSelection() {"
+    assert_includes picker_controller, "this.setMultipleSelectionMode(false)"
+    assert_includes picker_controller, "async directUploadFiles(files) {"
+    assert_includes picker_controller, "directUploadBlob(file) {"
+    assert_includes picker_controller, "async createAttachments(attachments) {"
     assert_includes picker_controller, 'import { preprocessImageFile } from "controllers/recording_studio_attachable/image_preprocessing"'
     assert_includes picker_controller, "const processed = await preprocessImageFile(file, this.imageProcessingOptions())"
     assert_includes picker_controller, "maxBytes: this.maxFileSizeValue"
-    assert_includes picker_controller, "new DirectUpload(uploadFile, this.directUploadUrlValue)"
+    assert_includes picker_controller, "const selectedFiles = this.multipleSelectionEnabled() ? files : [files[0]]"
+    assert_includes picker_controller, "const upload = new DirectUpload(file, this.directUploadUrlValue)"
     assert_includes picker_controller, 'button.setAttribute("aria-label", attachment.name || "Untitled image")'
+    assert_includes picker_controller, 'button.setAttribute("aria-pressed", this.attachmentSelectedForMultiMode(attachment.id) ? "true" : "false")'
     assert_includes picker_controller, "attachmentId: attachment.id"
     assert_includes picker_controller, "showPath: attachment.show_path"
     assert_includes picker_controller, 'display: "small"'
     assert_includes picker_controller, 'align: "left"'
+    assert_includes picker_controller, "indicator.dataset.selectionIndicator = \"true\""
     assert_not_includes picker_controller, 'const body = document.createElement("div")'
     assert_includes addon, 'registerTiptapAddon("attachment_image"'
     assert_includes addon, "const ManagedAttachmentImage = Image.extend({"
@@ -223,6 +241,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes addon, "removeSelectedAttachmentImage"
     assert_includes addon, 'label: "Remove image"'
     assert_includes addon, 'label: "Alt"'
+    assert_includes addon, 'container.dataset.controller = "flat-pack--tooltip"'
+    assert_includes addon, "Edit alt text"
     assert_includes addon, 'name: "attachmentImage"'
     assert_includes addon, "recording-studio-inline-picker"
     assert_includes html_preview_addon, 'registerTiptapAddon("html_preview"'
@@ -267,8 +287,9 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes controller, "draft_message.class.transaction do"
     assert_includes controller, "attachment_recordings = draft_message.attachment_recordings.to_a"
     assert_includes controller, "destroy_message!(draft_message)"
-    assert_includes controller, "sent_message = draft_message.chat_thread.chat_messages.create!("
-    assert_includes controller, "sent_message.chat_message_attachments.create!(attachment_recording: attachment_recording)"
+    assert_includes controller, "sent_message = draft_message.chat_thread.chat_messages.new("
+    assert_includes controller, "sent_message.chat_message_attachments.build(attachment_recording: attachment_recording)"
+    assert_includes controller, "sent_message.save!"
     assert_includes controller, "ensure_message_recording!(sent_message)"
     assert_includes controller, "RecordingStudio::Recording.unscoped.find_or_create_by!(recordable: message)"
     assert_includes controller, 'redirect_to chat_demo_path, alert: "Add a message or choose at least one image."'
@@ -299,10 +320,24 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes panel_partial, "recording-studio-attachable--attachment-image-picker:selected->chat-demo#attachmentSelected"
     assert_includes panel_partial, 'data-chat-demo-attach-url-value="<%= chat_demo_message_attachments_path(@draft_message) %>"'
     assert_includes panel_partial, 'data-chat-demo-detach-url-template-value="<%= chat_demo_message_attachment_path(@draft_message, "__ATTACHMENT_ID__") %>"'
+    assert_includes panel_partial, 'data-recording-studio-attachable--attachment-image-picker-multiple-selection-value="false"'
     assert_includes panel_partial, 'name="chat_demo[draft_message_id]"'
     assert_includes panel_partial, "value: @draft_message.body"
-    assert_includes panel_partial, "recording-studio-attachable--attachment-image-picker#openPicker"
+    assert_includes panel_partial, "Single select"
+    assert_includes panel_partial, "Multiple select"
+    assert_includes panel_partial, "Attach one image immediately."
+    assert_includes panel_partial, "Stage several images, then add them together."
+    assert_includes panel_partial, "recording-studio-attachable--attachment-image-picker#openSinglePicker"
+    assert_includes panel_partial, "recording-studio-attachable--attachment-image-picker#openMultiplePicker"
     assert_includes panel_partial, 'title: "Add images"'
+    assert_includes panel_partial, 'data-recording-studio-attachable--attachment-image-picker-target="modeSummary"'
+    assert_includes panel_partial, 'class="min-h-0 flex-1 overflow-y-auto p-1"'
+    assert_includes panel_partial, 'data-recording-studio-attachable--attachment-image-picker-target="selectionActions"'
+    assert_includes panel_partial, 'data-recording-studio-attachable--attachment-image-picker-target="selectionCount"'
+    assert_includes picker_controller, "`${count} selected`"
+    assert_includes picker_controller, '"Select one or more"'
+    assert_includes panel_partial, 'text: "Add selected"'
+    assert_includes panel_partial, 'text: "Clear"'
     assert_not_includes panel_partial, "flex min-h-full flex-col justify-end gap-4"
     assert_not_includes panel_partial, 'class: "min-h-0"'
     assert_not_includes panel_partial, 'class: "shrink-0 border-t border-(--surface-border-color) p-4"'
@@ -317,6 +352,9 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes controller, "def chat_threads"
     assert_includes picker_controller, "openPicker(event) {"
     assert_includes picker_controller, 'this.dispatch("selected", { detail: { attachment } })'
+    assert_includes picker_controller, "if (this.multipleSelectionEnabled()) {"
+    assert_includes picker_controller, "this.selectedAttachments.forEach((attachment) => this.dispatchSelection(attachment))"
+    assert_includes picker_controller, 'event.currentTarget.closest("details")?.removeAttribute("open")'
     assert_includes picker_controller, "this.openModalAndLoad()"
     assert_includes chat_controller, 'static targets = ["attachments", "emptyState"]'
     assert_includes chat_controller, "static values = {"
@@ -378,7 +416,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes grid_partial, 'data-controller="recording-studio-attachable--image-fallback"'
     assert_includes grid_partial, "preview_path = authorized_attachment_preview_path(attachment_recording, :med)"
     assert_includes grid_partial, "image_tag preview_path"
-    assert_includes grid_partial, "authorized_attachment_file_path(attachment_recording)"
+    assert_includes grid_partial, "attachment_path(attachment_recording)"
+    assert_not_includes grid_partial, "authorized_attachment_file_path(attachment_recording)"
     assert_includes list_partial, 'number_to_human_size(attachment.byte_size, strip_insignificant_zeros: true).downcase.delete(" ")'
     assert_includes list_partial, "<%= display_content_type %> <%= display_size %>"
     assert_includes list_partial, 'data: { turbo_frame: "_top" }'

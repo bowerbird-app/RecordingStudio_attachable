@@ -9,6 +9,7 @@ Rails.application.routes.draw do
   get "config", to: "docs#configuration", as: :configuration_docs
   get "methods", to: "docs#methods_reference", as: :methods_docs
   get "plugins", to: "docs#plugins", as: :plugins_docs
+  get "picker", to: "docs#picker", as: :picker_docs
   get "resizing", to: "docs#resizing", as: :resizing_docs
   get "gem_views", to: "docs#gem_views", as: :gem_views_docs
   get "recordables", to: "docs#recordables", as: :recordables_docs

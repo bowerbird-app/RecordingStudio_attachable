@@ -9,6 +9,8 @@ class DocsController < ApplicationController
 
   def plugins; end
 
+  def picker; end
+
   def resizing; end
 
   def gem_views; end
@@ -282,6 +284,97 @@ class DocsController < ApplicationController
       "name and description: optional attachment metadata overrides.",
       "metadata: extra provider details such as external ids or URLs.",
       "source and identify: trusted direct-service options; identify defaults to true, and the HTTP endpoint stamps source from provider_key and ignores storage-service overrides."
+    ]
+
+    @picker_summary = [
+      "The picker is an image-only library surface backed by recording_attachment_picker_path(recording). The endpoint filters to kind: :images and returns JSON cards plus pagination.",
+      "The bundled Stimulus controller loads that JSON into a FlatPack modal, supports search, infinite scroll, direct uploads, and single or multiple selection.",
+      "Every selection dispatches a recording-studio-attachable--attachment-image-picker:selected event with event.detail.attachment so host-app code can persist or render the chosen attachment.",
+      "The same payload shape is returned after new uploads, so browsing existing images and uploading new images share one client contract."
+    ]
+
+    @picker_payload_fields = [
+      "id: the attachment recording id to persist on host-app records or form payloads.",
+      "name, description, content_type, byte_size, attachment_kind: display metadata for cards, previews, and audit UI.",
+      "thumbnail_url: square preview for gallery cards and compact chip UIs.",
+      "insert_url and variant_urls: original and size-specific URLs for inline image rendering.",
+      "alt and show_path: host-app accessible text and a stable detail link for the attachment."
+    ]
+
+    @picker_usage_examples = [
+      {
+        title: "Expose the picker endpoint for a parent recording",
+        subtitle: "Controller setup for a host-app screen",
+        language: :ruby,
+        code: <<~RUBY
+          class PagesController < ApplicationController
+            def edit
+              @page = Page.find(params[:id])
+              @page_recording = RecordingStudio::Recording.unscoped.find_by!(recordable: @page)
+
+              @page_attachment_picker_path =
+                recording_studio_attachable.recording_attachment_picker_path(@page_recording)
+              @page_attachment_create_path =
+                recording_studio_attachable.recording_attachments_path(@page_recording)
+            end
+          end
+        RUBY
+      },
+      {
+        title: "Listen for selected attachments in app UI",
+        subtitle: "Event-driven integration for chat, chips, or custom forms",
+        language: :erb,
+        code: <<~ERB
+          <div
+            data-controller="chat-demo recording-studio-attachable--attachment-image-picker"
+            data-action="recording-studio-attachable--attachment-image-picker:selected->chat-demo#attachmentSelected"
+            data-recording-studio-attachable--attachment-image-picker-picker-url-value="<%= @chat_attachment_picker_path %>"
+            data-recording-studio-attachable--attachment-image-picker-upload-url-value="<%= @chat_attachment_create_path %>"
+            data-recording-studio-attachable--attachment-image-picker-direct-upload-url-value="<%= main_app.rails_direct_uploads_path %>">
+          </div>
+        ERB
+      },
+      {
+        title: "Read the returned attachment payload",
+        subtitle: "Stimulus consumer contract",
+        language: :js,
+        code: <<~JAVASCRIPT
+          async attachmentSelected(event) {
+            const { attachment } = event.detail || {}
+            if (!attachment) return
+
+            await this.persistAttachment(attachment.id)
+            this.renderAttachmentChip({
+              id: attachment.id,
+              name: attachment.name,
+              thumbnailUrl: attachment.thumbnail_url,
+              fileUrl: attachment.insert_url,
+              showPath: attachment.show_path
+            })
+          }
+        JAVASCRIPT
+      },
+      {
+        title: "Reuse the picker from the inline editor toolbar",
+        subtitle: "The bundled controller can also insert selected images into Tiptap",
+        language: :erb,
+        code: <<~ERB
+          <div
+            data-controller="recording-studio-attachable--attachment-image-picker"
+            data-action="recording-studio-inline-picker->recording-studio-attachable--attachment-image-picker#openPickerFromToolbar"
+            data-recording-studio-attachable--attachment-image-picker-picker-url-value="<%= @page_attachment_picker_path %>"
+            data-recording-studio-attachable--attachment-image-picker-upload-url-value="<%= @page_attachment_create_path %>"
+            data-recording-studio-attachable--attachment-image-picker-modal-id-value="page-image-picker-modal">
+          </div>
+        ERB
+      }
+    ]
+
+    @picker_integration_notes = [
+      "Use the event contract when your app owns what happens after selection, such as attaching images to a draft message, form field, or custom chip list.",
+      "Use the toolbar hook when you want the bundled controller to insert the chosen image into the FlatPack rich-text editor automatically.",
+      "Pass scope: :subtree when a screen should browse images owned anywhere below a root recording, such as a workspace-level chat demo.",
+      "Keep the picker and your host-app action separate: the picker chooses or uploads an attachment, while your app decides whether to insert, persist, preview, or send it."
     ]
 
     @resizing_config_example = <<~RUBY

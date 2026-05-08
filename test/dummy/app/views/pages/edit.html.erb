@@ -131,7 +131,33 @@
 
                 <p class="hidden text-sm text-(--surface-muted-content-color)" data-recording-studio-attachable--attachment-image-picker-target="status"></p>
 
-                <div class="min-h-0 flex-1 overflow-y-auto pr-1" data-recording-studio-attachable--attachment-image-picker-target="scrollContainer">
+                <div class="hidden rounded-xl border border-(--surface-border-color) bg-(--surface-muted-background-color) px-4 py-3" data-recording-studio-attachable--attachment-image-picker-target="selectionActions">
+                  <div class="flex items-center justify-between gap-3">
+                    <p class="text-sm text-(--surface-content-color)" data-recording-studio-attachable--attachment-image-picker-target="selectionCount">Select one or more images</p>
+
+                    <div class="flex items-center gap-2">
+                    <%= render FlatPack::Button::Component.new(
+                      text: "Clear",
+                      style: :secondary,
+                      size: :sm,
+                      type: "button",
+                      data: { action: "recording-studio-attachable--attachment-image-picker#clearSelection" }
+                    ) %>
+                    <%= render FlatPack::Button::Component.new(
+                      text: "Add selected",
+                      style: :primary,
+                      size: :sm,
+                      type: "button",
+                      data: {
+                        action: "recording-studio-attachable--attachment-image-picker#confirmSelection",
+                        recording_studio_attachable__attachment_image_picker_target: "confirmButton"
+                      }
+                    ) %>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="min-h-0 flex-1 overflow-y-auto p-1" data-recording-studio-attachable--attachment-image-picker-target="scrollContainer">
                   <div class="grid grid-cols-2 gap-4 lg:grid-cols-4" data-recording-studio-attachable--attachment-image-picker-target="gallery"></div>
 
                   <div class="hidden rounded-lg border border-dashed border-(--surface-border-color) px-4 py-8 text-center text-sm text-(--surface-muted-content-color)" data-recording-studio-attachable--attachment-image-picker-target="emptyState">

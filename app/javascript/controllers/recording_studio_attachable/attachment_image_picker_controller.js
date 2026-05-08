@@ -4,13 +4,26 @@ import { application } from "controllers/application"
 import { preprocessImageFile } from "controllers/recording_studio_attachable/image_preprocessing"
 
 export default class extends Controller {
-  static targets = ["editorHost", "searchInput", "fileInput", "status", "scrollContainer", "gallery", "emptyState"]
+  static targets = [
+    "editorHost",
+    "searchInput",
+    "fileInput",
+    "status",
+    "modeSummary",
+    "scrollContainer",
+    "gallery",
+    "emptyState",
+    "selectionActions",
+    "selectionCount",
+    "confirmButton",
+  ]
 
   static values = {
     pickerUrl: String,
     uploadUrl: String,
     directUploadUrl: String,
     modalId: String,
+    multipleSelection: Boolean,
     maxFileSize: Number,
     imageProcessingEnabled: Boolean,
     imageProcessingMaxWidth: Number,
@@ -26,7 +39,11 @@ export default class extends Controller {
     this.isLoading = false
     this.searchTimeoutId = null
     this.activeEditor = null
+    this.selectedAttachments = new Map()
     this.boundHandleScroll = this.handleScroll.bind(this)
+
+    this.syncFileInputMode()
+    this.updateSelectionUi()
 
     if (this.hasScrollContainerTarget) {
       this.scrollContainerTarget.addEventListener("scroll", this.boundHandleScroll)
@@ -51,14 +68,38 @@ export default class extends Controller {
     this.openModalAndLoad()
   }
 
+  openSinglePicker(event) {
+    if (event) {
+      event.preventDefault()
+      this.closeModeMenu(event)
+    }
+
+    this.activeEditor = null
+    this.setMultipleSelectionMode(false)
+    this.openModalAndLoad()
+  }
+
+  openMultiplePicker(event) {
+    if (event) {
+      event.preventDefault()
+      this.closeModeMenu(event)
+    }
+
+    this.activeEditor = null
+    this.setMultipleSelectionMode(true)
+    this.openModalAndLoad()
+  }
+
   openPickerFromToolbar(event) {
     event.preventDefault()
 
     this.activeEditor = event.detail?.editor || this.editorController()?.editor || null
+    this.setMultipleSelectionMode(false)
     this.openModalAndLoad()
   }
 
   browseUpload() {
+    this.syncFileInputMode()
     this.fileInputTarget.click()
   }
 
@@ -74,10 +115,11 @@ export default class extends Controller {
   }
 
   uploadSelected() {
-    const [file] = this.fileInputTarget.files || []
-    if (!file) return
+    const files = Array.from(this.fileInputTarget.files || [])
+    if (files.length === 0) return
 
-    this.directUpload(file)
+    const selectedFiles = this.multipleSelectionEnabled() ? files : [files[0]]
+    this.directUploadFiles(selectedFiles)
   }
 
   handleScroll() {
@@ -133,8 +175,38 @@ export default class extends Controller {
   }
 
   selectAttachment(attachment) {
+    if (this.multipleSelectionEnabled()) {
+      this.toggleAttachmentSelection(attachment)
+      return
+    }
+
+    this.dispatchSelection(attachment)
+    this.modalController()?.close?.()
+  }
+
+  confirmSelection() {
+    if (!this.multipleSelectionEnabled() || this.selectedAttachments.size === 0) return
+
+    this.selectedAttachments.forEach((attachment) => this.dispatchSelection(attachment))
+    this.clearSelection()
+    this.modalController()?.close?.()
+  }
+
+  clearSelection() {
+    if (this.selectedAttachments.size === 0) return
+
+    this.selectedAttachments.clear()
+    this.updateSelectionUi()
+    this.refreshGallerySelection()
+  }
+
+  dispatchSelection(attachment) {
     this.dispatch("selected", { detail: { attachment } })
 
+    this.insertAttachment(attachment)
+  }
+
+  insertAttachment(attachment) {
     const editor = this.activeEditor || this.editorController()?.editor
     if (editor) {
       const variantUrls = attachment.variant_urls || {}
@@ -156,13 +228,12 @@ export default class extends Controller {
         align: "left",
       }).run()
     }
-
-    this.modalController()?.close?.()
   }
 
   openModalAndLoad() {
     this.modalController()?.open?.()
     this.currentPage = 1
+    this.clearSelection()
     this.loadAttachments({ reset: true })
   }
 
@@ -184,34 +255,58 @@ export default class extends Controller {
     return application.getControllerForElementAndIdentifier(fieldWrapper, "flat-pack--text-area")
   }
 
-  async directUpload(file) {
-    const processed = await preprocessImageFile(file, this.imageProcessingOptions())
-    const uploadFile = processed.file
-    this.showStatus(processed.transformed ? `Optimizing complete. Uploading ${uploadFile.name}…` : `Uploading ${uploadFile.name}…`)
+  async directUploadFiles(files) {
+    const attachments = []
 
-    const upload = new DirectUpload(uploadFile, this.directUploadUrlValue)
+    try {
+      for (const [index, file] of files.entries()) {
+        const processed = await preprocessImageFile(file, this.imageProcessingOptions())
+        const uploadFile = processed.file
+        const statusPrefix = files.length > 1 ? `Uploading ${index + 1} of ${files.length}` : "Uploading"
+        this.showStatus(
+          processed.transformed ? `Optimizing complete. ${statusPrefix}: ${uploadFile.name}…` : `${statusPrefix}: ${uploadFile.name}…`
+        )
 
-    upload.create(async (error, blob) => {
-      if (error) {
-        this.showStatus(error.message)
-        return
+        const blob = await this.directUploadBlob(uploadFile)
+        attachments.push({
+          signed_blob_id: blob.signed_id,
+          name: this.defaultAttachmentName(uploadFile)
+        })
       }
 
-      try {
-        const attachment = await this.createAttachmentFromBlob(uploadFile, blob)
-        this.selectAttachment(attachment)
-        this.showStatus(`Added ${attachment.name}`)
-        this.currentPage = 1
-        this.loadAttachments({ reset: true })
-      } catch (uploadError) {
-        this.showStatus(uploadError.message || "Unable to add image")
-      } finally {
-        this.fileInputTarget.value = ""
-      }
+      const createdAttachments = await this.createAttachments(attachments)
+
+      createdAttachments.forEach((attachment) => this.dispatchSelection(attachment))
+
+      const noun = createdAttachments.length === 1 ? "image" : "images"
+      this.showStatus(`Added ${createdAttachments.length} ${noun}`)
+      this.currentPage = 1
+      this.clearSelection()
+      this.loadAttachments({ reset: true })
+      this.modalController()?.close?.()
+    } catch (uploadError) {
+      this.showStatus(uploadError.message || "Unable to add image")
+    } finally {
+      this.fileInputTarget.value = ""
+    }
+  }
+
+  directUploadBlob(file) {
+    return new Promise((resolve, reject) => {
+      const upload = new DirectUpload(file, this.directUploadUrlValue)
+
+      upload.create((error, blob) => {
+        if (error) {
+          reject(error)
+          return
+        }
+
+        resolve(blob)
+      })
     })
   }
 
-  async createAttachmentFromBlob(file, blob) {
+  async createAttachments(attachments) {
     const response = await fetch(this.uploadUrlValue, {
       method: "POST",
       credentials: "same-origin",
@@ -221,12 +316,7 @@ export default class extends Controller {
         "X-CSRF-Token": this.csrfToken()
       },
       body: JSON.stringify({
-        attachments: [
-          {
-            signed_blob_id: blob.signed_id,
-            name: this.defaultAttachmentName(file)
-          }
-        ]
+        attachments
       })
     })
 
@@ -235,12 +325,12 @@ export default class extends Controller {
       throw new Error(payload.error || "Unable to add image")
     }
 
-    const [attachment] = payload.attachments || []
-    if (!attachment) {
+    const createdAttachments = payload.attachments || []
+    if (createdAttachments.length === 0) {
       throw new Error("Upload completed without an attachment payload")
     }
 
-    return attachment
+    return createdAttachments
   }
 
   pickerRequestUrl() {
@@ -267,8 +357,10 @@ export default class extends Controller {
     attachments.forEach((attachment) => {
       const button = document.createElement("button")
       button.type = "button"
-      button.className = "group flex h-full flex-col overflow-hidden rounded-xl border border-(--surface-border-color) bg-(--surface-background-color) text-left shadow-sm transition hover:border-(--surface-content-color) hover:shadow-md focus:outline-none focus:ring-2 focus:ring-ring"
+      button.className = this.galleryButtonClass(this.attachmentSelectedForMultiMode(attachment.id))
       button.setAttribute("aria-label", attachment.name || "Untitled image")
+      button.setAttribute("aria-pressed", this.attachmentSelectedForMultiMode(attachment.id) ? "true" : "false")
+      button.dataset.attachmentId = attachment.id
       button.addEventListener("click", () => this.selectAttachment(attachment))
 
       const media = document.createElement("div")
@@ -280,6 +372,15 @@ export default class extends Controller {
         image.alt = attachment.alt || attachment.name || "Attachment image"
         image.className = "h-full w-full object-cover transition group-hover:scale-[1.02]"
         media.appendChild(image)
+      }
+
+      if (this.multipleSelectionEnabled()) {
+        const indicator = document.createElement("span")
+        indicator.className = "absolute right-2 top-2 inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-white/70 bg-black/70 px-2 text-xs font-semibold text-white"
+        indicator.textContent = this.selectedAttachmentIndex(attachment.id)
+        indicator.classList.toggle("hidden", !this.attachmentSelectedForMultiMode(attachment.id))
+        indicator.dataset.selectionIndicator = "true"
+        media.appendChild(indicator)
       }
 
       button.appendChild(media)
@@ -340,5 +441,106 @@ export default class extends Controller {
       maxBytes: this.maxFileSizeValue,
       quality: this.imageProcessingQualityValue
     }
+  }
+
+  multipleSelectionEnabled() {
+    return this.multipleSelectionValue
+  }
+
+  setMultipleSelectionMode(enabled) {
+    this.multipleSelectionValue = enabled
+    this.clearSelection()
+    this.syncFileInputMode()
+    this.updateSelectionUi()
+  }
+
+  syncFileInputMode() {
+    if (!this.hasFileInputTarget) return
+
+    this.fileInputTarget.multiple = this.multipleSelectionEnabled()
+  }
+
+  toggleAttachmentSelection(attachment) {
+    if (this.selectedAttachments.has(attachment.id)) {
+      this.selectedAttachments.delete(attachment.id)
+    } else {
+      this.selectedAttachments.set(attachment.id, attachment)
+    }
+
+    this.updateSelectionUi()
+    this.refreshGallerySelection()
+  }
+
+  updateSelectionUi() {
+    this.updateModeSummary()
+
+    if (!this.multipleSelectionEnabled()) {
+      if (this.hasSelectionActionsTarget) {
+        this.selectionActionsTarget.classList.add("hidden")
+      }
+
+      return
+    }
+
+    if (this.hasSelectionActionsTarget) {
+      this.selectionActionsTarget.classList.remove("hidden")
+    }
+
+    if (this.hasSelectionCountTarget) {
+      const count = this.selectedAttachments.size
+      this.selectionCountTarget.textContent = count > 0 ? `${count} selected` : "Select one or more"
+    }
+
+    if (this.hasConfirmButtonTarget) {
+      this.confirmButtonTarget.disabled = this.selectedAttachments.size === 0
+    }
+  }
+
+  refreshGallerySelection() {
+    if (!this.hasGalleryTarget || !this.multipleSelectionEnabled()) return
+
+    this.galleryTarget.querySelectorAll("button[data-attachment-id]").forEach((button) => {
+      const selected = this.attachmentSelectedForMultiMode(button.dataset.attachmentId)
+      button.className = this.galleryButtonClass(selected)
+      button.setAttribute("aria-pressed", selected ? "true" : "false")
+
+      const indicator = button.querySelector("[data-selection-indicator]")
+      if (indicator) {
+        indicator.classList.toggle("hidden", !selected)
+        indicator.textContent = this.selectedAttachmentIndex(button.dataset.attachmentId)
+      }
+    })
+  }
+
+  attachmentSelectedForMultiMode(id) {
+    return this.selectedAttachments.has(String(id)) || this.selectedAttachments.has(id)
+  }
+
+  selectedAttachmentIndex(id) {
+    const selectedIds = Array.from(this.selectedAttachments.keys()).map((value) => String(value))
+    const index = selectedIds.indexOf(String(id))
+
+    return index >= 0 ? String(index + 1) : ""
+  }
+
+  galleryButtonClass(selected) {
+    const baseClass = "group flex h-full flex-col overflow-hidden rounded-xl border bg-(--surface-background-color) text-left shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+
+    if (selected) {
+      return `${baseClass} border-(--surface-content-color) ring-2 ring-inset ring-ring shadow-md`
+    }
+
+    return `${baseClass} border-(--surface-border-color) hover:shadow-md`
+  }
+
+  updateModeSummary() {
+    if (!this.hasModeSummaryTarget) return
+
+    this.modeSummaryTarget.textContent = ""
+    this.modeSummaryTarget.classList.add("hidden")
+  }
+
+  closeModeMenu(event) {
+    event.currentTarget.closest("details")?.removeAttribute("open")
   }
 }

@@ -145,12 +145,13 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes controller_source, "helper_method :authorized_attachment_file_path"
     assert_includes view_source, "preview_path = authorized_attachment_preview_path(@attachment_recording, :large)"
     assert_includes view_source, "image_tag preview_path"
+    assert_includes view_source, 'text: "Edit"'
+    assert_includes view_source, 'text: "Trash"'
     assert_not_includes view_source, "overflow-hidden rounded-lg border border-[var(--surface-border-color)] bg-[var(--surface-muted-background-color)]"
     assert_not_includes view_source, "FlatPack::Badge::Component"
     assert_not_includes view_source, 'title: "Attachment details"'
     assert_not_includes view_source, 'title: "Revise attachment"'
     assert_not_includes view_source, 'text: "Download"'
-    assert_not_includes view_source, 'text: "Save revision"'
   end
 
   def test_image_fallback_controller_toggles_preview_state
@@ -254,6 +255,8 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes grid_partial_source, 'class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)"'
     assert_includes grid_partial_source, "preview_path = authorized_attachment_preview_path(attachment_recording, :med)"
     assert_includes grid_partial_source, "image_tag preview_path"
+    assert_includes grid_partial_source, "attachment_path(attachment_recording)"
+    assert_not_includes grid_partial_source, "authorized_attachment_file_path(attachment_recording)"
     assert_not_includes grid_partial_source, '<h2 class="text-base font-semibold"><%= attachment.name %></h2>'
     assert_includes list_partial_source, ">Preview<"
     assert_not_includes list_partial_source, ">Kind<"
@@ -300,12 +303,17 @@ class RecordingStudioAttachableTest < Minitest::Test
 
     assert_includes view_source, "preview_path = authorized_attachment_preview_path(@attachment_recording, :large)"
     assert_includes view_source, "image_tag preview_path"
+    assert_includes view_source, 'text: "Edit"'
+    assert_includes view_source, 'text: "Trash"'
+    assert_includes view_source, "destroy_attachment_path(@attachment_recording)"
+    assert_includes view_source, 'title: "Edit attachment"'
+    assert_includes view_source, 'text: "Save revision"'
+    assert_includes view_source, 'file_field_tag "attachment[signed_blob_id]"'
     assert_not_includes view_source, "FlatPack::Badge::Component"
     assert_not_includes view_source, 'controller: "recording-studio-attachable--attachment-revision-upload"'
     assert_not_includes view_source, 'hidden_field_tag "attachment[signed_blob_id]"'
     assert_not_includes view_source, 'file_field_tag "attachment[file]"'
     assert_not_includes view_source, 'text: "Download"'
-    assert_not_includes view_source, 'text: "Save revision"'
     assert_not_includes view_source, "Recording id"
     assert_not_includes view_source, "Parent recording id"
   end

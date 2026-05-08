@@ -10,6 +10,7 @@ class DummyDocsTest < Minitest::Test
     assert_includes routes_source, 'get "config", to: "docs#configuration"'
     assert_includes routes_source, 'get "methods", to: "docs#methods_reference"'
     assert_includes routes_source, 'get "plugins", to: "docs#plugins"'
+    assert_includes routes_source, 'get "picker", to: "docs#picker"'
     assert_includes routes_source, 'get "resizing", to: "docs#resizing"'
     assert_includes routes_source, 'get "gem_views", to: "docs#gem_views"'
     assert_includes routes_source, 'get "recordables", to: "docs#recordables"'
@@ -27,6 +28,8 @@ class DummyDocsTest < Minitest::Test
     assert_includes sidebar_source, "methods_docs_path"
     assert_includes sidebar_source, 'label: "Plugins"'
     assert_includes sidebar_source, "plugins_docs_path"
+    assert_includes sidebar_source, 'label: "Picker"'
+    assert_includes sidebar_source, "picker_docs_path"
     assert_includes sidebar_source, 'label: "Resizing"'
     assert_includes sidebar_source, "resizing_docs_path"
     assert_includes sidebar_source, 'label: "Gem views"'
@@ -37,6 +40,7 @@ class DummyDocsTest < Minitest::Test
     assert_includes sidebar_source, "query_docs_path"
     assert_match(/label: "Config"[\s\S]*icon: :settings/, sidebar_source)
     assert_match(/label: "Plugins"[\s\S]*icon: :box/, sidebar_source)
+    assert_match(/label: "Picker"[\s\S]*icon: :image/, sidebar_source)
     assert_match(/label: "Resizing"[\s\S]*icon: :image/, sidebar_source)
     assert_match(/label: "Gem views"[\s\S]*icon: :file/, sidebar_source)
     assert_match(/label: "Recordables"[\s\S]*icon: :folder/, sidebar_source)
@@ -82,6 +86,25 @@ class DummyDocsTest < Minitest::Test
     assert_includes controller_source, "signed_blob_id: blob.signed_id"
     assert_includes controller_source,
                     "The built-in Google Drive addon in the dummy app demonstrates the same provider registration and import flow"
+  end
+
+  def test_dummy_picker_page_documents_picker_contract_and_examples
+    picker_source = File.read(File.expand_path("dummy/app/views/docs/picker.html.erb", __dir__))
+    controller_source = File.read(File.expand_path("dummy/app/controllers/docs_controller.rb", __dir__))
+
+    assert_includes picker_source, 'title: "Picker"'
+    assert_includes picker_source, 'title: "How it works"'
+    assert_includes picker_source, 'title: "Attachment payload"'
+    assert_includes picker_source, 'title: "Integration notes"'
+    assert_includes picker_source, "FlatPack::CodeBlock::Component"
+    assert_includes picker_source, "FlatPack::List::Component"
+    assert_includes controller_source, "def picker"
+    assert_includes controller_source, "recording_attachment_picker_path(@page_recording)"
+    assert_includes controller_source, "recording-studio-attachable--attachment-image-picker:selected->chat-demo#attachmentSelected"
+    assert_includes controller_source, "const { attachment } = event.detail || {}"
+    assert_includes controller_source, 'data-action="recording-studio-inline-picker->recording-studio-attachable--attachment-image-picker#openPickerFromToolbar"'
+    assert_includes controller_source, "event.detail.attachment"
+    assert_includes controller_source, "scope: :subtree"
   end
 
   def test_dummy_resizing_page_documents_browser_side_resizing

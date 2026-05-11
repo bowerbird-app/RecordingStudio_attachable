@@ -213,6 +213,7 @@ module RecordingStudioAttachable
               (() => {
                 const payload = JSON.parse("#{payload_json}");
                 const storageKey = "#{PROVIDER_EVENT_STORAGE_KEY}";
+                const channelName = `${storageKey}:channel`;
                 const targets = [];
 
                 if (window.opener) targets.push(window.opener);
@@ -228,6 +229,15 @@ module RecordingStudioAttachable
                 try {
                   window.localStorage.setItem(storageKey, JSON.stringify({ payload, sentAt: Date.now() }));
                 } catch (_error) {
+                }
+
+                if (window.BroadcastChannel) {
+                  try {
+                    const channel = new window.BroadcastChannel(channelName);
+                    channel.postMessage(payload);
+                    channel.close();
+                  } catch (_error) {
+                  }
                 }
 
                 #{'window.close();' if close_window}

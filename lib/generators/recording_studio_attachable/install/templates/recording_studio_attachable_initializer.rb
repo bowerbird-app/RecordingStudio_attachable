@@ -58,8 +58,8 @@ RecordingStudioAttachable.configure do |config|
   # config.google_drive.enabled = true
   # config.google_drive.client_id = ENV["GOOGLE_DRIVE_CLIENT_ID"]
   # config.google_drive.client_secret = ENV["GOOGLE_DRIVE_CLIENT_SECRET"]
-  # config.google_drive.api_key = ENV["GOOGLE_DRIVE_API_KEY"]
-  # config.google_drive.app_id = ENV["GOOGLE_DRIVE_APP_ID"]
+  # config.google_drive.api_key = ENV["GOOGLE_DRIVE_API_KEY"] # Browser API key for Google Picker
+  # config.google_drive.app_id = ENV["GOOGLE_DRIVE_APP_ID"]   # Google Cloud project number
   # config.google_drive.redirect_uri = "https://your-app.test/recording_studio_attachable/google_drive/oauth/callback"
   #
   # The engine mounts the Google Drive routes under:

@@ -97,10 +97,28 @@ class ImportAttachmentsTest < Minitest::Test
       )
 
       assert result.failure?
-      assert_equal "One or more attachments failed to import", result.error
+      assert_equal 'Failed to import "two.svg": bad file', result.error
+      assert_equal [{ filename: "two.svg", content_type: "image/svg+xml", error: "bad file" }], result.errors
     end
 
     assert first_blob.purged
+  end
+
+  def test_import_attachments_uses_underlying_error_when_attachment_label_is_missing
+    parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: FakeRecording.new(id: "root-1"))
+    failure_result = RecordingStudioAttachable::Services::BaseService::Result.new(success: false, error: "bad file")
+
+    RecordingStudioAttachable::Services::ImportAttachment.stub(:call, failure_result) do
+      result = RecordingStudioAttachable::Services::ImportAttachments.call(
+        parent_recording: parent,
+        attachments: [
+          { io: StringIO.new("1"), filename: "", content_type: "image/svg+xml" }
+        ]
+      )
+
+      assert result.failure?
+      assert_equal "bad file", result.error
+    end
   end
 
   private

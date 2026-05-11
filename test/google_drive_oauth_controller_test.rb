@@ -169,6 +169,7 @@ class GoogleDriveOauthControllerTest < ActionController::TestCase
     assert_includes @response.body, "modal-1"
     assert_includes @response.body, "/google_drive/recordings/rec-1/imports"
     assert_includes @response.body, "localStorage.setItem"
+    assert_includes @response.body, "BroadcastChannel"
     assert_includes @response.body, "window.close()"
   end
 
@@ -205,6 +206,7 @@ class GoogleDriveOauthControllerTest < ActionController::TestCase
     assert_includes @response.body, "provider-auth-complete"
     assert_includes @response.body, "google_drive"
     assert_includes @response.body, "localStorage.setItem"
+    assert_includes @response.body, "BroadcastChannel"
     refute_includes @response.body, "/google_drive/recordings/rec-1/imports"
   end
 

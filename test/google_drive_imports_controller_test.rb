@@ -316,6 +316,47 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
     assert_equal({ "error" => "Select at least one file" }, JSON.parse(@response.body))
   end
 
+  def test_create_preserves_picker_resource_keys_when_forwarding_selected_files
+    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+    result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [Object.new])
+    captured = nil
+    attachable_proxy = Object.new
+    attachable_proxy.define_singleton_method(:recording_attachments_path) do |record|
+      "/recording_studio_attachable/recordings/#{record.id}/attachments"
+    end
+    @controller.define_singleton_method(:recording_studio_attachable) { attachable_proxy }
+    @request.session["recording_studio_attachable_google_drive"] = {
+      "tokens" => { "access_token" => "token-1", "expires_at" => Time.current.to_i + 3600 }
+    }
+
+    with_routing do |set|
+      set.draw do
+        post "/google_drive/recordings/:recording_id/imports(.:format)",
+             to: "recording_studio_attachable/google_drive/imports#create"
+      end
+
+      @routes = set
+
+      RecordingStudio::Recording.stub(:find, recording) do
+        RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.stub(:call, lambda { |**kwargs|
+          captured = kwargs
+          result
+        }) do
+          @controller.stub(:protect_against_forgery?, false) do
+            post :create, params: {
+              recording_id: recording.id,
+              file_ids: [{ id: "file-1", resource_key: "resource-key-1" }],
+              format: :json
+            }
+          end
+        end
+      end
+    end
+
+    assert_response :created
+    assert_equal [{ "id" => "file-1", "resource_key" => "resource-key-1" }], captured[:file_ids]
+  end
+
   def test_create_returns_json_error_when_google_drive_is_not_configured
     recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
     RecordingStudioAttachable.configuration.google_drive.enabled = false

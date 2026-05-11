@@ -13,6 +13,13 @@ module RecordingStudioAttachable
     }.freeze
 
     class GoogleDriveConfiguration
+      PLACEHOLDER_PREFIXES = {
+        client_id: ["dummy-google-drive-client-id"],
+        client_secret: ["dummy-google-drive-client-secret"],
+        api_key: ["dummy-google-drive-api-key"],
+        app_id: ["dummy-google-drive-app-id"]
+      }.freeze
+
       attr_accessor :enabled,
                     :client_id,
                     :client_secret,
@@ -55,11 +62,13 @@ module RecordingStudioAttachable
       end
 
       def configured?
-        client_id.present? && client_secret.present? && redirect_uri.present?
+        valid_google_drive_value?(client_id, :client_id) &&
+          valid_google_drive_value?(client_secret, :client_secret) &&
+          redirect_uri.present?
       end
 
       def picker_configured?
-        configured? && api_key.present? && app_id.present?
+        configured? && valid_google_drive_value?(api_key, :api_key) && valid_google_drive_value?(app_id, :app_id)
       end
 
       def to_h
@@ -76,6 +85,15 @@ module RecordingStudioAttachable
           include_granted_scopes: include_granted_scopes,
           page_size: page_size
         }
+      end
+
+      private
+
+      def valid_google_drive_value?(value, field)
+        normalized = value.to_s.strip
+        return false if normalized.blank?
+
+        !Array(PLACEHOLDER_PREFIXES[field]).include?(normalized)
       end
     end
 

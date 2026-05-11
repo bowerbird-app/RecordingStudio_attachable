@@ -189,6 +189,30 @@ class EngineTest < Minitest::Test
     assert_nil RecordingStudioAttachable.configuration.upload_provider(:google_drive)
   end
 
+  def test_google_drive_initializer_skips_provider_when_picker_configuration_uses_dummy_placeholders
+    RecordingStudioAttachable.configuration.merge!(
+      google_drive: {
+        enabled: true,
+        client_id: "client-id",
+        client_secret: "client-secret",
+        redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
+        api_key: "dummy-google-drive-api-key",
+        app_id: "dummy-google-drive-app-id"
+      }
+    )
+    after_initialize = nil
+    app = Struct.new(:config).new(
+      Object.new.tap do |config|
+        config.define_singleton_method(:after_initialize) { |&block| after_initialize = block }
+      end
+    )
+
+    find_google_drive_initializer("recording_studio_attachable.google_drive.register_upload_provider").block.call(app)
+    after_initialize.call
+
+    assert_nil RecordingStudioAttachable.configuration.upload_provider(:google_drive)
+  end
+
   def test_google_drive_initializer_registers_provider_with_route_helper_urls
     RecordingStudioAttachable.configuration.merge!(
       google_drive: {

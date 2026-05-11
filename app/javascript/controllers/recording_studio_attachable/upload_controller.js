@@ -5,6 +5,7 @@ import { preprocessImageFile, shouldPreprocessImageFile } from "controllers/reco
 import "controllers/recording_studio_attachable/google_drive_picker_launcher"
 
 const PROVIDER_EVENT_STORAGE_KEY = "recording-studio-attachable:provider-event"
+const PROVIDER_EVENT_CHANNEL_NAME = `${PROVIDER_EVENT_STORAGE_KEY}:channel`
 
 export default class extends Controller {
   static targets = ["dropzone", "input", "queue"]
@@ -27,15 +28,27 @@ export default class extends Controller {
     this.providerButtonsByKey = new Map()
     this.handleProviderMessage = this.handleProviderMessage.bind(this)
     this.handleProviderStorage = this.handleProviderStorage.bind(this)
+    this.handleProviderChannelMessage = this.handleProviderChannelMessage.bind(this)
     this.bindDropzoneEvents()
     window.addEventListener("message", this.handleProviderMessage)
     window.addEventListener("storage", this.handleProviderStorage)
+
+    if (window.BroadcastChannel) {
+      this.providerEventChannel = new window.BroadcastChannel(PROVIDER_EVENT_CHANNEL_NAME)
+      this.providerEventChannel.addEventListener("message", this.handleProviderChannelMessage)
+    }
   }
 
   disconnect() {
     this.files.forEach((entry) => this.revokePreview(entry))
     window.removeEventListener("message", this.handleProviderMessage)
     window.removeEventListener("storage", this.handleProviderStorage)
+
+    if (this.providerEventChannel) {
+      this.providerEventChannel.removeEventListener("message", this.handleProviderChannelMessage)
+      this.providerEventChannel.close()
+      this.providerEventChannel = null
+    }
   }
 
   browse() {
@@ -378,6 +391,10 @@ export default class extends Controller {
       this.handleProviderPayload(parsed?.payload || {})
     } catch (_error) {
     }
+  }
+
+  handleProviderChannelMessage(event) {
+    this.handleProviderPayload(event.data || {})
   }
 
   handleProviderPayload(payload) {

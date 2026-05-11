@@ -316,6 +316,8 @@ RecordingStudioAttachable.configure do |config|
 end
 ```
 
+`GOOGLE_DRIVE_API_KEY` must be a browser API key for the same Google Cloud project, and `GOOGLE_DRIVE_APP_ID` is the Google Cloud project number used by Google Picker.
+
 Once enabled, the upload page will automatically show a `Google Drive` provider button that opens Google auth and the Google Picker directly from the upload page. There is no provider-owned middle screen in the normal flow. The addon routes remain mounted inside the main engine at `/recording_studio_attachable/google_drive`.
 
 The addon handles:

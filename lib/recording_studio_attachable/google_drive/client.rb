@@ -7,6 +7,7 @@ require "uri"
 
 module RecordingStudioAttachable
   module GoogleDrive
+    # rubocop:disable Metrics/ClassLength
     class Client
       class Error < RecordingStudioAttachable::Error; end
       class UnauthorizedError < Error; end
@@ -19,6 +20,7 @@ module RecordingStudioAttachable
       }.freeze
 
       API_ROOT = "https://www.googleapis.com/drive/v3"
+      MAX_REDIRECTS = 5
 
       def initialize(access_token:)
         @access_token = access_token
@@ -36,16 +38,29 @@ module RecordingStudioAttachable
         )
       end
 
-      def fetch_file(file_id)
-        get_json("/files/#{file_id}", fields: "id,name,mimeType,webViewLink")
+      def fetch_file(file_id, resource_key: nil)
+        get_json(
+          "/files/#{file_id}",
+          fields: "id,name,mimeType,resourceKey,webViewLink",
+          resourceKey: resource_key,
+          supportsAllDrives: true
+        )
       end
 
       def download_file(file)
         metadata = file.stringify_keys
         export = EXPORT_MIME_TYPES[metadata.fetch("mimeType")]
+        request_params = {
+          resourceKey: metadata["resourceKey"],
+          supportsAllDrives: true
+        }
 
         if export
-          body = get_body("/files/#{metadata.fetch('id')}/export", mimeType: export.fetch(:content_type))
+          body = get_body(
+            "/files/#{metadata.fetch('id')}/export",
+            mimeType: export.fetch(:content_type),
+            **request_params
+          )
           return {
             io: StringIO.new(body),
             filename: append_extension(metadata.fetch("name"), export.fetch(:extension)),
@@ -53,7 +68,7 @@ module RecordingStudioAttachable
           }
         end
 
-        body, content_type = get_binary("/files/#{metadata.fetch('id')}", alt: "media")
+        body, content_type = get_binary("/files/#{metadata.fetch('id')}", alt: "media", **request_params)
         {
           io: StringIO.new(body),
           filename: metadata.fetch("name"),
@@ -102,15 +117,28 @@ module RecordingStudioAttachable
       end
 
       def perform_request(path, params: {})
-        uri = URI.join(API_ROOT, path)
+        uri = URI.join("#{API_ROOT}/", path.to_s.sub(%r{\A/+}, ""))
         compact_params = params.compact
         uri.query = URI.encode_www_form(compact_params) if compact_params.any?
+
+        perform_get_request(uri, redirects_remaining: MAX_REDIRECTS)
+      end
+
+      def perform_get_request(uri, redirects_remaining:)
+        raise Error, "Google Drive request redirected too many times" if redirects_remaining.negative?
 
         request = Net::HTTP::Get.new(uri)
         request["Authorization"] = "Bearer #{access_token}"
 
         Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
-          http.request(request)
+          response = http.request(request)
+          return response unless response.is_a?(Net::HTTPRedirection)
+
+          location = response["location"].to_s
+          return response if location.blank?
+
+          redirected_uri = URI.join(uri.to_s, location)
+          perform_get_request(redirected_uri, redirects_remaining: redirects_remaining - 1)
         end
       end
 
@@ -121,11 +149,20 @@ module RecordingStudioAttachable
       end
 
       def request_error(response, body)
-        message = body.dig("error", "message").presence || body["error_description"].presence || "Google Drive request failed"
+        message = body.dig("error", "message").presence || body["error_description"].presence || fallback_error_message(response)
         return UnauthorizedError.new(message) if response.code.to_i == 401
 
         Error.new(message)
       end
+
+      def fallback_error_message(response)
+        status = response.code.to_s.presence || "unknown"
+        snippet = response.body.to_s.squish.truncate(200)
+        details = snippet.presence || "no response body"
+
+        "Google Drive request failed (HTTP #{status}): #{details}"
+      end
     end
+    # rubocop:enable Metrics/ClassLength
   end
 end

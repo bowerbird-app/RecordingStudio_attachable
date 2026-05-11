@@ -6,7 +6,7 @@ class DummyUploadProviderDemoTest < Minitest::Test
   def test_dummy_app_registers_demo_upload_provider
     initializer = File.read(File.expand_path("dummy/config/initializers/recording_studio_attachable.rb", __dir__))
 
-    assert_includes initializer, "config.max_file_size = 1.megabyte"
+    assert_includes initializer, "config.max_file_size = 25.megabytes"
     assert_includes initializer, "config.image_processing_enabled = true"
     assert_includes initializer, "config.image_processing_max_width = 1200"
     assert_includes initializer, "config.image_processing_max_height = 1200"

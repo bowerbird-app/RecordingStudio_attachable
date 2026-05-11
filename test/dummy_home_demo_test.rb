@@ -509,11 +509,11 @@ class DummyHomeDemoTest < Minitest::Test
     page_model = File.read(File.expand_path("dummy/app/models/page.rb", __dir__))
     workspace_model = File.read(File.expand_path("dummy/app/models/workspace.rb", __dir__))
 
-    assert_includes initializer, "config.max_file_size = 1.megabyte"
+    assert_includes initializer, "config.max_file_size = 25.megabytes"
     assert_includes initializer, ":demo_cloud"
     assert_includes initializer, 'label: "Demo cloud import"'
-    assert_includes page_model, "max_file_size: 1.megabyte"
-    assert_includes workspace_model, "max_file_size: 1.megabyte"
+    assert_includes page_model, "max_file_size: 25.megabytes"
+    assert_includes workspace_model, "max_file_size: 25.megabytes"
     assert_includes routes, "as: :demo_upload_provider"
   end
 

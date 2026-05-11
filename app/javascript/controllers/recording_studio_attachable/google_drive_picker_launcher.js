@@ -68,7 +68,11 @@ function openPicker(bootstrap) {
       .addView(docsView)
       .setCallback((data) => {
         if (data.action === window.google.picker.Action.PICKED) {
-          resolve(data.docs.map((doc) => doc.id).filter(Boolean))
+          resolve(
+            data.docs
+              .filter((doc) => doc?.id)
+              .map((doc) => ({ id: doc.id, resource_key: doc.resourceKey }))
+          )
           return
         }
 

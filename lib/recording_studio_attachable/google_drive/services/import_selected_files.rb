@@ -21,10 +21,14 @@ module RecordingStudioAttachable
         attr_reader :parent_recording, :file_ids, :access_token, :actor, :impersonator, :client
 
         def perform
-          raise ArgumentError, "Select at least one Google Drive file to import" if Array(file_ids).blank?
+          selections = normalized_file_selections
+          raise ArgumentError, "Select at least one Google Drive file to import" if selections.blank?
 
-          attachments = Array(file_ids).map do |file_id|
-            file = google_drive_client.fetch_file(file_id)
+          attachments = selections.map do |selection|
+            fetch_options = {}
+            fetch_options[:resource_key] = selection["resource_key"] if selection["resource_key"].present?
+
+            file = google_drive_client.fetch_file(selection.fetch("id"), **fetch_options)
             downloaded = google_drive_client.download_file(file)
 
             downloaded.merge(
@@ -45,6 +49,26 @@ module RecordingStudioAttachable
             impersonator: impersonator,
             source: "google_drive"
           )
+        end
+
+        def normalized_file_selections
+          Array(file_ids).filter_map do |selection|
+            case selection
+            when String
+              selection.presence && { "id" => selection }
+            when Hash
+              normalized_selection_hash(selection)
+            end
+          end.uniq
+        end
+
+        def normalized_selection_hash(selection)
+          id = selection["id"] || selection[:id]
+          return if id.blank?
+
+          resource_key = selection["resource_key"] || selection[:resource_key] || selection["resourceKey"] || selection[:resourceKey]
+
+          { "id" => id.to_s, "resource_key" => resource_key.to_s.presence }.compact
         end
 
         def google_drive_client

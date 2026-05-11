@@ -69,6 +69,25 @@ class GoogleDriveApplicationControllerTest < Minitest::Test
     assert_equal "Google Drive picker requires api_key and app_id configuration", error.message
   end
 
+  def test_ensure_google_drive_picker_configured_rejects_dummy_placeholder_picker_values
+    RecordingStudioAttachable.configuration.merge!(
+      google_drive: {
+        enabled: true,
+        client_id: "client-id",
+        client_secret: "client-secret",
+        redirect_uri: "https://example.test/oauth/callback",
+        api_key: "dummy-google-drive-api-key",
+        app_id: "dummy-google-drive-app-id"
+      }
+    )
+
+    error = assert_raises(RecordingStudioAttachable::DependencyUnavailableError) do
+      @controller.send(:ensure_google_drive_picker_configured!)
+    end
+
+    assert_equal "Google Drive picker requires api_key and app_id configuration", error.message
+  end
+
   def test_google_drive_connected_uses_session_tokens
     refute @controller.send(:google_drive_connected?)
 

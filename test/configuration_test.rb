@@ -179,6 +179,20 @@ class ConfigurationTest < Minitest::Test
     assert_equal 10, @configuration.google_drive.page_size
   end
 
+  def test_google_drive_picker_configuration_rejects_dummy_placeholder_values
+    @configuration.merge!(google_drive: {
+                            enabled: true,
+                            client_id: "client-id",
+                            client_secret: "client-secret",
+                            redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
+                            api_key: "dummy-google-drive-api-key",
+                            app_id: "dummy-google-drive-app-id"
+                          })
+
+    assert @configuration.google_drive.configured?
+    assert_not @configuration.google_drive.picker_configured?
+  end
+
   def test_google_drive_merge_returns_self_and_ignores_unknown_keys
     google_drive = @configuration.google_drive
 

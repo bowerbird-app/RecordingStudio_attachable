@@ -96,4 +96,45 @@ class GoogleDriveImportSelectedFilesTest < Minitest::Test
 
     assert_equal "access-token", built_with_token
   end
+
+  def test_call_passes_picker_resource_keys_through_to_the_google_drive_client
+    calls = []
+    client = Object.new
+    client.define_singleton_method(:fetch_file) do |file_id, resource_key: nil|
+      calls << { method: :fetch_file, file_id: file_id, resource_key: resource_key }
+      {
+        "id" => file_id,
+        "name" => "File #{file_id}",
+        "mimeType" => "image/png",
+        "resourceKey" => resource_key,
+        "webViewLink" => "https://drive.test/#{file_id}"
+      }
+    end
+    client.define_singleton_method(:download_file) do |file|
+      calls << { method: :download_file, resource_key: file["resourceKey"] }
+      { io: StringIO.new("payload"), filename: "image.png", content_type: "image/png" }
+    end
+
+    RecordingStudioAttachable::Services::ImportAttachments.stub(
+      :call,
+      RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [:imported])
+    ) do
+      result = RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.call(
+        parent_recording: FakeRecording.new(id: "rec-1", recordable_type: "Workspace"),
+        file_ids: [{ id: "file-1", resource_key: "resource-key-1" }],
+        access_token: "access-token",
+        client: client
+      )
+
+      assert result.success?
+    end
+
+    assert_equal(
+      [
+        { method: :fetch_file, file_id: "file-1", resource_key: "resource-key-1" },
+        { method: :download_file, resource_key: "resource-key-1" }
+      ],
+      calls
+    )
+  end
 end

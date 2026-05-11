@@ -7,7 +7,7 @@ else
 end
 
 RecordingStudioAttachable.configure do |config|
-  config.max_file_size = 1.megabyte
+  config.max_file_size = 25.megabytes
   config.image_processing_enabled = true
   config.image_processing_max_width = 1200
   config.image_processing_max_height = 1200

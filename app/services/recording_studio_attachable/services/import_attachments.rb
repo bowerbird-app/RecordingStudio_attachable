@@ -47,18 +47,25 @@ module RecordingStudioAttachable
 
               if result.failure?
                 failures = [attachment.except(:io).merge(error: result.error)]
-                raise BatchFailure, result.error
+                raise BatchFailure, batch_failure_message(attachment, result.error)
               end
 
               created << result.value
             end
           end
-        rescue BatchFailure
+        rescue BatchFailure => e
           purge_created_attachments(created)
-          return failure("One or more attachments failed to import", errors: failures)
+          return failure(e.message, errors: failures)
         end
 
         success(created)
+      end
+
+      def batch_failure_message(attachment, error)
+        label = attachment[:name].presence || attachment[:filename].presence
+        return error if label.blank?
+
+        %(Failed to import "#{label}": #{error})
       end
 
       def validate_attachment_count!(capability_options)

@@ -2,6 +2,7 @@
 
 module RecordingStudioAttachable
   module GoogleDrive
+    # rubocop:disable Metrics/ClassLength, Metrics/CyclomaticComplexity
     class ImportsController < ApplicationController
       def index
         authorize_google_drive_upload!
@@ -102,8 +103,20 @@ module RecordingStudioAttachable
       end
 
       def selected_file_ids
-        Array(params[:file_ids]).map(&:to_s).reject(&:blank?).uniq
+        Array(params[:file_ids]).filter_map do |selection|
+          case selection
+          when String
+            selection.presence
+          when ActionController::Parameters, Hash
+            id = selection[:id] || selection["id"]
+            next if id.blank?
+
+            resource_key = selection[:resource_key] || selection["resource_key"] || selection[:resourceKey] || selection["resourceKey"]
+            { "id" => id.to_s, "resource_key" => resource_key.to_s.presence }.compact
+          end
+        end.uniq
       end
     end
+    # rubocop:enable Metrics/ClassLength, Metrics/CyclomaticComplexity
   end
 end

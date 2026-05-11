@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@import "./flat_pack_variables.css";
+
 /* Include dummy app views for Tailwind CSS */
 @source "../../views/**/*.erb";
 

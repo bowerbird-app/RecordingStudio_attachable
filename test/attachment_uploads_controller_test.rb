@@ -85,6 +85,10 @@ module RecordingStudioAttachable
                     suffix = query_params.to_h.to_query
                     suffix.present? ? "/recordings/#{recording.id}/attachments?#{suffix}" : "/recordings/#{recording.id}/attachments"
                   end
+                  @controller.define_singleton_method(:recording_attachment_imports_path) do |_recording, query_params = {}|
+                    suffix = query_params.to_h.to_query
+                    suffix.present? ? "/recordings/#{recording.id}/attachment_imports?#{suffix}" : "/recordings/#{recording.id}/attachment_imports"
+                  end
                   @controller.define_singleton_method(:default_render) do
                     render plain: Array(@upload_providers).map(&:label).join(",")
                   end

@@ -8,6 +8,7 @@ require_relative "../app/controllers/recording_studio_attachable/attachment_impo
 require_relative "../lib/recording_studio_attachable/services/base_service"
 require_relative "../app/services/recording_studio_attachable/services/application_service"
 require_relative "../app/services/recording_studio_attachable/services/import_attachments"
+require_relative "../app/services/recording_studio_attachable/services/import_attachment_payloads"
 require_relative "../app/services/recording_studio_attachable/services/record_attachment_uploads"
 
 module RecordingStudioAttachable
@@ -39,7 +40,7 @@ module RecordingStudioAttachable
               @controller.define_singleton_method(:recording_attachments_path) { |_recording| "/recordings/#{recording.id}/attachments" }
 
               RecordingStudioAttachable.configuration.stub(:upload_provider, provider) do
-                RecordingStudioAttachable::Services::RecordAttachmentUploads.stub(:call, lambda { |**kwargs|
+                RecordingStudioAttachable::Services::ImportAttachmentPayloads.stub(:call, lambda { |**kwargs|
                   captured = kwargs
                   result
                 }) do
@@ -71,8 +72,7 @@ module RecordingStudioAttachable
 
       assert_response :created
       assert_equal recording, captured[:parent_recording]
-      assert_equal "google_drive", captured[:default_source]
-      assert_equal [{ signed_blob_id: "blob-1", name: "Drive file", metadata: { "external_id" => "file-1", "provider" => "google_drive" } }],
+      assert_equal [{ provider_key: "google_drive", signed_blob_id: "blob-1", name: "Drive file", metadata: { "external_id" => "file-1", "provider" => "google_drive" }, provider_payload: nil }],
                    captured[:attachments]
     end
 
@@ -167,7 +167,7 @@ module RecordingStudioAttachable
           @controller.stub(:authorize_attachment_action!, true) do
             @controller.stub(:capability_options_for, {}) do
               RecordingStudioAttachable.configuration.stub(:upload_provider, provider) do
-                RecordingStudioAttachable::Services::RecordAttachmentUploads.stub(:call, result) do
+                RecordingStudioAttachable::Services::ImportAttachmentPayloads.stub(:call, result) do
                   @controller.stub(:protect_against_forgery?, false) do
                     post :create,
                          params: {

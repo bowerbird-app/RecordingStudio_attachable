@@ -154,6 +154,55 @@ module RecordingStudioAttachable
       assert_equal "upload failed", flash[:alert]
     end
 
+    def test_new_uses_attachment_imports_path_for_shared_queue_finalization
+      recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+
+      with_routing do |set|
+        set.draw do
+          get "/recordings/:recording_id/attachments/upload",
+              to: "recording_studio_attachable/attachment_uploads#new"
+        end
+
+        @routes = set
+
+        RecordingStudio::Recording.stub(:find, recording) do
+          @controller.stub(:authorize_attachment_action!, true) do
+            @controller.stub(:capability_options_for, {}) do
+              configured_option = lambda { |_recording, option_name|
+                {
+                  allowed_content_types: ["image/*"],
+                  max_file_size: 25.megabytes,
+                  max_file_count: 20,
+                  image_processing_enabled: true,
+                  image_processing_max_width: 2048,
+                  image_processing_max_height: 2048,
+                  image_processing_quality: 0.8
+                }.fetch(option_name)
+              }
+
+              @controller.stub(:configured_attachable_option, configured_option) do
+                @controller.stub(:configured_upload_providers, []) do
+                  @controller.define_singleton_method(:recording_attachment_imports_path) do |_recording, options = {}|
+                    suffix = options.to_h.to_query
+                    path = "/recordings/#{recording.id}/attachments/imports"
+                    suffix.present? ? "#{path}?#{suffix}" : path
+                  end
+                  @controller.define_singleton_method(:default_render) do
+                    render plain: @create_path
+                  end
+
+                  get :new, params: { recording_id: recording.id, redirect_mode: "return_to", return_to: "/pages/page-1#gallery" }
+                end
+              end
+            end
+          end
+        end
+      end
+
+      assert_response :success
+      assert_equal "/recordings/rec-1/attachments/imports?redirect_mode=return_to&return_to=%2Fpages%2Fpage-1%23gallery", @response.body
+    end
+
     private
 
     def ensure_recording_lookup!

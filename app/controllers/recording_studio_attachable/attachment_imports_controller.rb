@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../../services/recording_studio_attachable/services/import_attachment_payloads"
+
 module RecordingStudioAttachable
   class AttachmentImportsController < ApplicationController
     def create
@@ -33,61 +35,23 @@ module RecordingStudioAttachable
     private
 
     def import_result
-      return failure_result("Unknown upload provider") if provider_key.present? && registered_provider.blank?
-
-      payloads = attachment_payloads
-      return failure_result("No importable attachment payloads were provided") if payloads.blank?
-
-      io_payloads = payloads.select { |payload| payload[:io].present? }
-      blob_payloads = payloads.select { |payload| payload[:signed_blob_id].present? }
-
-      if io_payloads.any? && blob_payloads.any?
-        return failure_result("Attachment import payloads must all use either file uploads or signed_blob_id values")
-      end
-
-      if io_payloads.any?
-        RecordingStudioAttachable::Services::ImportAttachments.call(
-          parent_recording: @recording,
-          actor: current_attachable_actor,
-          impersonator: current_attachable_impersonator,
-          attachments: io_payloads,
-          source: import_source
-        )
-      elsif blob_payloads.any?
-        RecordingStudioAttachable::Services::RecordAttachmentUploads.call(
-          parent_recording: @recording,
-          actor: current_attachable_actor,
-          impersonator: current_attachable_impersonator,
-          attachments: blob_payloads,
-          default_source: import_source
-        )
-      else
-        failure_result("No importable attachment payloads were provided")
-      end
-    end
-
-    def failure_result(error)
-      RecordingStudioAttachable::Services::BaseService::Result.new(success: false, error: error)
-    end
-
-    def provider_key
-      attachment_import_params[:provider_key].presence
-    end
-
-    def registered_provider
-      return if provider_key.blank?
-
-      RecordingStudioAttachable.configuration.upload_provider(provider_key)
-    end
-
-    def import_source
-      registered_provider&.key&.to_s || "provider_import"
+      RecordingStudioAttachable::Services::ImportAttachmentPayloads.call(
+        parent_recording: @recording,
+        actor: current_attachable_actor,
+        impersonator: current_attachable_impersonator,
+        attachments: attachment_payloads,
+        context: self
+      )
+    rescue ArgumentError => e
+      RecordingStudioAttachable::Services::BaseService::Result.new(success: false, error: e.message)
     end
 
     def attachment_payloads
+      default_provider_key = attachment_import_params[:provider_key].presence
       permitted = attachment_import_params.permit(
         :provider_key,
         attachments: [
+          :provider_key,
           :signed_blob_id,
           :name,
           :description,
@@ -95,20 +59,28 @@ module RecordingStudioAttachable
           :content_type,
           :identify,
           :file,
-          { metadata: {} }
+          { metadata: {} },
+          { provider_payload: {} }
         ]
       )
 
       Array(permitted.fetch(:attachments, [])).map do |attachment|
-        normalize_attachment_payload(attachment.to_h.symbolize_keys)
+        normalize_attachment_payload(attachment.to_h.symbolize_keys, default_provider_key: default_provider_key)
       end
     end
 
-    def normalize_attachment_payload(payload)
+    def normalize_attachment_payload(payload, default_provider_key: nil)
       uploaded_file = payload.delete(:file)
       payload.delete(:source)
       payload.delete(:service_name)
-      payload[:metadata] = normalized_metadata(payload[:metadata])
+      payload[:provider_key] = payload[:provider_key].presence || default_provider_key
+      if payload[:provider_key].present? && registered_provider(payload[:provider_key]).blank?
+        raise ArgumentError,
+              "Unknown upload provider"
+      end
+
+      payload[:metadata] = normalized_metadata(payload[:metadata], provider_key: payload[:provider_key])
+      payload[:provider_payload] = normalized_provider_payload(payload[:provider_payload], provider_key: payload[:provider_key])
       payload[:identify] = ActiveModel::Type::Boolean.new.cast(payload[:identify]) if payload.key?(:identify)
 
       return payload unless uploaded_file.present?
@@ -119,12 +91,30 @@ module RecordingStudioAttachable
       payload
     end
 
-    def normalized_metadata(metadata)
+    def normalized_metadata(metadata, provider_key: nil)
       normalized = metadata.respond_to?(:to_h) ? metadata.to_h : {}
       normalized = normalized.except("provider", :provider)
       return normalized if provider_key.blank?
 
-      normalized.merge("provider" => import_source)
+      normalized.merge("provider" => import_source_for(provider_key))
+    end
+
+    def normalized_provider_payload(provider_payload, provider_key: nil)
+      return nil if provider_payload.blank?
+      return nil if provider_key.blank?
+      raise ArgumentError, "Unknown upload provider" if registered_provider(provider_key).blank?
+
+      provider_payload.to_h.compact_blank
+    end
+
+    def registered_provider(provider_key)
+      return if provider_key.blank?
+
+      RecordingStudioAttachable.configuration.upload_provider(provider_key)
+    end
+
+    def import_source_for(provider_key)
+      registered_provider(provider_key)&.key&.to_s || "provider_import"
     end
 
     def attachment_import_params
@@ -132,12 +122,20 @@ module RecordingStudioAttachable
     end
 
     def attachment_json(recording)
+      attachment = recording.recordable
+      insert_url = authorized_attachment_file_path(recording)
+
       {
         id: recording.id,
-        name: recording.recordable.name,
-        content_type: recording.recordable.content_type,
-        byte_size: recording.recordable.byte_size,
-        attachment_kind: recording.recordable.attachment_kind,
+        name: attachment.name,
+        description: attachment.description,
+        content_type: attachment.content_type,
+        byte_size: attachment.byte_size,
+        attachment_kind: attachment.attachment_kind,
+        thumbnail_url: authorized_attachment_preview_path(recording, :square_small) || insert_url,
+        insert_url: insert_url,
+        variant_urls: authorized_attachment_inline_variant_urls(recording),
+        alt: attachment.name,
         show_path: attachment_path(recording)
       }
     end

@@ -61,7 +61,7 @@ class ChatDemoController < ApplicationController
       @root_recording,
       scope: :subtree
     )
-    @chat_attachment_create_path = recording_studio_attachable.recording_attachments_path(
+    @chat_attachment_create_path = recording_studio_attachable.recording_attachment_imports_path(
       @root_recording,
       redirect_mode: "return_to",
       return_to: chat_demo_path

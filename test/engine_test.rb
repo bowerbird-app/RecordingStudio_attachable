@@ -151,6 +151,7 @@ class EngineTest < Minitest::Test
     assert_equal :google_drive, provider.key
     assert_equal :client_picker, provider.strategy
     assert_equal "google_drive", provider.launcher
+    assert provider.supports_remote_imports?
   end
 
   def test_google_drive_initializer_skips_provider_when_disabled

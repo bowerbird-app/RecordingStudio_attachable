@@ -32,11 +32,12 @@ module RecordingStudioAttachable
       end
     end
 
-    attr_reader :key, :label, :description, :icon, :style, :size, :strategy, :launcher, :modal_size
+    attr_reader :key, :label, :description, :icon, :style, :size, :strategy, :launcher, :modal_size,
+                :remote_importer
 
     def initialize(key:, label:, url:, description: nil, icon: "cloud", style: :secondary, size: :md,
                    target: nil, visible: nil, strategy: :link, launcher: nil, bootstrap_url: nil,
-                   import_url: nil, presentation: nil, modal_title: nil, modal_size: :xl,
+                   import_url: nil, remote_importer: nil, presentation: nil, modal_title: nil, modal_size: :xl,
                    iframe_title: nil, **system_arguments)
       @key = key.to_sym
       @label = label
@@ -52,12 +53,14 @@ module RecordingStudioAttachable
       @launcher = launcher&.to_s
       @bootstrap_url = bootstrap_url
       @import_url = import_url
+      @remote_importer = remote_importer
       @modal_title = modal_title
       @modal_size = modal_size.to_sym
       @iframe_title = iframe_title
       @system_arguments = system_arguments
 
       validate_strategy!
+      validate_remote_importer!
     end
 
     def render?(view_context:, recording:)
@@ -111,6 +114,10 @@ module RecordingStudioAttachable
       strategy == :client_picker
     end
 
+    def supports_remote_imports?
+      remote_importer.respond_to?(:call)
+    end
+
     def modal_id(recording:)
       "recording-studio-attachable-provider-#{key}-#{recording.id}-modal"
     end
@@ -123,12 +130,30 @@ module RecordingStudioAttachable
       resolve(@iframe_title, view_context:, recording:) || "#{label} picker"
     end
 
+    def import_remote_attachments(parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil)
+      raise ArgumentError, "Upload provider does not support remote imports" unless supports_remote_imports?
+
+      call_importer(
+        parent_recording: parent_recording,
+        attachments: attachments,
+        actor: actor,
+        impersonator: impersonator,
+        context: context
+      )
+    end
+
     private
 
     def validate_strategy!
       return if STRATEGIES.include?(strategy)
 
       raise ArgumentError, "Unknown upload provider strategy: #{strategy.inspect}"
+    end
+
+    def validate_remote_importer!
+      return if remote_importer.nil? || remote_importer.respond_to?(:call)
+
+      raise ArgumentError, "remote_importer must respond to #call"
     end
 
     def launch_url(view_context:, recording:, query_params: {})
@@ -198,6 +223,39 @@ module RecordingStudioAttachable
 
     def non_data_system_arguments
       @system_arguments.except(:data)
+    end
+
+    def call_importer(parent_recording:, attachments:, actor:, impersonator:, context:)
+      kwargs = {
+        parent_recording: parent_recording,
+        attachments: attachments,
+        actor: actor,
+        impersonator: impersonator,
+        context: context
+      }
+      parameters = @remote_importer.parameters
+
+      return @remote_importer.call(**kwargs) if parameters.any? { |type, _name| type == :keyrest }
+
+      keyword_names = parameters.filter_map do |type, name|
+        name if %i[key keyreq].include?(type)
+      end
+      return @remote_importer.call(**kwargs.slice(*keyword_names)) if keyword_names.any?
+
+      case @remote_importer.arity
+      when 5
+        @remote_importer.call(parent_recording, attachments, actor, impersonator, context)
+      when 4
+        @remote_importer.call(parent_recording, attachments, actor, impersonator)
+      when 3
+        @remote_importer.call(parent_recording, attachments, actor)
+      when 2
+        @remote_importer.call(parent_recording, attachments)
+      when 1
+        @remote_importer.call(parent_recording)
+      else
+        @remote_importer.call
+      end
     end
 
     def resolve(value, view_context:, recording:)

@@ -55,6 +55,10 @@
     variant: :h1
   ) %>
 
+  <template data-recording-studio-attachable--upload-target="progressTemplate">
+    <%= render FlatPack::Progress::Component.new(value: 0, max: 100, label: "Progress") %>
+  </template>
+
   <div class="flex min-h-80 flex-col gap-6">
     <div class="flex h-full min-h-[220px] flex-col gap-6">
       <div class="flex min-h-[220px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-(--surface-border-color) p-10 text-center" data-recording-studio-attachable--upload-target="dropzone">

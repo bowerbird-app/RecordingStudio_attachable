@@ -99,6 +99,61 @@ class UploadProviderTest < Minitest::Test
     assert_includes options.dig(:data, :provider_import_url), "return_to=%2Fpages%2Fpage-1%23gallery"
   end
 
+  def test_supports_remote_imports_is_true_when_hook_is_registered
+    importer = ->(**) { :ok }
+    provider = RecordingStudioAttachable::UploadProvider.new(
+      key: :google_drive,
+      label: "Google Drive",
+      url: "/bootstrap/google_drive",
+      strategy: :client_picker,
+      launcher: "google_drive",
+      remote_importer: importer
+    )
+
+    assert provider.supports_remote_imports?
+    assert_same importer, provider.remote_importer
+  end
+
+  def test_initialize_rejects_non_callable_remote_importers
+    error = assert_raises(ArgumentError) do
+      RecordingStudioAttachable::UploadProvider.new(
+        key: :google_drive,
+        label: "Google Drive",
+        url: "/bootstrap/google_drive",
+        remote_importer: Object.new
+      )
+    end
+
+    assert_equal "remote_importer must respond to #call", error.message
+  end
+
+  def test_import_remote_attachments_forwards_full_hook_context
+    captured = nil
+    provider = RecordingStudioAttachable::UploadProvider.new(
+      key: :google_drive,
+      label: "Google Drive",
+      url: "/bootstrap/google_drive",
+      remote_importer: lambda { |**kwargs|
+        captured = kwargs
+        :result
+      }
+    )
+    context = Struct.new(:session).new({ "token" => "abc" })
+
+    result = provider.import_remote_attachments(
+      parent_recording: FakeRecording.new("rec-1"),
+      attachments: [{ provider_payload: { id: "file-1" } }],
+      actor: :actor,
+      impersonator: :impersonator,
+      context: context
+    )
+
+    assert_equal :result, result
+    assert_equal :actor, captured[:actor]
+    assert_equal :impersonator, captured[:impersonator]
+    assert_same context, captured[:context]
+  end
+
   def test_render_returns_false_when_visible_callback_rejects_provider
     provider = RecordingStudioAttachable::UploadProvider.new(
       key: :dropbox,

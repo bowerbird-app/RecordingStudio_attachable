@@ -32,13 +32,14 @@ module RecordingStudioAttachable
             downloaded = google_drive_client.download_file(file)
 
             downloaded.merge(
-              name: file.fetch("name"),
-              description: "Imported from Google Drive",
+              name: selection["name"].presence || file.fetch("name"),
+              description: selection["description"].presence || "Imported from Google Drive",
               metadata: {
                 provider: "google_drive",
                 external_id: file.fetch("id"),
                 external_url: file["webViewLink"]
               }.compact
+                .merge(selection.fetch("metadata", {}))
             )
           end
 
@@ -63,12 +64,25 @@ module RecordingStudioAttachable
         end
 
         def normalized_selection_hash(selection)
-          id = selection["id"] || selection[:id]
+          id = selection_value(selection, :id)
           return if id.blank?
 
-          resource_key = selection["resource_key"] || selection[:resource_key] || selection["resourceKey"] || selection[:resourceKey]
+          {
+            "id" => id.to_s,
+            "resource_key" => selection_value(selection, :resource_key, :resourceKey).to_s.presence,
+            "name" => selection_value(selection, :name).to_s.presence,
+            "description" => selection_value(selection, :description).to_s.presence,
+            "metadata" => normalized_metadata(selection)
+          }.compact
+        end
 
-          { "id" => id.to_s, "resource_key" => resource_key.to_s.presence }.compact
+        def selection_value(selection, *keys)
+          keys.lazy.map { |key| selection[key.to_s] || selection[key] }.find(&:present?)
+        end
+
+        def normalized_metadata(selection)
+          metadata = selection_value(selection, :metadata)
+          metadata.respond_to?(:to_h) ? metadata.to_h.compact_blank : {}
         end
 
         def google_drive_client

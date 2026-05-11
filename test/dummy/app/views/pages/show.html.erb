@@ -14,9 +14,7 @@
   ) %>
 
   <div class="flex flex-wrap gap-3">
-    <%= link_to edit_page_path(@page), class: "inline-flex" do %>
-      <%= render FlatPack::Button::Component.new(text: "Edit inline", style: :primary, size: :md) %>
-    <% end %>
+    <%= render FlatPack::Button::Component.new(text: "Edit inline", style: :primary, size: :md, url: edit_page_path(@page)) %>
   </div>
 
   <div class="page-inline-content prose max-w-none text-(--surface-content-color)">

@@ -46,28 +46,22 @@
             <div class="<%= @draft_attachments.any? ? "flex" : "hidden" %> flex-wrap gap-3" data-chat-demo-target="attachments">
               <% @draft_attachments.each do |attachment_recording| %>
                 <% attachment = attachment_recording.recordable %>
-                <div
-                  class="flex items-center gap-3 rounded-xl border border-(--surface-border-color) bg-(--surface-background-color) px-3 py-2"
-                  data-chat-demo-attachment-id="<%= attachment_recording.id %>">
-                  <img
-                    src="<%= recording_studio_attachable.attachment_preview_file_path(attachment_recording, variant_name: :square_small) %>"
-                    alt="<%= attachment.name %>"
-                    class="h-12 w-12 rounded-lg object-cover">
-
-                  <div class="min-w-0 flex-1">
-                    <p class="truncate text-sm font-medium text-(--surface-content-color)"><%= attachment.name %></p>
-                    <p class="text-xs text-(--surface-muted-content-color)">Ready to send</p>
-                  </div>
-
-                  <button
-                    type="button"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-full text-(--surface-muted-content-color) transition hover:bg-(--surface-muted-background-color) hover:text-(--surface-content-color)"
-                    data-action="chat-demo#removeAttachment"
-                    data-id="<%= attachment_recording.id %>"
-                    aria-label="<%= "Remove #{attachment.name}" %>">×</button>
-                </div>
+                <%= render "attachment_preview",
+                  attachment_id: attachment_recording.id,
+                  name: attachment.name,
+                  thumbnail_url: recording_studio_attachable.attachment_preview_file_path(attachment_recording, variant_name: :square_small),
+                  insert_url: recording_studio_attachable.attachment_file_path(attachment_recording),
+                  remove_label: "Remove #{attachment.name}" %>
               <% end %>
             </div>
+            <template data-chat-demo-target="attachmentTemplate">
+              <%= render "attachment_preview",
+                attachment_id: "__ATTACHMENT_ID__",
+                name: "__ATTACHMENT_NAME__",
+                thumbnail_url: "__ATTACHMENT_THUMBNAIL_URL__",
+                insert_url: "__ATTACHMENT_URL__",
+                remove_label: "__REMOVE_LABEL__" %>
+            </template>
           <% end %>
 
           <% composer.left do %>
@@ -157,11 +151,17 @@
                 data-recording-studio-attachable--attachment-image-picker-target="fileInput"
                 data-action="change->recording-studio-attachable--attachment-image-picker#uploadSelected">
 
+              <template data-recording-studio-attachable--attachment-image-picker-target="progressTemplate">
+                <%= render FlatPack::Progress::Component.new(value: 0, max: 100, label: "Progress") %>
+              </template>
+
               <p class="hidden text-sm text-(--surface-muted-content-color)" data-recording-studio-attachable--attachment-image-picker-target="status"></p>
 
               <p class="text-sm text-(--surface-muted-content-color)" data-recording-studio-attachable--attachment-image-picker-target="modeSummary">
                 Choose one image to attach it immediately.
               </p>
+
+              <div class="hidden space-y-3" data-recording-studio-attachable--attachment-image-picker-target="uploadQueue"></div>
 
               <div class="hidden rounded-xl border border-(--surface-border-color) bg-(--surface-muted-background-color) px-4 py-3" data-recording-studio-attachable--attachment-image-picker-target="selectionActions">
                 <div class="flex items-center justify-between gap-3">

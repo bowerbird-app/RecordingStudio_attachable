@@ -87,7 +87,7 @@ function openPicker(bootstrap) {
 }
 
 registerUploadProviderLauncher("google_drive", {
-  async launch({ controller, providerKey, bootstrapUrl, importUrl }) {
+  async launch({ controller, providerKey, bootstrapUrl }) {
     const bootstrap = await controller.fetchProviderBootstrap(bootstrapUrl)
 
     if (bootstrap.auth_url) {
@@ -101,18 +101,13 @@ registerUploadProviderLauncher("google_drive", {
 
     controller.setProviderStatus("Opening Google Drive picker…")
     await ensureGooglePickerLoaded()
-    const fileIds = await openPicker(bootstrap)
-    if (fileIds.length === 0) {
+    const selections = await openPicker(bootstrap)
+    if (selections.length === 0) {
       controller.clearProviderStatus()
       return
     }
 
-    controller.setProviderStatus("Importing selected Google Drive files…")
-    const result = await controller.submitProviderImport(importUrl || bootstrap.import_url, fileIds)
     controller.clearProviderStatus()
-
-    if (result.redirect_path) {
-      window.location.href = result.redirect_path
-    }
+    controller.addProviderSelections(providerKey, selections)
   }
 })

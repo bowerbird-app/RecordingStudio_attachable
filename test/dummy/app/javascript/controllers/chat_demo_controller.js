@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["attachments", "emptyState"]
+  static targets = ["attachments", "emptyState", "attachmentTemplate"]
 
   static values = {
     attachUrl: String,
@@ -39,41 +39,32 @@ export default class extends Controller {
   }
 
   buildPreview(attachment) {
+    const previewHtml = this.interpolateTemplate(this.attachmentTemplateTarget.innerHTML, {
+      ATTACHMENT_ID: attachment.id,
+      ATTACHMENT_NAME: attachment.name || "Untitled image",
+      ATTACHMENT_THUMBNAIL_URL: attachment.thumbnail_url || attachment.insert_url || "",
+      ATTACHMENT_URL: attachment.insert_url || attachment.thumbnail_url || "",
+      REMOVE_LABEL: `Remove ${attachment.name || "image"}`,
+    })
+
     const wrapper = document.createElement("div")
-    wrapper.className = "flex items-center gap-3 rounded-xl border border-(--surface-border-color) bg-(--surface-background-color) px-3 py-2"
-    wrapper.dataset.chatDemoAttachmentId = attachment.id
+    wrapper.innerHTML = previewHtml.trim()
+    return wrapper.firstElementChild
+  }
 
-    const image = document.createElement("img")
-    image.src = attachment.thumbnail_url || attachment.insert_url
-    image.alt = attachment.alt || attachment.name || "Selected image"
-    image.className = "h-12 w-12 rounded-lg object-cover"
-    wrapper.appendChild(image)
+  interpolateTemplate(templateHtml, values) {
+    return Object.entries(values).reduce((result, [key, value]) => {
+      return result.replaceAll(`__${key}__`, this.escapeHtml(String(value)))
+    }, templateHtml)
+  }
 
-    const copy = document.createElement("div")
-    copy.className = "min-w-0 flex-1"
-
-    const title = document.createElement("p")
-    title.className = "truncate text-sm font-medium text-(--surface-content-color)"
-    title.textContent = attachment.name || "Untitled image"
-    copy.appendChild(title)
-
-    const meta = document.createElement("p")
-    meta.className = "text-xs text-(--surface-muted-content-color)"
-    meta.textContent = "Ready to send"
-    copy.appendChild(meta)
-
-    wrapper.appendChild(copy)
-
-    const button = document.createElement("button")
-    button.type = "button"
-    button.className = "inline-flex h-8 w-8 items-center justify-center rounded-full text-(--surface-muted-content-color) transition hover:bg-(--surface-muted-background-color) hover:text-(--surface-content-color)"
-    button.dataset.action = "chat-demo#removeAttachment"
-    button.dataset.id = attachment.id
-    button.setAttribute("aria-label", `Remove ${attachment.name || "image"}`)
-    button.textContent = "×"
-    wrapper.appendChild(button)
-
-    return wrapper
+  escapeHtml(value) {
+    return value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;")
   }
 
   async persistAttachment(id) {

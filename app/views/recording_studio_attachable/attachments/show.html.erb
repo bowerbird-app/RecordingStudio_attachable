@@ -14,9 +14,7 @@
   ) %>
 
   <div class="flex flex-wrap gap-3">
-    <%= link_to "#edit-attachment", class: "inline-flex" do %>
-      <%= render FlatPack::Button::Component.new(text: "Edit", style: :primary, size: :md) %>
-    <% end %>
+    <%= render FlatPack::Button::Component.new(text: "Edit", style: :primary, size: :md, url: "#edit-attachment") %>
 
     <% unless @attachment_recording.respond_to?(:trashed_at) && @attachment_recording.trashed_at.present? %>
       <%= button_to destroy_attachment_path(@attachment_recording), method: :delete, class: "inline-flex" do %>

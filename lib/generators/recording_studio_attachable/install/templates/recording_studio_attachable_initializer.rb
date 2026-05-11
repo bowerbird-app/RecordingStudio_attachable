@@ -51,7 +51,20 @@ RecordingStudioAttachable.configure do |config|
   #   strategy: :client_picker,
   #   launcher: "google_drive",
   #   bootstrap_url: ->(route_helpers:, recording:) { route_helpers.google_drive.recording_bootstrap_path(recording, format: :json) },
-  #   import_url: ->(route_helpers:, recording:) { route_helpers.google_drive.recording_imports_path(recording, format: :json) }
+  #   remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|
+  #     # `attachments` arrives as normalized remote selections from the shared
+  #     # upload queue. Each entry includes `provider_payload`, optional name /
+  #     # description overrides, and provider-stamped metadata.
+  #     access_token = YourProvider::SessionAccessToken.fetch(session: context.session)
+  #
+  #     YourProvider::Services::ImportSelectedFiles.call(
+  #       parent_recording: parent_recording,
+  #       file_ids: attachments.map { |payload| payload.fetch(:provider_payload) },
+  #       access_token: access_token,
+  #       actor: actor,
+  #       impersonator: impersonator
+  #     )
+  #   end
   # )
   #
   # Built-in Google Drive addon:
@@ -83,6 +96,8 @@ RecordingStudioAttachable.configure do |config|
   #
   # Or register a browser launcher with
   # `registerUploadProviderLauncher("provider_name", launcher)` and have it
-  # fetch `bootstrap_url`, open any auth popup it needs, then post selected
-  # remote file ids back to `import_url`.
+  # fetch `bootstrap_url`, open any auth popup it needs, then add normalized
+  # provider selections into the shared upload queue. The queue posts to
+  # `recording_attachment_imports_path(recording)` and invokes your provider's
+  # `remote_importer` hook during finalization.
 end

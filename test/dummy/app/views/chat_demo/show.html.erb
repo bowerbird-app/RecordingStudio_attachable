@@ -16,9 +16,11 @@
   <% if @root_recording.present? %>
     <% chat_modal_id = "chat-demo-image-picker" %>
 
-    <%= render FlatPack::Chat::Layout::Component.new(variant: :single) do |layout| %>
-      <% layout.panel do %>
-        <%= render "panel", chat_modal_id: chat_modal_id %>
+    <%= turbo_frame_tag "chat-demo-panel" do %>
+      <%= render FlatPack::Chat::Layout::Component.new(variant: :single) do |layout| %>
+        <% layout.panel do %>
+          <%= render "panel", chat_modal_id: chat_modal_id %>
+        <% end %>
       <% end %>
     <% end %>
   <% else %>

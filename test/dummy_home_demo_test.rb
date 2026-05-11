@@ -3,14 +3,24 @@
 require "test_helper"
 
 class DummyHomeDemoTest < Minitest::Test
-  def test_dummy_layouts_load_flat_pack_variables_after_tailwind
+  def test_dummy_layouts_load_flat_pack_application_after_tailwind
     application_layout = File.read(File.expand_path("dummy/app/views/layouts/application.html.erb", __dir__))
     sidebar_layout = File.read(File.expand_path("dummy/app/views/layouts/flat_pack_sidebar.html.erb", __dir__))
 
+    assert_includes application_layout, '<html data-theme="rounded">'
+    assert_includes sidebar_layout, '<html data-theme="rounded"'
+    assert_includes sidebar_layout, '<div class="min-h-0 p-6">'
+    assert_not_includes sidebar_layout, '<main class="h-full overflow-auto p-6">'
+    assert_not_includes sidebar_layout, 'class="h-full overflow-hidden overscroll-none"'
+    assert_not_includes sidebar_layout, 'class="m-0 h-full overflow-hidden overscroll-none'
     assert_operator application_layout.index('stylesheet_link_tag "tailwind.css"'), :<,
                     application_layout.index('stylesheet_link_tag "flat_pack/variables"')
     assert_operator sidebar_layout.index('stylesheet_link_tag "tailwind.css"'), :<,
                     sidebar_layout.index('stylesheet_link_tag "flat_pack/variables"')
+    assert_includes application_layout, 'stylesheet_link_tag "flat_pack/rich_text"'
+    assert_includes application_layout, 'stylesheet_link_tag "flat_pack/content_editor"'
+    assert_includes sidebar_layout, 'stylesheet_link_tag "flat_pack/rich_text"'
+    assert_includes sidebar_layout, 'stylesheet_link_tag "flat_pack/content_editor"'
   end
 
   def test_dummy_home_page_has_root_and_page_demo_actions
@@ -148,7 +158,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes controller, "@page_recording = RecordingStudio::Recording.unscoped.find_by(recordable: @page)"
     assert_includes controller,
                     "@page_attachment_picker_path = recording_studio_attachable.recording_attachment_picker_path(@page_recording)"
-    assert_includes controller, "@page_attachment_create_path = recording_studio_attachable.recording_attachments_path("
+    assert_includes controller, "@page_attachment_create_path = recording_studio_attachable.recording_attachment_imports_path("
     assert_includes controller, 'redirect_mode: "return_to"'
     assert_includes controller, "return_to: page_path(@page)"
     assert_includes show_view, "FlatPack::Breadcrumb::Component.new("
@@ -175,7 +185,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes view, 'items: [{ text: "Home", href: root_path, icon: "home" }]'
     assert_includes view, 'title: "Edit inline"'
     assert_includes view, 'subtitle: "Update page copy and formatted content for the inline recording demo."'
-    assert_includes view, '<%= link_to page_path(@page), class: "inline-flex" do %>'
+    assert_includes view, "url: page_path(@page)"
     assert_includes view, 'text: "View"'
     assert_includes view, "FlatPack::TextInput::Component.new("
     assert_includes view, 'name: "page[title]"'
@@ -198,8 +208,11 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes view, "data-recording-studio-attachable--attachment-image-picker-image-processing-max-height-value="
     assert_includes view, "data-recording-studio-attachable--attachment-image-picker-image-processing-quality-value="
     assert_includes view, 'title: "Insert image"'
+    assert_includes view, "FlatPack::Button::Dropdown::Component.new("
     assert_includes view, 'text: "Upload"'
-    assert_includes view, 'icon: "upload"'
+    assert_includes view, "dropdown.menu_item("
+    assert_includes view, 'text: "Upload from device"'
+    assert_includes view, "dropdown.menu_divider"
     assert_includes view, 'class="flex h-full min-h-0 flex-col gap-4"'
     assert_includes view, 'class="w-full lg:w-auto"'
     assert_includes view, "FlatPack::Search::Component.new("
@@ -209,6 +222,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes view, 'data-recording-studio-attachable--attachment-image-picker-target="fileInput"'
     assert_includes view, 'data-recording-studio-attachable--attachment-image-picker-target="selectionActions"'
     assert_includes view, 'data-recording-studio-attachable--attachment-image-picker-target="selectionCount"'
+    assert_includes view, "provider.client_picker?"
+    assert_includes view, "recording-studio-attachable--attachment-image-picker#launchProvider"
     assert_includes view, "recording-studio-attachable--attachment-image-picker#confirmSelection"
     assert_includes view, "recording-studio-attachable--attachment-image-picker#clearSelection"
     assert_includes view, "data-recording-studio-attachable--attachment-image-picker-max-file-size-value="
@@ -217,11 +232,14 @@ class DummyHomeDemoTest < Minitest::Test
     assert_not_includes view, 'class="max-h-96 overflow-y-auto pr-1"'
     assert_not_includes view, 'text: "Close"'
     assert_includes view, 'text: "Save page"'
+    assert_includes picker_controller, 'import { getUploadProviderLauncher } from "controllers/recording_studio_attachable/provider_launchers"'
     assert_includes picker_controller, "application.getControllerForElementAndIdentifier"
     assert_includes picker_controller, "openPickerFromToolbar(event)"
     assert_includes picker_controller, "async loadAttachments({ append = false, reset = false } = {}) {"
     assert_includes picker_controller, "openSinglePicker(event) {"
     assert_includes picker_controller, "openMultiplePicker(event) {"
+    assert_includes picker_controller, "async launchProvider(event) {"
+    assert_includes picker_controller, "async addProviderSelections(providerKey, selections) {"
     assert_includes picker_controller, "multipleSelection: Boolean"
     assert_includes picker_controller, "this.selectedAttachments = new Map()"
     assert_includes picker_controller, "this.syncFileInputMode()"
@@ -229,13 +247,16 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes picker_controller, "clearSelection() {"
     assert_includes picker_controller, "this.setMultipleSelectionMode(false)"
     assert_includes picker_controller, "async directUploadFiles(files) {"
-    assert_includes picker_controller, "directUploadBlob(file) {"
-    assert_includes picker_controller, "async createAttachments(attachments) {"
+    assert_includes picker_controller, "directUploadBlob(file, entry = null) {"
+    assert_includes picker_controller, "async createAttachments(attachments, providerKey = null) {"
+    assert_includes picker_controller, "attachment_import: {"
+    assert_includes picker_controller, "handleProviderPayload(payload) {"
+    assert_includes picker_controller, "fetchProviderBootstrap(bootstrapUrl) {"
     assert_includes picker_controller, 'import { preprocessImageFile } from "controllers/recording_studio_attachable/image_preprocessing"'
     assert_includes picker_controller, "const processed = await preprocessImageFile(file, this.imageProcessingOptions())"
     assert_includes picker_controller, "maxBytes: this.maxFileSizeValue"
     assert_includes picker_controller, "const selectedFiles = this.multipleSelectionEnabled() ? files : [files[0]]"
-    assert_includes picker_controller, "const upload = new DirectUpload(file, this.directUploadUrlValue)"
+    assert_includes picker_controller, "const upload = new DirectUpload(file, this.directUploadUrlValue, entry"
     assert_includes picker_controller, 'button.setAttribute("aria-label", attachment.name || "Untitled image")'
     assert_includes picker_controller, 'button.setAttribute("aria-pressed", this.attachmentSelectedForMultiMode(attachment.id) ? "true" : "false")'
     assert_includes picker_controller, "attachmentId: attachment.id"
@@ -285,7 +306,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes controller, "@draft_attachments = attachment_recordings_for(@draft_message)"
     assert_includes controller, "@messages = persisted_messages"
     assert_includes controller, "@chat_attachment_picker_path = recording_studio_attachable.recording_attachment_picker_path("
-    assert_includes controller, "@chat_attachment_create_path = recording_studio_attachable.recording_attachments_path("
+    assert_includes controller, "@chat_attachment_create_path = recording_studio_attachable.recording_attachment_imports_path("
     assert_includes controller, "@chat_attachment_upload_path = recording_studio_attachable.recording_attachment_upload_path("
     assert_includes controller, "draft_message = find_draft_message!(chat_demo_params[:draft_message_id])"
     assert_includes controller, "send_draft_message!(draft_message, body.presence)"
@@ -306,6 +327,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes controller, 'redirect_to chat_demo_path, notice: "Chat demo reset."'
     assert_includes view, 'title: "Chat demo"'
     assert_includes view, "FlatPack::Chat::Layout::Component.new("
+    assert_includes view, 'turbo_frame_tag "chat-demo-panel"'
     assert_includes view, "variant: :single"
     assert_not_includes view, 'class: "rounded-lg border"'
     assert_not_includes view, 'style: "height: 620px; border-color: var(--surface-border-color); background-color: var(--surface-background-color);"'
@@ -319,6 +341,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes partial, "FlatPack::Chat::Attachment::Component.new("
     assert_includes partial, "FlatPack::Carousel::Component.new("
     panel_partial = File.read(File.expand_path("dummy/app/views/chat_demo/_panel.html.erb", __dir__))
+    attachment_preview_partial = File.read(File.expand_path("dummy/app/views/chat_demo/_attachment_preview.html.erb", __dir__))
     assert_includes panel_partial, "FlatPack::Chat::Panel::Component.new"
     assert_includes panel_partial, "FlatPack::Chat::Header::Component.new("
     assert_includes panel_partial, 'title: "Chat"'
@@ -342,8 +365,11 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes panel_partial, 'title: "Add images"'
     assert_includes panel_partial, 'data-recording-studio-attachable--attachment-image-picker-target="modeSummary"'
     assert_includes panel_partial, 'class="min-h-0 flex-1 overflow-y-auto p-1"'
+    assert_includes panel_partial, 'data-chat-demo-target="attachmentTemplate"'
     assert_includes panel_partial, 'data-recording-studio-attachable--attachment-image-picker-target="selectionActions"'
     assert_includes panel_partial, 'data-recording-studio-attachable--attachment-image-picker-target="selectionCount"'
+    assert_includes attachment_preview_partial, "FlatPack::Chat::Attachment::Component.new("
+    assert_includes attachment_preview_partial, "FlatPack::Button::Component.new("
     assert_includes picker_controller, "`${count} selected`"
     assert_includes picker_controller, '"Select one or more"'
     assert_includes panel_partial, 'text: "Add selected"'
@@ -366,16 +392,20 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes picker_controller, "this.selectedAttachments.forEach((attachment) => this.dispatchSelection(attachment))"
     assert_includes picker_controller, 'event.currentTarget.closest("details")?.removeAttribute("open")'
     assert_includes picker_controller, "this.openModalAndLoad()"
-    assert_includes chat_controller, 'static targets = ["attachments", "emptyState"]'
+    assert_includes chat_controller, 'static targets = ["attachments", "emptyState", "attachmentTemplate"]'
     assert_includes chat_controller, "static values = {"
     assert_includes chat_controller, "async attachmentSelected(event) {"
     assert_includes chat_controller, "await this.persistAttachment(attachment.id)"
     assert_includes chat_controller, "async removeAttachment(event) {"
     assert_includes chat_controller, "await this.removePersistedAttachment(id)"
+    assert_includes chat_controller, "const previewHtml = this.interpolateTemplate(this.attachmentTemplateTarget.innerHTML, {"
+    assert_includes chat_controller, "interpolateTemplate(templateHtml, values) {"
+    assert_includes chat_controller, "escapeHtml(value) {"
     assert_includes chat_controller, "async persistAttachment(id) {"
     assert_includes chat_controller, "async removePersistedAttachment(id) {"
     assert_includes chat_controller, 'return this.detachUrlTemplateValue.replace("__ATTACHMENT_ID__", encodeURIComponent(String(id)))'
-    assert_includes chat_controller, 'button.dataset.action = "chat-demo#removeAttachment"'
+    assert_includes chat_controller, "this.attachmentTemplateTarget.innerHTML"
+    assert_includes chat_controller, "replaceAll(`__${key}__`, this.escapeHtml(String(value)))"
   end
 
   def test_attachment_listing_uses_card_grid_with_empty_state_when_no_results_exist
@@ -395,13 +425,18 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes listing_view, "view: @view_mode"
     assert_includes listing_view, 'text: "Upload"'
     assert_includes listing_view, 'icon: "upload"'
-    assert_includes listing_view, 'icon: "squares-2x2"'
-    assert_includes listing_view, 'icon: "list-bullet"'
-    assert_includes listing_view, "icon_only: true"
+    assert_includes listing_view, "FlatPack::Button::Pill::Component"
+    assert_includes listing_view, 'text: "Grid"'
+    assert_includes listing_view, 'text: "List"'
+    assert_includes listing_view, 'id: "recording-attachments-grid-view"'
+    assert_includes listing_view, 'id: "recording-attachments-list-view"'
     assert_includes listing_view, "size: :md"
     assert_not_includes listing_view, ">View<"
-    assert_not_includes listing_view, 'text: "Grid"'
-    assert_not_includes listing_view, 'text: "List"'
+    assert_not_includes listing_view, 'icon: "squares-2x2"'
+    assert_not_includes listing_view, 'icon: "list-bullet"'
+    assert_not_includes listing_view, "icon_only: true"
+    assert_not_includes listing_view, 'aria: { label: "Grid view" }'
+    assert_not_includes listing_view, 'aria: { label: "List view" }'
     assert_includes listing_view, "form_with url: recording_attachments_path(@recording), method: :get"
     assert_includes listing_view, 'controller: "recording-studio-attachable--live-search"'
     assert_includes listing_view, "input->recording-studio-attachable--live-search#queueSubmit"
@@ -416,14 +451,16 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes listing_view, 'render "grid", attachments: @attachments'
     assert_includes listing_view, 'render "list", attachments: @attachments'
     assert_includes listing_view, 'data: { turbo_frame: "recording-attachments-results", turbo_action: "advance" }'
-    assert_includes listing_view, "@view_mode == :grid ? :secondary : :ghost"
-    assert_includes listing_view, "@view_mode == :list ? :secondary : :ghost"
+    assert_includes listing_view, "active: @view_mode == :grid"
+    assert_includes listing_view, "active: @view_mode == :list"
     assert_includes listing_view, 'title: @query.present? ? "Nothing found" : "Nothing uplaoded yet"'
     assert_includes listing_view, 'subtitle: @query.present? ? nil : "Upload files to start building this library."'
     assert_includes listing_view, '<circle cx="11" cy="11" r="6" />'
     assert_includes grid_partial, 'class="grid grid-cols-2 items-stretch gap-6 lg:grid-cols-5"'
     assert_includes grid_partial, "card.media padding: :none"
     assert_includes grid_partial, 'data-controller="recording-studio-attachable--image-fallback"'
+    assert_includes grid_partial, 'data-recording-studio-attachable--image-fallback-target="skeleton"'
+    assert_includes grid_partial, 'FlatPack::Skeleton::Component.new(variant: :rectangle, shimmer: true, width: "100%", height: "100%")'
     assert_includes grid_partial, "preview_path = authorized_attachment_preview_path(attachment_recording, :med)"
     assert_includes grid_partial, "image_tag preview_path"
     assert_includes grid_partial, "attachment_path(attachment_recording)"
@@ -433,7 +470,9 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes list_partial, 'data: { turbo_frame: "_top" }'
     assert_operator list_partial.scan("attachment_path(attachment_recording)").length, :>=, 2
     assert_includes list_partial, 'FlatPack::Tooltip::Component.new(text: "Download")'
-    assert_includes list_partial, 'icon: "arrow-down-tray", icon_only: true'
+    assert_includes list_partial, 'icon: "arrow-down-tray"'
+    assert_includes list_partial, "icon_only: true"
+    assert_includes list_partial, "url: download_attachment_path(attachment_recording)"
     assert_includes list_partial, 'FlatPack::Tooltip::Component.new(text: "Trash")'
     assert_includes list_partial, "destroy_attachment_path(attachment_recording)"
     assert_includes list_partial, 'icon: "trash", icon_only: true'
@@ -468,10 +507,18 @@ class DummyHomeDemoTest < Minitest::Test
       assert_includes layout, 'stylesheet_link_tag "application.css"'
       assert_includes layout, 'stylesheet_link_tag "flat_pack/variables"'
       assert_includes layout, 'stylesheet_link_tag "flat_pack/rich_text"'
+      assert_includes layout, 'stylesheet_link_tag "flat_pack/content_editor"'
       assert_includes layout, 'stylesheet_link_tag "tailwind.css"'
       assert_operator layout.index('stylesheet_link_tag "tailwind.css"'), :<,
                       layout.index('stylesheet_link_tag "flat_pack/variables"')
     end
+
+    assert_includes application_layout, 'stylesheet_link_tag "flat_pack/variables"'
+    assert_includes sidebar_layout, 'stylesheet_link_tag "flat_pack/variables"'
+    assert_includes blank_layout, 'stylesheet_link_tag "flat_pack/variables"'
+    assert_includes blank_layout, 'class="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-6 py-10"'
+    assert_not_includes blank_layout, 'overflow-y-auto overscroll-y-contain'
+    assert_not_includes blank_layout, 'h-screen overflow-hidden'
 
     assert_includes blank_layout, "style: :danger"
     assert_not_includes blank_layout, "style: :error"
@@ -510,6 +557,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes initializer_template, "square_small: { resize_to_fill: [128, 128] }"
     assert_includes initializer_template, "xlarge: { resize_to_limit: [2400, 2400] }"
     assert_includes initializer_template, 'label: "Google Drive"'
+    assert_includes initializer_template, "remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|"
     assert_includes initializer_template, "config.google_drive.enabled = true"
     assert_includes initializer_template, "GOOGLE_DRIVE_CLIENT_ID"
     assert_includes initializer_template, "/recording_studio_attachable/google_drive/oauth/callback"

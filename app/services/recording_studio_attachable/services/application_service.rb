@@ -17,7 +17,7 @@ module RecordingStudioAttachable
 
       def capability_options_for(recording)
         owner_type = RecordingStudioAttachable::Authorization.owner_type_for(recording)
-        return {} unless defined?(RecordingStudio) && owner_type.present?
+        return {} unless defined?(RecordingStudio) && RecordingStudio.respond_to?(:capability_options) && owner_type.present?
 
         RecordingStudio.capability_options(:attachable, for_type: owner_type) || {}
       end

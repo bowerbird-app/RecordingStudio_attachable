@@ -184,8 +184,16 @@ RecordingStudioAttachable.configure do |config|
     bootstrap_url: ->(route_helpers:, recording:) do
       route_helpers.google_drive.recording_bootstrap_path(recording, format: :json)
     end,
-    import_url: ->(route_helpers:, recording:) do
-      route_helpers.google_drive.recording_imports_path(recording, format: :json)
+    remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|
+      access_token = GoogleDriveSessionAccessToken.fetch(session: context.session)
+
+      MyAddon::GoogleDrive::ImportSelectedFiles.call(
+        parent_recording: parent_recording,
+        file_ids: attachments.map { |payload| payload.fetch(:provider_payload) },
+        access_token: access_token,
+        actor: actor,
+        impersonator: impersonator
+      )
     end
   )
 end
@@ -198,11 +206,21 @@ Each provider registration supports:
 - `strategy`: `:link`, `:modal_page`, or `:client_picker`
 - `url`: string or callable for `:link`
 - `bootstrap_url`: JSON bootstrap endpoint for `:client_picker`
-- `import_url`: JSON import handoff endpoint for `:client_picker`
 - `launcher`: browser launcher name for `:client_picker`
+- `remote_importer`: callable hook that materializes queued remote selections into attachments through the shared Attachable result contract
 - `modal_title`: optional modal heading for `:modal_page`
 - `icon`, `style`, `size`, `target`: FlatPack button options
 - `visible`: optional callable receiving `view_context:` and `recording:`
+
+The `remote_importer` hook is the public cloud-provider API. It receives:
+
+- `parent_recording`
+- `attachments`: normalized remote selections from the shared upload queue
+- `actor`
+- `impersonator`
+- `context`: the request/controller context for session-backed provider auth
+
+It must return the same `RecordingStudioAttachable::Services::BaseService::Result` shape used by the gem's other service APIs.
 
 For `:modal_page`, the upload page opens the provider URL inside a shared FlatPack modal. The engine appends `embed=modal`, `provider_key`, and `provider_modal_id` to the provider URL so addon-owned screens can adapt their layout and communicate back to the upload page.
 
@@ -212,7 +230,7 @@ For modal-page providers, the shared browser contract is:
 - addon screens can complete auth in a popup and post a `provider-auth-complete` message back to the upload page
 - addon screens can post a `provider-import-complete` message with a `redirectPath` when the import succeeds
 
-For `:client_picker`, the upload page stays in place and calls a registered browser launcher. The launcher fetches provider bootstrap JSON, can open auth in a popup, and can submit selected remote file ids back to the provider's `import_url`.
+For `:client_picker`, the upload page stays in place and calls a registered browser launcher. The launcher fetches provider bootstrap JSON, can open auth in a popup, and then adds normalized provider selections into the shared upload queue.
 
 Client-picker launchers are registered in JavaScript:
 
@@ -220,13 +238,16 @@ Client-picker launchers are registered in JavaScript:
 import { registerUploadProviderLauncher } from "controllers/recording_studio_attachable/provider_launchers"
 
 registerUploadProviderLauncher("google_drive", {
-  async launch({ controller, bootstrapUrl, importUrl }) {
+  async launch({ controller, providerKey, bootstrapUrl }) {
     const bootstrap = await controller.fetchProviderBootstrap(bootstrapUrl)
     // open auth popup if needed, then launch provider SDK picker
-    // finally post selected file ids back to importUrl
+    // finally add normalized provider selections to the shared queue
+    controller.addProviderSelections(providerKey, [{ id: "file-1", resource_key: "rk-1" }])
   }
 })
 ```
+
+The upload page then posts the whole batch to `recording_attachment_imports_path(recording)`. Recording Studio Attachable owns the queue UI, retries, response handling, and redirect behavior; the provider only implements `remote_importer`.
 
 In your provider controller or service, hand the gem an IO object plus metadata and let it create the blob, identify the file content by default, enforce attachable validations, and create the child recording:
 

@@ -8,7 +8,7 @@ const PROVIDER_EVENT_STORAGE_KEY = "recording-studio-attachable:provider-event"
 const PROVIDER_EVENT_CHANNEL_NAME = `${PROVIDER_EVENT_STORAGE_KEY}:channel`
 
 export default class extends Controller {
-  static targets = ["dropzone", "input", "queue"]
+  static targets = ["dropzone", "input", "queue", "progressTemplate"]
   static values = {
     directUploadUrl: String,
     finalizeUrl: String,
@@ -26,6 +26,7 @@ export default class extends Controller {
     this.files = []
     this.finalizeRequestInFlight = false
     this.providerButtonsByKey = new Map()
+    this.remoteStageTimers = new Map()
     this.handleProviderMessage = this.handleProviderMessage.bind(this)
     this.handleProviderStorage = this.handleProviderStorage.bind(this)
     this.handleProviderChannelMessage = this.handleProviderChannelMessage.bind(this)
@@ -41,6 +42,7 @@ export default class extends Controller {
 
   disconnect() {
     this.files.forEach((entry) => this.revokePreview(entry))
+    this.clearAllRemoteStageTimers()
     window.removeEventListener("message", this.handleProviderMessage)
     window.removeEventListener("storage", this.handleProviderStorage)
 
@@ -118,13 +120,14 @@ export default class extends Controller {
   finalize() {
     if (this.finalizeRequestInFlight || !this.queueSettled()) return
 
-    const readyEntries = this.uploadedEntries()
+    const readyEntries = this.finalizableEntries()
     if (readyEntries.length === 0) return
 
     this.finalizeRequestInFlight = true
     readyEntries.forEach((entry) => {
-      entry.status = "finalizing"
+      entry.status = entry.providerPayload ? "importing" : "finalizing"
       this.renderEntry(entry)
+      if (entry.providerPayload) this.scheduleRemoteAttachStage(entry)
     })
 
     fetch(this.finalizeUrlValue, {
@@ -137,11 +140,9 @@ export default class extends Controller {
         Accept: "application/json"
       },
       body: JSON.stringify({
-        attachments: readyEntries.map((entry) => ({
-          signed_blob_id: entry.signedBlobId,
-          name: entry.name,
-          description: entry.description
-        }))
+        attachment_import: {
+          attachments: readyEntries.map((entry) => this.serializedEntry(entry))
+        }
       })
     })
       .then(async (response) => {
@@ -149,6 +150,7 @@ export default class extends Controller {
         if (!response.ok) throw payload
 
         readyEntries.forEach((entry) => {
+          this.clearRemoteStageTimer(entry.id)
           entry.status = "attached"
           this.renderEntry(entry)
         })
@@ -160,6 +162,7 @@ export default class extends Controller {
         )
 
         readyEntries.forEach((entry) => {
+          this.clearRemoteStageTimer(entry.id)
           entry.status = "failed"
           entry.error = errorsByBlobId.get(entry.signedBlobId) || error?.error || "Finalization failed"
           this.renderEntry(entry)
@@ -177,7 +180,11 @@ export default class extends Controller {
     if (!entry) return
 
     entry.error = null
-    if (entry.signedBlobId) {
+    if (entry.providerPayload) {
+      entry.status = "selected"
+      this.renderEntry(entry)
+      this.maybeFinalize()
+    } else if (entry.signedBlobId) {
       entry.status = "uploaded"
       this.renderEntry(entry)
       this.maybeFinalize()
@@ -190,6 +197,7 @@ export default class extends Controller {
     const id = event.currentTarget.dataset.id
     const entry = this.files.find((item) => item.id === id)
     this.files = this.files.filter((item) => item.id !== id)
+    this.clearRemoteStageTimer(id)
     this.revokePreview(entry)
     this.renderQueue()
   }
@@ -241,6 +249,38 @@ export default class extends Controller {
       this.files.push(entry)
       this.renderQueue()
       if (entry.status === "pending") this.uploadEntry(entry)
+    })
+  }
+
+  addProviderSelections(providerKey, selections) {
+    const availableSlots = this.hasMaxFilesCountValue
+      ? Math.max(this.maxFilesCountValue - this.queueableEntryCount(), 0)
+      : selections.length
+
+    selections.forEach((selection, index) => {
+      const exceedsCount = this.hasMaxFilesCountValue && index >= availableSlots
+      const entry = {
+        id: crypto.randomUUID(),
+        file: null,
+        name: selection.name || selection.id || "Remote file",
+        description: selection.description || "",
+        previewUrl: null,
+        progress: 0,
+        status: exceedsCount ? "invalid" : "selected",
+        error: null,
+        signedBlobId: null,
+        providerKey,
+        providerPayload: this.normalizedProviderPayload(selection),
+        contentType: selection.mimeType || selection.mime_type || selection.type || "",
+        byteSize: selection.byteSize || selection.size || null
+      }
+
+      if (exceedsCount) {
+        entry.error = this.maxFilesError()
+      }
+
+      this.files.push(entry)
+      this.renderQueue()
     })
   }
 
@@ -469,24 +509,6 @@ export default class extends Controller {
     return payload
   }
 
-  async submitProviderImport(importUrl, fileIds) {
-    const response = await fetch(importUrl, {
-      method: "POST",
-      credentials: "same-origin",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.content || "",
-        "X-Requested-With": "XMLHttpRequest"
-      },
-      body: JSON.stringify({ file_ids: fileIds })
-    })
-    const payload = await response.json()
-    if (!response.ok) throw new Error(payload.error || "Could not import selected files.")
-
-    return payload
-  }
-
   openPopup(url, name = "recording-studio-attachable-provider-auth") {
     const width = 640
     const height = 760
@@ -536,17 +558,17 @@ export default class extends Controller {
 
   maybeFinalize() {
     if (this.finalizeRequestInFlight || !this.queueSettled()) return
-    if (this.uploadedEntries().length === 0) return
+    if (this.finalizableEntries().length === 0) return
 
     this.finalize()
   }
 
-  uploadedEntries() {
-    return this.files.filter((entry) => entry.status === "uploaded")
+  finalizableEntries() {
+    return this.files.filter((entry) => ["uploaded", "selected"].includes(entry.status))
   }
 
   queueSettled() {
-    return this.files.every((entry) => !["pending", "processing", "uploading", "finalizing"].includes(entry.status))
+    return this.files.every((entry) => !["pending", "processing", "uploading", "finalizing", "importing", "attaching"].includes(entry.status))
   }
 
   async preprocessEntryFile(entry) {
@@ -569,17 +591,24 @@ export default class extends Controller {
   }
 
   entryTemplate(entry) {
-    const preview = entry.previewUrl ? `<img src="${this.escapeAttribute(entry.previewUrl)}" alt="" class="h-12 w-12 rounded object-cover" />` : `<div class="flex h-12 w-12 items-center justify-center rounded bg-(--surface-muted-background-color) text-xs">FILE</div>`
+    const preview = entry.previewUrl
+      ? `<img src="${this.escapeAttribute(entry.previewUrl)}" alt="" class="h-12 w-12 rounded object-cover" />`
+      : `<div class="flex h-12 w-12 items-center justify-center rounded bg-(--surface-muted-background-color) px-1 text-[10px] font-medium uppercase tracking-wide">${this.escapeHtml(this.entryBadge(entry))}</div>`
     const progress = entry.status === "processing"
       ? `<p class="text-xs text-(--surface-muted-content-color)">Optimizing image before upload…</p>`
+      : this.remoteProgressVisible(entry)
+        ? this.indeterminateProgressTemplate(entry)
       : entry.status === "uploading" || entry.progress > 0
-        ? `<progress class="w-full" value="${entry.progress}" max="100"></progress>`
+        ? this.progressTemplateHtml({
+            value: entry.progress,
+            label: `Uploading ${this.entryName(entry)}`
+          })
         : ""
     const error = entry.error ? `<p class="text-xs text-red-600">${this.escapeHtml(entry.error)}</p>` : ""
     const retry = entry.status === "failed" ? `<button type="button" data-action="recording-studio-attachable--upload#retry" data-id="${entry.id}" class="text-xs underline">Retry</button>` : ""
     const remove = this.removeButtonTemplateValue
       .replace("__ENTRY_ID__", this.escapeAttribute(entry.id))
-      .replace("__REMOVE_LABEL__", this.escapeAttribute(`Remove ${entry.file.name} from upload queue`))
+      .replace("__REMOVE_LABEL__", this.escapeAttribute(`Remove ${this.entryName(entry)} from upload queue`))
       .replace("__REMOVE_TITLE__", this.escapeAttribute("Remove from upload queue"))
 
     return `
@@ -589,8 +618,8 @@ export default class extends Controller {
           ${preview}
           <div class="min-w-0 flex-1 space-y-2">
             <div>
-              <p class="font-medium">${this.escapeHtml(entry.file.name)}</p>
-              <p class="text-xs text-(--surface-muted-content-color)">${Math.round(entry.file.size / 1024)} KB · ${entry.status}</p>
+              <p class="font-medium">${this.escapeHtml(this.entryName(entry))}</p>
+              <p class="text-xs text-(--surface-muted-content-color)">${this.entryMeta(entry)}</p>
             </div>
             ${progress}
             ${error}
@@ -605,6 +634,181 @@ export default class extends Controller {
 
   revokePreview(entry) {
     if (entry?.previewUrl) URL.revokeObjectURL(entry.previewUrl)
+  }
+
+  scheduleRemoteAttachStage(entry) {
+    this.clearRemoteStageTimer(entry.id)
+    const timer = window.setTimeout(() => {
+      if (!entry || entry.status !== "importing") return
+
+      entry.status = "attaching"
+      this.renderEntry(entry)
+      this.remoteStageTimers.delete(entry.id)
+    }, 900)
+
+    this.remoteStageTimers.set(entry.id, timer)
+  }
+
+  clearRemoteStageTimer(entryId) {
+    const timer = this.remoteStageTimers.get(entryId)
+    if (timer) window.clearTimeout(timer)
+    this.remoteStageTimers.delete(entryId)
+  }
+
+  clearAllRemoteStageTimers() {
+    this.remoteStageTimers.forEach((timer) => window.clearTimeout(timer))
+    this.remoteStageTimers.clear()
+  }
+
+  entryName(entry) {
+    return entry.file?.name || entry.name || entry.providerPayload?.id || "Remote file"
+  }
+
+  entryMeta(entry) {
+    if (entry.providerPayload) {
+      return `${this.providerDisplayName(entry.providerKey)} · ${this.remoteStatusLabel(entry)}`
+    }
+
+    const status = entry.status
+    if (entry.file) {
+      return `${Math.round(entry.file.size / 1024)} KB · ${status}`
+    }
+
+    const size = Number(entry.byteSize)
+    const sizeLabel = Number.isFinite(size) && size > 0 ? `${Math.round(size / 1024)} KB` : "Cloud import"
+    return `${sizeLabel} · ${status}`
+  }
+
+  entryBadge(entry) {
+    if (!entry.providerPayload) return "FILE"
+
+    return this.providerBadge(entry.providerKey)
+  }
+
+  providerBadge(providerKey) {
+    const words = this.providerDisplayName(providerKey).split(/\s+/).filter(Boolean)
+    if (words.length > 1) return words[words.length - 1].slice(0, 5).toUpperCase()
+
+    return (words[0] || "Cloud").slice(0, 5).toUpperCase()
+  }
+
+  providerDisplayName(providerKey) {
+    return String(providerKey || "Cloud")
+      .split(/[_-]+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ")
+  }
+
+  remoteProgressVisible(entry) {
+    return entry.providerPayload && ["importing", "attaching"].includes(entry.status)
+  }
+
+  remoteStatusLabel(entry) {
+    switch (entry.status) {
+      case "selected":
+        return "Import queued"
+      case "importing":
+        return `Importing from ${this.providerDisplayName(entry.providerKey)}`
+      case "attaching":
+        return "Creating attachment"
+      case "attached":
+        return "Import complete"
+      case "failed":
+        return "Import failed"
+      default:
+        return "Ready to import"
+    }
+  }
+
+  indeterminateProgressTemplate(entry) {
+    return this.progressTemplateHtml({
+      value: this.remoteProgressValue(entry),
+      label: this.remoteStatusLabel(entry)
+    })
+  }
+
+  remoteProgressValue(entry) {
+    switch (entry.status) {
+      case "selected":
+        return 0
+      case "importing":
+        return 45
+      case "attaching":
+        return 85
+      case "attached":
+        return 100
+      case "failed":
+        return 0
+      default:
+        return 0
+    }
+  }
+
+  progressTemplateHtml({ value = 0, max = 100, label = "Progress" } = {}) {
+    if (!this.hasProgressTemplateTarget) return ""
+
+    const template = this.progressTemplateTarget.content.firstElementChild
+    if (!template) return ""
+
+    const nextNode = template.cloneNode(true)
+    const normalizedValue = Number.isFinite(Number(value)) ? Math.max(0, Math.min(Number(value), Number(max) || 100)) : 0
+    const normalizedMax = Number(max) > 0 ? Number(max) : 100
+    const percentage = normalizedMax > 0 ? Math.min((normalizedValue / normalizedMax) * 100, 100) : 0
+    const progressBar = nextNode.querySelector("[role='progressbar']")
+    const labelNode = nextNode.querySelector(".text-sm.font-medium")
+    const fillNode = progressBar?.firstElementChild
+
+    if (progressBar) {
+      progressBar.setAttribute("aria-valuenow", String(normalizedValue))
+      progressBar.setAttribute("aria-valuemin", "0")
+      progressBar.setAttribute("aria-valuemax", String(normalizedMax))
+      progressBar.setAttribute("aria-label", label)
+    }
+
+    if (labelNode) {
+      labelNode.textContent = label
+    }
+
+    if (fillNode) {
+      fillNode.style.width = `${percentage}%`
+    }
+
+    return nextNode.outerHTML
+  }
+
+  normalizedProviderPayload(selection) {
+    const payload = { ...selection }
+    delete payload.name
+    delete payload.description
+    delete payload.byteSize
+    delete payload.size
+    delete payload.mimeType
+    delete payload.mime_type
+    delete payload.type
+
+    return payload
+  }
+
+  serializedEntry(entry) {
+    const payload = {
+      name: entry.name,
+      description: entry.description
+    }
+
+    if (entry.providerPayload) {
+      return {
+        ...payload,
+        provider_key: entry.providerKey,
+        provider_payload: entry.providerPayload,
+        content_type: entry.contentType
+      }
+    }
+
+    return {
+      ...payload,
+      signed_blob_id: entry.signedBlobId
+    }
   }
 
   escapeHtml(value) {

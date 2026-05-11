@@ -196,6 +196,7 @@ class DocsController < ApplicationController
 
     @plugin_summary = [
       "Third-party addons register upload sources with config.register_upload_provider(...) so the upload page can discover them without replacing the built-in direct uploader.",
+      "Providers that need cloud imports should register a remote_importer hook so the shared upload queue can hand normalized remote selections back to addon code without giving up control of the browser flow.",
       "Provider code should usually call the import services directly; the engine-owned recording_attachment_imports_path(recording) endpoint is for browser handoff flows that already run inside the host app.",
       "The gem owns authorization, Active Storage validation, attachment-recording creation, and provider provenance once the provider hands over a file IO or signed blob id.",
       "The built-in Google Drive addon in the dummy app demonstrates the same provider registration and import flow that third-party addons can implement in their own engines or services."
@@ -217,8 +218,16 @@ class DocsController < ApplicationController
               bootstrap_url: ->(route_helpers:, recording:) do
                 route_helpers.google_drive.recording_bootstrap_path(recording, format: :json)
               end,
-              import_url: ->(route_helpers:, recording:) do
-                route_helpers.google_drive.recording_imports_path(recording, format: :json)
+              remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|
+                access_token = GoogleDriveSessionAccessToken.fetch(session: context.session)
+
+                MyAddon::GoogleDrive::ImportSelectedFiles.call(
+                  parent_recording: parent_recording,
+                  file_ids: attachments.map { |payload| payload.fetch(:provider_payload) },
+                  access_token: access_token,
+                  actor: actor,
+                  impersonator: impersonator
+                )
               end
             )
           end
@@ -245,34 +254,31 @@ class DocsController < ApplicationController
         RUBY
       },
       {
-        title: "Post browser handoff payloads to the engine",
-        subtitle: "recording_attachment_imports_path(recording)",
+        title: "Register the remote importer hook",
+        subtitle: "provider.import_remote_attachments(...) via remote_importer:",
         language: :ruby,
         code: <<~RUBY
-          post recording_studio_attachable.recording_attachment_imports_path(recording), params: {
-            attachment_import: {
-              provider_key: "google_drive",
-              attachments: [
-                {
-                  signed_blob_id: blob.signed_id,
-                  name: remote_file.title,
-                  metadata: {
-                    external_id: remote_file.id,
-                    external_url: remote_file.web_view_link
-                  }
-                }
-              ]
-            }
-          }, as: :json
+          remote_importer = lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|
+            access_token = GoogleDriveSessionAccessToken.fetch(session: context.session)
+
+            MyAddon::GoogleDrive::ImportSelectedFiles.call(
+              parent_recording: parent_recording,
+              file_ids: attachments.map { |payload| payload.fetch(:provider_payload) },
+              access_token: access_token,
+              actor: actor,
+              impersonator: impersonator
+            )
+          end
         RUBY
       }
     ]
 
     @plugin_api_points = [
-      "Upload discovery: config.register_upload_provider(key, label:, strategy:, bootstrap_url:, import_url:, launcher:, icon:, visible:, target:). Prefer route_helpers: in callables instead of reaching into the full view context.",
+      "Upload discovery: config.register_upload_provider(key, label:, strategy:, bootstrap_url:, launcher:, remote_importer:, icon:, visible:, target:). Prefer route_helpers: in callables instead of reaching into the full view context.",
+      "remote_importer is the public cloud-provider hook. It receives parent_recording:, attachments:, actor:, impersonator:, and context:, then returns the standard service result object.",
       "Direct import services: RecordingStudioAttachable::Services::ImportAttachment.call and ImportAttachments.call.",
       "Convenience recording helpers exist for trusted internal app code, but addon gems should prefer the explicit service result APIs.",
-      "Browser handoff endpoint: recording_attachment_imports_path(recording) for multipart file uploads or signed_blob_id finalization inside the host app session.",
+      "Browser handoff endpoint: recording_attachment_imports_path(recording) for multipart file uploads, signed_blob_id finalization, and shared-queue remote selections inside the host app session.",
       "Provider provenance for the HTTP endpoint comes from provider_key; callers can add metadata, but they do not choose source or storage service.",
       "max_file_count is enforced per upload/import batch. If you need a total-per-recording quota, add that policy in host app code."
     ]
@@ -280,6 +286,7 @@ class DocsController < ApplicationController
     @plugin_payload_fields = [
       "file: multipart upload when the provider callback already has a local file in hand.",
       "signed_blob_id: finalize an existing Active Storage blob without re-uploading it.",
+      "provider_payload: opaque provider-specific selection data handed back to remote_importer from the shared upload queue.",
       "io, filename, content_type: the direct service-level import contract for provider integrations.",
       "name and description: optional attachment metadata overrides.",
       "metadata: extra provider details such as external ids or URLs.",
@@ -315,7 +322,7 @@ class DocsController < ApplicationController
               @page_attachment_picker_path =
                 recording_studio_attachable.recording_attachment_picker_path(@page_recording)
               @page_attachment_create_path =
-                recording_studio_attachable.recording_attachments_path(@page_recording)
+                recording_studio_attachable.recording_attachment_imports_path(@page_recording)
             end
           end
         RUBY

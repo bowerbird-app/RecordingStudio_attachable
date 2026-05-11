@@ -23,6 +23,7 @@ class GoogleDriveApplicationControllerTest < Minitest::Test
     @controller = ProbeController.new
     @request = ActionDispatch::TestRequest.create
     @response = ActionDispatch::TestResponse.create
+    @request.env["action_dispatch.request.flash_hash"] = ActionDispatch::Flash::FlashHash.new
     @session = {}
     @controller.set_request!(@request)
     @controller.set_response!(@response)

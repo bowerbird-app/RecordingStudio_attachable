@@ -24,9 +24,12 @@
           <%= render FlatPack::Button::Component.new(text: "Import sample SVG", style: :primary, size: :md, type: "submit", icon: "cloud") %>
         <% end %>
 
-        <%= link_to recording_studio_attachable.recording_attachment_upload_path(@recording), class: "inline-flex" do %>
-          <%= render FlatPack::Button::Component.new(text: "Back to upload page", style: :secondary, size: :md) %>
-        <% end %>
+        <%= render FlatPack::Button::Component.new(
+          text: "Back to upload page",
+          style: :secondary,
+          size: :md,
+          url: recording_studio_attachable.recording_attachment_upload_path(@recording)
+        ) %>
       </div>
     </div>
   </div>

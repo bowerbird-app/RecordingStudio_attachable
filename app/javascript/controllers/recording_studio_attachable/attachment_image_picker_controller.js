@@ -1,7 +1,12 @@
 import { DirectUpload } from "@rails/activestorage"
 import { Controller } from "@hotwired/stimulus"
 import { application } from "controllers/application"
+import { getUploadProviderLauncher } from "controllers/recording_studio_attachable/provider_launchers"
 import { preprocessImageFile } from "controllers/recording_studio_attachable/image_preprocessing"
+import "controllers/recording_studio_attachable/google_drive_picker_launcher"
+
+const PROVIDER_EVENT_STORAGE_KEY = "recording-studio-attachable:provider-event"
+const PROVIDER_EVENT_CHANNEL_NAME = `${PROVIDER_EVENT_STORAGE_KEY}:channel`
 
 export default class extends Controller {
   static targets = [
@@ -9,6 +14,8 @@ export default class extends Controller {
     "searchInput",
     "fileInput",
     "status",
+    "uploadQueue",
+    "progressTemplate",
     "modeSummary",
     "scrollContainer",
     "gallery",
@@ -40,10 +47,22 @@ export default class extends Controller {
     this.searchTimeoutId = null
     this.activeEditor = null
     this.selectedAttachments = new Map()
+    this.uploadEntries = []
+    this.providerButtonsByKey = new Map()
     this.boundHandleScroll = this.handleScroll.bind(this)
+    this.handleProviderMessage = this.handleProviderMessage.bind(this)
+    this.handleProviderStorage = this.handleProviderStorage.bind(this)
+    this.handleProviderChannelMessage = this.handleProviderChannelMessage.bind(this)
 
     this.syncFileInputMode()
     this.updateSelectionUi()
+    window.addEventListener("message", this.handleProviderMessage)
+    window.addEventListener("storage", this.handleProviderStorage)
+
+    if (window.BroadcastChannel) {
+      this.providerEventChannel = new window.BroadcastChannel(PROVIDER_EVENT_CHANNEL_NAME)
+      this.providerEventChannel.addEventListener("message", this.handleProviderChannelMessage)
+    }
 
     if (this.hasScrollContainerTarget) {
       this.scrollContainerTarget.addEventListener("scroll", this.boundHandleScroll)
@@ -54,6 +73,15 @@ export default class extends Controller {
     if (this.searchTimeoutId) {
       window.clearTimeout(this.searchTimeoutId)
       this.searchTimeoutId = null
+    }
+
+    window.removeEventListener("message", this.handleProviderMessage)
+    window.removeEventListener("storage", this.handleProviderStorage)
+
+    if (this.providerEventChannel) {
+      this.providerEventChannel.removeEventListener("message", this.handleProviderChannelMessage)
+      this.providerEventChannel.close()
+      this.providerEventChannel = null
     }
 
     if (this.hasScrollContainerTarget) {
@@ -90,6 +118,41 @@ export default class extends Controller {
     this.openModalAndLoad()
   }
 
+  async launchProvider(event) {
+    if (event) event.preventDefault()
+
+    const button = event.currentTarget
+    const { providerKey, providerStrategy } = button.dataset
+    if (providerKey) this.providerButtonsByKey.set(providerKey, button)
+
+    if (providerStrategy === "client_picker") {
+      await this.launchClientPicker(button)
+    }
+  }
+
+  async launchClientPicker(button) {
+    const launcherName = button.dataset.providerLauncher
+    const launcher = getUploadProviderLauncher(launcherName)
+    if (!launcher) {
+      this.showStatus("This upload provider is not available on this page.")
+      return
+    }
+
+    this.showStatus("")
+
+    try {
+      await launcher.launch({
+        button,
+        controller: this,
+        providerKey: button.dataset.providerKey,
+        bootstrapUrl: button.dataset.providerBootstrapUrl,
+        importUrl: button.dataset.providerImportUrl
+      })
+    } catch (error) {
+      this.showStatus(error?.message || "Could not open the provider picker.")
+    }
+  }
+
   openPickerFromToolbar(event) {
     event.preventDefault()
 
@@ -98,7 +161,9 @@ export default class extends Controller {
     this.openModalAndLoad()
   }
 
-  browseUpload() {
+  browseUpload(event) {
+    if (event) event.preventDefault()
+
     this.syncFileInputMode()
     this.fileInputTarget.click()
   }
@@ -234,6 +299,7 @@ export default class extends Controller {
     this.modalController()?.open?.()
     this.currentPage = 1
     this.clearSelection()
+    this.clearUploadQueue()
     this.loadAttachments({ reset: true })
   }
 
@@ -257,17 +323,38 @@ export default class extends Controller {
 
   async directUploadFiles(files) {
     const attachments = []
+    this.uploadEntries = files.map((file) => this.buildUploadEntry(file))
+    this.renderUploadQueue()
 
     try {
       for (const [index, file] of files.entries()) {
+        const entry = this.uploadEntries[index]
+        if (entry) {
+          entry.status = "processing"
+          this.renderUploadEntry(entry)
+        }
+
         const processed = await preprocessImageFile(file, this.imageProcessingOptions())
         const uploadFile = processed.file
+        if (entry) {
+          entry.file = uploadFile
+          entry.name = uploadFile.name
+          entry.status = "uploading"
+          entry.progress = 0
+          entry.processingComplete = processed.transformed
+          this.renderUploadEntry(entry)
+        }
         const statusPrefix = files.length > 1 ? `Uploading ${index + 1} of ${files.length}` : "Uploading"
         this.showStatus(
           processed.transformed ? `Optimizing complete. ${statusPrefix}: ${uploadFile.name}…` : `${statusPrefix}: ${uploadFile.name}…`
         )
 
-        const blob = await this.directUploadBlob(uploadFile)
+        const blob = await this.directUploadBlob(uploadFile, entry)
+        if (entry) {
+          entry.status = "uploaded"
+          entry.progress = 100
+          this.renderUploadEntry(entry)
+        }
         attachments.push({
           signed_blob_id: blob.signed_id,
           name: this.defaultAttachmentName(uploadFile)
@@ -282,18 +369,51 @@ export default class extends Controller {
       this.showStatus(`Added ${createdAttachments.length} ${noun}`)
       this.currentPage = 1
       this.clearSelection()
+      this.clearUploadQueue()
       this.loadAttachments({ reset: true })
       this.modalController()?.close?.()
     } catch (uploadError) {
+      const failedEntry = this.uploadEntries.find((entry) => ["processing", "uploading"].includes(entry.status))
+      if (failedEntry) {
+        failedEntry.status = "failed"
+        failedEntry.error = uploadError.message || "Unable to add image"
+        this.renderUploadEntry(failedEntry)
+      }
       this.showStatus(uploadError.message || "Unable to add image")
     } finally {
       this.fileInputTarget.value = ""
     }
   }
 
-  directUploadBlob(file) {
+  async addProviderSelections(providerKey, selections) {
+    const attachments = Array.from(selections || []).map((selection) => ({
+      provider_key: providerKey,
+      provider_payload: this.normalizedProviderPayload(selection),
+      name: selection.name || selection.id || "Remote file",
+      description: selection.description || ""
+    }))
+
+    try {
+      const createdAttachments = await this.createAttachments(attachments, providerKey)
+
+      createdAttachments.forEach((attachment) => this.dispatchSelection(attachment))
+
+      const noun = createdAttachments.length === 1 ? "image" : "images"
+      this.showStatus(`Added ${createdAttachments.length} ${noun}`)
+      this.currentPage = 1
+      this.clearSelection()
+      this.loadAttachments({ reset: true })
+      this.modalController()?.close?.()
+    } catch (uploadError) {
+      this.showStatus(uploadError.message || "Unable to add image")
+    }
+  }
+
+  directUploadBlob(file, entry = null) {
     return new Promise((resolve, reject) => {
-      const upload = new DirectUpload(file, this.directUploadUrlValue)
+      const upload = new DirectUpload(file, this.directUploadUrlValue, entry
+        ? { directUploadWillStoreFileWithXHR: (request) => this.bindUploadProgress(request, entry) }
+        : {})
 
       upload.create((error, blob) => {
         if (error) {
@@ -306,7 +426,16 @@ export default class extends Controller {
     })
   }
 
-  async createAttachments(attachments) {
+  bindUploadProgress(request, entry) {
+    request.upload.addEventListener("progress", (event) => {
+      if (!event.lengthComputable) return
+
+      entry.progress = Math.round((event.loaded / event.total) * 100)
+      this.renderUploadEntry(entry)
+    })
+  }
+
+  async createAttachments(attachments, providerKey = null) {
     const response = await fetch(this.uploadUrlValue, {
       method: "POST",
       credentials: "same-origin",
@@ -316,7 +445,10 @@ export default class extends Controller {
         "X-CSRF-Token": this.csrfToken()
       },
       body: JSON.stringify({
-        attachments
+        attachment_import: {
+          provider_key: providerKey,
+          attachments
+        }
       })
     })
 
@@ -331,6 +463,98 @@ export default class extends Controller {
     }
 
     return createdAttachments
+  }
+
+  handleProviderMessage(event) {
+    if (event.origin !== window.location.origin) return
+
+    this.handleProviderPayload(event.data || {})
+  }
+
+  handleProviderStorage(event) {
+    if (event.key !== PROVIDER_EVENT_STORAGE_KEY || !event.newValue) return
+
+    try {
+      const parsed = JSON.parse(event.newValue)
+      this.handleProviderPayload(parsed?.payload || {})
+    } catch (_error) {
+    }
+  }
+
+  handleProviderChannelMessage(event) {
+    this.handleProviderPayload(event.data || {})
+  }
+
+  handleProviderPayload(payload) {
+    if (payload.namespace !== "recording-studio-attachable") return
+
+    if (payload.type === "provider-auth-complete") {
+      if (payload.providerKey) {
+        this.relaunchProvider(payload.providerKey)
+      }
+      return
+    }
+
+    if (payload.type === "provider-auth-error") {
+      this.showStatus(payload.error || "Authentication failed.")
+    }
+  }
+
+  relaunchProvider(providerKey) {
+    const button = this.providerButtonsByKey.get(providerKey)
+    if (!button) return
+
+    this.launchClientPicker(button)
+  }
+
+  fetchProviderBootstrap(bootstrapUrl) {
+    return fetch(bootstrapUrl, {
+      credentials: "same-origin",
+      headers: {
+        Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest"
+      }
+    }).then(async (response) => {
+      const payload = await response.json()
+      if (!response.ok) throw new Error(payload.error || "Could not load provider bootstrap data.")
+
+      return payload
+    })
+  }
+
+  openPopup(url, name = "recording-studio-attachable-provider-auth") {
+    const width = 640
+    const height = 760
+    const left = Math.max(window.screenX + (window.outerWidth - width) / 2, 0)
+    const top = Math.max(window.screenY + (window.outerHeight - height) / 2, 0)
+    const features = [
+      "popup=yes",
+      `width=${width}`,
+      `height=${height}`,
+      `left=${Math.round(left)}`,
+      `top=${Math.round(top)}`,
+      "resizable=yes",
+      "scrollbars=yes"
+    ].join(",")
+
+    const popup = window.open(url, name, features)
+    if (popup) popup.focus()
+    return popup
+  }
+
+  setProviderStatus(message) {
+    this.showStatus(message)
+  }
+
+  clearProviderStatus() {
+    this.showStatus("")
+  }
+
+  normalizedProviderPayload(selection) {
+    return {
+      id: selection.id,
+      resource_key: selection.resource_key || selection.resourceKey
+    }
   }
 
   pickerRequestUrl() {
@@ -417,6 +641,149 @@ export default class extends Controller {
 
   defaultAttachmentName(file) {
     return file.name.replace(/\.[^.]+$/, "") || file.name
+  }
+
+  buildUploadEntry(file) {
+    return {
+      id: crypto.randomUUID(),
+      file,
+      name: file.name,
+      progress: 0,
+      status: "pending",
+      error: null,
+      processingComplete: false
+    }
+  }
+
+  renderUploadQueue() {
+    if (!this.hasUploadQueueTarget) return
+
+    this.uploadQueueTarget.innerHTML = ""
+    this.uploadQueueTarget.classList.toggle("hidden", this.uploadEntries.length === 0)
+    this.uploadEntries.forEach((entry) => {
+      this.uploadQueueTarget.insertAdjacentHTML("beforeend", this.uploadEntryTemplate(entry))
+    })
+  }
+
+  renderUploadEntry(entry) {
+    if (!this.hasUploadQueueTarget) return
+
+    const node = this.uploadQueueTarget.querySelector(`[data-upload-entry-id='${entry.id}']`)
+    if (!node) {
+      this.renderUploadQueue()
+      return
+    }
+
+    const template = document.createElement("template")
+    template.innerHTML = this.uploadEntryTemplate(entry).trim()
+
+    const nextNode = template.content.firstElementChild
+    const currentContent = node.querySelector("[data-upload-entry-content]")
+    const nextContent = nextNode?.querySelector("[data-upload-entry-content]")
+
+    if (currentContent && nextContent) {
+      currentContent.replaceWith(nextContent)
+    } else if (nextNode) {
+      node.replaceWith(nextNode)
+    }
+  }
+
+  clearUploadQueue() {
+    this.uploadEntries = []
+    if (!this.hasUploadQueueTarget) return
+
+    this.uploadQueueTarget.innerHTML = ""
+    this.uploadQueueTarget.classList.add("hidden")
+  }
+
+  uploadEntryTemplate(entry) {
+    const progress = entry.status === "processing"
+      ? '<p class="text-xs text-(--surface-muted-content-color)">Optimizing image before upload…</p>'
+      : entry.status === "uploading" || entry.progress > 0
+        ? this.progressTemplateHtml({
+            value: entry.progress,
+            label: `Uploading ${this.entryName(entry)}`
+          })
+        : entry.status === "uploaded"
+          ? this.progressTemplateHtml({
+              value: 100,
+              label: `${this.entryName(entry)} uploaded`
+            })
+          : ""
+    const error = entry.error ? `<p class="text-xs text-red-600">${this.escapeHtml(entry.error)}</p>` : ""
+
+    return `
+      <div data-upload-entry-id="${entry.id}" class="rounded-xl border border-(--surface-border-color) bg-(--surface-muted-background-color) px-4 py-3">
+        <div data-upload-entry-content class="space-y-2">
+          <div class="flex items-center justify-between gap-3">
+            <p class="truncate text-sm font-medium text-(--surface-content-color)">${this.escapeHtml(this.entryName(entry))}</p>
+            <p class="shrink-0 text-xs text-(--surface-muted-content-color)">${this.uploadStatusLabel(entry)}</p>
+          </div>
+          ${progress}
+          ${error}
+        </div>
+      </div>
+    `
+  }
+
+  entryName(entry) {
+    return entry.file?.name || entry.name || "Image"
+  }
+
+  uploadStatusLabel(entry) {
+    switch (entry.status) {
+      case "processing":
+        return "Optimizing"
+      case "uploading":
+        return `${entry.progress}%`
+      case "uploaded":
+        return "Uploaded"
+      case "failed":
+        return "Failed"
+      default:
+        return "Queued"
+    }
+  }
+
+  progressTemplateHtml({ value = 0, max = 100, label = "Progress" } = {}) {
+    if (!this.hasProgressTemplateTarget) return ""
+
+    const template = this.progressTemplateTarget.content.firstElementChild
+    if (!template) return ""
+
+    const nextNode = template.cloneNode(true)
+    const normalizedValue = Number.isFinite(Number(value)) ? Math.max(0, Math.min(Number(value), Number(max) || 100)) : 0
+    const normalizedMax = Number(max) > 0 ? Number(max) : 100
+    const percentage = normalizedMax > 0 ? Math.min((normalizedValue / normalizedMax) * 100, 100) : 0
+    const progressBar = nextNode.querySelector("[role='progressbar']")
+    const labelNode = nextNode.querySelector(".text-sm.font-medium")
+    const fillNode = progressBar?.firstElementChild
+
+    if (progressBar) {
+      progressBar.setAttribute("aria-valuenow", String(normalizedValue))
+      progressBar.setAttribute("aria-valuemin", "0")
+      progressBar.setAttribute("aria-valuemax", String(normalizedMax))
+      progressBar.setAttribute("aria-label", label)
+    }
+
+    if (labelNode) {
+      labelNode.textContent = label
+    }
+
+    if (fillNode) {
+      fillNode.style.width = `${percentage}%`
+    }
+
+    return nextNode.outerHTML
+  }
+
+  escapeHtml(value) {
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;")
   }
 
   searchQuery() {

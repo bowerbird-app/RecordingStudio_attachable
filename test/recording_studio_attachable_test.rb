@@ -79,7 +79,27 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes upload_controller_source, "async launchProvider(event)"
     assert_includes upload_controller_source, "launchClientPicker(button)"
     assert_includes upload_controller_source, "fetchProviderBootstrap(bootstrapUrl)"
-    assert_includes upload_controller_source, "submitProviderImport(importUrl, fileIds)"
+    assert_includes upload_controller_source, "addProviderSelections(providerKey, selections)"
+    assert_includes upload_controller_source, "attachment_import"
+    assert_includes upload_controller_source, "provider_payload"
+    assert_includes upload_controller_source, "finalizableEntries()"
+    assert_includes upload_controller_source, "scheduleRemoteAttachStage(entry)"
+    assert_includes upload_controller_source, 'entry.status = entry.providerPayload ? "importing" : "finalizing"'
+    assert_includes upload_controller_source, "remoteStatusLabel(entry)"
+    assert_includes upload_controller_source, "Importing from ${this.providerDisplayName(entry.providerKey)}"
+    assert_includes upload_controller_source, 'return "Creating attachment"'
+    assert_includes upload_controller_source, "indeterminateProgressTemplate(entry)"
+    assert_includes upload_controller_source, "progressTemplateHtml({"
+    assert_includes upload_controller_source, "remoteProgressValue(entry)"
+    assert_includes upload_controller_source, "progressTemplateTarget.content.firstElementChild"
+    assert_includes upload_controller_source, "labelNode.textContent = label"
+    assert_includes upload_controller_source, "fillNode.style.width = `${percentage}%`"
+    assert_includes view_source, 'data-recording-studio-attachable--upload-target="progressTemplate"'
+    assert_includes view_source, 'render FlatPack::Progress::Component.new(value: 0, max: 100, label: "Progress")'
+    picker_controller_source = File.read(
+      File.expand_path("../app/javascript/controllers/recording_studio_attachable/attachment_image_picker_controller.js", __dir__)
+    )
+    page_edit_view_source = File.read(File.expand_path("dummy/app/views/pages/edit.html.erb", __dir__))
     assert_includes upload_controller_source, 'import { preprocessImageFile, shouldPreprocessImageFile } from "controllers/recording_studio_attachable/image_preprocessing"'
     assert_includes upload_controller_source, 'entry.status = "processing"'
     assert_includes upload_controller_source, "await this.preprocessEntryFile(entry)"
@@ -99,16 +119,28 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes upload_controller_source, 'payload.type === "provider-import-complete"'
     assert_includes upload_controller_source, "event.key !== PROVIDER_EVENT_STORAGE_KEY"
     assert_not_includes upload_controller_source, "node.outerHTML = this.entryTemplate(entry)"
+    assert_not_includes upload_controller_source, '<progress class="w-full"'
+    assert_not_includes upload_controller_source, "ensureRemoteProgressStyles()"
+    assert_not_includes upload_controller_source, "recording-studio-attachable-remote-progress"
     assert_not_includes view_source, '<button type="button" data-action="recording-studio-attachable--upload#browse"'
     assert_not_includes view_source, 'text: "Attach files"'
     assert_not_includes view_source, 'text: "Cancel"'
     assert_not_includes upload_controller_source, "finalizeButton"
+    assert_not_includes upload_controller_source, "submitProviderImport(importUrl, fileIds)"
     assert_not_includes view_source, "FlatPack::Card::Component"
     assert_not_includes view_source, 'title: "Drop files here"'
     assert_not_includes view_source, "Multiple uploads, previews, and direct-upload progress are handled in-page."
     assert_not_includes view_source, "Drag files anywhere into this zone or browse from disk."
     assert_not_includes view_source, "Upload rules"
     assert_not_includes view_source, 'title: "Queue"'
+    assert_includes picker_controller_source, "uploadQueue"
+    assert_includes picker_controller_source, "progressTemplate"
+    assert_includes picker_controller_source, "this.uploadEntries = files.map((file) => this.buildUploadEntry(file))"
+    assert_includes picker_controller_source, "directUploadBlob(file, entry = null) {"
+    assert_includes picker_controller_source, "bindUploadProgress(request, entry)"
+    assert_includes picker_controller_source, "progressTemplateHtml({ value = 0, max = 100, label = \"Progress\" } = {})"
+    assert_includes page_edit_view_source, 'data-recording-studio-attachable--attachment-image-picker-target="progressTemplate"'
+    assert_includes page_edit_view_source, 'data-recording-studio-attachable--attachment-image-picker-target="uploadQueue"'
   end
 
   def test_attachment_show_view_uses_flatpack_breadcrumb_above_title
@@ -158,7 +190,11 @@ class RecordingStudioAttachableTest < Minitest::Test
     controller_path = File.expand_path("../app/javascript/controllers/recording_studio_attachable/image_fallback_controller.js", __dir__)
     controller_source = File.read(controller_path)
 
-    assert_includes controller_source, 'static targets = ["image", "fallback"]'
+    assert_includes controller_source, 'static targets = ["image", "fallback", "skeleton"]'
+    assert_includes controller_source, "connect() {"
+    assert_includes controller_source, "this.imageTarget.complete === false"
+    assert_includes controller_source, 'this.skeletonTarget.classList.add("hidden")'
+    assert_includes controller_source, 'this.imageTarget.classList.remove("opacity-0")'
     assert_includes controller_source, 'this.imageTarget.classList.add("hidden")'
     assert_includes controller_source, 'this.fallbackTarget.classList.remove("hidden")'
     assert_includes controller_source, 'this.fallbackTarget.classList.add("flex")'
@@ -206,16 +242,22 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, 'title: "Library"'
     assert_includes view_source, 'text: "Upload"'
     assert_includes view_source, 'icon: "upload"'
-    assert_includes view_source, 'link_to recording_attachment_upload_path(@recording), class: "inline-flex", data: { turbo_frame: "_top" }'
-    assert_includes view_source, 'icon: "squares-2x2"'
-    assert_includes view_source, 'icon: "list-bullet"'
-    assert_includes view_source, "icon_only: true"
+    assert_includes view_source, "url: recording_attachment_upload_path(@recording)"
+    assert_includes view_source, 'data: { turbo_frame: "_top" }'
+    assert_includes view_source, "FlatPack::Button::Pill::Component"
+    assert_includes view_source, 'text: "Grid"'
+    assert_includes view_source, 'text: "List"'
+    assert_includes view_source, 'id: "recording-attachments-grid-view"'
+    assert_includes view_source, 'id: "recording-attachments-list-view"'
     assert_includes view_source, "size: :md"
-    assert_includes view_source, 'aria: { label: "Grid view" }'
-    assert_includes view_source, 'aria: { label: "List view" }'
+    assert_includes view_source, 'turbo_frame: "recording-attachments-results"'
+    assert_includes view_source, 'turbo_action: "advance"'
+    assert_not_includes view_source, 'icon: "squares-2x2"'
+    assert_not_includes view_source, 'icon: "list-bullet"'
+    assert_not_includes view_source, "icon_only: true"
+    assert_not_includes view_source, 'aria: { label: "Grid view" }'
+    assert_not_includes view_source, 'aria: { label: "List view" }'
     assert_not_includes view_source, ">View<"
-    assert_not_includes view_source, 'text: "Grid"'
-    assert_not_includes view_source, 'text: "List"'
     assert_includes view_source, "form_with url: recording_attachments_path(@recording), method: :get"
     assert_includes view_source, 'controller: "recording-studio-attachable--live-search"'
     assert_includes view_source, "input->recording-studio-attachable--live-search#queueSubmit"
@@ -235,16 +277,18 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, "Previous"
     assert_includes view_source, "Next"
     assert_includes view_source, 'data: { turbo_frame: "recording-attachments-results", turbo_action: "advance" }'
-    assert_includes view_source, "@view_mode == :grid ? :secondary : :ghost"
-    assert_includes view_source, "@view_mode == :list ? :secondary : :ghost"
+    assert_includes view_source, "active: @view_mode == :grid"
+    assert_includes view_source, "active: @view_mode == :list"
     assert_includes view_source, 'title: @query.present? ? "Nothing found" : "Nothing uplaoded yet"'
     assert_includes view_source, 'subtitle: @query.present? ? nil : "Upload files to start building this library."'
     assert_includes view_source, '<circle cx="11" cy="11" r="6" />'
     assert_includes grid_partial_source, 'class="grid grid-cols-2 items-stretch gap-6 lg:grid-cols-5"'
     assert_includes grid_partial_source, "card.media padding: :none"
     assert_not_includes grid_partial_source, "card.body do"
-    assert_includes grid_partial_source, 'class: "h-full w-full object-cover"'
-    assert_includes grid_partial_source, 'data-controller="recording-studio-attachable--image-fallback"'
+    assert_includes grid_partial_source, 'class: "h-full w-full object-cover opacity-0 transition-opacity duration-200"'
+    assert_includes grid_partial_source, 'data-recording-studio-attachable--image-fallback-target="skeleton"'
+    assert_includes grid_partial_source, 'FlatPack::Skeleton::Component.new(variant: :rectangle, shimmer: true, width: "100%", height: "100%")'
+    assert_includes grid_partial_source, "load->recording-studio-attachable--image-fallback#showImage"
     assert_includes grid_partial_source, "error->recording-studio-attachable--image-fallback#showFallback"
     assert_includes grid_partial_source, 'data-recording-studio-attachable--image-fallback-target="fallback"'
     assert_includes grid_partial_source, "Preview unavailable"
@@ -269,7 +313,8 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes list_partial_source, "preview_path = authorized_attachment_preview_path(attachment_recording, :square_small)"
     assert_includes list_partial_source, "image_tag preview_path"
     assert_includes list_partial_source, 'FlatPack::Tooltip::Component.new(text: "Download")'
-    assert_includes list_partial_source, 'icon: "arrow-down-tray", icon_only: true'
+    assert_includes list_partial_source, 'icon: "arrow-down-tray"'
+    assert_includes list_partial_source, "icon_only: true"
     assert_includes list_partial_source, 'aria: { label: "Download attachment" }'
     assert_includes list_partial_source, 'FlatPack::Tooltip::Component.new(text: "Trash")'
     assert_includes list_partial_source, "destroy_attachment_path(attachment_recording)"
@@ -351,6 +396,8 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes launcher_source, 'registerUploadProviderLauncher("google_drive"'
     assert_includes launcher_source, "https://apis.google.com/js/api.js"
     assert_includes initializer_template, "strategy: :client_picker"
+    assert_includes initializer_template, "remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|"
+    assert_includes initializer_template, "payload.fetch(:provider_payload)"
     assert_includes initializer_template, "GOOGLE_DRIVE_API_KEY"
     assert_includes initializer_template, "GOOGLE_DRIVE_APP_ID"
     assert_includes view_source, 'title: "Google Drive"'

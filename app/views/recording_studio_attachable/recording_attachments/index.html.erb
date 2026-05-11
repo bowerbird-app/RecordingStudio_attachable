@@ -38,19 +38,34 @@
       <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div class="flex flex-wrap items-center gap-3">
           <% if @can_upload %>
-            <%= link_to recording_attachment_upload_path(@recording), class: "inline-flex", data: { turbo_frame: "_top" } do %>
-              <%= render FlatPack::Button::Component.new(text: "Upload", style: :primary, size: :md, icon: "upload") %>
-            <% end %>
+            <%= render FlatPack::Button::Component.new(
+              text: "Upload",
+              style: :primary,
+              size: :md,
+              icon: "upload",
+              url: recording_attachment_upload_path(@recording),
+              data: { turbo_frame: "_top" }
+            ) %>
           <% end %>
 
-          <div class="flex items-center gap-2">
-            <%= link_to recording_attachments_path(@recording, listing_params.merge(view: :grid)), class: "inline-flex", data: { turbo_frame: "recording-attachments-results", turbo_action: "advance" } do %>
-              <%= render FlatPack::Button::Component.new(icon: "squares-2x2", icon_only: true, style: (@view_mode == :grid ? :secondary : :ghost), size: :md, aria: { label: "Grid view" }) %>
-            <% end %>
-            <%= link_to recording_attachments_path(@recording, listing_params.merge(view: :list)), class: "inline-flex", data: { turbo_frame: "recording-attachments-results", turbo_action: "advance" } do %>
-              <%= render FlatPack::Button::Component.new(icon: "list-bullet", icon_only: true, style: (@view_mode == :list ? :secondary : :ghost), size: :md, aria: { label: "List view" }) %>
-            <% end %>
-          </div>
+          <%= render FlatPack::Button::Pill::Component.new(
+            items: [
+              {
+                text: "Grid",
+                href: recording_attachments_path(@recording, listing_params.merge(view: :grid)),
+                active: @view_mode == :grid,
+                id: "recording-attachments-grid-view",
+                data: { turbo_frame: "recording-attachments-results", turbo_action: "advance" }
+              },
+              {
+                text: "List",
+                href: recording_attachments_path(@recording, listing_params.merge(view: :list)),
+                active: @view_mode == :list,
+                id: "recording-attachments-list-view",
+                data: { turbo_frame: "recording-attachments-results", turbo_action: "advance" }
+              }
+            ]
+          ) %>
         </div>
 
         <%= form_with url: recording_attachments_path(@recording), method: :get, local: true, class: "w-full lg:w-auto", data: { controller: "recording-studio-attachable--live-search", action: "input->recording-studio-attachable--live-search#queueSubmit", turbo_frame: "recording-attachments-results", turbo_action: "advance" } do %>
@@ -84,14 +99,22 @@
             </div>
             <div class="flex gap-3">
               <% if @page > 1 %>
-                <%= link_to recording_attachments_path(@recording, listing_params.merge(page: @page - 1)), class: "inline-flex", data: { turbo_frame: "recording-attachments-results", turbo_action: "advance" } do %>
-                  <%= render FlatPack::Button::Component.new(text: "Previous", style: :secondary, size: :md) %>
-                <% end %>
+                <%= render FlatPack::Button::Component.new(
+                  text: "Previous",
+                  style: :secondary,
+                  size: :md,
+                  url: recording_attachments_path(@recording, listing_params.merge(page: @page - 1)),
+                  data: { turbo_frame: "recording-attachments-results", turbo_action: "advance" }
+                ) %>
               <% end %>
               <% if @page < @total_pages %>
-                <%= link_to recording_attachments_path(@recording, listing_params.merge(page: @page + 1)), class: "inline-flex", data: { turbo_frame: "recording-attachments-results", turbo_action: "advance" } do %>
-                  <%= render FlatPack::Button::Component.new(text: "Next", style: :secondary, size: :md) %>
-                <% end %>
+                <%= render FlatPack::Button::Component.new(
+                  text: "Next",
+                  style: :secondary,
+                  size: :md,
+                  url: recording_attachments_path(@recording, listing_params.merge(page: @page + 1)),
+                  data: { turbo_frame: "recording-attachments-results", turbo_action: "advance" }
+                ) %>
               <% end %>
             </div>
           </div>

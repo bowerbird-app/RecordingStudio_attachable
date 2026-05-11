@@ -46,9 +46,15 @@
               <td class="px-3 py-3">
                 <div class="flex gap-2">
                   <%= render FlatPack::Tooltip::Component.new(text: "Download") do %>
-                    <%= link_to download_attachment_path(attachment_recording), class: "inline-flex", data: { turbo_frame: "_top" } do %>
-                      <%= render FlatPack::Button::Component.new(icon: "arrow-down-tray", icon_only: true, style: :ghost, size: :md, aria: { label: "Download attachment" }) %>
-                    <% end %>
+                    <%= render FlatPack::Button::Component.new(
+                      icon: "arrow-down-tray",
+                      icon_only: true,
+                      style: :ghost,
+                      size: :md,
+                      aria: { label: "Download attachment" },
+                      url: download_attachment_path(attachment_recording),
+                      data: { turbo_frame: "_top" }
+                    ) %>
                   <% end %>
                   <% unless attachment_recording.respond_to?(:trashed_at) && attachment_recording.trashed_at.present? %>
                     <%= render FlatPack::Tooltip::Component.new(text: "Trash") do %>

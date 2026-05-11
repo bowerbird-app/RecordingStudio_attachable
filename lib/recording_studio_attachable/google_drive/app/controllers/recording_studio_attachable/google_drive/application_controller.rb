@@ -77,24 +77,11 @@ module RecordingStudioAttachable
       end
 
       def current_google_drive_access_token
-        tokens = google_drive_tokens
-        access_token = tokens["access_token"].presence
-        raise RecordingStudioAttachable::Error, "Connect Google Drive before importing files" if access_token.blank?
-
-        return access_token unless token_refresh_needed?(tokens)
-
-        refresh_token = tokens["refresh_token"].presence
-        raise RecordingStudioAttachable::Error, "Reconnect Google Drive to continue" if refresh_token.blank?
-
-        refreshed = oauth_client.refresh_token(refresh_token: refresh_token)
-        merged = tokens.merge(refreshed.slice("access_token", "refresh_token", "expires_at"))
-        store_google_drive_tokens!(merged)
-        merged.fetch("access_token")
-      end
-
-      def token_refresh_needed?(tokens)
-        expires_at = tokens["expires_at"].to_i
-        expires_at.positive? && expires_at <= Time.current.to_i + 30
+        RecordingStudioAttachable::GoogleDrive::SessionAccessToken.fetch(
+          session: session,
+          configuration: google_drive_configuration,
+          oauth_client: oauth_client
+        )
       end
 
       def oauth_client

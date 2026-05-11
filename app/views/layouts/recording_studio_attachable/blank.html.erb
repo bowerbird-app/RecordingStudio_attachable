@@ -7,13 +7,13 @@
     <%= csp_meta_tag %>
     <%= yield :head if content_for?(:head) %>
     <%= stylesheet_link_tag "application.css", "data-turbo-track": "reload" if respond_to?(:stylesheet_link_tag) %>
+    <%= stylesheet_link_tag "tailwind.css", "data-turbo-track": "reload" if respond_to?(:stylesheet_link_tag) %>
     <%= stylesheet_link_tag "flat_pack/variables", "data-turbo-track": "reload" if respond_to?(:stylesheet_link_tag) %>
     <%= stylesheet_link_tag "flat_pack/rich_text", "data-turbo-track": "reload" if respond_to?(:stylesheet_link_tag) %>
-    <%= stylesheet_link_tag "tailwind.css", "data-turbo-track": "reload" if respond_to?(:stylesheet_link_tag) %>
     <%= javascript_importmap_tags if respond_to?(:javascript_importmap_tags) %>
   </head>
 
-  <body class="min-h-screen bg-[var(--surface-background-color)] text-[var(--surface-content-color)]">
+  <body class="min-h-screen bg-(--surface-background-color) text-(--surface-content-color)">
     <main class="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-6 py-10">
       <% if notice.present? %>
         <%= render FlatPack::Alert::Component.new(title: "Notice", body: notice, style: :success) %>

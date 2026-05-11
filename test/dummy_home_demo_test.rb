@@ -3,6 +3,16 @@
 require "test_helper"
 
 class DummyHomeDemoTest < Minitest::Test
+  def test_dummy_layouts_load_flat_pack_variables_after_tailwind
+    application_layout = File.read(File.expand_path("dummy/app/views/layouts/application.html.erb", __dir__))
+    sidebar_layout = File.read(File.expand_path("dummy/app/views/layouts/flat_pack_sidebar.html.erb", __dir__))
+
+    assert_operator application_layout.index('stylesheet_link_tag "tailwind.css"'), :<,
+                    application_layout.index('stylesheet_link_tag "flat_pack/variables"')
+    assert_operator sidebar_layout.index('stylesheet_link_tag "tailwind.css"'), :<,
+                    sidebar_layout.index('stylesheet_link_tag "flat_pack/variables"')
+  end
+
   def test_dummy_home_page_has_root_and_page_demo_actions
     home_view = File.read(File.expand_path("dummy/app/views/home/index.html.erb", __dir__))
 
@@ -459,6 +469,8 @@ class DummyHomeDemoTest < Minitest::Test
       assert_includes layout, 'stylesheet_link_tag "flat_pack/variables"'
       assert_includes layout, 'stylesheet_link_tag "flat_pack/rich_text"'
       assert_includes layout, 'stylesheet_link_tag "tailwind.css"'
+      assert_operator layout.index('stylesheet_link_tag "tailwind.css"'), :<,
+                      layout.index('stylesheet_link_tag "flat_pack/variables"')
     end
 
     assert_includes blank_layout, "style: :danger"

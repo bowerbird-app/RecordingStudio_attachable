@@ -18,11 +18,11 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
 
-    <%# Load app styles, FlatPack token styles, and utility classes %>
+    <%# Load app styles, utility classes, then FlatPack theme tokens so named themes override Tailwind defaults %>
     <%= stylesheet_link_tag "application.css", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "tailwind.css", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "flat_pack/variables", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "flat_pack/rich_text", "data-turbo-track": "reload" %>
-    <%= stylesheet_link_tag "tailwind.css", "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
 

@@ -1,49 +1,26 @@
 # Migration Notes - Private Gems to Public Gems
 
-## Changes Made
+This file is a historical note for the repository migration from private-gem assumptions to the current public-gem setup.
 
-1. ✅ Removed repository access entries from `.devcontainer/devcontainer.json`
-2. ✅ Updated documentation in `CODESPACES.md` and `PRIVATE_GEMS.md`
-3. ✅ Updated copilot instructions to reference local docs
-4. ✅ Replaced `makeup_artist` with `flat_pack` in `test/dummy/Gemfile`
+## Status
 
-## Next Steps (Requires Ruby 3.3.0+)
+The migration described here has already been completed in this repository. The old checklist is intentionally not treated as current setup guidance.
 
-The following steps need to be completed in an environment with Ruby 3.3.0 or higher:
+## What changed
 
-1. **Update Gemfile.lock**: Run `bundle install` in the test/dummy directory to update the lockfile
-   ```bash
-   cd test/dummy
-   bundle install
-   ```
+1. Removed repository access entries from `.devcontainer/devcontainer.json`.
+2. Updated template-reference docs such as `CODESPACES.md` and `PRIVATE_GEMS.md`.
+3. Updated Copilot instructions to point at local documentation.
+4. Replaced the old `makeup_artist` dependency with `flat_pack` in the dummy app.
 
-2. **Run FlatPack installer**: After bundle install, run the FlatPack installation generator
-   ```bash
-   cd test/dummy
-   rails generate flat_pack:install
-   ```
+## Current source of truth
 
-3. **Update views**: Replace any `makeup_artist` component references with `flat_pack` components
-   - Search for: `MakeupArtist::`, `makeup_artist/`
-   - Replace with equivalent FlatPack components
+Use these files for current behavior instead of the old migration checklist:
 
-4. **Test the application**: Start the dummy app and verify all UI components work
-   ```bash
-   cd test/dummy
-   bin/dev
-   ```
+1. `README.md` for gem installation, configuration, provider integration, picker usage, and validation.
+2. `lib/generators/recording_studio_attachable/install/templates/INSTALL.md` for the generated host-app install checklist.
+3. `test/dummy/README.md` for what the dummy app is intended to validate.
 
-5. **Run tests**: Execute the test suite
-   ```bash
-   bundle exec rake test
-   ```
+## FlatPack note
 
-## Component Migration Guide
-
-FlatPack is the successor to MakeupArtist with similar components:
-
-- Both use ViewComponent architecture
-- Both integrate with Tailwind CSS
-- Component names and APIs may differ slightly
-
-See: https://github.com/bowerbird-app/flatpack for component documentation
+FlatPack is now the default UI system for both the engine and the dummy app. If you are reviewing older commits or template-history docs, treat any `makeup_artist` references as superseded historical context.

@@ -17,10 +17,10 @@
   <body class="min-h-screen bg-(--surface-background-color) text-(--surface-content-color)">
     <main class="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-6 py-10">
       <% if notice.present? %>
-        <%= render FlatPack::Alert::Component.new(title: "Notice", body: notice, style: :success) %>
+        <%= render FlatPack::Alert::Component.new(description: notice, style: :success) %>
       <% end %>
       <% if alert.present? %>
-        <%= render FlatPack::Alert::Component.new(title: "Alert", body: alert, style: :danger) %>
+        <%= render FlatPack::Alert::Component.new(title: "Error", description: alert, style: :danger) %>
       <% end %>
       <%= yield %>
     </main>

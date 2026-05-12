@@ -66,6 +66,12 @@ class DummyDocsTest < Minitest::Test
 
     assert_includes controller_source, 'title: "Library path"'
     assert_includes controller_source, 'title: "Upload path"'
+    assert_includes controller_source, 'title: "Picker path"'
+    assert_includes controller_source, 'title: "Import handoff path"'
+    assert_includes controller_source, 'title: "Download a file through the engine"'
+    assert_includes controller_source, "recording_attachment_picker_path(@recording, scope: :subtree)"
+    assert_includes controller_source, "recording_attachment_imports_path(@recording)"
+    assert_includes controller_source, "download_attachment_path(@attachment_recording)"
   end
 
   def test_dummy_plugins_page_documents_provider_apis
@@ -112,11 +118,12 @@ class DummyDocsTest < Minitest::Test
   def test_dummy_resizing_page_documents_browser_side_resizing
     resizing_source = File.read(File.expand_path("dummy/app/views/docs/resizing.html.erb", __dir__))
     controller_source = File.read(File.expand_path("dummy/app/controllers/docs_controller.rb", __dir__))
+    resizing_subtitle = "subtitle: \"Named delivery variants are generated on demand and reused through signed Active Storage URLs.\""
 
     assert_includes resizing_source, 'title: "Resizing"'
-    assert_includes resizing_source, 'title: "Browser side resezing"'
+    assert_includes resizing_source, 'title: "Browser-side resizing"'
     assert_includes resizing_source, 'title: "Size variants"'
-    assert_includes resizing_source, 'subtitle: "Summarise how they work"'
+    assert_includes resizing_source, resizing_subtitle
     assert_includes resizing_source, "FlatPack::PageTitle::Component"
     assert_includes resizing_source, "FlatPack::SectionTitle::Component"
     assert_includes resizing_source, "FlatPack::CodeBlock::Component"
@@ -161,6 +168,10 @@ class DummyDocsTest < Minitest::Test
     assert_includes controller_source, "icon: :layout"
     assert_includes controller_source, "Upload images and files"
     assert_includes controller_source, "Browse the attachment library and manage uploads with bulk remove actions."
+    assert_includes controller_source,
+                    "Show a single attachment with preview context, download/trash actions, and metadata editing."
+    assert_includes controller_source,
+                    "Use it when editors need to rename an attachment, update the description, or download the current file."
     assert_includes icon_sprite_source, 'symbol id="icon-grid"'
     assert_includes icon_sprite_source, 'symbol id="icon-eye"'
     assert_includes icon_sprite_source, 'symbol id="icon-layout"'

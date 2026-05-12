@@ -1,50 +1,52 @@
-<div class="grid grid-cols-2 items-stretch gap-6 lg:grid-cols-5">
+<%= render FlatPack::Grid::Component.new(cols: 2, class: "items-stretch gap-6 lg:grid-cols-5", data: { pagination_content: true }) do %>
   <% attachments.each do |attachment_recording| %>
     <% attachment = attachment_recording.recordable %>
-    <div>
-      <%= link_to attachment_path(attachment_recording), class: "block rounded-xl focus:outline-none focus:ring-2 focus:ring-(--brand-color)", data: { turbo_frame: "_top" } do %>
-        <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
-          <% card.media padding: :none do %>
-            <% preview_path = authorized_attachment_preview_path(attachment_recording, :med) %>
-            <% if preview_path.present? %>
-              <div class="relative aspect-4/3 overflow-hidden bg-(--surface-muted-background-color)" data-controller="recording-studio-attachable--image-fallback">
-                <div class="absolute inset-0 flex items-stretch justify-stretch" data-recording-studio-attachable--image-fallback-target="skeleton">
-                  <%= render FlatPack::Skeleton::Component.new(variant: :rectangle, shimmer: true, width: "100%", height: "100%") %>
+    <%= render FlatPack::Card::Component.new(
+      style: :default,
+      clickable: true,
+      href: attachment_path(attachment_recording),
+      class: "rounded-xl focus:outline-none focus:ring-2 focus:ring-(--brand-color)",
+      data: { turbo_frame: "_top" }
+    ) do |card| %>
+      <% card.media padding: :none do %>
+        <% preview_path = authorized_attachment_preview_path(attachment_recording, :med) %>
+        <% if preview_path.present? %>
+          <div class="relative aspect-4/3 overflow-hidden bg-(--surface-muted-background-color)" data-controller="recording-studio-attachable--image-fallback">
+            <div class="absolute inset-0 flex items-stretch justify-stretch" data-recording-studio-attachable--image-fallback-target="skeleton">
+              <%= render FlatPack::Skeleton::Component.new(variant: :rectangle, shimmer: true, width: "100%", height: "100%") %>
+            </div>
+            <%= image_tag preview_path, alt: attachment.name, class: "h-full w-full object-cover opacity-0 transition-opacity duration-200", data: { recording_studio_attachable__image_fallback_target: "image", action: "load->recording-studio-attachable--image-fallback#showImage error->recording-studio-attachable--image-fallback#showFallback" } %>
+            <div class="absolute inset-0 hidden items-center justify-center bg-(--surface-background-color)" data-recording-studio-attachable--image-fallback-target="fallback">
+              <div class="flex flex-col items-center justify-center gap-3 px-4 text-center">
+                <div class="flex h-16 w-16 items-center justify-center rounded-full bg-(--surface-background-color) text-(--surface-content-color) shadow-sm ring-1 ring-(--surface-border-color)">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 9v4" />
+                    <path d="M12 17h.01" />
+                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+                  </svg>
                 </div>
-                <%= image_tag preview_path, alt: attachment.name, class: "h-full w-full object-cover opacity-0 transition-opacity duration-200", data: { recording_studio_attachable__image_fallback_target: "image", action: "load->recording-studio-attachable--image-fallback#showImage error->recording-studio-attachable--image-fallback#showFallback" } %>
-                <div class="absolute inset-0 hidden items-center justify-center bg-(--surface-background-color)" data-recording-studio-attachable--image-fallback-target="fallback">
-                  <div class="flex flex-col items-center justify-center gap-3 px-4 text-center">
-                    <div class="flex h-16 w-16 items-center justify-center rounded-full bg-(--surface-background-color) text-(--surface-content-color) shadow-sm ring-1 ring-(--surface-border-color)">
-                      <svg viewBox="0 0 24 24" aria-hidden="true" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 9v4" />
-                        <path d="M12 17h.01" />
-                        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
-                      </svg>
-                    </div>
-                    <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)">IMAGE</span>
-                    <span class="text-sm text-(--surface-muted-content-color)">Preview unavailable</span>
-                  </div>
-                </div>
+                <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)">IMAGE</span>
+                <span class="text-sm text-(--surface-muted-content-color)">Preview unavailable</span>
               </div>
-            <% else %>
-              <% file_extension = File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || "FILE" %>
-              <div class="aspect-4/3 flex items-center justify-center bg-(--surface-background-color)">
-                <div class="flex flex-col items-center justify-center gap-3 px-4 text-center">
-                  <div class="flex h-16 w-16 items-center justify-center rounded-full bg-(--surface-background-color) text-(--surface-content-color) shadow-sm ring-1 ring-(--surface-border-color)">
-                    <svg viewBox="0 0 24 24" aria-hidden="true" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M14.25 3.75H7.5A2.25 2.25 0 0 0 5.25 6v12A2.25 2.25 0 0 0 7.5 20.25h9A2.25 2.25 0 0 0 18.75 18V8.25l-4.5-4.5Z" />
-                      <path d="M14.25 3.75V8.25h4.5" />
-                      <path d="M9 12.75h6" />
-                      <path d="M9 16.5h6" />
-                    </svg>
-                  </div>
-                  <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)"><%= file_extension %></span>
-                </div>
+            </div>
+          </div>
+        <% else %>
+          <% file_extension = File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || "FILE" %>
+          <div class="aspect-4/3 flex items-center justify-center bg-(--surface-background-color)">
+            <div class="flex flex-col items-center justify-center gap-3 px-4 text-center">
+              <div class="flex h-16 w-16 items-center justify-center rounded-full bg-(--surface-background-color) text-(--surface-content-color) shadow-sm ring-1 ring-(--surface-border-color)">
+                <svg viewBox="0 0 24 24" aria-hidden="true" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14.25 3.75H7.5A2.25 2.25 0 0 0 5.25 6v12A2.25 2.25 0 0 0 7.5 20.25h9A2.25 2.25 0 0 0 18.75 18V8.25l-4.5-4.5Z" />
+                  <path d="M14.25 3.75V8.25h4.5" />
+                  <path d="M9 12.75h6" />
+                  <path d="M9 16.5h6" />
+                </svg>
               </div>
-            <% end %>
-          <% end %>
+              <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)"><%= file_extension %></span>
+            </div>
+          </div>
         <% end %>
       <% end %>
-    </div>
+    <% end %>
   <% end %>
-</div>
+<% end %>

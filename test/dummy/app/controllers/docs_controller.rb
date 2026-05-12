@@ -185,11 +185,37 @@ class DocsController < ApplicationController
         RUBY
       },
       {
+        title: "Picker path",
+        subtitle: "recording_attachment_picker_path(recording)",
+        code: <<~RUBY
+          # Load the image-only picker JSON payload for browser-driven surfaces
+          # such as chat composers, editors, or custom attachment chips.
+          recording_attachment_picker_path(@recording, scope: :subtree)
+        RUBY
+      },
+      {
+        title: "Import handoff path",
+        subtitle: "recording_attachment_imports_path(recording)",
+        code: <<~RUBY
+          # Post multipart uploads, signed blob ids, or provider queue payloads
+          # through the shared import/finalize endpoint.
+          recording_attachment_imports_path(@recording)
+        RUBY
+      },
+      {
         title: "Show a specific attachment revision",
         subtitle: "attachment_path(attachment_recording)",
         code: <<~RUBY
           # Use the child attachment recording when linking to the detail page.
           attachment_path(@attachment_recording)
+        RUBY
+      },
+      {
+        title: "Download a file through the engine",
+        subtitle: "download_attachment_path(attachment_recording)",
+        code: <<~RUBY
+          # Keep attachment delivery behind the engine's authorization checks.
+          download_attachment_path(@attachment_recording)
         RUBY
       }
     ]
@@ -433,8 +459,8 @@ class DocsController < ApplicationController
       {
         title: "Attachment details",
         path: "recording_studio_attachable/attachments/show.html.erb",
-        description: "Show a single attachment with minimal navigation and image preview context.",
-        example: "Use it to inspect an image attachment without extra editing controls.",
+        description: "Show a single attachment with preview context, download/trash actions, and metadata editing.",
+        example: "Use it when editors need to rename an attachment, update the description, or download the current file.",
         icon: :eye
       },
       {

@@ -40,7 +40,7 @@ module RecordingStudioAttachable
                end
 
       if result.success?
-        redirect_to attachment_path(result.value), notice: I18n.t("recording_studio_attachable.attachments.updated")
+        redirect_to attachment_path(result.value), notice: I18n.t("recording_studio_attachable.attachments.updated", default: "Saved")
       else
         redirect_to attachment_path(@attachment_recording), alert: result.error
       end

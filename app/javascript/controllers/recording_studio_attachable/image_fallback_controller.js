@@ -24,6 +24,7 @@ export default class extends Controller {
     }
 
     if (this.hasImageTarget) {
+      this.imageTarget.classList.remove("hidden")
       this.imageTarget.classList.remove("opacity-0")
       this.imageTarget.classList.add("opacity-100")
     }

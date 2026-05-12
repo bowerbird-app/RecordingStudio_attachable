@@ -103,6 +103,7 @@ module RecordingStudioAttachable
       end
 
       assert_redirected_to "/attachments/att-2"
+      assert_equal "Saved", flash[:notice]
       assert_equal attachment_recording, captured[:attachment_recording]
       assert_equal :actor, captured[:actor]
       assert_equal :impersonator, captured[:impersonator]

@@ -7,7 +7,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - `RecordingStudio::Capabilities::Attachable.to(...)` opt-in API for parent recordables
 - addon-owned `RecordingStudioAttachable::Attachment` recordable with `has_one_attached :file`
 - child recording identity with append-only recordable revisions
-- FlatPack-based listing, search, bulk remove, and upload UI slice
+- FlatPack-based grid/list library, search, bulk remove, upload, and picker UI slice
 - Stimulus + Active Storage direct upload flow
 - Accessible-backed authorization and Trashable-aware removal when available
 
@@ -382,6 +382,31 @@ The most important per-recordable options are:
 - `auth_roles`
 - `authorize_with`
 
+## Helpers and queries
+
+The engine exposes a small set of route helpers that host apps typically use directly:
+
+- `recording_attachments_path(recording, scope: :direct, kind: :all)` for the library page
+- `recording_attachment_upload_path(recording)` for the dedicated upload screen
+- `recording_attachment_picker_path(recording)` for the image-picker JSON endpoint
+- `recording_attachment_imports_path(recording)` for browser-driven multipart or signed-blob import handoff
+- `attachment_path(attachment_recording)` for the attachment detail page
+- `download_attachment_path(attachment_recording)` for authorized file downloads
+
+For parent-recording lookups outside the UI, use `RecordingStudioAttachable::Queries::WithAttachments` to filter a `RecordingStudio::Recording` scope down to records that currently have attachments:
+
+```ruby
+recordings_with_images = RecordingStudioAttachable::Queries::WithAttachments.new(
+  scope: RecordingStudio::Recording.all,
+  recordable_type: "Page",
+  kind: :images
+).call
+
+Page.where(id: recordings_with_images.select(:recordable_id))
+```
+
+The query accepts `scope:`, `kind:`, `recordable_type:`, and `include_trashed:`. `kind:` accepts `:image`, `:images`, `:file`, `:files`, or `:all`.
+
 ## Delivery
 
 Attachment previews, editor insert URLs, and downloads are served through engine-owned endpoints so each request stays behind the gem's authorization checks. Host apps should link to the engine paths returned by the gem instead of generating raw Active Storage blob URLs for attachment delivery.
@@ -424,7 +449,7 @@ Removal is Trashable-aware:
 
 The engine ships with:
 
-- an attachment listing page with scope and kind filters
+- an attachment listing page with scope and kind filters plus grid/list view toggles
 - name search, pagination, and bulk remove from the attachment listing page
 - an upload page with direct uploads, previews, progress, and server-side batch validation
 - an attachment detail page for metadata revision and optional file replacement via direct upload

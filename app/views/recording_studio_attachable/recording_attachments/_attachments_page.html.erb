@@ -1,0 +1,21 @@
+<div class="space-y-6">
+  <% view_mode = local_assigns.fetch(:view_mode) %>
+  <% list_view = view_mode == :list %>
+
+  <% if list_view %>
+    <%= render "list", attachments: attachments %>
+  <% else %>
+    <%= render "grid", attachments: attachments %>
+  <% end %>
+
+  <% if @page < @total_pages %>
+    <% next_page = @page + 1 %>
+    <%= render FlatPack::PaginationInfinite::Component.new(
+      url: recording_attachments_path(@recording, listing_params.merge(page: next_page, append_only: true, view: view_mode)),
+      page: next_page,
+      has_more: true,
+      loading_variant: list_view ? :inline : :cards,
+      loading_text: view_mode == :grid ? "Loading more attachments..." : "Loading more rows..."
+    ) %>
+  <% end %>
+</div>

@@ -48,6 +48,7 @@ export default class extends Controller {
     this.activeEditor = null
     this.selectedAttachments = new Map()
     this.uploadEntries = []
+    this.providerUploadTimers = new Map()
     this.providerButtonsByKey = new Map()
     this.boundHandleScroll = this.handleScroll.bind(this)
     this.handleProviderMessage = this.handleProviderMessage.bind(this)
@@ -74,6 +75,8 @@ export default class extends Controller {
       window.clearTimeout(this.searchTimeoutId)
       this.searchTimeoutId = null
     }
+
+    this.clearProviderUploadTimers()
 
     window.removeEventListener("message", this.handleProviderMessage)
     window.removeEventListener("storage", this.handleProviderStorage)
@@ -393,8 +396,19 @@ export default class extends Controller {
       description: selection.description || ""
     }))
 
+    this.uploadEntries = Array.from(selections || []).map((selection) => this.buildProviderUploadEntry(selection))
+    this.renderUploadQueue()
+    this.startProviderUploadSimulation()
+
     try {
       const createdAttachments = await this.createAttachments(attachments, providerKey)
+      this.clearProviderUploadTimers()
+
+      this.uploadEntries.forEach((entry) => {
+        entry.status = "uploaded"
+        entry.progress = 100
+        this.renderUploadEntry(entry)
+      })
 
       createdAttachments.forEach((attachment) => this.dispatchSelection(attachment))
 
@@ -402,9 +416,20 @@ export default class extends Controller {
       this.showStatus(`Added ${createdAttachments.length} ${noun}`)
       this.currentPage = 1
       this.clearSelection()
+      this.clearUploadQueue()
       this.loadAttachments({ reset: true })
       this.modalController()?.close?.()
     } catch (uploadError) {
+      this.clearProviderUploadTimers()
+
+      this.uploadEntries.forEach((entry) => {
+        if (entry.status === "uploading") {
+          entry.status = "failed"
+          entry.error = uploadError.message || "Unable to add image"
+          this.renderUploadEntry(entry)
+        }
+      })
+
       this.showStatus(uploadError.message || "Unable to add image")
     }
   }
@@ -598,15 +623,6 @@ export default class extends Controller {
         media.appendChild(image)
       }
 
-      if (this.multipleSelectionEnabled()) {
-        const indicator = document.createElement("span")
-        indicator.className = "absolute right-2 top-2 inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-white/70 bg-black/70 px-2 text-xs font-semibold text-white"
-        indicator.textContent = this.selectedAttachmentIndex(attachment.id)
-        indicator.classList.toggle("hidden", !this.attachmentSelectedForMultiMode(attachment.id))
-        indicator.dataset.selectionIndicator = "true"
-        media.appendChild(indicator)
-      }
-
       button.appendChild(media)
       this.galleryTarget.appendChild(button)
     })
@@ -655,6 +671,53 @@ export default class extends Controller {
     }
   }
 
+  buildProviderUploadEntry(selection) {
+    return {
+      id: crypto.randomUUID(),
+      name: selection.name || selection.id || "Remote file",
+      progress: 12,
+      status: "uploading",
+      error: null,
+      processingComplete: false
+    }
+  }
+
+  startProviderUploadSimulation() {
+    this.uploadEntries.forEach((entry, index) => {
+      entry.progress = 12
+      this.renderUploadEntry(entry)
+      this.scheduleProviderUploadStep(entry, [32, 56, 78, 90], 320 + (index * 120))
+    })
+  }
+
+  scheduleProviderUploadStep(entry, remainingSteps, delay = 320) {
+    this.clearProviderUploadTimer(entry.id)
+    if (remainingSteps.length === 0) return
+
+    const timerId = window.setTimeout(() => {
+      if (entry.status !== "uploading") return
+
+      entry.progress = remainingSteps[0]
+      this.renderUploadEntry(entry)
+      this.scheduleProviderUploadStep(entry, remainingSteps.slice(1), 420)
+    }, delay)
+
+    this.providerUploadTimers.set(entry.id, timerId)
+  }
+
+  clearProviderUploadTimer(entryId) {
+    const timerId = this.providerUploadTimers.get(entryId)
+    if (!timerId) return
+
+    window.clearTimeout(timerId)
+    this.providerUploadTimers.delete(entryId)
+  }
+
+  clearProviderUploadTimers() {
+    this.providerUploadTimers.forEach((timerId) => window.clearTimeout(timerId))
+    this.providerUploadTimers.clear()
+  }
+
   renderUploadQueue() {
     if (!this.hasUploadQueueTarget) return
 
@@ -689,6 +752,7 @@ export default class extends Controller {
   }
 
   clearUploadQueue() {
+    this.clearProviderUploadTimers()
     this.uploadEntries = []
     if (!this.hasUploadQueueTarget) return
 
@@ -698,16 +762,22 @@ export default class extends Controller {
 
   uploadEntryTemplate(entry) {
     const progress = entry.status === "processing"
-      ? '<p class="text-xs text-(--surface-muted-content-color)">Optimizing image before upload…</p>'
+      ? this.progressTemplateHtml({
+          value: 0,
+          label: `Uploading ${this.entryName(entry)}`,
+          hideLabel: true
+        })
       : entry.status === "uploading" || entry.progress > 0
         ? this.progressTemplateHtml({
             value: entry.progress,
-            label: `Uploading ${this.entryName(entry)}`
+            label: `Uploading ${this.entryName(entry)}`,
+            hideLabel: true
           })
         : entry.status === "uploaded"
           ? this.progressTemplateHtml({
               value: 100,
-              label: `${this.entryName(entry)} uploaded`
+              label: `${this.entryName(entry)} uploaded`,
+              hideLabel: true
             })
           : ""
     const error = entry.error ? `<p class="text-xs text-red-600">${this.escapeHtml(entry.error)}</p>` : ""
@@ -715,10 +785,6 @@ export default class extends Controller {
     return `
       <div data-upload-entry-id="${entry.id}" class="rounded-xl border border-(--surface-border-color) bg-(--surface-muted-background-color) px-4 py-3">
         <div data-upload-entry-content class="space-y-2">
-          <div class="flex items-center justify-between gap-3">
-            <p class="truncate text-sm font-medium text-(--surface-content-color)">${this.escapeHtml(this.entryName(entry))}</p>
-            <p class="shrink-0 text-xs text-(--surface-muted-content-color)">${this.uploadStatusLabel(entry)}</p>
-          </div>
           ${progress}
           ${error}
         </div>
@@ -730,22 +796,7 @@ export default class extends Controller {
     return entry.file?.name || entry.name || "Image"
   }
 
-  uploadStatusLabel(entry) {
-    switch (entry.status) {
-      case "processing":
-        return "Optimizing"
-      case "uploading":
-        return `${entry.progress}%`
-      case "uploaded":
-        return "Uploaded"
-      case "failed":
-        return "Failed"
-      default:
-        return "Queued"
-    }
-  }
-
-  progressTemplateHtml({ value = 0, max = 100, label = "Progress" } = {}) {
+  progressTemplateHtml({ value = 0, max = 100, label = "Progress", hideLabel = false } = {}) {
     if (!this.hasProgressTemplateTarget) return ""
 
     const template = this.progressTemplateTarget.content.firstElementChild
@@ -768,6 +819,8 @@ export default class extends Controller {
 
     if (labelNode) {
       labelNode.textContent = label
+      labelNode.classList.toggle("hidden", hideLabel)
+      labelNode.setAttribute("aria-hidden", hideLabel ? "true" : "false")
     }
 
     if (fillNode) {
@@ -870,24 +923,11 @@ export default class extends Controller {
       const selected = this.attachmentSelectedForMultiMode(button.dataset.attachmentId)
       button.className = this.galleryButtonClass(selected)
       button.setAttribute("aria-pressed", selected ? "true" : "false")
-
-      const indicator = button.querySelector("[data-selection-indicator]")
-      if (indicator) {
-        indicator.classList.toggle("hidden", !selected)
-        indicator.textContent = this.selectedAttachmentIndex(button.dataset.attachmentId)
-      }
     })
   }
 
   attachmentSelectedForMultiMode(id) {
     return this.selectedAttachments.has(String(id)) || this.selectedAttachments.has(id)
-  }
-
-  selectedAttachmentIndex(id) {
-    const selectedIds = Array.from(this.selectedAttachments.keys()).map((value) => String(value))
-    const index = selectedIds.indexOf(String(id))
-
-    return index >= 0 ? String(index + 1) : ""
   }
 
   galleryButtonClass(selected) {

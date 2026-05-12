@@ -87,109 +87,12 @@
             <%= body_field %>
           </div>
 
-          <%= render FlatPack::Modal::Component.new(id: editor_modal_id, title: "Insert image", size: :xl, body_height_mode: :fixed, body_height: "32rem") do |modal| %>
-            <% modal.body do %>
-              <% cloud_upload_providers = RecordingStudioAttachable.configuration.upload_providers.select do |provider|
-                   provider.render?(view_context: self, recording: @page_recording) && provider.client_picker?
-                 end %>
-
-              <div class="flex h-full min-h-0 flex-col gap-4">
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                  <div class="flex flex-wrap items-center gap-3">
-                    <%= render FlatPack::Button::Dropdown::Component.new(text: "Upload", style: :primary, size: :md) do |dropdown| %>
-                      <% dropdown.menu_item(
-                        text: "Upload from device",
-                        icon: "upload",
-                        href: "#",
-                        data: { action: "recording-studio-attachable--attachment-image-picker#browseUpload" }
-                      ) %>
-
-                      <% if cloud_upload_providers.any? %>
-                        <% dropdown.menu_divider %>
-
-                        <% cloud_upload_providers.each do |provider| %>
-                          <% provider_button_options = provider.button_options(view_context: self, recording: @page_recording) %>
-                          <% provider_menu_item_options = {
-                            text: provider_button_options[:text],
-                            icon: provider_button_options[:icon],
-                            href: "#",
-                            data: provider_button_options.fetch(:data, {}).merge(action: "recording-studio-attachable--attachment-image-picker#launchProvider")
-                          } %>
-                          <% dropdown.menu_item(**provider_menu_item_options) %>
-                        <% end %>
-                      <% end %>
-                    <% end %>
-                  </div>
-
-                  <div class="w-full lg:w-auto">
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
-                      <%= render FlatPack::Search::Component.new(
-                        input_id: "#{editor_modal_id}-search",
-                        name: :picker_search,
-                        value: nil,
-                        placeholder: "Search",
-                        max_width: :lg,
-                        aria: { label: "Search images" },
-                        data: {
-                          recording_studio_attachable__attachment_image_picker_target: "searchInput",
-                          action: "input->recording-studio-attachable--attachment-image-picker#searchChanged"
-                        }
-                      ) %>
-                    </div>
-                  </div>
-                </div>
-
-                <input
-                  type="file"
-                  accept="image/*"
-                  class="hidden"
-                  data-recording-studio-attachable--attachment-image-picker-target="fileInput"
-                  data-action="change->recording-studio-attachable--attachment-image-picker#uploadSelected">
-
-                <template data-recording-studio-attachable--attachment-image-picker-target="progressTemplate">
-                  <%= render FlatPack::Progress::Component.new(value: 0, max: 100, label: "Progress") %>
-                </template>
-
-                <p class="hidden text-sm text-(--surface-muted-content-color)" data-recording-studio-attachable--attachment-image-picker-target="status"></p>
-
-                <div class="hidden space-y-3" data-recording-studio-attachable--attachment-image-picker-target="uploadQueue"></div>
-
-                <div class="hidden rounded-xl border border-(--surface-border-color) bg-(--surface-muted-background-color) px-4 py-3" data-recording-studio-attachable--attachment-image-picker-target="selectionActions">
-                  <div class="flex items-center justify-between gap-3">
-                    <p class="text-sm text-(--surface-content-color)" data-recording-studio-attachable--attachment-image-picker-target="selectionCount">Select one or more images</p>
-
-                    <div class="flex items-center gap-2">
-                    <%= render FlatPack::Button::Component.new(
-                      text: "Clear",
-                      style: :secondary,
-                      size: :sm,
-                      type: "button",
-                      data: { action: "recording-studio-attachable--attachment-image-picker#clearSelection" }
-                    ) %>
-                    <%= render FlatPack::Button::Component.new(
-                      text: "Add selected",
-                      style: :primary,
-                      size: :sm,
-                      type: "button",
-                      data: {
-                        action: "recording-studio-attachable--attachment-image-picker#confirmSelection",
-                        recording_studio_attachable__attachment_image_picker_target: "confirmButton"
-                      }
-                    ) %>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="min-h-0 flex-1 overflow-y-auto p-1" data-recording-studio-attachable--attachment-image-picker-target="scrollContainer">
-                  <div class="grid grid-cols-2 gap-4 lg:grid-cols-4" data-recording-studio-attachable--attachment-image-picker-target="gallery"></div>
-
-                  <div class="hidden rounded-lg border border-dashed border-(--surface-border-color) px-4 py-8 text-center text-sm text-(--surface-muted-content-color)" data-recording-studio-attachable--attachment-image-picker-target="emptyState">
-                    No images found for this page yet.
-                  </div>
-                </div>
-              </div>
-            <% end %>
-          <% end %>
+          <%= render "recording_studio_attachable/attachment_image_pickers/modal",
+            modal_id: editor_modal_id,
+            modal_title: "Insert image",
+            recording: @page_recording,
+            search_aria_label: "Search images",
+            empty_state_text: "No images found for this page yet." %>
         </div>
       <% else %>
         <%= body_field %>

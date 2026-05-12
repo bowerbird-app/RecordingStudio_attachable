@@ -7,6 +7,8 @@ require_relative "../app/queries/recording_studio_attachable/queries/for_recordi
 
 module RecordingStudioAttachable
   class RecordingAttachmentsControllerTest < ActionController::TestCase
+    tests RecordingAttachmentsController
+
     FakeRecording = Struct.new(:id, :recordable, :recordable_type, keyword_init: true)
     FakeQuery = Struct.new(:call_result, :current_page, :total_pages, :total_count, keyword_init: true) do
       def call
@@ -25,6 +27,37 @@ module RecordingStudioAttachable
     def test_index_defaults_to_grid_view_for_non_file_kinds_and_accepts_explicit_override
       assert_equal "grid", render_view_mode_for(kind: "all")
       assert_equal "list", render_view_mode_for(kind: "all", view: "list")
+    end
+
+    def test_append_only_index_uses_no_layout
+      @controller = RecordingAttachmentsController.new
+      recording = FakeRecording.new(id: "parent-1", recordable: Object.new, recordable_type: "Workspace")
+      query = FakeQuery.new(call_result: [], current_page: 1, total_pages: 1, total_count: 0)
+
+      with_routing do |set|
+        set.draw do
+          get "/recordings/:recording_id/attachments",
+              to: "recording_studio_attachable/recording_attachments#index"
+        end
+
+        @routes = set
+
+        RecordingStudio::Recording.stub(:find, recording) do
+          @controller.stub(:authorize_attachment_action!, true) do
+            @controller.stub(:capability_options_for, {}) do
+              RecordingStudioAttachable::Queries::ForRecording.stub(:new, ->(**_kwargs) { query }) do
+                RecordingStudioAttachable::Authorization.stub(:allowed?, false) do
+                  @controller.define_singleton_method(:default_render) { render plain: layout_for_index.inspect }
+
+                  get :index, params: { recording_id: recording.id, kind: "all", append_only: true }
+                end
+              end
+            end
+          end
+        end
+      end
+
+      assert_equal "false", @response.body
     end
 
     private

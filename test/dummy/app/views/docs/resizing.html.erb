@@ -7,8 +7,8 @@
 
   <section class="space-y-3">
     <%= render FlatPack::SectionTitle::Component.new(
-      title: "Browser side resezing",
-      subtitle: "You can set a max size and get the browser to resize oversized JPEG, PNG, and WebP uploads before they are sent to Active Storage, including extra downscaling when the file still needs to fit the byte limit.",
+      title: "Browser-side resizing",
+      subtitle: "Resize oversized JPEG, PNG, and WebP files before direct upload so the shared upload flows can reduce byte size without changing the server-side validation contract.",
       anchor_link: true
     ) %>
 
@@ -22,7 +22,7 @@
   <section class="space-y-3">
     <%= render FlatPack::SectionTitle::Component.new(
       title: "Size variants",
-      subtitle: "Summarise how they work",
+      subtitle: "Named delivery variants are generated on demand and reused through signed Active Storage URLs.",
       anchor_link: true
     ) %>
 

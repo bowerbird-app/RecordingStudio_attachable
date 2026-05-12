@@ -2,7 +2,7 @@
 
 module RecordingStudioAttachable
   class RecordingAttachmentsController < ApplicationController
-    LISTING_VIEWS = %i[grid list].freeze
+    layout :layout_for_index
 
     def index
       @recording = find_recording
@@ -11,9 +11,10 @@ module RecordingStudioAttachable
       authorize_attachment_action!(:view, @recording, capability_options: capability_options)
       @scope = RecordingStudioAttachable::Queries::ForRecording.normalize_scope(params[:scope])
       @kind = RecordingStudioAttachable::Queries::ForRecording.normalize_kind(params[:kind])
+      @view_mode = resolve_view_mode(params[:view])
       @query = RecordingStudioAttachable::Queries::ForRecording.normalize_search(params[:q])
       @include_trashed = ActiveModel::Type::Boolean.new.cast(params[:include_trashed])
-      @view_mode = normalize_listing_view(params[:view], kind: @kind)
+      @append_only = ActiveModel::Type::Boolean.new.cast(params[:append_only])
       attachment_query = RecordingStudioAttachable::Queries::ForRecording.new(
         recording: @recording,
         scope: @scope,
@@ -36,11 +37,14 @@ module RecordingStudioAttachable
 
     private
 
-    def normalize_listing_view(value, kind:)
-      normalized_view = value.to_s.strip.downcase.presence&.to_sym
-      return normalized_view if LISTING_VIEWS.include?(normalized_view)
+    def resolve_view_mode(requested_view)
+      return requested_view.to_sym if requested_view.to_s.in?(%w[grid list])
 
-      kind.to_sym == :files ? :list : :grid
+      @kind.to_sym == :files ? :list : :grid
+    end
+
+    def layout_for_index
+      false if action_name == "index" && @append_only
     end
   end
 end

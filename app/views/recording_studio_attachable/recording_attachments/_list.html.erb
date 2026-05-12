@@ -1,0 +1,73 @@
+<% preview_column = lambda do |attachment_recording|
+     attachment = attachment_recording.recordable
+     file_extension = File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || "FILE"
+     preview_path = authorized_attachment_preview_path(attachment_recording, :square_small)
+
+     link_to attachment_path(attachment_recording), class: "inline-flex rounded-lg focus:outline-none focus:ring-2 focus:ring-(--brand-color)", data: { turbo_frame: "_top" } do
+       if preview_path.present?
+         tag.div(class: "relative h-12 w-12 overflow-hidden rounded-lg bg-(--surface-muted-background-color)", data: { controller: "recording-studio-attachable--image-fallback" }) do
+           image = image_tag(preview_path, alt: attachment.name, class: "h-full w-full object-cover", data: { recording_studio_attachable__image_fallback_target: "image", action: "error->recording-studio-attachable--image-fallback#showFallback" })
+           fallback = tag.div(class: "absolute inset-0 hidden items-center justify-center bg-(--surface-background-color)", data: { "recording-studio-attachable--image-fallback-target": "fallback" }) do
+             tag.span("IMAGE", class: "text-[10px] font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)")
+           end
+
+           safe_join([image, fallback])
+         end
+       else
+         tag.div(class: "flex h-12 w-12 items-center justify-center rounded-lg bg-(--surface-background-color) text-(--surface-content-color) shadow-sm ring-1 ring-(--surface-border-color)") do
+           tag.span(file_extension, class: "text-[10px] font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)")
+         end
+       end
+     end
+   end %>
+<% name_column = lambda do |attachment_recording|
+     attachment = attachment_recording.recordable
+     display_content_type = attachment.content_type.to_s.split("/", 2).last.presence || attachment.content_type
+     display_size = number_to_human_size(attachment.byte_size, strip_insignificant_zeros: true).downcase.delete(" ")
+
+     safe_join([
+       render(FlatPack::Link::Component.new(
+         href: attachment_path(attachment_recording),
+         class: "block max-w-[12rem] truncate font-medium sm:max-w-[18rem]",
+         data: { turbo_frame: "_top" }
+       )) { attachment.name },
+       tag.div("#{display_content_type} #{display_size}", class: "text-xs text-(--surface-muted-content-color)")
+     ])
+   end %>
+<% actions_column = lambda do |attachment_recording|
+     actions = [
+       render(FlatPack::Tooltip::Component.new(text: "Download")) do
+         render FlatPack::Button::Component.new(
+           icon: "arrow-down-tray",
+           icon_only: true,
+           style: :ghost,
+           size: :md,
+           aria: { label: "Download attachment" },
+           url: download_attachment_path(attachment_recording),
+           data: { turbo_frame: "_top" }
+         )
+       end
+     ]
+
+     unless attachment_recording.respond_to?(:trashed_at) && attachment_recording.trashed_at.present?
+       actions << render(FlatPack::Tooltip::Component.new(text: "Trash")) do
+         button_to destroy_attachment_path(attachment_recording), method: :delete, class: "inline-flex" do
+           render FlatPack::Button::Component.new(icon: "trash", icon_only: true, style: :ghost, size: :md, aria: { label: "Trash attachment" })
+         end
+       end
+     end
+
+     tag.div(class: "flex gap-2") do
+       safe_join(actions)
+     end
+   end %>
+<%= render FlatPack::Table::Component.new(
+  data: attachments,
+  tbody_data: { pagination_content: true }
+) do |table| %>
+  <% table.column(title: "Preview", html: preview_column) %>
+
+  <% table.column(title: "Name", html: name_column) %>
+
+  <% table.column(title: "Actions", html: actions_column) %>
+<% end %>

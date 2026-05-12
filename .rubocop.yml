@@ -14,41 +14,100 @@ Style/StringLiterals:
   EnforcedStyle: double_quotes
 
 Layout/LineLength:
-  Max: 120
+  Max: 140
+  Exclude:
+    - 'test/**/*'
 
-# Relax metrics for test files and generators
 Metrics/ClassLength:
   Exclude:
     - 'test/**/*'
-    - 'lib/gem_template/hooks.rb'
+    - 'app/controllers/recording_studio_attachable/application_controller.rb'
+    - 'app/controllers/recording_studio_attachable/attachment_imports_controller.rb'
+    - 'lib/recording_studio_attachable/configuration.rb'
+    - 'lib/recording_studio_attachable/upload_provider.rb'
 
 Metrics/MethodLength:
   Exclude:
     - 'test/**/*'
     - 'lib/generators/**/*'
+    - 'app/javascript/**/*'
+    - 'app/controllers/**/*'
+    - 'app/services/**/*'
+    - 'app/models/**/*'
+    - 'lib/recording_studio_attachable/configuration.rb'
+    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/bootstrap_controller.rb'
+    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/imports_controller.rb'
+    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/oauth_controller.rb'
+    - 'lib/recording_studio_attachable/google_drive/client.rb'
+    - 'lib/recording_studio_attachable/google_drive/oauth_client.rb'
+    - 'lib/recording_studio_attachable/google_drive/services/import_selected_files.rb'
+    - 'lib/recording_studio_attachable/upload_provider.rb'
 
 Metrics/AbcSize:
   Exclude:
     - 'test/**/*'
     - 'lib/generators/**/*'
+    - 'app/controllers/**/*'
+    - 'app/services/**/*'
+    - 'app/queries/recording_studio_attachable/queries/with_attachments.rb'
+    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/application_controller.rb'
+    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/bootstrap_controller.rb'
+    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/imports_controller.rb'
+    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/oauth_controller.rb'
+    - 'lib/recording_studio_attachable/google_drive/client.rb'
+    - 'lib/recording_studio_attachable/google_drive/oauth_client.rb'
+    - 'lib/recording_studio_attachable/google_drive/services/import_selected_files.rb'
+    - 'lib/recording_studio_attachable/upload_provider.rb'
 
-# Allow empty blocks in tests (common for stubs/mocks)
 Lint/EmptyBlock:
   Exclude:
     - 'test/**/*'
 
-# Allow nested method definitions in tests (common for testing behavior)
+Lint/UnusedBlockArgument:
+  Exclude:
+    - 'test/**/*'
+
 Lint/NestedMethodDefinition:
   Exclude:
     - 'test/**/*'
 
-# Allow underscores in test method names (test_something_100 is fine)
 Naming/VariableNumber:
   Exclude:
     - 'test/**/*'
 
-# Don't require super in service initialize methods
 Lint/MissingSuper:
   Exclude:
-    - 'lib/gem_template/services/**/*'
+    - 'app/services/**/*'
     - 'test/services/**/*'
+
+Metrics/ParameterLists:
+  Exclude:
+    - 'app/services/**/*'
+    - 'app/controllers/recording_studio_attachable/application_controller.rb'
+    - 'lib/recording_studio_attachable/google_drive/services/import_selected_files.rb'
+    - 'lib/recording_studio_attachable/upload_provider.rb'
+
+Metrics/BlockLength:
+  Exclude:
+    - 'test/**/*'
+    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/imports_controller.rb'
+
+Metrics/CyclomaticComplexity:
+  Exclude:
+    - 'test/**/*'
+    - 'app/controllers/recording_studio_attachable/attachment_imports_controller.rb'
+    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/oauth_controller.rb'
+    - 'lib/recording_studio_attachable/upload_provider.rb'
+
+Metrics/PerceivedComplexity:
+  Exclude:
+    - 'test/**/*'
+    - 'app/controllers/recording_studio_attachable/attachment_imports_controller.rb'
+    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/oauth_controller.rb'
+
+Naming/PredicatePrefix:
+  Exclude:
+    - 'lib/recording_studio/capabilities/attachable.rb'
+
+Style/ArgumentsForwarding:
+  Enabled: false

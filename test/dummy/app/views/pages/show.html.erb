@@ -1,0 +1,62 @@
+<div class="mx-auto flex w-full max-w-4xl flex-col gap-6">
+  <%= render FlatPack::Breadcrumb::Component.new(
+    show_back: true,
+    back_text: "Back",
+    back_icon: "arrow-left",
+    back_href: request.referer.presence || root_path,
+    items: [{ text: "Home", href: root_path, icon: "home" }]
+  ) %>
+
+  <%= render FlatPack::PageTitle::Component.new(
+    title: @page.title,
+    subtitle: "Review the inline page content and related page actions.",
+    variant: :h1
+  ) %>
+
+  <div class="flex flex-wrap gap-3">
+    <%= render FlatPack::Button::Component.new(text: "Edit inline", style: :primary, size: :md, url: edit_page_path(@page)) %>
+  </div>
+
+  <div class="page-inline-content prose max-w-none text-(--surface-content-color)">
+    <%= sanitize(
+      @page.body.presence || "<p>No page content yet.</p>",
+      tags: %w[p br strong em u s code blockquote ul ol li h1 h2 h3 a img figure figcaption],
+      attributes: %w[href src alt title data-display data-align]
+    ) %>
+  </div>
+</div>
+
+<style>
+  .page-inline-content img[data-display="small"] {
+    width: 33% !important;
+  }
+
+  .page-inline-content img[data-display="medium"] {
+    width: 50% !important;
+  }
+
+  .page-inline-content img[data-display="full"] {
+    width: 100% !important;
+  }
+
+  .page-inline-content img[data-display] {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .page-inline-content img[data-align="left"] {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .page-inline-content img[data-align="center"] {
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .page-inline-content img[data-align="right"] {
+    margin-left: auto !important;
+    margin-right: 0 !important;
+  }
+</style>

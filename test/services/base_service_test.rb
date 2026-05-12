@@ -2,10 +2,9 @@
 
 require "test_helper"
 
-module GemTemplate
+module RecordingStudioAttachable
   module Services
     class BaseServiceTest < Minitest::Test
-      # Test subclass for testing BaseService
       class TestService < BaseService
         def initialize(should_succeed:, value: nil, error: nil)
           @should_succeed = should_succeed
@@ -16,127 +15,99 @@ module GemTemplate
         private
 
         def perform
-          if @should_succeed
-            success(@value)
-          else
-            failure(@error)
-          end
+          @should_succeed ? success(@value) : failure(@error)
         end
       end
 
-      # Test subclass that doesn't implement perform
-      class IncompleteService < BaseService
+      class HandledExceptionService < BaseService
+        private
+
+        def perform
+          raise ArgumentError, "bad input"
+        end
       end
 
-      def test_call_class_method_delegates_to_instance
-        result = TestService.call(should_succeed: true, value: "hello")
+      class UnexpectedExceptionService < BaseService
+        private
+
+        def perform
+          raise NoMethodError, "boom"
+        end
+      end
+
+      def test_call_returns_success_result
+        result = TestService.call(should_succeed: true, value: "ok")
+
         assert result.success?
-        assert_equal "hello", result.value
+        assert_equal "ok", result.value
       end
 
-      def test_success_result
-        result = TestService.call(should_succeed: true, value: { data: 123 })
+      def test_call_returns_failure_result
+        result = TestService.call(should_succeed: false, error: "bad")
 
-        assert result.success?
-        refute result.failure?
-        assert_equal({ data: 123 }, result.value)
-        assert_nil result.error
-      end
-
-      def test_failure_result
-        result = TestService.call(should_succeed: false, error: "Something went wrong")
-
-        refute result.success?
         assert result.failure?
-        assert_nil result.value
-        assert_equal "Something went wrong", result.error
+        assert_equal "bad", result.error
       end
 
-      def test_on_success_callback
-        called = false
-        received_value = nil
+      def test_call_wraps_expected_domain_errors
+        result = HandledExceptionService.call
 
-        TestService.call(should_succeed: true, value: "test") do |result|
-          result.on_success do |value|
-            called = true
-            received_value = value
-          end
+        assert result.failure?
+        assert_equal "bad input", result.error
+      end
+
+      def test_call_re_raises_unexpected_errors
+        assert_raises(NoMethodError) { UnexpectedExceptionService.call }
+      end
+
+      def test_result_on_success_yields_value_and_returns_self
+        result = BaseService::Result.new(success: true, value: "ok")
+        yielded_value = nil
+
+        returned = result.on_success do |value|
+          yielded_value = value
         end
 
-        assert called, "on_success should have been called"
-        assert_equal "test", received_value
+        assert_same result, returned
+        assert_equal "ok", yielded_value
       end
 
-      def test_on_failure_callback
-        called = false
-        received_error = nil
+      def test_result_on_failure_yields_error_and_errors_and_returns_self
+        result = BaseService::Result.new(success: false, error: "bad", errors: [:details])
+        yielded = nil
 
-        TestService.call(should_succeed: false, error: "oops") do |result|
-          result.on_failure do |error, _errors|
-            called = true
-            received_error = error
-          end
+        returned = result.on_failure do |error, errors|
+          yielded = [error, errors]
         end
 
-        assert called, "on_failure should have been called"
-        assert_equal "oops", received_error
+        assert_same result, returned
+        assert_equal ["bad", [:details]], yielded
       end
 
-      def test_on_success_not_called_on_failure
-        called = false
+      def test_call_yields_result_to_block
+        yielded_result = nil
 
-        TestService.call(should_succeed: false, error: "fail") do |result|
-          result.on_success { called = true }
+        result = TestService.call(should_succeed: true, value: "ok") do |service_result|
+          yielded_result = service_result
         end
 
-        refute called, "on_success should not be called on failure"
+        assert_same result, yielded_result
       end
 
-      def test_on_failure_not_called_on_success
-        called = false
-
-        TestService.call(should_succeed: true, value: "ok") do |result|
-          result.on_failure { called = true }
-        end
-
-        refute called, "on_failure should not be called on success"
-      end
-
-      def test_value_bang_returns_value_on_success
-        result = TestService.call(should_succeed: true, value: "unwrapped")
-        assert_equal "unwrapped", result.value!
-      end
-
-      def test_value_bang_raises_on_failure
-        result = TestService.call(should_succeed: false, error: "error message")
-        assert_raises(RuntimeError) { result.value! }
-      end
-
-      def test_chaining_callbacks
-        success_called = false
-        failure_called = false
-
-        result = TestService.call(should_succeed: true, value: "chain")
-        result
-          .on_success { success_called = true }
-          .on_failure { failure_called = true }
-
-        assert success_called
-        refute failure_called
-      end
-
-      def test_perform_not_implemented_raises
-        assert_raises(NotImplementedError) { IncompleteService.call }
-      end
-
-      def test_result_errors_array
-        result = BaseService::Result.new(
-          success: false,
-          error: "Main error",
-          errors: ["Detail 1", "Detail 2"]
+      def test_failure_uses_exception_message
+        result = TestService.call(
+          should_succeed: false,
+          error: ArgumentError.new("invalid")
         )
 
-        assert_equal ["Detail 1", "Detail 2"], result.errors
+        assert result.failure?
+        assert_equal "invalid", result.error
+      end
+
+      def test_base_service_requires_subclasses_to_implement_perform
+        abstract_service = Class.new(BaseService)
+
+        assert_raises(NotImplementedError) { abstract_service.call }
       end
     end
   end

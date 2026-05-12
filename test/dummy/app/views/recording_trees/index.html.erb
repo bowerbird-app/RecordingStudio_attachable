@@ -1,0 +1,19 @@
+<div class="mx-auto flex w-full max-w-4xl flex-col gap-6">
+  <%= render FlatPack::PageTitle::Component.new(
+    title: "Recording tree",
+    subtitle: "All seeded recordings in the dummy app, shown by parent-child structure.",
+    variant: :h1
+  ) %>
+
+  <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
+    <% card.body do %>
+      <% if @root_recordings.any? %>
+        <%= render FlatPack::Tree::Component.new do |tree| %>
+          <% build_recording_tree_nodes(tree, @root_recordings, @recording_children) %>
+        <% end %>
+      <% else %>
+        <p class="text-sm text-(--surface-muted-content-color)">Seed the dummy app to populate the recordings tree.</p>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

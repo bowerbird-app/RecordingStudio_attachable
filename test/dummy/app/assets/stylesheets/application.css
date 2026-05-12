@@ -8,3 +8,15 @@
  *
  * Consider organizing styles into separate files for maintainability.
  */
+
+.flat-pack-richtext-toolbar {
+	border-width: 1px;
+	border-style: solid;
+	border-color: var(--surface-border-color);
+	border-bottom-width: 0;
+}
+
+.flat-pack-richtext-editor {
+	border-width: 1px;
+	border-style: solid;
+}

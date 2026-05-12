@@ -1,0 +1,22 @@
+<div class="mx-auto flex w-full max-w-4xl flex-col gap-8">
+  <%= render FlatPack::PageTitle::Component.new(
+    title: "Methods",
+    subtitle: "The primary entrypoints a host app uses when wiring and linking the gem.",
+    variant: :h1
+  ) %>
+
+  <% @method_examples.each do |example| %>
+    <section class="space-y-3">
+      <%= render FlatPack::SectionTitle::Component.new(
+        title: example[:title],
+        subtitle: example[:subtitle],
+        anchor_link: true
+      ) %>
+      <%= render FlatPack::CodeBlock::Component.new(
+        title: example[:subtitle],
+        code: example[:code],
+        language: :ruby
+      ) %>
+    </section>
+  <% end %>
+</div>

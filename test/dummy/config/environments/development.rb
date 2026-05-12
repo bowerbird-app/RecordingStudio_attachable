@@ -28,8 +28,8 @@ Rails.application.configure do
   # Change to :null_store to avoid any caching.
   config.cache_store = :memory_store
 
-  # Store uploaded files on the local file system (see config/storage.yml for options).
-  config.active_storage.service = :local
+  # Allow the dummy app to exercise alternate Active Storage backends such as S3.
+  config.active_storage.service = ENV.fetch("DUMMY_ACTIVE_STORAGE_SERVICE", "local").to_sym
 
   # Don't care if the mailer can't send.
   config.action_mailer.raise_delivery_errors = false
@@ -78,6 +78,7 @@ Rails.application.configure do
     # Relax CSRF origin check
     config.action_controller.forgery_protection_origin_check = false
     # Allow GitHub Codespaces hosts
+    config.hosts << ".app"
     config.hosts << ".app.github.dev"
   end
 

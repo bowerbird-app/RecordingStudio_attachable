@@ -1,0 +1,127 @@
+<%= render FlatPack::Chat::Panel::Component.new do |panel| %>
+  <% panel.header do %>
+    <%= render FlatPack::Chat::Header::Component.new(title: "Chat") %>
+  <% end %>
+
+  <% panel.messages do %>
+    <%= render FlatPack::Chat::MessageList::Component.new do %>
+      <%= render FlatPack::Chat::DateDivider::Component.new(label: "Today") %>
+
+      <% @messages.each do |message| %>
+        <%= render "message", message: message %>
+      <% end %>
+
+      <%= render FlatPack::Chat::TypingIndicator::Component.new(label: "Attachable is typing") do |typing| %>
+        <% typing.avatar do %>
+          <%= render FlatPack::Avatar::Component.new(initials: "RS", size: :sm) %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <% panel.composer do %>
+    <%= form_with url: chat_demo_messages_path, method: :post do %>
+      <div
+        data-controller="chat-demo recording-studio-attachable--attachment-image-picker"
+        data-action="recording-studio-attachable--attachment-image-picker:selected->chat-demo#attachmentSelected"
+        data-chat-demo-attach-url-value="<%= chat_demo_message_attachments_path(@draft_message) %>"
+        data-chat-demo-detach-url-template-value="<%= chat_demo_message_attachment_path(@draft_message, "__ATTACHMENT_ID__") %>"
+        data-recording-studio-attachable--attachment-image-picker-picker-url-value="<%= @chat_attachment_picker_path %>"
+        data-recording-studio-attachable--attachment-image-picker-upload-url-value="<%= @chat_attachment_create_path %>"
+        data-recording-studio-attachable--attachment-image-picker-direct-upload-url-value="<%= main_app.rails_direct_uploads_path %>"
+        data-recording-studio-attachable--attachment-image-picker-max-file-size-value="<%= RecordingStudioAttachable.configuration.max_file_size %>"
+        data-recording-studio-attachable--attachment-image-picker-image-processing-enabled-value="<%= RecordingStudioAttachable.configuration.image_processing_enabled %>"
+        data-recording-studio-attachable--attachment-image-picker-image-processing-max-width-value="<%= RecordingStudioAttachable.configuration.image_processing_max_width %>"
+        data-recording-studio-attachable--attachment-image-picker-image-processing-max-height-value="<%= RecordingStudioAttachable.configuration.image_processing_max_height %>"
+        data-recording-studio-attachable--attachment-image-picker-image-processing-quality-value="<%= RecordingStudioAttachable.configuration.image_processing_quality %>"
+        data-recording-studio-attachable--attachment-image-picker-multiple-selection-value="false"
+        data-recording-studio-attachable--attachment-image-picker-modal-id-value="<%= chat_modal_id %>">
+        <input type="hidden" name="chat_demo[draft_message_id]" value="<%= @draft_message.id %>">
+
+        <%= render FlatPack::Chat::Composer::Component.new do |composer| %>
+          <% composer.attachments do %>
+            <p class="<%= @draft_attachments.any? ? "hidden " : "" %>text-sm text-(--surface-muted-content-color)" data-chat-demo-target="emptyState">
+              Add one or more images from the picker, then send them as a chat message.
+            </p>
+            <div class="<%= @draft_attachments.any? ? "flex" : "hidden" %> flex-wrap gap-3" data-chat-demo-target="attachments">
+              <% @draft_attachments.each do |attachment_recording| %>
+                <% attachment = attachment_recording.recordable %>
+                <%= render "attachment_preview",
+                  attachment_id: attachment_recording.id,
+                  name: attachment.name,
+                  thumbnail_url: recording_studio_attachable.attachment_preview_file_path(attachment_recording, variant_name: :square_small),
+                  insert_url: recording_studio_attachable.attachment_file_path(attachment_recording),
+                  remove_label: "Remove #{attachment.name}" %>
+              <% end %>
+            </div>
+            <template data-chat-demo-target="attachmentTemplate">
+              <%= render "attachment_preview",
+                attachment_id: "__ATTACHMENT_ID__",
+                name: "__ATTACHMENT_NAME__",
+                thumbnail_url: "__ATTACHMENT_THUMBNAIL_URL__",
+                insert_url: "__ATTACHMENT_URL__",
+                remove_label: "__REMOVE_LABEL__" %>
+            </template>
+          <% end %>
+
+          <% composer.left do %>
+            <details class="relative">
+              <summary class="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full border border-(--surface-border-color) bg-(--surface-background-color) text-base font-medium text-(--surface-content-color) shadow-sm transition hover:bg-(--surface-muted-background-color) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden" aria-label="Add image">
+                +
+              </summary>
+
+              <div class="absolute bottom-full left-0 z-10 mb-2 w-56 rounded-xl border border-(--surface-border-color) bg-(--surface-background-color) p-2 shadow-lg">
+                <div class="space-y-1">
+                  <button
+                    type="button"
+                    class="flex w-full flex-col rounded-lg px-3 py-2 text-left transition hover:bg-(--surface-muted-background-color)"
+                    data-action="recording-studio-attachable--attachment-image-picker#openSinglePicker">
+                    <span class="text-sm font-medium text-(--surface-content-color)">Single select</span>
+                    <span class="text-xs text-(--surface-muted-content-color)">Attach one image immediately.</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="flex w-full flex-col rounded-lg px-3 py-2 text-left transition hover:bg-(--surface-muted-background-color)"
+                    data-action="recording-studio-attachable--attachment-image-picker#openMultiplePicker">
+                    <span class="text-sm font-medium text-(--surface-content-color)">Multiple select</span>
+                    <span class="text-xs text-(--surface-muted-content-color)">Stage several images, then add them together.</span>
+                  </button>
+                </div>
+              </div>
+            </details>
+          <% end %>
+
+          <% composer.center do %>
+            <%= render FlatPack::TextArea::Component.new(
+              name: "chat_demo[body]",
+              value: @draft_message.body,
+              placeholder: "Type a message...",
+              rows: 1,
+              autogrow: true
+            ) %>
+          <% end %>
+
+          <% composer.right do %>
+            <%= render FlatPack::Button::Component.new(
+              text: "Send",
+              style: :primary,
+              size: :md,
+              type: "submit",
+              icon: "send"
+            ) %>
+          <% end %>
+        <% end %>
+
+        <%= render "recording_studio_attachable/attachment_image_pickers/modal",
+          modal_id: chat_modal_id,
+          modal_title: "Add images",
+          recording: @root_recording,
+          search_aria_label: "Search chat images",
+          empty_state_text: "No images are available in the workspace library yet.",
+          show_mode_summary: true,
+          mode_summary_text: "Choose one image to attach it immediately." %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

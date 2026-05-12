@@ -1,0 +1,35 @@
+<div class="mx-auto flex w-full max-w-4xl flex-col gap-8">
+  <%= render FlatPack::PageTitle::Component.new(
+    title: "Resizing",
+    subtitle: "Configure browser-side image resizing before direct upload for the dummy app and the engine's built-in upload flows.",
+    variant: :h1
+  ) %>
+
+  <section class="space-y-3">
+    <%= render FlatPack::SectionTitle::Component.new(
+      title: "Browser-side resizing",
+      subtitle: "Resize oversized JPEG, PNG, and WebP files before direct upload so the shared upload flows can reduce byte size without changing the server-side validation contract.",
+      anchor_link: true
+    ) %>
+
+    <%= render FlatPack::CodeBlock::Component.new(
+      title: "config/initializers/recording_studio_attachable.rb",
+      code: @resizing_config_example,
+      language: :ruby
+    ) %>
+  </section>
+
+  <section class="space-y-3">
+    <%= render FlatPack::SectionTitle::Component.new(
+      title: "Size variants",
+      subtitle: "Named delivery variants are generated on demand and reused through signed Active Storage URLs.",
+      anchor_link: true
+    ) %>
+
+    <%= render FlatPack::CodeBlock::Component.new(
+      title: "config/initializers/recording_studio_attachable.rb",
+      code: @variant_config_example,
+      language: :ruby
+    ) %>
+  </section>
+</div>

@@ -1,14 +1,26 @@
 > **Architecture Documentation**
 > *   **Canonical Source:** [bowerbird-app/gem_template](https://github.com/bowerbird-app/gem_template/tree/main/docs/gem_template)
-> *   **Last Updated:** December 11, 2025
+> *   **Last Updated:** May 7, 2026
 >
 > *Maintainers: Please update the date above when modifying this file.*
 
 ---
 
-# GemTemplate Configuration
+# Template Configuration Reference
 
-This document explains how to configure **GemTemplate** in your host Rails application.
+This file documents the original `GemTemplate` configuration model. It is not the runtime configuration guide for Recording Studio Attachable.
+
+For current configuration, use:
+
+- `README.md` for supported `RecordingStudioAttachable.configure` options
+- `lib/generators/recording_studio_attachable/install/templates/recording_studio_attachable_initializer.rb` for the generated initializer contract
+- `test/dummy/app/controllers/docs_controller.rb` for maintained example snippets used by the dummy app docs
+
+If you are maintaining the template lineage, keep this file as architectural reference. If you are integrating Recording Studio Attachable, do not use the `GemTemplate` initializer names, YAML keys, or route examples below.
+
+---
+
+The remaining content below is retained as template reference only.
 
 ---
 

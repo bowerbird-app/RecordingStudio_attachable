@@ -1,6 +1,19 @@
 {
   "Unit Tests": {
     "coverage": {},
-    "timestamp": 1772762522
+    "timestamp": 1778568158
+  },
+  "Minitest": {
+    "coverage": {
+      "/workspaces/RecordingStudio_attachable/test/dummy/app/models/current.rb": {
+        "lines": [
+          1,
+          1,
+          null
+        ],
+        "branches": {}
+      }
+    },
+    "timestamp": 1778045830
   }
 }

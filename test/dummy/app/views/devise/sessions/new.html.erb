@@ -1,15 +1,13 @@
 <div class="fixed inset-0 p-4">
   <%= render FlatPack::Grid::Component.new(cols: 1, align: :center, class: "h-full w-full place-content-center justify-items-center") do %>
     <%= render FlatPack::Card::Component.new(style: :default, class: "w-full max-w-md h-auto") do |card| %>
-      <% card.header do %>
+      <% card.body do %>
         <%= render FlatPack::PageTitle::Component.new(
           title: "Sign In",
           variant: :h2,
-          class: "mb-0 pb-0"
+          class: "mb-6"
         ) %>
-      <% end %>
 
-      <% card.body do %>
         <%= form_for(resource, as: resource_name, url: session_path(resource_name)) do |f| %>
           <div class="space-y-4">
             <%= render FlatPack::EmailInput::Component.new(

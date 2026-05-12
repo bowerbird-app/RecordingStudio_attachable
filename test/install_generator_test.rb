@@ -3,98 +3,82 @@
 require "test_helper"
 require "fileutils"
 require "tmpdir"
-require "generators/gem_template/install/install_generator"
+require "generators/recording_studio_attachable/install/install_generator"
 
 class InstallGeneratorTest < Minitest::Test
   def with_temp_app
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p(File.join(dir, "app/assets/tailwind"))
+      FileUtils.mkdir_p(File.join(dir, "app/javascript/controllers"))
+      FileUtils.mkdir_p(File.join(dir, "config"))
+      File.write(File.join(dir, "config/importmap.rb"), "pin_all_from 'app/javascript/controllers', under: 'controllers'\n")
+      File.write(File.join(dir, "app/javascript/application.js"), "import \"controllers\"\n")
+      File.write(
+        File.join(dir, "app/javascript/controllers/index.js"),
+        "import { application } from \"controllers/application\"\nimport { eagerLoadControllersFrom } from \"@hotwired/stimulus-loading\"\n"
+      )
       yield dir
     end
   end
 
   def build_generator(destination_root, options = {})
-    GemTemplate::Generators::InstallGenerator.new(
-      [],
-      options,
-      destination_root: destination_root
-    )
+    RecordingStudioAttachable::Generators::InstallGenerator.new([], options, destination_root: destination_root)
   end
 
   def test_mount_engine_uses_configured_mount_path
-    generator = build_generator("/tmp", mount_path: "/addons/recording")
+    generator = build_generator("/tmp", mount_path: "/studio/files")
     routes = []
 
     generator.stub(:route, ->(value) { routes << value }) do
       generator.mount_engine
     end
 
-    assert_equal ["mount GemTemplate::Engine, at: \"/addons/recording\""], routes
+    assert_equal ['mount RecordingStudioAttachable::Engine, at: "/studio/files"'], routes
   end
 
-  def test_add_tailwind_source_injects_engine_and_flatpack_sources
+  def test_add_tailwind_source_injects_attachable_sources
     with_temp_app do |dir|
       css_path = File.join(dir, "app/assets/tailwind/application.css")
       File.write(css_path, "@import \"tailwindcss\";\n")
 
       generator = build_generator(dir)
-
-      Rails.stub(:root, Pathname.new(dir)) do
-        generator.stub(:say, nil) do
-          generator.add_tailwind_source
-        end
-      end
+      Rails.stub(:root, Pathname.new(dir)) { generator.add_tailwind_source }
 
       css = File.read(css_path)
-      assert_tailwind_sources_present(css)
+      assert_includes css, "recording_studio_attachable/app/views/**/*.erb"
+      assert_includes css, "flat_pack/app/components"
     end
   end
 
-  def test_add_tailwind_source_does_not_duplicate_existing_entries
+  def test_add_importmap_entries_appends_engine_pin_and_javascript_wiring
     with_temp_app do |dir|
-      css_path = File.join(dir, "app/assets/tailwind/application.css")
-      File.write(css_path, <<~CSS)
-        @import "tailwindcss";
-        @source "../../vendor/bundle/**/gem_template/app/views/**/*.erb";
-        @source "../../../../../../usr/local/bundle/ruby/**/bundler/gems/gem_template-*/app/views/**/*.erb";
-        @source "../../vendor/bundle/**/flatpack/app/components/**/*.{rb,erb}";
-        @source "../../../../../../usr/local/bundle/ruby/**/bundler/gems/flatpack-*/app/components/**/*.{rb,erb}";
-      CSS
-
       generator = build_generator(dir)
+      Rails.stub(:root, Pathname.new(dir)) { generator.add_importmap_entries }
 
-      Rails.stub(:root, Pathname.new(dir)) do
-        generator.stub(:say, nil) do
-          generator.add_tailwind_source
-        end
-      end
+      importmap = File.read(File.join(dir, "config/importmap.rb"))
+      application_js = File.read(File.join(dir, "app/javascript/application.js"))
+      controllers_index = File.read(File.join(dir, "app/javascript/controllers/index.js"))
 
-      css = File.read(css_path)
-      assert_tailwind_sources_present(css)
-      assert_tailwind_sources_count(css, 1)
+      assert_includes importmap, "@rails/activestorage"
+      assert_includes importmap, "controllers/recording_studio_attachable"
+      assert_includes importmap, 'pin "recording_studio_attachable/tiptap/attachment_image_addon"'
+      assert_includes importmap, "RecordingStudioAttachable::Engine.root"
+      assert_includes importmap, 'to: "controllers/recording_studio_attachable"'
+      assert_includes application_js, "import * as ActiveStorage from \"@rails/activestorage\"\nActiveStorage.start()\n"
+      assert_includes application_js, 'import "recording_studio_attachable/tiptap/attachment_image_addon"'
+      assert_includes controllers_index, "eagerLoadControllersFrom(\"controllers/recording_studio_attachable\", application)\n"
     end
   end
 
-  private
+  def test_initializer_template_defaults_to_blank_layout_and_mentions_override
+    initializer_template = File.read(
+      File.expand_path(
+        "../lib/generators/recording_studio_attachable/install/templates/recording_studio_attachable_initializer.rb",
+        __dir__
+      )
+    )
 
-  def assert_tailwind_sources_present(css)
-    tailwind_source_lines.each do |line|
-      assert_includes css, line
-    end
-  end
-
-  def assert_tailwind_sources_count(css, count)
-    tailwind_source_lines.each do |line|
-      assert_equal count, css.scan(line).size
-    end
-  end
-
-  def tailwind_source_lines
-    [
-      '@source "../../vendor/bundle/**/gem_template/app/views/**/*.erb";',
-      '@source "../../../../../../usr/local/bundle/ruby/**/bundler/gems/gem_template-*/app/views/**/*.erb";',
-      '@source "../../vendor/bundle/**/flatpack/app/components/**/*.{rb,erb}";',
-      '@source "../../../../../../usr/local/bundle/ruby/**/bundler/gems/flatpack-*/app/components/**/*.{rb,erb}";'
-    ]
+    assert_includes initializer_template, "config.layout = :blank"
+    assert_includes initializer_template, 'host app layout like "application"'
   end
 end

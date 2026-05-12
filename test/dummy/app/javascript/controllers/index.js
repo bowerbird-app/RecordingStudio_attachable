@@ -5,3 +5,4 @@ eagerLoadControllersFrom("controllers", application)
 
 // Eager load FlatPack controllers
 eagerLoadControllersFrom("controllers/flat_pack", application)
+eagerLoadControllersFrom("controllers/recording_studio_attachable", application)

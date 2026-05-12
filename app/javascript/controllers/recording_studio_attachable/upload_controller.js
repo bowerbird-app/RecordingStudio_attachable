@@ -1,0 +1,823 @@
+import { Controller } from "@hotwired/stimulus"
+import { DirectUpload } from "@rails/activestorage"
+import { getUploadProviderLauncher } from "controllers/recording_studio_attachable/provider_launchers"
+import { preprocessImageFile, shouldPreprocessImageFile } from "controllers/recording_studio_attachable/image_preprocessing"
+import "controllers/recording_studio_attachable/google_drive_picker_launcher"
+
+const PROVIDER_EVENT_STORAGE_KEY = "recording-studio-attachable:provider-event"
+const PROVIDER_EVENT_CHANNEL_NAME = `${PROVIDER_EVENT_STORAGE_KEY}:channel`
+
+export default class extends Controller {
+  static targets = ["dropzone", "input", "queue", "progressTemplate"]
+  static values = {
+    directUploadUrl: String,
+    finalizeUrl: String,
+    maxFileSize: Number,
+    maxFilesCount: Number,
+    imageProcessingEnabled: Boolean,
+    imageProcessingMaxWidth: Number,
+    imageProcessingMaxHeight: Number,
+    imageProcessingQuality: Number,
+    removeButtonTemplate: String,
+    allowedContentTypes: String
+  }
+
+  connect() {
+    this.files = []
+    this.finalizeRequestInFlight = false
+    this.providerButtonsByKey = new Map()
+    this.remoteStageTimers = new Map()
+    this.handleProviderMessage = this.handleProviderMessage.bind(this)
+    this.handleProviderStorage = this.handleProviderStorage.bind(this)
+    this.handleProviderChannelMessage = this.handleProviderChannelMessage.bind(this)
+    this.bindDropzoneEvents()
+    window.addEventListener("message", this.handleProviderMessage)
+    window.addEventListener("storage", this.handleProviderStorage)
+
+    if (window.BroadcastChannel) {
+      this.providerEventChannel = new window.BroadcastChannel(PROVIDER_EVENT_CHANNEL_NAME)
+      this.providerEventChannel.addEventListener("message", this.handleProviderChannelMessage)
+    }
+  }
+
+  disconnect() {
+    this.files.forEach((entry) => this.revokePreview(entry))
+    this.clearAllRemoteStageTimers()
+    window.removeEventListener("message", this.handleProviderMessage)
+    window.removeEventListener("storage", this.handleProviderStorage)
+
+    if (this.providerEventChannel) {
+      this.providerEventChannel.removeEventListener("message", this.handleProviderChannelMessage)
+      this.providerEventChannel.close()
+      this.providerEventChannel = null
+    }
+  }
+
+  browse() {
+    this.inputTarget.click()
+  }
+
+  async launchProvider(event) {
+    const button = event.currentTarget
+    const { providerKey, providerStrategy } = button.dataset
+    if (providerKey) this.providerButtonsByKey.set(providerKey, button)
+
+    if (providerStrategy === "modal_page") {
+      this.openProviderModal(button)
+      return
+    }
+
+    if (providerStrategy === "client_picker") {
+      await this.launchClientPicker(button)
+    }
+  }
+
+  openProviderModal(button) {
+    const frameUrl = button.dataset.providerFrameUrl
+    const modalId = button.dataset.providerModalId || button.dataset.modalId
+    if (!frameUrl || !modalId) return
+
+    const frame = document.querySelector(`[data-provider-modal-frame][data-provider-modal-id='${modalId}']`)
+    if (!frame) return
+
+    if (!frame.dataset.sourceUrl) {
+      frame.dataset.sourceUrl = frameUrl
+    }
+
+    if (frame.getAttribute("src") !== frameUrl) {
+      frame.setAttribute("src", frameUrl)
+    }
+  }
+
+  async launchClientPicker(button) {
+    const launcherName = button.dataset.providerLauncher
+    const launcher = getUploadProviderLauncher(launcherName)
+    if (!launcher) {
+      this.setProviderStatus("This upload provider is not available on this page.", "error")
+      return
+    }
+
+    this.clearProviderStatus()
+
+    try {
+      await launcher.launch({
+        button,
+        controller: this,
+        providerKey: button.dataset.providerKey,
+        bootstrapUrl: button.dataset.providerBootstrapUrl,
+        importUrl: button.dataset.providerImportUrl
+      })
+    } catch (error) {
+      this.setProviderStatus(error?.message || "Could not open the provider picker.", "error")
+    }
+  }
+
+  filesSelected(event) {
+    this.addFiles(Array.from(event.target.files || []))
+    event.target.value = null
+  }
+
+  finalize() {
+    if (this.finalizeRequestInFlight || !this.queueSettled()) return
+
+    const readyEntries = this.finalizableEntries()
+    if (readyEntries.length === 0) return
+
+    this.finalizeRequestInFlight = true
+    readyEntries.forEach((entry) => {
+      entry.status = entry.providerPayload ? "importing" : "finalizing"
+      this.renderEntry(entry)
+      if (entry.providerPayload) this.scheduleRemoteAttachStage(entry)
+    })
+
+    fetch(this.finalizeUrlValue, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.content || "",
+        "X-Requested-With": "XMLHttpRequest",
+        Accept: "application/json"
+      },
+      body: JSON.stringify({
+        attachment_import: {
+          attachments: readyEntries.map((entry) => this.serializedEntry(entry))
+        }
+      })
+    })
+      .then(async (response) => {
+        const payload = await response.json()
+        if (!response.ok) throw payload
+
+        readyEntries.forEach((entry) => {
+          this.clearRemoteStageTimer(entry.id)
+          entry.status = "attached"
+          this.renderEntry(entry)
+        })
+        window.location.href = payload.redirect_path || this.finalizeUrlValue
+      })
+      .catch((error) => {
+        const errorsByBlobId = new Map(
+          Array.from(error?.errors || []).map((item) => [item.signed_blob_id, item.error])
+        )
+
+        readyEntries.forEach((entry) => {
+          this.clearRemoteStageTimer(entry.id)
+          entry.status = "failed"
+          entry.error = errorsByBlobId.get(entry.signedBlobId) || error?.error || "Finalization failed"
+          this.renderEntry(entry)
+        })
+      })
+      .finally(() => {
+        this.finalizeRequestInFlight = false
+        this.maybeFinalize()
+      })
+  }
+
+  retry(event) {
+    const id = event.currentTarget.dataset.id
+    const entry = this.files.find((item) => item.id === id)
+    if (!entry) return
+
+    entry.error = null
+    if (entry.providerPayload) {
+      entry.status = "selected"
+      this.renderEntry(entry)
+      this.maybeFinalize()
+    } else if (entry.signedBlobId) {
+      entry.status = "uploaded"
+      this.renderEntry(entry)
+      this.maybeFinalize()
+    } else {
+      this.uploadEntry(entry)
+    }
+  }
+
+  remove(event) {
+    const id = event.currentTarget.dataset.id
+    const entry = this.files.find((item) => item.id === id)
+    this.files = this.files.filter((item) => item.id !== id)
+    this.clearRemoteStageTimer(id)
+    this.revokePreview(entry)
+    this.renderQueue()
+  }
+
+  bindDropzoneEvents() {
+    ;["dragenter", "dragover"].forEach((eventName) => {
+      this.dropzoneTarget.addEventListener(eventName, (event) => {
+        event.preventDefault()
+        this.dropzoneTarget.classList.add("ring-2", "ring-[var(--brand-primary-color)]")
+      })
+    })
+
+    ;["dragleave", "drop"].forEach((eventName) => {
+      this.dropzoneTarget.addEventListener(eventName, (event) => {
+        event.preventDefault()
+        this.dropzoneTarget.classList.remove("ring-2", "ring-[var(--brand-primary-color)]")
+      })
+    })
+
+    this.dropzoneTarget.addEventListener("drop", (event) => {
+      const files = Array.from(event.dataTransfer?.files || [])
+      this.addFiles(files)
+    })
+  }
+
+  addFiles(files) {
+    const availableSlots = this.hasMaxFilesCountValue
+      ? Math.max(this.maxFilesCountValue - this.queueableEntryCount(), 0)
+      : files.length
+
+    files.forEach((file, index) => {
+      const exceedsCount = this.hasMaxFilesCountValue && index >= availableSlots
+      const entry = {
+        id: crypto.randomUUID(),
+        file,
+        name: file.name.replace(/\.[^.]+$/, ""),
+        description: "",
+        previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
+        progress: 0,
+        status: exceedsCount ? "invalid" : this.initialStatusFor(file),
+        error: null,
+        signedBlobId: null
+      }
+      if (exceedsCount) {
+        entry.error = this.maxFilesError()
+      } else if (entry.status === "invalid") {
+        entry.error = this.validationError(file)
+      }
+      this.files.push(entry)
+      this.renderQueue()
+      if (entry.status === "pending") this.uploadEntry(entry)
+    })
+  }
+
+  addProviderSelections(providerKey, selections) {
+    const availableSlots = this.hasMaxFilesCountValue
+      ? Math.max(this.maxFilesCountValue - this.queueableEntryCount(), 0)
+      : selections.length
+
+    selections.forEach((selection, index) => {
+      const exceedsCount = this.hasMaxFilesCountValue && index >= availableSlots
+      const entry = {
+        id: crypto.randomUUID(),
+        file: null,
+        name: selection.name || selection.id || "Remote file",
+        description: selection.description || "",
+        previewUrl: null,
+        progress: 0,
+        status: exceedsCount ? "invalid" : "selected",
+        error: null,
+        signedBlobId: null,
+        providerKey,
+        providerPayload: this.normalizedProviderPayload(selection),
+        contentType: selection.mimeType || selection.mime_type || selection.type || "",
+        byteSize: selection.byteSize || selection.size || null
+      }
+
+      if (exceedsCount) {
+        entry.error = this.maxFilesError()
+      }
+
+      this.files.push(entry)
+      this.renderQueue()
+    })
+  }
+
+  async uploadEntry(entry) {
+    try {
+      entry.status = "processing"
+      this.renderEntry(entry)
+
+      await this.preprocessEntryFile(entry)
+
+      const validationError = this.validationError(entry.file)
+      if (validationError) {
+        entry.status = "invalid"
+        entry.error = validationError
+        this.renderEntry(entry)
+        return
+      }
+
+      entry.status = "uploading"
+      this.renderEntry(entry)
+
+      const upload = new DirectUpload(entry.file, this.directUploadUrlValue, {
+        directUploadWillStoreFileWithXHR: (request) => this.bindUploadProgress(request, entry)
+      })
+
+      upload.create((error, blob) => {
+        if (error) {
+          entry.status = "failed"
+          entry.error = error?.message || String(error)
+        } else {
+          entry.status = "uploaded"
+          entry.progress = 100
+          entry.signedBlobId = blob.signed_id
+        }
+        this.renderEntry(entry)
+        this.maybeFinalize()
+      })
+    } catch (error) {
+      entry.status = "failed"
+      entry.error = error?.message || "Could not prepare file for upload"
+      this.renderEntry(entry)
+    }
+  }
+
+  bindUploadProgress(request, entry) {
+    request.upload.addEventListener("progress", (event) => {
+      if (!event.lengthComputable) return
+
+      entry.progress = Math.round((event.loaded / event.total) * 100)
+      this.renderEntry(entry)
+    })
+  }
+
+  initialStatusFor(file) {
+    return this.initialValidationError(file) ? "invalid" : "pending"
+  }
+
+  validationError(file) {
+    if (this.maxFileSizeValue && file.size > this.maxFileSizeValue) return "File exceeds the maximum allowed size"
+    if (!this.contentTypeAllowed(file)) {
+      return `${file.type || "Unknown type"} is not allowed. Allowed types: ${this.allowedContentTypePatterns().join(", ")}`
+    }
+
+    return null
+  }
+
+  initialValidationError(file) {
+    if (this.deferSizeValidationUntilAfterProcessing(file)) {
+      return this.contentTypeAllowed(file)
+        ? null
+        : `${file.type || "Unknown type"} is not allowed. Allowed types: ${this.allowedContentTypePatterns().join(", ")}`
+    }
+
+    return this.validationError(file)
+  }
+
+  deferSizeValidationUntilAfterProcessing(file) {
+    return shouldPreprocessImageFile(file, this.imageProcessingOptions())
+  }
+
+  contentTypeAllowed(file) {
+    const allowed = this.allowedContentTypePatterns()
+    return allowed.length === 0 || allowed.some((pattern) => this.matchesContentType(pattern, file.type))
+  }
+
+  maxFilesError() {
+    const noun = this.maxFilesCountValue === 1 ? "file" : "files"
+    return `You can upload up to ${this.maxFilesCountValue} ${noun} at a time`
+  }
+
+  matchesContentType(pattern, contentType) {
+    if (pattern.endsWith("/*")) return contentType.startsWith(pattern.replace(/\*$/, ""))
+    return pattern === contentType
+  }
+
+  allowedContentTypePatterns() {
+    return (this.allowedContentTypesValue || "").split(",").map((value) => value.trim()).filter(Boolean)
+  }
+
+  queueableEntryCount() {
+    return this.files.filter((entry) => entry.status !== "invalid").length
+  }
+
+  renderQueue() {
+    this.queueTarget.innerHTML = ""
+    if (this.files.length === 0) {
+      this.queueTarget.classList.add("hidden")
+      return
+    }
+
+    this.queueTarget.classList.remove("hidden")
+    this.files.forEach((entry) => this.queueTarget.insertAdjacentHTML("beforeend", this.entryTemplate(entry)))
+    this.maybeFinalize()
+  }
+
+  renderEntry(entry) {
+    const node = this.queueTarget.querySelector(`[data-entry-id='${entry.id}']`)
+    if (node) {
+      const template = document.createElement("template")
+      template.innerHTML = this.entryTemplate(entry).trim()
+
+      const nextNode = template.content.firstElementChild
+      const currentContent = node.querySelector("[data-entry-content]")
+      const nextContent = nextNode?.querySelector("[data-entry-content]")
+
+      if (currentContent && nextContent) {
+        currentContent.replaceWith(nextContent)
+      } else if (nextNode) {
+        node.replaceWith(nextNode)
+      }
+    } else {
+      this.renderQueue()
+    }
+  }
+
+  handleProviderMessage(event) {
+    if (event.origin !== window.location.origin) return
+
+    const payload = event.data || {}
+    this.handleProviderPayload(payload)
+  }
+
+  handleProviderStorage(event) {
+    if (event.key !== PROVIDER_EVENT_STORAGE_KEY || !event.newValue) return
+
+    try {
+      const parsed = JSON.parse(event.newValue)
+      this.handleProviderPayload(parsed?.payload || {})
+    } catch (_error) {
+    }
+  }
+
+  handleProviderChannelMessage(event) {
+    this.handleProviderPayload(event.data || {})
+  }
+
+  handleProviderPayload(payload) {
+    if (payload.namespace !== "recording-studio-attachable") return
+
+    if (payload.type === "provider-auth-complete") {
+      if (payload.modalId) {
+        this.reloadProviderFrame(payload)
+        return
+      }
+
+      if (payload.providerKey) {
+        this.relaunchProvider(payload.providerKey)
+      }
+      return
+    }
+
+    if (payload.type === "provider-auth-error") {
+      this.setProviderStatus(payload.error || "Authentication failed.", "error")
+      return
+    }
+
+    if (payload.type === "provider-import-complete") {
+      this.closeProviderModal(payload.modalId)
+      if (payload.redirectPath) {
+        window.location.href = payload.redirectPath
+      }
+    }
+  }
+
+  relaunchProvider(providerKey) {
+    const button = this.providerButtonsByKey.get(providerKey)
+    if (!button) return
+
+    this.launchClientPicker(button)
+  }
+
+  reloadProviderFrame(payload) {
+    const frame = document.querySelector(`[data-provider-modal-frame][data-provider-modal-id='${payload.modalId}']`)
+    if (!frame) return
+
+    const nextUrl = payload.reloadUrl || frame.dataset.sourceUrl || frame.getAttribute("src")
+    if (!nextUrl) return
+
+    frame.dataset.sourceUrl = nextUrl
+    frame.setAttribute("src", nextUrl)
+  }
+
+  closeProviderModal(modalId) {
+    if (!modalId) return
+
+    const modal = document.getElementById(modalId)
+    if (!modal) return
+
+    const controller = this.application.getControllerForElementAndIdentifier(modal, "flat-pack--modal")
+    if (controller) {
+      controller.close()
+    }
+  }
+
+  async fetchProviderBootstrap(bootstrapUrl) {
+    const response = await fetch(bootstrapUrl, {
+      credentials: "same-origin",
+      headers: {
+        Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest"
+      }
+    })
+    const payload = await response.json()
+    if (!response.ok) throw new Error(payload.error || "Could not load provider bootstrap data.")
+
+    return payload
+  }
+
+  openPopup(url, name = "recording-studio-attachable-provider-auth") {
+    const width = 640
+    const height = 760
+    const left = Math.max(window.screenX + (window.outerWidth - width) / 2, 0)
+    const top = Math.max(window.screenY + (window.outerHeight - height) / 2, 0)
+    const features = [
+      "popup=yes",
+      `width=${width}`,
+      `height=${height}`,
+      `left=${Math.round(left)}`,
+      `top=${Math.round(top)}`,
+      "resizable=yes",
+      "scrollbars=yes"
+    ].join(",")
+
+    const popup = window.open(url, name, features)
+    if (popup) popup.focus()
+    return popup
+  }
+
+  setProviderStatus(message, kind = "info") {
+    let region = this.element.querySelector("[data-provider-status-region]")
+    if (!region) {
+      region = document.createElement("p")
+      region.dataset.providerStatusRegion = "true"
+      region.className = "text-sm"
+      const anchor = this.element.querySelector(".max-w-sm")
+      if (anchor) {
+        anchor.insertAdjacentElement("afterend", region)
+      } else {
+        this.element.appendChild(region)
+      }
+    }
+
+    region.textContent = message
+    region.classList.remove("hidden", "text-red-600", "text-(--surface-muted-content-color)")
+    region.classList.add(kind === "error" ? "text-red-600" : "text-(--surface-muted-content-color)")
+  }
+
+  clearProviderStatus() {
+    const region = this.element.querySelector("[data-provider-status-region]")
+    if (!region) return
+
+    region.textContent = ""
+    region.classList.add("hidden")
+  }
+
+  maybeFinalize() {
+    if (this.finalizeRequestInFlight || !this.queueSettled()) return
+    if (this.finalizableEntries().length === 0) return
+
+    this.finalize()
+  }
+
+  finalizableEntries() {
+    return this.files.filter((entry) => ["uploaded", "selected"].includes(entry.status))
+  }
+
+  queueSettled() {
+    return this.files.every((entry) => !["pending", "processing", "uploading", "finalizing", "importing", "attaching"].includes(entry.status))
+  }
+
+  async preprocessEntryFile(entry) {
+    const result = await preprocessImageFile(entry.file, this.imageProcessingOptions())
+    if (!result.transformed) return
+
+    this.revokePreview(entry)
+    entry.file = result.file
+    entry.previewUrl = entry.file.type.startsWith("image/") ? URL.createObjectURL(entry.file) : null
+  }
+
+  imageProcessingOptions() {
+    return {
+      enabled: this.imageProcessingEnabledValue,
+      maxWidth: this.imageProcessingMaxWidthValue,
+      maxHeight: this.imageProcessingMaxHeightValue,
+      maxBytes: this.maxFileSizeValue,
+      quality: this.imageProcessingQualityValue
+    }
+  }
+
+  entryTemplate(entry) {
+    const preview = entry.previewUrl
+      ? `<img src="${this.escapeAttribute(entry.previewUrl)}" alt="" class="h-12 w-12 rounded object-cover" />`
+      : `<div class="flex h-12 w-12 items-center justify-center rounded bg-(--surface-muted-background-color) px-1 text-[10px] font-medium uppercase tracking-wide">${this.escapeHtml(this.entryBadge(entry))}</div>`
+    const progress = entry.status === "processing"
+      ? `<p class="text-xs text-(--surface-muted-content-color)">Optimizing image before upload…</p>`
+      : this.remoteProgressVisible(entry)
+        ? this.indeterminateProgressTemplate(entry)
+      : entry.status === "uploading" || entry.progress > 0
+        ? this.progressTemplateHtml({
+            value: entry.progress,
+            label: `Uploading ${this.entryName(entry)}`
+          })
+        : ""
+    const error = entry.error ? `<p class="text-xs text-red-600">${this.escapeHtml(entry.error)}</p>` : ""
+    const retry = entry.status === "failed" ? `<button type="button" data-action="recording-studio-attachable--upload#retry" data-id="${entry.id}" class="text-xs underline">Retry</button>` : ""
+    const remove = this.removeButtonTemplateValue
+      .replace("__ENTRY_ID__", this.escapeAttribute(entry.id))
+      .replace("__REMOVE_LABEL__", this.escapeAttribute(`Remove ${this.entryName(entry)} from upload queue`))
+      .replace("__REMOVE_TITLE__", this.escapeAttribute("Remove from upload queue"))
+
+    return `
+      <div data-entry-id="${entry.id}" class="relative rounded-lg border border-(--surface-border-color) p-4 pr-12">
+        ${remove}
+        <div data-entry-content class="flex items-start gap-4">
+          ${preview}
+          <div class="min-w-0 flex-1 space-y-2">
+            <div>
+              <p class="font-medium">${this.escapeHtml(this.entryName(entry))}</p>
+              <p class="text-xs text-(--surface-muted-content-color)">${this.entryMeta(entry)}</p>
+            </div>
+            ${progress}
+            ${error}
+          </div>
+          <div class="flex flex-col items-end gap-2 pt-6">
+            ${retry}
+          </div>
+        </div>
+      </div>
+    `
+  }
+
+  revokePreview(entry) {
+    if (entry?.previewUrl) URL.revokeObjectURL(entry.previewUrl)
+  }
+
+  scheduleRemoteAttachStage(entry) {
+    this.clearRemoteStageTimer(entry.id)
+    const timer = window.setTimeout(() => {
+      if (!entry || entry.status !== "importing") return
+
+      entry.status = "attaching"
+      this.renderEntry(entry)
+      this.remoteStageTimers.delete(entry.id)
+    }, 900)
+
+    this.remoteStageTimers.set(entry.id, timer)
+  }
+
+  clearRemoteStageTimer(entryId) {
+    const timer = this.remoteStageTimers.get(entryId)
+    if (timer) window.clearTimeout(timer)
+    this.remoteStageTimers.delete(entryId)
+  }
+
+  clearAllRemoteStageTimers() {
+    this.remoteStageTimers.forEach((timer) => window.clearTimeout(timer))
+    this.remoteStageTimers.clear()
+  }
+
+  entryName(entry) {
+    return entry.file?.name || entry.name || entry.providerPayload?.id || "Remote file"
+  }
+
+  entryMeta(entry) {
+    if (entry.providerPayload) {
+      return `${this.providerDisplayName(entry.providerKey)} · ${this.remoteStatusLabel(entry)}`
+    }
+
+    const status = entry.status
+    if (entry.file) {
+      return `${Math.round(entry.file.size / 1024)} KB · ${status}`
+    }
+
+    const size = Number(entry.byteSize)
+    const sizeLabel = Number.isFinite(size) && size > 0 ? `${Math.round(size / 1024)} KB` : "Cloud import"
+    return `${sizeLabel} · ${status}`
+  }
+
+  entryBadge(entry) {
+    if (!entry.providerPayload) return "FILE"
+
+    return this.providerBadge(entry.providerKey)
+  }
+
+  providerBadge(providerKey) {
+    const words = this.providerDisplayName(providerKey).split(/\s+/).filter(Boolean)
+    if (words.length > 1) return words[words.length - 1].slice(0, 5).toUpperCase()
+
+    return (words[0] || "Cloud").slice(0, 5).toUpperCase()
+  }
+
+  providerDisplayName(providerKey) {
+    return String(providerKey || "Cloud")
+      .split(/[_-]+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ")
+  }
+
+  remoteProgressVisible(entry) {
+    return entry.providerPayload && ["importing", "attaching"].includes(entry.status)
+  }
+
+  remoteStatusLabel(entry) {
+    switch (entry.status) {
+      case "selected":
+        return "Import queued"
+      case "importing":
+        return `Importing from ${this.providerDisplayName(entry.providerKey)}`
+      case "attaching":
+        return "Creating attachment"
+      case "attached":
+        return "Import complete"
+      case "failed":
+        return "Import failed"
+      default:
+        return "Ready to import"
+    }
+  }
+
+  indeterminateProgressTemplate(entry) {
+    return this.progressTemplateHtml({
+      value: this.remoteProgressValue(entry),
+      label: this.remoteStatusLabel(entry)
+    })
+  }
+
+  remoteProgressValue(entry) {
+    switch (entry.status) {
+      case "selected":
+        return 0
+      case "importing":
+        return 45
+      case "attaching":
+        return 85
+      case "attached":
+        return 100
+      case "failed":
+        return 0
+      default:
+        return 0
+    }
+  }
+
+  progressTemplateHtml({ value = 0, max = 100, label = "Progress" } = {}) {
+    if (!this.hasProgressTemplateTarget) return ""
+
+    const template = this.progressTemplateTarget.content.firstElementChild
+    if (!template) return ""
+
+    const nextNode = template.cloneNode(true)
+    const normalizedValue = Number.isFinite(Number(value)) ? Math.max(0, Math.min(Number(value), Number(max) || 100)) : 0
+    const normalizedMax = Number(max) > 0 ? Number(max) : 100
+    const percentage = normalizedMax > 0 ? Math.min((normalizedValue / normalizedMax) * 100, 100) : 0
+    const progressBar = nextNode.querySelector("[role='progressbar']")
+    const labelNode = nextNode.querySelector(".text-sm.font-medium")
+    const fillNode = progressBar?.firstElementChild
+
+    if (progressBar) {
+      progressBar.setAttribute("aria-valuenow", String(normalizedValue))
+      progressBar.setAttribute("aria-valuemin", "0")
+      progressBar.setAttribute("aria-valuemax", String(normalizedMax))
+      progressBar.setAttribute("aria-label", label)
+    }
+
+    if (labelNode) {
+      labelNode.textContent = label
+    }
+
+    if (fillNode) {
+      fillNode.style.width = `${percentage}%`
+    }
+
+    return nextNode.outerHTML
+  }
+
+  normalizedProviderPayload(selection) {
+    const payload = { ...selection }
+    delete payload.name
+    delete payload.description
+    delete payload.byteSize
+    delete payload.size
+    delete payload.mimeType
+    delete payload.mime_type
+    delete payload.type
+
+    return payload
+  }
+
+  serializedEntry(entry) {
+    const payload = {
+      name: entry.name,
+      description: entry.description
+    }
+
+    if (entry.providerPayload) {
+      return {
+        ...payload,
+        provider_key: entry.providerKey,
+        provider_payload: entry.providerPayload,
+        content_type: entry.contentType
+      }
+    }
+
+    return {
+      ...payload,
+      signed_blob_id: entry.signedBlobId
+    }
+  }
+
+  escapeHtml(value) {
+    const div = document.createElement("div")
+    div.textContent = String(value || "")
+    return div.innerHTML
+  }
+
+  escapeAttribute(value) {
+    return this.escapeHtml(value).replace(/"/g, "&quot;")
+  }
+}

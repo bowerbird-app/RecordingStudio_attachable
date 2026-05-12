@@ -1,0 +1,117 @@
+<%
+  allowed_type_labels = @allowed_content_types.map do |content_type|
+    case content_type
+    when "image/*"
+      "images"
+    when "application/pdf"
+      "PDFs"
+    when "text/plain"
+      "text files"
+    else
+      content_type
+    end
+  end
+
+  remove_button_template = render(
+    FlatPack::Button::Component.new(
+      text: "X",
+      style: :ghost,
+      size: :md,
+      type: "button",
+      class: "absolute right-2 top-2",
+      data: {
+        action: "recording-studio-attachable--upload#remove",
+        id: "__ENTRY_ID__"
+      },
+      aria: { label: "__REMOVE_LABEL__" },
+      title: "__REMOVE_TITLE__"
+    )
+  ).squish
+%>
+
+<div class="mx-auto flex w-full max-w-6xl flex-col gap-6"
+     data-controller="recording-studio-attachable--upload"
+     data-recording-studio-attachable--upload-direct-upload-url-value="<%= main_app.rails_direct_uploads_path %>"
+     data-recording-studio-attachable--upload-finalize-url-value="<%= @create_path %>"
+     data-recording-studio-attachable--upload-max-file-size-value="<%= @max_file_size %>"
+     data-recording-studio-attachable--upload-max-files-count-value="<%= @max_file_count %>"
+  data-recording-studio-attachable--upload-image-processing-enabled-value="<%= @image_processing_enabled %>"
+  data-recording-studio-attachable--upload-image-processing-max-width-value="<%= @image_processing_max_width %>"
+  data-recording-studio-attachable--upload-image-processing-max-height-value="<%= @image_processing_max_height %>"
+  data-recording-studio-attachable--upload-image-processing-quality-value="<%= @image_processing_quality %>"
+      data-recording-studio-attachable--upload-remove-button-template-value="<%= remove_button_template %>"
+     data-recording-studio-attachable--upload-allowed-content-types-value="<%= @allowed_content_types.join(',') %>">
+  <%= render FlatPack::Breadcrumb::Component.new(
+    show_back: true,
+    back_text: "Back",
+    back_icon: "arrow-left",
+    back_href: request.referer.presence || "javascript:history.back()",
+    items: [{ text: "Home", href: main_app.root_path, icon: "home" }]
+  ) %>
+
+  <%= render FlatPack::PageTitle::Component.new(
+    title: "Upload",
+    subtitle: "Allowed file types: #{allowed_type_labels.to_sentence} · Max size: #{number_to_human_size(@max_file_size)}",
+    variant: :h1
+  ) %>
+
+  <template data-recording-studio-attachable--upload-target="progressTemplate">
+    <%= render FlatPack::Progress::Component.new(value: 0, max: 100, label: "Progress") %>
+  </template>
+
+  <div class="flex min-h-80 flex-col gap-6">
+    <div class="flex h-full min-h-[220px] flex-col gap-6">
+      <div class="flex min-h-[220px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-(--surface-border-color) p-10 text-center" data-recording-studio-attachable--upload-target="dropzone">
+      <p class="text-sm text-(--surface-muted-content-color)">Drag and drop, or choose</p>
+      <input type="file" multiple class="hidden" data-recording-studio-attachable--upload-target="input" data-action="change->recording-studio-attachable--upload#filesSelected">
+      <div class="flex w-full max-w-sm flex-col items-stretch gap-3">
+        <%= render FlatPack::Button::Component.new(
+          text: "Choose files",
+          style: :primary,
+          size: :md,
+          type: "button",
+          icon: "upload",
+          full_width: true,
+          data: { action: "recording-studio-attachable--upload#browse" }
+        ) %>
+
+        <% if @upload_providers.any? %>
+          <% @upload_providers.each do |provider| %>
+            <%= render FlatPack::Button::Component.new(
+              **provider.button_options(view_context: self, recording: @recording, query_params: @upload_redirect_params).reverse_merge(full_width: true)
+            ) %>
+          <% end %>
+        <% end %>
+      </div>
+      </div>
+
+      <div class="hidden space-y-4" data-recording-studio-attachable--upload-target="queue"></div>
+    </div>
+  </div>
+
+  <% @upload_providers.select(&:modal?).each do |provider| %>
+    <% modal_id = provider.modal_id(recording: @recording) %>
+    <%= render FlatPack::Modal::Component.new(
+      id: modal_id,
+      title: provider.modal_title(view_context: self, recording: @recording),
+      size: provider.modal_size,
+      body_height_mode: :fixed,
+      body_height: "34rem"
+    ) do |modal| %>
+      <% modal.body do %>
+        <div class="h-full overflow-hidden rounded-lg border border-(--surface-border-color) bg-(--surface-background-color)">
+          <iframe
+            title="<%= provider.iframe_title(view_context: self, recording: @recording) %>"
+            class="h-136 w-full border-0"
+            loading="lazy"
+            data-provider-modal-frame
+            data-provider-modal-id="<%= modal_id %>"></iframe>
+        </div>
+      <% end %>
+
+      <% modal.footer do %>
+        <%= render FlatPack::Button::Component.new(text: "Close", style: :secondary, size: :md, type: "button", data: { action: "flat-pack--modal#close" }) %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

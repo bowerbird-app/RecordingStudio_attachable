@@ -1,0 +1,71 @@
+<div class="mx-auto flex w-full max-w-4xl flex-col gap-8">
+  <%= render FlatPack::PageTitle::Component.new(
+    title: "Picker",
+    subtitle: "How the attachment image picker works and how host apps can reuse it.",
+    variant: :h1
+  ) %>
+
+  <section class="space-y-3">
+    <%= render FlatPack::SectionTitle::Component.new(
+      title: "How it works",
+      subtitle: "The picker is a JSON-backed image library with a small browser contract.",
+      anchor_link: true
+    ) %>
+
+    <%= render FlatPack::List::Component.new(divider: true, class: "rounded-xl border border-[var(--surface-border-color)] bg-[var(--surface-background-color)] p-4") do %>
+      <% @picker_summary.each do |item| %>
+        <%= render FlatPack::List::Item.new do %>
+          <p class="text-sm text-(--surface-content-color)"><%= item %></p>
+        <% end %>
+      <% end %>
+    <% end %>
+  </section>
+
+  <% @picker_usage_examples.each do |example| %>
+    <section class="space-y-3">
+      <%= render FlatPack::SectionTitle::Component.new(
+        title: example[:title],
+        subtitle: example[:subtitle],
+        anchor_link: true
+      ) %>
+
+      <%= render FlatPack::CodeBlock::Component.new(
+        title: example[:subtitle],
+        code: example[:code],
+        language: example[:language]
+      ) %>
+    </section>
+  <% end %>
+
+  <section class="space-y-3">
+    <%= render FlatPack::SectionTitle::Component.new(
+      title: "Attachment payload",
+      subtitle: "These are the main fields returned to browser consumers after selection or upload.",
+      anchor_link: true
+    ) %>
+
+    <%= render FlatPack::List::Component.new(divider: true, class: "rounded-xl border border-[var(--surface-border-color)] bg-[var(--surface-background-color)] p-4") do %>
+      <% @picker_payload_fields.each do |item| %>
+        <%= render FlatPack::List::Item.new do %>
+          <p class="text-sm text-(--surface-content-color)"><%= item %></p>
+        <% end %>
+      <% end %>
+    <% end %>
+  </section>
+
+  <section class="space-y-3">
+    <%= render FlatPack::SectionTitle::Component.new(
+      title: "Integration notes",
+      subtitle: "Choose the event path or the editor path based on who owns the post-selection behavior.",
+      anchor_link: true
+    ) %>
+
+    <%= render FlatPack::List::Component.new(divider: true, class: "rounded-xl border border-[var(--surface-border-color)] bg-[var(--surface-background-color)] p-4") do %>
+      <% @picker_integration_notes.each do |item| %>
+        <%= render FlatPack::List::Item.new do %>
+          <p class="text-sm text-(--surface-content-color)"><%= item %></p>
+        <% end %>
+      <% end %>
+    <% end %>
+  </section>
+</div>

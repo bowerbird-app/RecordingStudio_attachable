@@ -1,0 +1,27 @@
+<div class="flex items-center gap-3 rounded-xl border border-(--surface-border-color) bg-(--surface-background-color) px-3 py-2" data-chat-demo-attachment-id="<%= attachment_id %>">
+  <%= render FlatPack::Chat::Attachment::Component.new(
+    type: :image,
+    name: name,
+    thumbnail_url: thumbnail_url,
+    href: insert_url
+  ) %>
+
+  <div class="min-w-0 flex-1">
+    <p class="truncate text-sm font-medium text-(--surface-content-color)"><%= name %></p>
+    <p class="text-xs text-(--surface-muted-content-color)">Ready to send</p>
+  </div>
+
+  <%= render FlatPack::Button::Component.new(
+    text: "×",
+    style: :ghost,
+    size: :sm,
+    type: "button",
+    data: {
+      action: "chat-demo#removeAttachment",
+      id: attachment_id
+    },
+    aria: {
+      label: remove_label
+    }
+  ) %>
+</div>

@@ -1,0 +1,21 @@
+<div class="mx-auto flex w-full max-w-4xl flex-col gap-6">
+  <%= render FlatPack::PageTitle::Component.new(
+    title: "Recordable types",
+    subtitle: "Configured Recording Studio recordable types with recording and model counts from the dummy app.",
+    variant: :h1
+  ) %>
+
+  <%= render FlatPack::List::Component.new(divider: true, class: "rounded-xl border border-[var(--surface-border-color)] bg-[var(--surface-background-color)] p-4") do %>
+    <% @recordable_types.each do |recordable_type| %>
+      <%= render FlatPack::List::Item.new(icon: :folder) do %>
+        <div class="space-y-1">
+          <p class="text-sm font-semibold text-[var(--surface-content-color)]"><%= recordable_type[:name] %></p>
+          <p class="text-sm text-[var(--surface-muted-content-color)]">
+            <%= pluralize(recordable_type[:recordings_count], "recording") %> point to this type ·
+            <%= pluralize(recordable_type[:recordables_count], "recordable record") %>
+          </p>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

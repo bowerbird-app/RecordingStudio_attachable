@@ -1,4 +1,4 @@
-<%= render FlatPack::TopNav::Component.new do |nav| %>
+<%= render FlatPack::TopNav::Component.new(style: "--top-nav-background-color: var(--surface-page-background-color);") do |nav| %>
   <% nav.left do %>
     <%= render FlatPack::Button::Component.new(
       icon: "menu",
@@ -16,9 +16,7 @@
   <% end %>
 
   <% nav.center do %>
-    <div class="hidden text-sm font-medium text-(--surface-muted-content-color) md:block">
-      Recording Studio addon template
-    </div>
+    <div aria-hidden="true"></div>
   <% end %>
 
   <% nav.right do %>

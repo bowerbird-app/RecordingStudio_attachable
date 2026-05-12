@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html data-theme="rounded">
   <head>
     <title><%= content_for(:title) || "Dummy" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -18,11 +18,13 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
 
-    <%# Load app styles, FlatPack token styles, and utility classes %>
-    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <%# Load app styles, utility classes, then FlatPack assets directly.
+      FlatPack's application.css currently ships raw relative @imports, which Propshaft serves without rewriting. %>
+    <%= stylesheet_link_tag "application.css", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "tailwind.css", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "flat_pack/variables", "data-turbo-track": "reload" %>
-    <%= stylesheet_link_tag "flat_pack/application", "data-turbo-track": "reload" %>
-    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "flat_pack/rich_text", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "flat_pack/content_editor", "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
 

@@ -18,5 +18,6 @@ class ApplicationController < ActionController::Base
 
   def set_current_actor
     Current.actor = current_user
+    Current.impersonator = nil
   end
 end

@@ -1,86 +1,75 @@
-<div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+<div class="mx-auto flex w-full max-w-4xl flex-col gap-8">
   <%= render FlatPack::PageTitle::Component.new(
-    title: @workspace&.name || "Recording Studio addon template",
-    subtitle: "Use this dummy app to validate authentication, root recording setup, and addon UI wiring before you rename the engine.",
+    title: "Attachment demo",
+    subtitle: "Workspace uploads accept images and files. Page uploads accept images only.",
     variant: :h1
   ) %>
 
-  <div class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
-    <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
-      <% card.header do %>
-        <%= render FlatPack::PageTitle::Component.new(
-          title: "Template workflow",
-          subtitle: "The first things to change when you turn this into a real addon.",
-          variant: :h3,
-          class: "mb-0 pb-0"
+  <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
+    <% card.body do %>
+      <div class="space-y-4">
+        <%= render FlatPack::SectionTitle::Component.new(
+          title: "Workspace",
+          subtitle: "Upload images, PDFs, and text files to the workspace library.",
+          anchor_link: true
         ) %>
-      <% end %>
 
+        <% if @root_attachment_upload_path.present? && @root_attachment_listing_path.present? %>
+          <div class="flex flex-wrap gap-3">
+            <%= render FlatPack::Button::Component.new(text: "Add", style: :primary, size: :md, url: @root_attachment_upload_path) %>
+            <%= render FlatPack::Button::Component.new(text: "Library", style: :secondary, size: :md, url: @root_attachment_listing_path) %>
+          </div>
+        <% else %>
+          <p class="text-sm text-(--surface-muted-content-color)">Seed the workspace recording to enable the demo links.</p>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <section>
+    <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
       <% card.body do %>
-        <ol class="space-y-4 text-sm leading-6 text-[var(--surface-content-color)]">
-          <li>
-            Rename the gem with <code>bin/rename_gem your_addon_name</code> once the engine structure looks right.
-          </li>
-          <li>
-            Replace the sample migration with your addon's real tables and then run <code>rails generate gem_template:migrations</code> in the host app.
-          </li>
-          <li>
-            Register your recordable types in <code>test/dummy/config/initializers/recording_studio.rb</code> and add capabilities only where they are needed.
-          </li>
-          <li>
-            Use this dummy app to check layout, authentication, Tailwind sources, and root recording behavior before shipping the engine.
-          </li>
-        </ol>
+        <div class="space-y-4">
+          <%= render FlatPack::SectionTitle::Component.new(
+            title: "Page",
+            subtitle: "Add images below page recording",
+            anchor_link: true
+          ) %>
+
+          <% if @page_attachment_upload_path.present? && @page_attachment_listing_path.present? %>
+            <div class="flex flex-wrap gap-3">
+              <%= render FlatPack::Button::Component.new(text: "Add", style: :primary, size: :md, url: @page_attachment_upload_path) %>
+              <%= render FlatPack::Button::Component.new(text: "Page library", style: :secondary, size: :md, url: @page_attachment_listing_path) %>
+              <%= render FlatPack::Button::Component.new(text: "View", style: :secondary, size: :md, url: @page_show_path) %>
+              <%= render FlatPack::Button::Component.new(text: "Edit inline", style: :secondary, size: :md, url: @page_edit_path) %>
+            </div>
+          <% else %>
+            <p class="text-sm text-(--surface-muted-content-color)">Seed the page recording to enable the page attachment demo.</p>
+          <% end %>
+        </div>
       <% end %>
     <% end %>
+  </section>
 
-    <div class="flex flex-col gap-6">
-      <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
-        <% card.header do %>
-          <%= render FlatPack::PageTitle::Component.new(
-            title: "Workspace state",
-            subtitle: "The seeded Recording Studio baseline for local development.",
-            variant: :h3,
-            class: "mb-0 pb-0"
+  <section>
+    <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
+      <% card.body do %>
+        <div class="space-y-4">
+          <%= render FlatPack::SectionTitle::Component.new(
+            title: "Chat demo",
+            subtitle: "Try the reusable image picker inside a FlatPack chat composer.",
+            anchor_link: true
           ) %>
-        <% end %>
 
-        <% card.body do %>
-          <dl class="space-y-3 text-sm">
-            <div>
-              <dt class="text-[var(--surface-muted-content-color)]">Workspace</dt>
-              <dd class="font-medium"><%= @workspace&.name || "Not seeded" %></dd>
-            </div>
-            <div>
-              <dt class="text-[var(--surface-muted-content-color)]">Root recording</dt>
-              <dd class="font-mono text-xs"><%= @root_recording&.id || "Missing" %></dd>
-            </div>
-            <div>
-              <dt class="text-[var(--surface-muted-content-color)]">Signed in as</dt>
-              <dd class="font-medium"><%= current_user.email %></dd>
-            </div>
-          </dl>
-        <% end %>
-      <% end %>
+          <div class="flex flex-wrap gap-3">
+            <%= render FlatPack::Button::Component.new(text: "Open chat demo", style: :primary, size: :md, url: @chat_demo_path) %>
 
-      <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
-        <% card.header do %>
-          <%= render FlatPack::PageTitle::Component.new(
-            title: "Useful routes",
-            subtitle: "Quick links for checking the mounted engine and local app shell.",
-            variant: :h3,
-            class: "mb-0 pb-0"
-          ) %>
-        <% end %>
-
-        <% card.body do %>
-          <div class="space-y-3 text-sm">
-            <p><strong>App home:</strong> <code>/</code></p>
-            <p><strong>Recording Studio mount:</strong> <code>/recording_studio</code></p>
-            <p><strong>Health check:</strong> <code>/up</code></p>
+            <% if @root_attachment_listing_path.present? %>
+              <%= render FlatPack::Button::Component.new(text: "Workspace library", style: :secondary, size: :md, url: @root_attachment_listing_path) %>
+            <% end %>
           </div>
-        <% end %>
+        </div>
       <% end %>
-    </div>
-  </div>
+    <% end %>
+  </section>
 </div>

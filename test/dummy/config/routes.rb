@@ -1,21 +1,30 @@
 Rails.application.routes.draw do
   devise_for :users
 
-  # RecordingStudio engine is data/API-focused and has no browser root route.
-  # Keep legacy links working by redirecting the base path to the app home.
   get "/recording_studio", to: redirect("/"), as: nil
   mount RecordingStudio::Engine, at: "/recording_studio"
+  mount RecordingStudioAttachable::Engine, at: "/recording_studio_attachable"
 
-  # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
+  get "setup", to: "docs#setup", as: :setup_docs
+  get "config", to: "docs#configuration", as: :configuration_docs
+  get "methods", to: "docs#methods_reference", as: :methods_docs
+  get "plugins", to: "docs#plugins", as: :plugins_docs
+  get "picker", to: "docs#picker", as: :picker_docs
+  get "resizing", to: "docs#resizing", as: :resizing_docs
+  get "gem_views", to: "docs#gem_views", as: :gem_views_docs
+  get "recordables", to: "docs#recordables", as: :recordables_docs
+  get "query", to: "docs#query", as: :query_docs
+  get "recording_tree", to: "recording_trees#index", as: :recording_tree
+  get "chat/demo", to: "chat_demo#show", as: :chat_demo
+  post "chat/demo/messages", to: "chat_demo#create", as: :chat_demo_messages
+    post "chat/demo/messages/:id/attachments", to: "chat_demo#attach_attachment", as: :chat_demo_message_attachments
+    delete "chat/demo/messages/:id/attachments/:attachment_recording_id",
+      to: "chat_demo#detach_attachment",
+      as: :chat_demo_message_attachment
+  delete "chat/demo", to: "chat_demo#destroy", as: :reset_chat_demo
+  get "upload_providers/demo", to: "upload_providers#show", as: :demo_upload_provider
+  post "upload_providers/demo", to: "upload_providers#create"
+  resources :pages, only: %i[show edit update]
 
-  # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
-  # Can be used by load balancers and uptime monitors to verify that the app is live.
-  get "up" => "rails/health#show", as: :rails_health_check
-
-  # Render dynamic PWA files from app/views/pwa/* (remember to link manifest in application.html.erb)
-  # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
-  # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
-
-  # Defines the root path route ("/")
   root "home#index"
 end

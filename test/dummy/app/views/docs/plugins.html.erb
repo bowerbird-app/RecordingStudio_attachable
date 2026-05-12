@@ -1,0 +1,71 @@
+<div class="mx-auto flex w-full max-w-4xl flex-col gap-8">
+  <%= render FlatPack::PageTitle::Component.new(
+    title: "Plugins",
+    subtitle: "Eg google drive, dropbox etc",
+    variant: :h1
+  ) %>
+
+  <section class="space-y-3">
+    <%= render FlatPack::SectionTitle::Component.new(
+      title: "How addons fit in",
+      subtitle: "The gem exposes a small discovery layer and a separate import/finalization layer.",
+      anchor_link: true
+    ) %>
+
+    <%= render FlatPack::List::Component.new(divider: true, class: "rounded-xl border border-[var(--surface-border-color)] bg-[var(--surface-background-color)] p-4") do %>
+      <% @plugin_summary.each do |item| %>
+        <%= render FlatPack::List::Item.new do %>
+          <p class="text-sm text-(--surface-content-color)"><%= item %></p>
+        <% end %>
+      <% end %>
+    <% end %>
+  </section>
+
+  <% @plugin_api_examples.each do |example| %>
+    <section class="space-y-3">
+      <%= render FlatPack::SectionTitle::Component.new(
+        title: example[:title],
+        subtitle: example[:subtitle],
+        anchor_link: true
+      ) %>
+
+      <%= render FlatPack::CodeBlock::Component.new(
+        title: example[:subtitle],
+        code: example[:code],
+        language: example[:language]
+      ) %>
+    </section>
+  <% end %>
+
+  <section class="space-y-3">
+    <%= render FlatPack::SectionTitle::Component.new(
+      title: "Available APIs",
+      subtitle: "Choose the lowest-level integration point that matches your provider flow.",
+      anchor_link: true
+    ) %>
+
+    <%= render FlatPack::List::Component.new(divider: true, class: "rounded-xl border border-[var(--surface-border-color)] bg-[var(--surface-background-color)] p-4") do %>
+      <% @plugin_api_points.each do |item| %>
+        <%= render FlatPack::List::Item.new do %>
+          <p class="text-sm text-(--surface-content-color)"><%= item %></p>
+        <% end %>
+      <% end %>
+    <% end %>
+  </section>
+
+  <section class="space-y-3">
+    <%= render FlatPack::SectionTitle::Component.new(
+      title: "Payload fields",
+      subtitle: "These are the fields third-party providers can hand to the gem during import or finalization.",
+      anchor_link: true
+    ) %>
+
+    <%= render FlatPack::List::Component.new(divider: true, class: "rounded-xl border border-[var(--surface-border-color)] bg-[var(--surface-background-color)] p-4") do %>
+      <% @plugin_payload_fields.each do |item| %>
+        <%= render FlatPack::List::Item.new do %>
+          <p class="text-sm text-(--surface-content-color)"><%= item %></p>
+        <% end %>
+      <% end %>
+    <% end %>
+  </section>
+</div>

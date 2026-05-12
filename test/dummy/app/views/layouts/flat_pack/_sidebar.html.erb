@@ -2,7 +2,7 @@
   <% sidebar.header do %>
     <%= render FlatPack::Sidebar::Header::Component.new(
       brand_abbr: "RS",
-      title: "Addon Template",
+      title: "Attachable",
       subtitle: "Recording Studio"
     ) %>
   <% end %>
@@ -16,17 +16,64 @@
       ) %>
 
       <%= render FlatPack::Sidebar::Item::Component.new(
-        label: "Recording Studio",
-        href: "/recording_studio",
+        label: "Setup",
+        href: setup_docs_path,
         icon: :folder
       ) %>
 
       <%= render FlatPack::Sidebar::Item::Component.new(
-        label: "Health",
-        href: "/up",
-        icon: :activity
+        label: "Config",
+        href: configuration_docs_path,
+        icon: :settings
       ) %>
 
+      <%= render FlatPack::Sidebar::Item::Component.new(
+        label: "Methods",
+        href: methods_docs_path,
+        icon: :folder
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
+        label: "Plugins",
+        href: plugins_docs_path,
+        icon: :box
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
+        label: "Picker",
+        href: picker_docs_path,
+        icon: :image
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
+        label: "Resizing",
+        href: resizing_docs_path,
+        icon: :image
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
+        label: "Gem views",
+        href: gem_views_docs_path,
+        icon: :file
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
+        label: "Recordables",
+        href: recordables_docs_path,
+        icon: :folder
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
+        label: "Query",
+        href: query_docs_path,
+        icon: :file
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
+        label: "Recording tree",
+        href: recording_tree_path,
+        icon: :folder
+      ) %>
     </nav>
   <% end %>
 

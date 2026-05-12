@@ -43,7 +43,7 @@ module RecordingStudioAttachable
       file = build_file_double(attached: true, variable: false, image: false)
       attachment.define_singleton_method(:file) { file }
 
-      refute attachment.previewable?
+      assert_not attachment.previewable?
       assert_nil attachment.preview_target_named(:med)
     end
 

@@ -15,13 +15,11 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
   def setup
     @original_configuration = RecordingStudioAttachable.instance_variable_get(:@configuration)
     RecordingStudioAttachable.instance_variable_set(:@configuration, RecordingStudioAttachable::Configuration.new)
-    RecordingStudioAttachable.configuration.merge!(
-      google_drive: {
-        enabled: true,
-        client_id: "client-id",
-        client_secret: "client-secret",
-        redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback"
-      }
+    RecordingStudioAttachable.configuration.google_drive.merge!(
+      enabled: true,
+      client_id: "client-id",
+      client_secret: "client-secret",
+      redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback"
     )
 
     @controller = RecordingStudioAttachable::GoogleDrive::ImportsController.new

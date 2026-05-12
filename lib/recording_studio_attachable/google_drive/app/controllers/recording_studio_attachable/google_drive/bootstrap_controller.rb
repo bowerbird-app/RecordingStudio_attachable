@@ -10,7 +10,7 @@ module RecordingStudioAttachable
 
         render json: bootstrap_payload
       rescue RecordingStudioAttachable::DependencyUnavailableError, RecordingStudioAttachable::Error => e
-        render json: { error: e.message }, status: :unprocessable_entity
+        render json: { error: e.message }, status: :unprocessable_content
       end
 
       private

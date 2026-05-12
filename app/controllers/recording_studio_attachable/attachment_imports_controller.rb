@@ -26,7 +26,7 @@ module RecordingStudioAttachable
               redirect_path: resolved_attachment_redirect_path(@recording)
             }, status: :created
           else
-            render json: { error: result.error, errors: result.errors }, status: :unprocessable_entity
+            render json: { error: result.error, errors: result.errors }, status: :unprocessable_content
           end
         end
       end
@@ -83,7 +83,7 @@ module RecordingStudioAttachable
       payload[:provider_payload] = normalized_provider_payload(payload[:provider_payload], provider_key: payload[:provider_key])
       payload[:identify] = ActiveModel::Type::Boolean.new.cast(payload[:identify]) if payload.key?(:identify)
 
-      return payload unless uploaded_file.present?
+      return payload if uploaded_file.blank?
 
       payload[:io] = uploaded_file.tempfile
       payload[:filename] = payload[:filename].presence || uploaded_file.original_filename

@@ -1,4 +1,11 @@
 en:
   recording_studio_attachable:
+    attachment_lifecycle:
+      removed: "Attachment removed."
+      restored: "Attachment restored."
     attachments:
       updated: "Saved"
+    google_drive:
+      connected: "Connected Google Drive."
+      disconnected: "Disconnected Google Drive."
+      session_expired: "Google Drive session expired. Reconnect to continue."

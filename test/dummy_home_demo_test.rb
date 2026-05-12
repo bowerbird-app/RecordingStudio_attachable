@@ -442,17 +442,20 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes listing_view, "FlatPack::Button::Pill::Component.new("
     assert_includes listing_view, "href: recording_attachments_path(@recording, listing_params.merge(view: :grid))"
     assert_includes listing_view, "href: recording_attachments_path(@recording, listing_params.merge(view: :list))"
+    assert_includes listing_view, 'data-controller="recording-studio-attachable--view-mode"'
     assert_includes listing_view, 'turbo_frame: "recording-attachments-results"'
     assert_includes listing_view, "size: :md"
     assert_not_includes listing_view, ">View<"
     assert_not_includes listing_view, 'icon: "list-bullet"'
     assert_includes listing_view, 'turbo_action: "advance"'
+    assert_includes listing_view, 'action: "click->recording-studio-attachable--view-mode#select"'
+    assert_includes listing_view, 'recording_studio_attachable__view_mode_target: "pill"'
     assert_includes listing_view, "FlatPack::Search::Component.new("
     assert_includes listing_view, 'placeholder: "Search"'
     assert_not_includes listing_view, 'text: "Apply"'
     assert_not_includes listing_view, 'text: "Clear"'
     assert_includes listing_view, 'turbo_frame_tag "recording-attachments-results"'
-    assert_includes listing_view, "<%= hidden_field_tag :view, @view_mode %>"
+    assert_includes listing_view, '<%= hidden_field_tag :view, @view_mode, data: { recording_studio_attachable__view_mode_target: "viewInput" } %>'
     assert_includes listing_view, 'title: @query.present? ? "Nothing found" : "Nothing uplaoded yet"'
     assert_includes listing_view, '<circle cx="11" cy="11" r="6" />'
     assert_includes grid_partial, "href: attachment_path(attachment_recording)"
@@ -480,6 +483,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes list_partial, 'table.column(title: "Actions", html: actions_column)'
     assert_not_includes list_partial, "FlatPack::Card::Component"
     assert_not_includes list_partial, "card.body do"
+    assert_includes list_partial, 'class: "block max-w-[12rem] truncate font-medium sm:max-w-[18rem]"'
     assert_includes list_partial, 'number_to_human_size(attachment.byte_size, strip_insignificant_zeros: true).downcase.delete(" ")'
     assert_includes list_partial, "tag.div(\"\#{display_content_type} \#{display_size}\", class: \"text-xs text-(--surface-muted-content-color)\")"
     assert_includes list_partial, 'data: { turbo_frame: "_top" }'

@@ -329,10 +329,8 @@ class AttachmentRevisionServicesTest < Minitest::Test
 
   private
 
-  def with_authorized_access(&block)
-    RecordingStudioAttachable::Authorization.stub(:authorize!, true) do
-      block.call
-    end
+  def with_authorized_access(&)
+    RecordingStudioAttachable::Authorization.stub(:authorize!, true, &)
   end
 
   def stub_recording_studio!

@@ -28,7 +28,9 @@ module RecordingStudioAttachable
         impersonator: current_attachable_impersonator
       )
 
-      redirect_to fallback_listing_path(attachment_recording), result.success? ? { notice: "Attachment removed." } : { alert: result.error }
+      redirect_to fallback_listing_path(attachment_recording),
+                  result.success? ? { notice: t("recording_studio_attachable.attachment_lifecycle.removed",
+                                                default: "Attachment removed.") } : { alert: result.error }
     end
 
     def restore
@@ -41,7 +43,9 @@ module RecordingStudioAttachable
         impersonator: current_attachable_impersonator
       )
 
-      redirect_to attachment_path(attachment_recording), result.success? ? { notice: "Attachment restored." } : { alert: result.error }
+      redirect_to attachment_path(attachment_recording),
+                  result.success? ? { notice: t("recording_studio_attachable.attachment_lifecycle.restored",
+                                                default: "Attachment restored.") } : { alert: result.error }
     end
 
     private

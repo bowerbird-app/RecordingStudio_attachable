@@ -5,11 +5,17 @@
      view: @view_mode,
      include_trashed: @include_trashed.presence
    }.compact %>
+<% pill_active_classes = "border-[var(--tabs-pill-active-border-color)] bg-[var(--tabs-pill-active-background-color)] text-[var(--tabs-pill-active-text-color)] shadow-[var(--tabs-pill-active-shadow)]" %>
+<% pill_inactive_classes = "text-[var(--tabs-pill-inactive-text-color)] hover:text-[var(--tabs-pill-inactive-hover-text-color)] hover:bg-[var(--tabs-pill-inactive-hover-background-color)]" %>
 
 <% if @append_only %>
   <%= render "attachments_page", attachments: @attachments, listing_params: listing_params, view_mode: @view_mode %>
 <% else %>
-  <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+  <div class="mx-auto flex w-full max-w-6xl flex-col gap-6"
+       data-controller="recording-studio-attachable--view-mode"
+       data-action="popstate@window->recording-studio-attachable--view-mode#syncFromLocation turbo:frame-load@document->recording-studio-attachable--view-mode#syncFromLocation turbo:load@document->recording-studio-attachable--view-mode#syncFromLocation"
+       data-recording-studio-attachable--view-mode-active-classes-value="<%= pill_active_classes %>"
+       data-recording-studio-attachable--view-mode-inactive-classes-value="<%= pill_inactive_classes %>">
     <% parent_recordable = @recording.recordable %>
     <% parent_recordable_name =
          if parent_recordable.respond_to?(:title) && parent_recordable.title.present?
@@ -36,67 +42,71 @@
       variant: :h1
     ) %>
 
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div class="flex flex-wrap items-center gap-3">
+        <% if @can_upload %>
+          <%= render FlatPack::Button::Component.new(
+            text: "Upload",
+            style: :primary,
+            size: :md,
+            icon: "upload",
+            url: recording_attachment_upload_path(@recording),
+            data: { turbo_frame: "_top" }
+          ) %>
+        <% end %>
+
+        <% if @attachments.any? %>
+          <%= render FlatPack::Button::Pill::Component.new(
+            items: [
+              {
+                text: "Grid",
+                href: recording_attachments_path(@recording, listing_params.merge(view: :grid)),
+                active: @view_mode == :grid,
+                data: {
+                  action: "click->recording-studio-attachable--view-mode#select",
+                  recording_studio_attachable__view_mode_target: "pill",
+                  turbo_frame: "recording-attachments-results",
+                  turbo_action: "advance",
+                  view_mode: "grid"
+                }
+              },
+              {
+                text: "List",
+                href: recording_attachments_path(@recording, listing_params.merge(view: :list)),
+                active: @view_mode == :list,
+                data: {
+                  action: "click->recording-studio-attachable--view-mode#select",
+                  recording_studio_attachable__view_mode_target: "pill",
+                  turbo_frame: "recording-attachments-results",
+                  turbo_action: "advance",
+                  view_mode: "list"
+                }
+              }
+            ],
+            aria: { label: "View mode" }
+          ) %>
+        <% end %>
+      </div>
+
+      <%= form_with url: recording_attachments_path(@recording), method: :get, local: true, class: "w-full lg:w-auto", data: { controller: "recording-studio-attachable--live-search", action: "input->recording-studio-attachable--live-search#queueSubmit", turbo_frame: "recording-attachments-results", turbo_action: "advance" } do %>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <%= hidden_field_tag :scope, @scope %>
+          <%= hidden_field_tag :kind, @kind %>
+          <%= hidden_field_tag :view, @view_mode, data: { recording_studio_attachable__view_mode_target: "viewInput" } %>
+          <%= hidden_field_tag :include_trashed, @include_trashed if @include_trashed %>
+          <%= render FlatPack::Search::Component.new(
+            name: :q,
+            value: @query,
+            placeholder: "Search",
+            max_width: :lg,
+            aria: { label: "Search attachments" }
+          ) %>
+        </div>
+      <% end %>
+    </div>
+
     <%= turbo_frame_tag "recording-attachments-results" do %>
       <div class="space-y-6">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div class="flex flex-wrap items-center gap-3">
-            <% if @can_upload %>
-              <%= render FlatPack::Button::Component.new(
-                text: "Upload",
-                style: :primary,
-                size: :md,
-                icon: "upload",
-                url: recording_attachment_upload_path(@recording),
-                data: { turbo_frame: "_top" }
-              ) %>
-            <% end %>
-
-            <% if @attachments.any? %>
-              <% pill_active_classes = "border-[var(--tabs-pill-active-border-color)] bg-[var(--tabs-pill-active-background-color)] text-[var(--tabs-pill-active-text-color)] shadow-[var(--tabs-pill-active-shadow)]" %>
-              <% pill_inactive_classes = "text-[var(--tabs-pill-inactive-text-color)] hover:text-[var(--tabs-pill-inactive-hover-text-color)] hover:bg-[var(--tabs-pill-inactive-hover-background-color)]" %>
-              <%= render FlatPack::Button::Pill::Component.new(
-                items: [
-                  {
-                    text: "Grid",
-                    href: recording_attachments_path(@recording, listing_params.merge(view: :grid)),
-                    active: @view_mode == :grid,
-                    data: {
-                      turbo_frame: "recording-attachments-results",
-                      turbo_action: "advance"
-                    }
-                  },
-                  {
-                    text: "List",
-                    href: recording_attachments_path(@recording, listing_params.merge(view: :list)),
-                    active: @view_mode == :list,
-                    data: {
-                      turbo_frame: "recording-attachments-results",
-                      turbo_action: "advance"
-                    }
-                  }
-                ],
-                aria: { label: "View mode" }
-              ) %>
-            <% end %>
-          </div>
-
-          <%= form_with url: recording_attachments_path(@recording), method: :get, local: true, class: "w-full lg:w-auto", data: { controller: "recording-studio-attachable--live-search", action: "input->recording-studio-attachable--live-search#queueSubmit", turbo_frame: "recording-attachments-results", turbo_action: "advance" } do %>
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <%= hidden_field_tag :scope, @scope %>
-              <%= hidden_field_tag :kind, @kind %>
-              <%= hidden_field_tag :view, @view_mode %>
-              <%= hidden_field_tag :include_trashed, @include_trashed if @include_trashed %>
-              <%= render FlatPack::Search::Component.new(
-                name: :q,
-                value: @query,
-                placeholder: "Search",
-                max_width: :lg,
-                aria: { label: "Search attachments" }
-              ) %>
-            </div>
-          <% end %>
-        </div>
-
         <% if @attachments.any? %>
           <%= render "attachments_page",
             attachments: @attachments,

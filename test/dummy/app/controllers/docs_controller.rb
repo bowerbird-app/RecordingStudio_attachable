@@ -457,6 +457,13 @@ class DocsController < ApplicationController
         icon: :upload
       },
       {
+        title: "Attachment picker modal",
+        path: "recording_studio_attachable/attachment_image_pickers/_modal.html.erb",
+        description: "Open the reusable FlatPack modal that powers image picking, search, direct uploads, and selection from inline editor or custom host-app flows.",
+        example: "Use it when a host-app screen needs the bundled image picker inside a modal instead of sending editors to the full library page.",
+        icon: :plus
+      },
+      {
         title: "Attachment details",
         path: "recording_studio_attachable/attachments/show.html.erb",
         description: "Show a single attachment with preview context, download/trash actions, and metadata editing.",

@@ -93,7 +93,7 @@ module RecordingStudioAttachable
         normalized = value.to_s.strip
         return false if normalized.blank?
 
-        !Array(PLACEHOLDER_PREFIXES[field]).include?(normalized)
+        Array(PLACEHOLDER_PREFIXES[field]).exclude?(normalized)
       end
     end
 
@@ -132,6 +132,16 @@ module RecordingStudioAttachable
       return unless hash.respond_to?(:each)
 
       hash.each { |key, value| merge_attribute!(key, value) }
+    end
+
+    def [](key)
+      getter = key.to_s
+      public_send(getter) if respond_to?(getter)
+    end
+
+    def []=(key, value)
+      merge_attribute!(key, value)
+      self[key]
     end
 
     def auth_role_for(action)

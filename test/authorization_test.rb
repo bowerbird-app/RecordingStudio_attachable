@@ -21,7 +21,7 @@ class AuthorizationTest < Minitest::Test
 
     RecordingStudio.configuration.stub(:capability_enabled?, false) do
       RecordingStudioAccessible::Authorization.stub(:allowed?, true) do
-        refute RecordingStudioAttachable::Authorization.allowed?(action: :view, actor: Object.new, recording: recording)
+        assert_not RecordingStudioAttachable::Authorization.allowed?(action: :view, actor: Object.new, recording: recording)
       end
     end
   end
@@ -115,7 +115,7 @@ class AuthorizationTest < Minitest::Test
     accessible = RecordingStudioAccessible.send(:remove_const, :Authorization)
 
     begin
-      refute RecordingStudioAttachable::Authorization.allowed?(
+      assert_not RecordingStudioAttachable::Authorization.allowed?(
         action: :view,
         actor: Object.new,
         recording: recording
@@ -128,7 +128,7 @@ class AuthorizationTest < Minitest::Test
   def test_attachable_enabled_is_false_when_owner_type_is_blank
     recording = FakeRecording.new(recordable_type: nil)
 
-    refute RecordingStudioAttachable::Authorization.attachable_enabled?(recording: recording)
+    assert_not RecordingStudioAttachable::Authorization.attachable_enabled?(recording: recording)
   end
 
   def test_attachable_enabled_uses_capability_options_without_recording_studio
@@ -140,7 +140,7 @@ class AuthorizationTest < Minitest::Test
         recording: recording,
         capability_options: { max_file_count: 1 }
       )
-      refute RecordingStudioAttachable::Authorization.attachable_enabled?(
+      assert_not RecordingStudioAttachable::Authorization.attachable_enabled?(
         recording: recording,
         capability_options: nil
       )
@@ -166,7 +166,7 @@ class AuthorizationTest < Minitest::Test
     recording = FakeRecording.new(recordable_type: "Workspace")
 
     RecordingStudio.configuration.stub(:capability_enabled?, true) do
-      refute RecordingStudioAttachable::Authorization.allowed?(
+      assert_not RecordingStudioAttachable::Authorization.allowed?(
         action: :view,
         actor: Object.new,
         recording: recording,

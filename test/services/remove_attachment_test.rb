@@ -146,10 +146,8 @@ class RemoveAttachmentTest < Minitest::Test
 
   private
 
-  def with_authorized_removal(&block)
-    RecordingStudioAttachable::Authorization.stub(:authorize!, true) do
-      block.call
-    end
+  def with_authorized_removal(&)
+    RecordingStudioAttachable::Authorization.stub(:authorize!, true, &)
   end
 
   def stub_recording_studio!

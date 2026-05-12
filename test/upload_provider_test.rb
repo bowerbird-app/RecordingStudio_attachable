@@ -162,7 +162,7 @@ class UploadProviderTest < Minitest::Test
       visible: ->(view_context:, recording:) { false }
     )
 
-    refute provider.render?(view_context: FakeViewContext.new("/root"), recording: FakeRecording.new("rec-1"))
+    assert_not provider.render?(view_context: FakeViewContext.new("/root"), recording: FakeRecording.new("rec-1"))
   end
 
   def test_render_returns_false_when_url_resolves_blank
@@ -172,7 +172,7 @@ class UploadProviderTest < Minitest::Test
       url: ->(view_context:, recording:) {}
     )
 
-    refute provider.render?(view_context: FakeViewContext.new("/root"), recording: FakeRecording.new("rec-1"))
+    assert_not provider.render?(view_context: FakeViewContext.new("/root"), recording: FakeRecording.new("rec-1"))
   end
 
   def test_render_supports_direct_and_mounted_route_helpers_from_controller_view_context
@@ -275,7 +275,7 @@ class UploadProviderTest < Minitest::Test
 
     assert_equal "/main/demo", proxy.demo_path
     assert proxy.respond_to?(:demo_path)
-    refute proxy.respond_to?(:missing_path)
+    assert_not proxy.respond_to?(:missing_path)
     assert_raises(NoMethodError) { proxy.missing_path }
   end
 
@@ -334,6 +334,6 @@ class UploadProviderTest < Minitest::Test
       strategy: :modal_page
     )
 
-    refute provider.render?(view_context: FakeViewContext.new("/root"), recording: FakeRecording.new("rec-1"))
+    assert_not provider.render?(view_context: FakeViewContext.new("/root"), recording: FakeRecording.new("rec-1"))
   end
 end

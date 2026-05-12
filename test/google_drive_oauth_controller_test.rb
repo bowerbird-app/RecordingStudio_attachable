@@ -14,13 +14,11 @@ class GoogleDriveOauthControllerTest < ActionController::TestCase
   def setup
     @original_configuration = RecordingStudioAttachable.instance_variable_get(:@configuration)
     RecordingStudioAttachable.instance_variable_set(:@configuration, RecordingStudioAttachable::Configuration.new)
-    RecordingStudioAttachable.configuration.merge!(
-      google_drive: {
-        enabled: true,
-        client_id: "client-id",
-        client_secret: "client-secret",
-        redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback"
-      }
+    RecordingStudioAttachable.configuration.google_drive.merge!(
+      enabled: true,
+      client_id: "client-id",
+      client_secret: "client-secret",
+      redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback"
     )
 
     @controller = RecordingStudioAttachable::GoogleDrive::OauthController.new
@@ -207,7 +205,7 @@ class GoogleDriveOauthControllerTest < ActionController::TestCase
     assert_includes @response.body, "google_drive"
     assert_includes @response.body, "localStorage.setItem"
     assert_includes @response.body, "BroadcastChannel"
-    refute_includes @response.body, "/google_drive/recordings/rec-1/imports"
+    assert_not_includes @response.body, "/google_drive/recordings/rec-1/imports"
   end
 
   def test_callback_restores_attachment_redirect_params_after_auth

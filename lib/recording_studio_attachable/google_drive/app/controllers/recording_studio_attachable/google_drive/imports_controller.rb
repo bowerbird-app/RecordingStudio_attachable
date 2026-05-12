@@ -19,7 +19,8 @@ module RecordingStudioAttachable
       rescue RecordingStudioAttachable::GoogleDrive::Client::UnauthorizedError
         clear_google_drive_tokens!
         redirect_to google_drive.recording_imports_path(@recording, upload_flow_params),
-                    alert: "Google Drive session expired. Reconnect to continue."
+                    alert: t("recording_studio_attachable.google_drive.session_expired",
+                             default: "Google Drive session expired. Reconnect to continue.")
       rescue RecordingStudioAttachable::GoogleDrive::Client::Error => e
         @query = params[:query].to_s.strip
         @files = []
@@ -62,7 +63,7 @@ module RecordingStudioAttachable
               end
             end
           else
-            format.json { render json: { error: result.error }, status: :unprocessable_entity }
+            format.json { render json: { error: result.error }, status: :unprocessable_content }
             format.html do
               redirect_to google_drive.recording_imports_path(
                 @recording,
@@ -73,18 +74,26 @@ module RecordingStudioAttachable
         end
       rescue RecordingStudioAttachable::DependencyUnavailableError => e
         respond_to do |format|
-          format.json { render json: { error: e.message }, status: :unprocessable_entity }
+          format.json { render json: { error: e.message }, status: :unprocessable_content }
           format.html { dependency_unavailable_alert(e) }
         end
       rescue RecordingStudioAttachable::GoogleDrive::Client::UnauthorizedError
         clear_google_drive_tokens!
+        session_expired_message = t(
+          "recording_studio_attachable.google_drive.session_expired",
+          default: "Google Drive session expired. Reconnect to continue."
+        )
         respond_to do |format|
-          format.json { render json: { error: "Google Drive session expired. Reconnect to continue." }, status: :unauthorized }
+          format.json do
+            render json: {
+              error: session_expired_message
+            }, status: :unauthorized
+          end
           format.html do
             redirect_to google_drive.recording_imports_path(
               @recording,
               upload_flow_params
-            ), alert: "Google Drive session expired. Reconnect to continue."
+            ), alert: session_expired_message
           end
         end
       end

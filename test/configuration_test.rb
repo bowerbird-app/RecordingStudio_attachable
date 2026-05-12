@@ -126,7 +126,7 @@ class ConfigurationTest < Minitest::Test
   end
 
   def test_merge_normalizes_auth_roles
-    @configuration.merge!(auth_roles: { view: :viewer, upload: :editor })
+    @configuration[:auth_roles] = { view: :viewer, upload: :editor }
 
     assert_equal :view, @configuration.auth_role_for(:view)
     assert_equal :edit, @configuration.auth_role_for(:upload)
@@ -162,15 +162,15 @@ class ConfigurationTest < Minitest::Test
   end
 
   def test_merge_updates_google_drive_configuration
-    @configuration.merge!(google_drive: {
-                            enabled: true,
-                            client_id: "client-id",
-                            client_secret: "client-secret",
-                            api_key: "api-key",
-                            app_id: "app-id",
-                            redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
-                            page_size: 10
-                          })
+    @configuration[:google_drive] = {
+      enabled: true,
+      client_id: "client-id",
+      client_secret: "client-secret",
+      api_key: "api-key",
+      app_id: "app-id",
+      redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
+      page_size: 10
+    }
 
     assert @configuration.google_drive.enabled?
     assert @configuration.google_drive.configured?
@@ -180,14 +180,14 @@ class ConfigurationTest < Minitest::Test
   end
 
   def test_google_drive_picker_configuration_rejects_dummy_placeholder_values
-    @configuration.merge!(google_drive: {
-                            enabled: true,
-                            client_id: "client-id",
-                            client_secret: "client-secret",
-                            redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
-                            api_key: "dummy-google-drive-api-key",
-                            app_id: "dummy-google-drive-app-id"
-                          })
+    @configuration[:google_drive] = {
+      enabled: true,
+      client_id: "client-id",
+      client_secret: "client-secret",
+      redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
+      api_key: "dummy-google-drive-api-key",
+      app_id: "dummy-google-drive-app-id"
+    }
 
     assert @configuration.google_drive.configured?
     assert_not @configuration.google_drive.picker_configured?

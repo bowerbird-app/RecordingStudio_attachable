@@ -201,7 +201,16 @@ module RecordingStudioAttachable
       }.compact
       payload_json = ERB::Util.json_escape(payload.to_json)
 
-      render html: <<~HTML.html_safe, layout: false, status: status
+      render body: upload_provider_modal_event_page(payload_json:, close_window:),
+             content_type: Mime[:html],
+             layout: false,
+             status: status
+    end
+
+    def upload_provider_modal_event_page(payload_json:, close_window:)
+      close_window_script = close_window ? "window.close();" : ""
+
+      <<~HTML
         <!DOCTYPE html>
         <html>
           <head>
@@ -240,7 +249,7 @@ module RecordingStudioAttachable
                   }
                 }
 
-                #{'window.close();' if close_window}
+                #{close_window_script}
               })();
             </script>
             <p>Returning to the upload page…</p>

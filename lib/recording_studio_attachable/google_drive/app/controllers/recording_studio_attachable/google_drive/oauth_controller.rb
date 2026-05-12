@@ -49,7 +49,7 @@ module RecordingStudioAttachable
           provider_modal_id: state["provider_modal_id"],
           redirect_mode: state["redirect_mode"],
           return_to: state["return_to"]
-        ), notice: "Connected Google Drive."
+        ), notice: t("recording_studio_attachable.google_drive.connected", default: "Connected Google Drive.")
       rescue RecordingStudioAttachable::Error, RecordingStudioAttachable::GoogleDrive::OAuthClient::Error => e
         recording_id ||= params[:recording_id]
         if recording_id.present?
@@ -66,7 +66,7 @@ module RecordingStudioAttachable
         redirect_to google_drive.recording_imports_path(
           @recording,
           upload_flow_params
-        ), notice: "Disconnected Google Drive."
+        ), notice: t("recording_studio_attachable.google_drive.disconnected", default: "Disconnected Google Drive.")
       end
     end
   end

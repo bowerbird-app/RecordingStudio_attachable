@@ -161,18 +161,25 @@ class DummyDocsTest < Minitest::Test
     assert_includes gem_views_source, "FlatPack::List::Item.new"
     assert_includes controller_source, 'title: "Library"'
     assert_includes controller_source, 'title: "Upload"'
+    assert_includes controller_source, 'title: "Attachment picker modal"'
     assert_includes controller_source, 'title: "Attachment details"'
     assert_includes controller_source, 'title: "Blank layout"'
     assert_includes controller_source, "icon: :grid"
+    assert_includes controller_source, "icon: :plus"
     assert_includes controller_source, "icon: :eye"
     assert_includes controller_source, "icon: :layout"
     assert_includes controller_source, "Upload images and files"
     assert_includes controller_source, "Browse the attachment library and manage uploads with bulk remove actions."
     assert_includes controller_source,
+                    "Open the reusable FlatPack modal that powers image picking, search, direct uploads, and selection from inline editor or custom host-app flows."
+    assert_includes controller_source,
+                    "Use it when a host-app screen needs the bundled image picker inside a modal instead of sending editors to the full library page."
+    assert_includes controller_source,
                     "Show a single attachment with preview context, download/trash actions, and metadata editing."
     assert_includes controller_source,
                     "Use it when editors need to rename an attachment, update the description, or download the current file."
     assert_includes icon_sprite_source, 'symbol id="icon-grid"'
+    assert_includes icon_sprite_source, 'symbol id="icon-plus"'
     assert_includes icon_sprite_source, 'symbol id="icon-eye"'
     assert_includes icon_sprite_source, 'symbol id="icon-layout"'
   end

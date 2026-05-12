@@ -105,8 +105,8 @@ module RecordingStudioAttachable
         assert_equal "demo-import.svg", payload[:filename]
         assert_equal "image/svg+xml", payload[:content_type]
         assert_equal({ "provider" => "demo_cloud" }, payload[:metadata])
-        refute_includes payload.keys, :service_name
-        refute_includes payload.keys, :source
+        assert_not_includes payload.keys, :service_name
+        assert_not_includes payload.keys, :source
       end
     ensure
       tempfile.close!

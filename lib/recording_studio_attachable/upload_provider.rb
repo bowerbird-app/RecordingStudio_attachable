@@ -4,6 +4,7 @@ require "uri"
 
 module RecordingStudioAttachable
   class UploadProvider
+    KEYWORD_PARAMETER_TYPES = %i[key keyreq].freeze
     STRATEGIES = %i[link modal_page client_picker].freeze
 
     class RouteHelpersProxy
@@ -238,7 +239,7 @@ module RecordingStudioAttachable
       return @remote_importer.call(**kwargs) if parameters.any? { |type, _name| type == :keyrest }
 
       keyword_names = parameters.filter_map do |type, name|
-        name if %i[key keyreq].include?(type)
+        name if KEYWORD_PARAMETER_TYPES.include?(type)
       end
       return @remote_importer.call(**kwargs.slice(*keyword_names)) if keyword_names.any?
 
@@ -268,7 +269,7 @@ module RecordingStudioAttachable
       return value.call(**kwargs) if parameters.any? { |type, _name| type == :keyrest }
 
       keyword_names = parameters.filter_map do |type, name|
-        name if %i[key keyreq].include?(type)
+        name if KEYWORD_PARAMETER_TYPES.include?(type)
       end
       return value.call(**kwargs.slice(*keyword_names)) if keyword_names.any?
 

@@ -129,7 +129,7 @@ class RecordingMethodsTest < Minitest::Test
     recording = FakeRecording.new
     recording.define_singleton_method(:attachments) { |**| relation.new(false) }
 
-    refute recording.has_attachments?(scope: :direct, kind: :files)
+    assert_not recording.has_attachments?(scope: :direct, kind: :files)
   end
 
   def test_recording_level_methods_delegate_to_services

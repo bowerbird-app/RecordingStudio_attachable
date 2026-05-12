@@ -28,7 +28,7 @@
      safe_join([
        render(FlatPack::Link::Component.new(
          href: attachment_path(attachment_recording),
-         class: "font-medium",
+         class: "block max-w-[12rem] truncate font-medium sm:max-w-[18rem]",
          data: { turbo_frame: "_top" }
        )) { attachment.name },
        tag.div("#{display_content_type} #{display_size}", class: "text-xs text-(--surface-muted-content-color)")

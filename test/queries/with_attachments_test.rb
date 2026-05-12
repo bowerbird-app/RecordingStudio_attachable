@@ -131,6 +131,6 @@ class WithAttachmentsTest < Minitest::Test
       RecordingStudioAttachable::Queries::WithAttachments.new(scope: scope, include_trashed: true).call
     end
 
-    refute_includes attachment_scope.where_calls, { trashed_at: nil }
+    assert_not_includes attachment_scope.where_calls, { trashed_at: nil }
   end
 end

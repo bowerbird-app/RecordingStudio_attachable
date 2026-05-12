@@ -138,7 +138,7 @@ class ForRecordingTest < Minitest::Test
     assert_equal 3, query.current_page
     assert_equal 10, relation.offset_value
     assert query.previous_page?
-    refute query.next_page?
+    assert_not query.next_page?
   end
 
   def test_normalize_scope_falls_back_to_default_for_unknown_values

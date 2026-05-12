@@ -163,7 +163,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     configuration_path = File.expand_path("../lib/recording_studio_attachable/configuration.rb", __dir__)
     configuration_source = File.read(configuration_path)
     theme_variables_path = File.expand_path("../test/dummy/app/assets/tailwind/flat_pack_variables.css", __dir__)
-    theme_variables_source = File.read(theme_variables_path)
+    File.read(theme_variables_path)
 
     assert_includes view_source, 'class="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6"'
     assert_includes view_source, "FlatPack::Breadcrumb::Component"
@@ -188,23 +188,24 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes controller_source, "def authorized_attachment_preview_path(recording, variant_name)"
     assert_includes controller_source, "attachment_preview_file_path(recording, variant_name: variant_name)"
     assert_includes controller_source, "helper_method :authorized_attachment_file_path"
-    assert_includes theme_variables_source, "--skeleton-background-color: var(--surface-border-color);"
-    assert_includes theme_variables_source, "--skeleton-shimmer-highlight-color: rgb(255 255 255 / 0.72);"
     assert_includes view_source, 'text: "Trash"'
     assert_includes view_source, 'text: "Download"'
     assert_includes view_source, 'text: "Save"'
     assert_includes view_source, 'class="grid gap-6 lg:grid-cols-2 lg:items-start"'
-    assert_includes view_source, 'data-controller="recording-studio-attachable--image-fallback"'
+    assert_includes view_source, 'id="edit-attachment" class="space-y-4 lg:col-start-2"'
     assert_includes view_source, "authorized_attachment_preview_path(@attachment_recording, :large)"
+    assert_includes view_source, 'data-controller="recording-studio-attachable--image-fallback"'
     assert_includes view_source, 'data-recording-studio-attachable--image-fallback-target="skeleton"'
     assert_includes view_source, 'FlatPack::Skeleton::Component.new(variant: :rectangle, shimmer: true, width: "100%", height: "100%", class: "h-full w-full rounded-none")'
     assert_includes view_source, "image_tag preview_path, alt: @attachment.name"
+    assert_includes view_source, "overflow-hidden rounded-xl border border-(--surface-border-color) bg-(--surface-muted-background-color)"
     assert_not_includes view_source, "FlatPack::Card::Component.new(style: :outlined, html_options: { id: \"edit-attachment\" })"
     assert_not_includes view_source, 'title: "Edit attachment"'
     assert_not_includes view_source, 'subtitle: "Update the attachment metadata."'
     assert_not_includes view_source, "Replace file (optional)"
     assert_not_includes view_source, 'text: "Save revision"'
     assert_not_includes view_source, "overflow-hidden rounded-lg border border-[var(--surface-border-color)] bg-[var(--surface-muted-background-color)]"
+    assert_not_includes view_source, "rounded-2xl border border-(--surface-border-color) bg-(--surface-muted-background-color)"
     assert_not_includes view_source, "FlatPack::Badge::Component"
     assert_not_includes view_source, 'title: "Attachment details"'
     assert_not_includes view_source, 'title: "Revise attachment"'
@@ -251,6 +252,20 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes controller_source, "window.clearTimeout(this.timeoutId)"
   end
 
+  def test_view_mode_controller_syncs_pills_and_hidden_field_from_url_state
+    controller_path = File.expand_path("../app/javascript/controllers/recording_studio_attachable/view_mode_controller.js", __dir__)
+    controller_source = File.read(controller_path)
+
+    assert_includes controller_source, 'static targets = ["pill", "viewInput"]'
+    assert_includes controller_source, "this.viewInputTarget.value = viewMode"
+    assert_includes controller_source, "const searchParams = new URLSearchParams(window.location.search)"
+    assert_includes controller_source, "pill.dataset.viewMode === viewMode"
+    assert_includes controller_source, "this.toggleClasses(pill, this.activeClassesValue, isActive)"
+    assert_includes controller_source, "this.toggleClasses(pill, this.inactiveClassesValue, !isActive)"
+    assert_includes controller_source, 'pill.setAttribute("aria-current", "page")'
+    assert_includes controller_source, 'pill.removeAttribute("aria-current")'
+  end
+
   def test_listing_view_keeps_upload_media_cards_pagination_controls_and_search_ui
     view_path = File.expand_path("../app/views/recording_studio_attachable/recording_attachments/index.html.erb", __dir__)
     view_source = File.read(view_path)
@@ -271,8 +286,14 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, "FlatPack::Button::Pill::Component.new("
     assert_includes view_source, "href: recording_attachments_path(@recording, listing_params.merge(view: :grid))"
     assert_includes view_source, "href: recording_attachments_path(@recording, listing_params.merge(view: :list))"
+    assert_includes view_source, 'data-controller="recording-studio-attachable--view-mode"'
+    assert_includes view_source, 'data-action="popstate@window->recording-studio-attachable--view-mode#syncFromLocation turbo:frame-load@document->recording-studio-attachable--view-mode#syncFromLocation turbo:load@document->recording-studio-attachable--view-mode#syncFromLocation"'
     assert_includes view_source, 'turbo_frame: "recording-attachments-results"'
-    assert_includes view_source, "<%= hidden_field_tag :view, @view_mode %>"
+    assert_includes view_source, 'action: "click->recording-studio-attachable--view-mode#select"'
+    assert_includes view_source, 'recording_studio_attachable__view_mode_target: "pill"'
+    assert_includes view_source, 'view_mode: "grid"'
+    assert_includes view_source, 'view_mode: "list"'
+    assert_includes view_source, '<%= hidden_field_tag :view, @view_mode, data: { recording_studio_attachable__view_mode_target: "viewInput" } %>'
     assert_includes view_source, "FlatPack::Search::Component.new("
     assert_includes view_source, 'placeholder: "Search"'
     assert_includes view_source, '<circle cx="11" cy="11" r="6" />'
@@ -280,6 +301,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes attachments_page_source, "list_view = view_mode == :list"
     assert_includes attachments_page_source, "if list_view"
     assert_includes view_source, 'render "attachments_page", attachments: @attachments, listing_params: listing_params, view_mode: @view_mode'
+    assert_includes view_source, 'turbo_frame_tag "recording-attachments-results"'
     assert_includes attachments_page_source, "loading_variant: list_view ? :inline : :cards"
     assert_includes attachments_page_source, "view: view_mode"
     assert_includes grid_partial_source, 'FlatPack::Grid::Component.new(cols: 2, class: "items-stretch gap-6 lg:grid-cols-5", data: { pagination_content: true })'
@@ -318,6 +340,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_not_includes list_partial_source, ">Kind<"
     assert_not_includes list_partial_source, ">Type<"
     assert_not_includes list_partial_source, ">Size<"
+    assert_includes list_partial_source, 'class: "block max-w-[12rem] truncate font-medium sm:max-w-[18rem]"'
     assert_includes list_partial_source, 'number_to_human_size(attachment.byte_size, strip_insignificant_zeros: true).downcase.delete(" ")'
     assert_includes list_partial_source, "tag.div(\"\#{display_content_type} \#{display_size}\", class: \"text-xs text-(--surface-muted-content-color)\")"
     assert_includes list_partial_source, 'data: { turbo_frame: "_top" }'
@@ -386,13 +409,13 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, "preview_path = authorized_attachment_preview_path(@attachment_recording, :large)"
     assert_includes view_source, "image_tag preview_path"
     assert_includes view_source, 'data-controller="recording-studio-attachable--image-fallback"'
-    assert_includes view_source, 'class="absolute inset-0 z-10 flex items-stretch justify-stretch"'
+    assert_includes view_source, 'class="absolute inset-0 flex items-stretch justify-stretch"'
     assert_includes view_source, 'data-recording-studio-attachable--image-fallback-target="skeleton"'
     assert_includes view_source, "variant: :rectangle"
     assert_includes view_source, "shimmer: true"
     assert_includes view_source, 'class: "h-full w-full rounded-none"'
     assert_not_includes view_source, "--skeleton-background-color:"
-    assert_includes view_source, 'class: "relative z-20 hidden max-h-[480px] w-full object-contain opacity-0 transition-opacity duration-200"'
+    assert_includes view_source, 'class: "h-full w-full object-cover opacity-0 transition-opacity duration-200"'
     assert_includes view_source, "load->recording-studio-attachable--image-fallback#showImage"
     assert_includes view_source, "error->recording-studio-attachable--image-fallback#showFallback"
     assert_includes view_source, 'data-recording-studio-attachable--image-fallback-target="fallback"'

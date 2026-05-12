@@ -44,7 +44,7 @@ class GoogleDriveApplicationControllerTest < Minitest::Test
   end
 
   def test_ensure_google_drive_enabled_requires_client_credentials
-    RecordingStudioAttachable.configuration.merge!(google_drive: { enabled: true })
+    RecordingStudioAttachable.configuration[:google_drive] = { enabled: true }
 
     error = assert_raises(RecordingStudioAttachable::DependencyUnavailableError) do
       @controller.send(:ensure_google_drive_enabled!)
@@ -54,14 +54,12 @@ class GoogleDriveApplicationControllerTest < Minitest::Test
   end
 
   def test_ensure_google_drive_picker_configured_requires_picker_keys
-    RecordingStudioAttachable.configuration.merge!(
-      google_drive: {
-        enabled: true,
-        client_id: "client-id",
-        client_secret: "client-secret",
-        redirect_uri: "https://example.test/oauth/callback"
-      }
-    )
+    RecordingStudioAttachable.configuration[:google_drive] = {
+      enabled: true,
+      client_id: "client-id",
+      client_secret: "client-secret",
+      redirect_uri: "https://example.test/oauth/callback"
+    }
 
     error = assert_raises(RecordingStudioAttachable::DependencyUnavailableError) do
       @controller.send(:ensure_google_drive_picker_configured!)
@@ -71,16 +69,14 @@ class GoogleDriveApplicationControllerTest < Minitest::Test
   end
 
   def test_ensure_google_drive_picker_configured_rejects_dummy_placeholder_picker_values
-    RecordingStudioAttachable.configuration.merge!(
-      google_drive: {
-        enabled: true,
-        client_id: "client-id",
-        client_secret: "client-secret",
-        redirect_uri: "https://example.test/oauth/callback",
-        api_key: "dummy-google-drive-api-key",
-        app_id: "dummy-google-drive-app-id"
-      }
-    )
+    RecordingStudioAttachable.configuration[:google_drive] = {
+      enabled: true,
+      client_id: "client-id",
+      client_secret: "client-secret",
+      redirect_uri: "https://example.test/oauth/callback",
+      api_key: "dummy-google-drive-api-key",
+      app_id: "dummy-google-drive-app-id"
+    }
 
     error = assert_raises(RecordingStudioAttachable::DependencyUnavailableError) do
       @controller.send(:ensure_google_drive_picker_configured!)
@@ -90,7 +86,7 @@ class GoogleDriveApplicationControllerTest < Minitest::Test
   end
 
   def test_google_drive_connected_uses_session_tokens
-    refute @controller.send(:google_drive_connected?)
+    assert_not @controller.send(:google_drive_connected?)
 
     @controller.send(:store_google_drive_tokens!, access_token: "token-1")
 

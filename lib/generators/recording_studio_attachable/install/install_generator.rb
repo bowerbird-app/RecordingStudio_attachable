@@ -92,15 +92,15 @@ module RecordingStudioAttachable
 
       def active_storage_wired?(application_js)
         normalized = application_js.gsub(/\s+/, " ")
-        normalized.match?(%r{@rails/activestorage}) && normalized.match?(/ActiveStorage\.start\(\)/)
+        normalized.match?(%r{@rails/activestorage}) && normalized.include?("ActiveStorage.start()")
       end
 
       def attachable_controllers_wired?(controllers_index)
-        controllers_index.match?(%r{controllers/recording_studio_attachable})
+        controllers_index.include?("controllers/recording_studio_attachable")
       end
 
       def attachment_image_addon_wired?(application_js)
-        application_js.match?(%r{recording_studio_attachable/tiptap/attachment_image_addon})
+        application_js.include?("recording_studio_attachable/tiptap/attachment_image_addon")
       end
     end
   end

@@ -90,7 +90,7 @@ module RecordingStudioAttachable
 
       def remote_payloads_by_provider
         attachments.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |payload, grouped|
-          next unless payload[:provider_payload].present?
+          next if payload[:provider_payload].blank?
 
           provider = RecordingStudioAttachable.configuration.upload_provider(payload[:provider_key])
           raise ArgumentError, "Unknown upload provider" if provider.blank?

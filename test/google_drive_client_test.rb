@@ -5,9 +5,7 @@ require_relative "../lib/recording_studio_attachable/google_drive/client"
 
 class GoogleDriveClientTest < Minitest::Test
   FakeResponse = Struct.new(:body, :code, :headers, :success, keyword_init: true) do
-    def [](key)
-      headers[key]
-    end
+    delegate :[], to: :headers
 
     def is_a?(klass)
       return success if klass == Net::HTTPSuccess
@@ -17,9 +15,7 @@ class GoogleDriveClientTest < Minitest::Test
   end
 
   FakeRedirectResponse = Struct.new(:body, :code, :headers, keyword_init: true) do
-    def [](key)
-      headers[key]
-    end
+    delegate :[], to: :headers
 
     def is_a?(klass)
       return true if klass == Net::HTTPRedirection

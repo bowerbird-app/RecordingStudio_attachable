@@ -125,16 +125,14 @@ class EngineTest < Minitest::Test
   end
 
   def test_google_drive_initializer_registers_provider_when_picker_is_configured
-    RecordingStudioAttachable.configuration.merge!(
-      google_drive: {
-        enabled: true,
-        client_id: "client-id",
-        client_secret: "client-secret",
-        redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
-        api_key: "api-key",
-        app_id: "app-id"
-      }
-    )
+    RecordingStudioAttachable.configuration[:google_drive] = {
+      enabled: true,
+      client_id: "client-id",
+      client_secret: "client-secret",
+      redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
+      api_key: "api-key",
+      app_id: "app-id"
+    }
     after_initialize = nil
     app = Struct.new(:config).new(
       Object.new.tap do |config|
@@ -146,7 +144,7 @@ class EngineTest < Minitest::Test
     after_initialize.call
 
     provider = RecordingStudioAttachable.configuration.upload_provider(:google_drive)
-    refute_nil provider
+    assert_not_nil provider
     assert_equal "Google Drive", provider.label
     assert_equal :google_drive, provider.key
     assert_equal :client_picker, provider.strategy
@@ -169,14 +167,12 @@ class EngineTest < Minitest::Test
   end
 
   def test_google_drive_initializer_skips_provider_when_picker_configuration_is_incomplete
-    RecordingStudioAttachable.configuration.merge!(
-      google_drive: {
-        enabled: true,
-        client_id: "client-id",
-        client_secret: "client-secret",
-        redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback"
-      }
-    )
+    RecordingStudioAttachable.configuration[:google_drive] = {
+      enabled: true,
+      client_id: "client-id",
+      client_secret: "client-secret",
+      redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback"
+    }
     after_initialize = nil
     app = Struct.new(:config).new(
       Object.new.tap do |config|
@@ -191,16 +187,14 @@ class EngineTest < Minitest::Test
   end
 
   def test_google_drive_initializer_skips_provider_when_picker_configuration_uses_dummy_placeholders
-    RecordingStudioAttachable.configuration.merge!(
-      google_drive: {
-        enabled: true,
-        client_id: "client-id",
-        client_secret: "client-secret",
-        redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
-        api_key: "dummy-google-drive-api-key",
-        app_id: "dummy-google-drive-app-id"
-      }
-    )
+    RecordingStudioAttachable.configuration[:google_drive] = {
+      enabled: true,
+      client_id: "client-id",
+      client_secret: "client-secret",
+      redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
+      api_key: "dummy-google-drive-api-key",
+      app_id: "dummy-google-drive-app-id"
+    }
     after_initialize = nil
     app = Struct.new(:config).new(
       Object.new.tap do |config|
@@ -215,16 +209,14 @@ class EngineTest < Minitest::Test
   end
 
   def test_google_drive_initializer_registers_provider_with_route_helper_urls
-    RecordingStudioAttachable.configuration.merge!(
-      google_drive: {
-        enabled: true,
-        client_id: "client-id",
-        client_secret: "client-secret",
-        redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
-        api_key: "api-key",
-        app_id: "app-id"
-      }
-    )
+    RecordingStudioAttachable.configuration[:google_drive] = {
+      enabled: true,
+      client_id: "client-id",
+      client_secret: "client-secret",
+      redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
+      api_key: "api-key",
+      app_id: "app-id"
+    }
     after_initialize = nil
     app = Struct.new(:config).new(
       Object.new.tap do |config|
@@ -242,9 +234,7 @@ class EngineTest < Minitest::Test
     route_helpers = Object.new
     route_helpers.define_singleton_method(:google_drive) { google_drive_proxy }
     view_context = Struct.new(:main_app) do
-      def google_drive
-        main_app.google_drive
-      end
+      delegate :google_drive, to: :main_app
     end.new(route_helpers)
     recording = Struct.new(:id).new("rec-1")
 

@@ -1,7 +1,7 @@
 {
   "Unit Tests": {
     "coverage": {
-      "/workspace/lib/recording_studio_attachable.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/lib/recording_studio_attachable.rb": {
         "lines": [
           null,
           null,
@@ -46,7 +46,7 @@
           }
         }
       },
-      "/workspace/lib/recording_studio_attachable/configuration.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/lib/recording_studio_attachable/configuration.rb": {
         "lines": [
           null,
           null,
@@ -423,7 +423,7 @@
           }
         }
       },
-      "/workspace/lib/recording_studio_attachable/upload_provider.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/lib/recording_studio_attachable/upload_provider.rb": {
         "lines": [
           null,
           null,
@@ -828,7 +828,7 @@
           }
         }
       },
-      "/workspace/lib/recording_studio_attachable/authorization.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/lib/recording_studio_attachable/authorization.rb": {
         "lines": [
           null,
           null,
@@ -952,7 +952,7 @@
           }
         }
       },
-      "/workspace/lib/recording_studio_attachable/services/base_service.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/lib/recording_studio_attachable/services/base_service.rb": {
         "lines": [
           null,
           null,
@@ -1046,7 +1046,7 @@
           }
         }
       },
-      "/workspace/lib/recording_studio_attachable/google_drive/oauth_client.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/lib/recording_studio_attachable/google_drive/oauth_client.rb": {
         "lines": [
           null,
           null,
@@ -1169,7 +1169,7 @@
           }
         }
       },
-      "/workspace/lib/recording_studio_attachable/google_drive/client.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/lib/recording_studio_attachable/google_drive/client.rb": {
         "lines": [
           null,
           null,
@@ -1387,7 +1387,7 @@
           }
         }
       },
-      "/workspace/lib/recording_studio_attachable/google_drive/session_access_token.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/lib/recording_studio_attachable/google_drive/session_access_token.rb": {
         "lines": [
           null,
           null,
@@ -1462,7 +1462,7 @@
           }
         }
       },
-      "/workspace/lib/recording_studio_attachable/google_drive/services/import_selected_files.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/lib/recording_studio_attachable/google_drive/services/import_selected_files.rb": {
         "lines": [
           null,
           null,
@@ -1583,7 +1583,7 @@
           }
         }
       },
-      "/workspace/app/services/recording_studio_attachable/services/application_service.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/app/services/recording_studio_attachable/services/application_service.rb": {
         "lines": [
           null,
           null,
@@ -1739,7 +1739,7 @@
           }
         }
       },
-      "/workspace/lib/recording_studio_attachable/google_drive/engine.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/lib/recording_studio_attachable/google_drive/engine.rb": {
         "lines": [
           null,
           null,
@@ -1829,7 +1829,7 @@
           }
         }
       },
-      "/workspace/lib/recording_studio_attachable/engine.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/lib/recording_studio_attachable/engine.rb": {
         "lines": [
           null,
           null,
@@ -1920,7 +1920,7 @@
           }
         }
       },
-      "/workspace/lib/recording_studio/capabilities/attachable.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/lib/recording_studio/capabilities/attachable.rb": {
         "lines": [
           null,
           null,
@@ -2058,7 +2058,7 @@
           }
         }
       },
-      "/workspace/app/controllers/recording_studio_attachable/application_controller.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/app/controllers/recording_studio_attachable/application_controller.rb": {
         "lines": [
           null,
           null,
@@ -2447,7 +2447,7 @@
           }
         }
       },
-      "/workspace/app/controllers/recording_studio_attachable/attachment_imports_controller.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/app/controllers/recording_studio_attachable/attachment_imports_controller.rb": {
         "lines": [
           null,
           null,
@@ -2648,7 +2648,7 @@
           }
         }
       },
-      "/workspace/app/services/recording_studio_attachable/services/import_attachment_payloads.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/app/services/recording_studio_attachable/services/import_attachment_payloads.rb": {
         "lines": [
           null,
           null,
@@ -2831,7 +2831,7 @@
           }
         }
       },
-      "/workspace/app/services/recording_studio_attachable/services/import_attachments.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/app/services/recording_studio_attachable/services/import_attachments.rb": {
         "lines": [
           null,
           null,
@@ -2964,7 +2964,7 @@
           }
         }
       },
-      "/workspace/app/services/recording_studio_attachable/services/record_attachment_uploads.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/app/services/recording_studio_attachable/services/record_attachment_uploads.rb": {
         "lines": [
           null,
           null,
@@ -3054,7 +3054,7 @@
           }
         }
       },
-      "/workspace/app/controllers/recording_studio_attachable/attachment_pickers_controller.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/app/controllers/recording_studio_attachable/attachment_pickers_controller.rb": {
         "lines": [
           null,
           null,
@@ -3115,7 +3115,7 @@
         ],
         "branches": {}
       },
-      "/workspace/app/queries/recording_studio_attachable/queries/for_recording.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/app/queries/recording_studio_attachable/queries/for_recording.rb": {
         "lines": [
           null,
           null,
@@ -3291,7 +3291,7 @@
           }
         }
       },
-      "/workspace/app/models/recording_studio_attachable/attachment.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/app/models/recording_studio_attachable/attachment.rb": {
         "lines": [
           null,
           null,
@@ -3422,7 +3422,7 @@
           }
         }
       },
-      "/workspace/app/controllers/recording_studio_attachable/attachment_uploads_controller.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/app/controllers/recording_studio_attachable/attachment_uploads_controller.rb": {
         "lines": [
           null,
           null,
@@ -3520,7 +3520,7 @@
           }
         }
       },
-      "/workspace/app/controllers/recording_studio_attachable/attachments_controller.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/app/controllers/recording_studio_attachable/attachments_controller.rb": {
         "lines": [
           null,
           null,
@@ -3640,7 +3640,7 @@
           }
         }
       },
-      "/workspace/app/services/recording_studio_attachable/services/replace_attachment_file.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/app/services/recording_studio_attachable/services/replace_attachment_file.rb": {
         "lines": [
           null,
           null,
@@ -3709,7 +3709,7 @@
           }
         }
       },
-      "/workspace/app/services/recording_studio_attachable/services/revise_attachment_metadata.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/app/services/recording_studio_attachable/services/revise_attachment_metadata.rb": {
         "lines": [
           null,
           null,
@@ -3776,7 +3776,7 @@
           }
         }
       },
-      "/workspace/lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/application_controller.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/application_controller.rb": {
         "lines": [
           null,
           null,
@@ -3903,7 +3903,7 @@
           }
         }
       },
-      "/workspace/lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/bootstrap_controller.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/bootstrap_controller.rb": {
         "lines": [
           null,
           null,
@@ -3949,7 +3949,7 @@
         ],
         "branches": {}
       },
-      "/workspace/lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/imports_controller.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/imports_controller.rb": {
         "lines": [
           null,
           null,
@@ -4111,7 +4111,7 @@
           }
         }
       },
-      "/workspace/lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/oauth_controller.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/oauth_controller.rb": {
         "lines": [
           null,
           null,
@@ -4210,7 +4210,7 @@
           }
         }
       },
-      "/workspace/lib/generators/recording_studio_attachable/install/install_generator.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/lib/generators/recording_studio_attachable/install/install_generator.rb": {
         "lines": [
           null,
           null,
@@ -4363,7 +4363,7 @@
           }
         }
       },
-      "/workspace/app/queries/recording_studio_attachable/queries/with_attachments.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/app/queries/recording_studio_attachable/queries/with_attachments.rb": {
         "lines": [
           null,
           null,
@@ -4429,7 +4429,7 @@
           }
         }
       },
-      "/workspace/app/controllers/recording_studio_attachable/recording_attachments_controller.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/app/controllers/recording_studio_attachable/recording_attachments_controller.rb": {
         "lines": [
           null,
           null,
@@ -4497,7 +4497,7 @@
           }
         }
       },
-      "/workspace/app/services/recording_studio_attachable/services/record_attachment_upload.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/app/services/recording_studio_attachable/services/record_attachment_upload.rb": {
         "lines": [
           null,
           null,
@@ -4554,7 +4554,7 @@
         ],
         "branches": {}
       },
-      "/workspace/app/services/recording_studio_attachable/services/import_attachment.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/app/services/recording_studio_attachable/services/import_attachment.rb": {
         "lines": [
           null,
           null,
@@ -4663,7 +4663,7 @@
           }
         }
       },
-      "/workspace/app/services/recording_studio_attachable/services/remove_attachment.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/app/services/recording_studio_attachable/services/remove_attachment.rb": {
         "lines": [
           null,
           null,
@@ -4721,7 +4721,7 @@
           }
         }
       },
-      "/workspace/app/services/recording_studio_attachable/services/remove_attachments.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/app/services/recording_studio_attachable/services/remove_attachments.rb": {
         "lines": [
           null,
           null,
@@ -4829,7 +4829,7 @@
           }
         }
       },
-      "/workspace/app/services/recording_studio_attachable/services/restore_attachment.rb": {
+      "/tmp/workspace/bowerbird-app/RecordingStudio_attachable/app/services/recording_studio_attachable/services/restore_attachment.rb": {
         "lines": [
           null,
           null,
@@ -4888,6 +4888,6 @@
         }
       }
     },
-    "timestamp": 1778570345
+    "timestamp": 1780615460
   }
 }

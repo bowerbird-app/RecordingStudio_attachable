@@ -1,9 +1,11 @@
 1. Mount the engine and review `config/initializers/recording_studio_attachable.rb`.
 2. Ensure Active Storage is installed and direct uploads are wired in your host app.
-3. Ensure Recording Studio and RecordingStudio Accessible are installed before using the default authorization flow.
+3. Ensure Recording Studio 3.0.0+ and RecordingStudio Accessible are installed before using the default authorization flow.
 4. Run `rails generate recording_studio_attachable:migrations` and then `rails db:migrate`.
-5. Register `RecordingStudioAttachable::Attachment` in `RecordingStudio.configure`.
+5. Declare each host-app recordable's Recording Studio hierarchy with `recording_studio_recordable`.
 6. Opt each parent recordable into `RecordingStudio::Capabilities::Attachable.to(...)` and set any per-recordable overrides there.
+   - `RecordingStudioAttachable::Attachment` is declared by this addon as `root: false`.
+   - Do not give `RecordingStudioAttachable::Attachment` host-specific `allowed_parent_types:`; the addon registers it as a child recordable of the `:attachable` capability.
 7. Choose the gem layout behavior in `config/initializers/recording_studio_attachable.rb`:
    - leave `config.layout = :blank` to use the gem's centered blank layout
    - set `config.layout = "application"` (or another host-app layout) to render gem views inside your shell

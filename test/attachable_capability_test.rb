@@ -8,10 +8,12 @@ class AttachableCapabilityTest < Minitest::Test
     enabled = []
     options_calls = []
     recordable_types = []
+    capabilities = []
 
     studio.define_singleton_method(:enable_capability) { |name, on:| enabled << [name, on] }
     studio.define_singleton_method(:set_capability_options) { |name, on:, **options| options_calls << [name, on, options] }
     studio.define_singleton_method(:register_recordable_type) { |type| recordable_types << type }
+    studio.define_singleton_method(:register_capability) { |name, **options| capabilities << [name, options] }
 
     klass = Class.new do
       def self.name
@@ -25,6 +27,16 @@ class AttachableCapabilityTest < Minitest::Test
     assert_equal [[:attachable, "ExampleRecord"]], enabled
     assert_equal [[:attachable, "ExampleRecord", { max_file_count: 5 }]], options_calls
     assert_equal ["RecordingStudioAttachable::Attachment"], recordable_types
+    assert_equal [
+      [
+        :attachable,
+        {
+          recording_methods: RecordingStudio::Capabilities::Attachable::RecordingMethods,
+          source: "recording_studio_attachable",
+          child_recordables: ["RecordingStudioAttachable::Attachment"]
+        }
+      ]
+    ], capabilities
   end
 
   def test_to_skips_registration_when_recording_studio_is_not_loaded

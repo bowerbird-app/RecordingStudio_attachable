@@ -18,11 +18,8 @@ module RecordingStudioAttachable
     initializer "recording_studio_attachable.register_recording_studio_integration" do
       next unless defined?(RecordingStudio)
 
-      RecordingStudio.register_recordable_type("RecordingStudioAttachable::Attachment")
-      RecordingStudio.register_capability(
-        :attachable,
-        RecordingStudio::Capabilities::Attachable::RecordingMethods
-      )
+      RecordingStudio::Capabilities::Attachable.register!
+      RecordingStudio.register_recordable_type(RecordingStudio::Capabilities::Attachable::ATTACHMENT_RECORDABLE_TYPE)
     end
 
     class << self

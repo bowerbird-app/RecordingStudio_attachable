@@ -16,7 +16,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - Ruby 3.3+
 - Rails 8.1+
 - Active Storage installed in the host app
-- Recording Studio installed in the host app
+- Recording Studio 3.0.0+ installed in the host app
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
 
@@ -27,7 +27,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 3. Run `rails generate recording_studio_attachable:install`.
 4. Run `rails generate recording_studio_attachable:migrations`.
 5. Run `rails db:migrate`.
-6. Register `RecordingStudioAttachable::Attachment` in `RecordingStudio.configure`.
+6. Declare each host-app recordable's Recording Studio hierarchy with `recording_studio_recordable`.
 7. Opt parent recordables into `RecordingStudio::Capabilities::Attachable.to(...)`.
 
 ## Host app setup
@@ -39,23 +39,37 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 gem "recording_studio_attachable"
 ```
 
-### 2. Register the attachment recordable
+### 2. Declare host recordable hierarchy
 
-```ruby
-RecordingStudio.configure do |config|
-  config.recordable_types << "RecordingStudioAttachable::Attachment"
-end
-```
+Recording Studio 3.0.0 requires each configured host-app recordable to declare whether it can be a root and, for non-root recordables, which domain parents are allowed.
 
-### 3. Opt a parent recordable into attachable
+Do not add host-specific `allowed_parent_types:` to `RecordingStudioAttachable::Attachment`. The addon declares that recordable as `root: false` and registers it as a child recordable of the `:attachable` capability. Attachment parent allowances are derived from whichever host recordable types include `RecordingStudio::Capabilities::Attachable.to(...)`.
+
+### 3. Opt parent recordables into attachable
 
 ```ruby
 class Workspace < ApplicationRecord
+  recording_studio_recordable label: "Workspace", root: true
+
   include RecordingStudio::Capabilities::Attachable.to(
     allowed_content_types: ["image/*", "application/pdf", "text/plain"],
     max_file_size: 25.megabytes,
     max_file_count: 20,
     enabled_attachment_kinds: %i[image file]
+  )
+end
+
+class Page < ApplicationRecord
+  recording_studio_recordable(
+    label: "Page",
+    root: false,
+    allowed_parent_types: ["Workspace"]
+  )
+
+  include RecordingStudio::Capabilities::Attachable.to(
+    allowed_content_types: ["image/*"],
+    max_file_size: 25.megabytes,
+    enabled_attachment_kinds: %i[image]
   )
 end
 ```

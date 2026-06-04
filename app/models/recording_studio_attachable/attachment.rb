@@ -4,6 +4,14 @@ module RecordingStudioAttachable
   class Attachment < ApplicationRecord
     self.table_name = "recording_studio_attachable_attachments"
 
+    if respond_to?(:recording_studio_recordable)
+      recording_studio_recordable(
+        label: "Attachment",
+        plural_label: "Attachments",
+        root: false
+      )
+    end
+
     attr_writer :validation_options
 
     has_one_attached :file

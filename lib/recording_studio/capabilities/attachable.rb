@@ -3,6 +3,9 @@
 module RecordingStudio
   module Capabilities
     module Attachable
+      ATTACHMENT_RECORDABLE_TYPE = "RecordingStudioAttachable::Attachment"
+      CAPABILITY_SOURCE = "recording_studio_attachable"
+
       def self.to(**options)
         Module.new do
           extend ActiveSupport::Concern
@@ -10,11 +13,21 @@ module RecordingStudio
           included do |base|
             next unless defined?(RecordingStudio)
 
+            RecordingStudio::Capabilities::Attachable.register!
             RecordingStudio.enable_capability(:attachable, on: base.name)
             RecordingStudio.set_capability_options(:attachable, on: base.name, **options)
-            RecordingStudio.register_recordable_type("RecordingStudioAttachable::Attachment")
+            RecordingStudio.register_recordable_type(RecordingStudio::Capabilities::Attachable::ATTACHMENT_RECORDABLE_TYPE)
           end
         end
+      end
+
+      def self.register!
+        RecordingStudio.register_capability(
+          :attachable,
+          recording_methods: RecordingMethods,
+          source: CAPABILITY_SOURCE,
+          child_recordables: [ATTACHMENT_RECORDABLE_TYPE]
+        )
       end
 
       module RecordingMethods

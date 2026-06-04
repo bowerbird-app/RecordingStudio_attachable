@@ -1,4 +1,10 @@
 class Workspace < ApplicationRecord
+  recording_studio_recordable(
+    label: "Workspace",
+    plural_label: "Workspaces",
+    root: true
+  )
+
   include RecordingStudio::Capabilities::Attachable.to(
     allowed_content_types: [ "image/*", "application/pdf", "text/plain" ],
     max_file_size: 25.megabytes,

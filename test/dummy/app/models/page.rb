@@ -1,4 +1,11 @@
 class Page < ApplicationRecord
+  recording_studio_recordable(
+    label: "Page",
+    plural_label: "Pages",
+    root: false,
+    allowed_parent_types: ["Workspace"]
+  )
+
   include RecordingStudio::Capabilities::Attachable.to(
     allowed_content_types: [ "image/*" ],
     max_file_size: 25.megabytes,

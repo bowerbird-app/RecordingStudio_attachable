@@ -8,6 +8,14 @@ module RecordingStudioAttachable
 
     has_one_attached :file
 
+    if respond_to?(:recording_studio_recordable)
+      recording_studio_recordable(
+        label: "Attachment",
+        plural_label: "Attachments",
+        root: false
+      )
+    end
+
     validates :name, :attachment_kind, :original_filename, :content_type, :byte_size, presence: true
     validates :byte_size, numericality: { greater_than_or_equal_to: 0 }
     validate :content_type_must_be_allowed

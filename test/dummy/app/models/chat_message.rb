@@ -1,4 +1,11 @@
 class ChatMessage < ApplicationRecord
+  recording_studio_recordable(
+    label: "Chat message",
+    plural_label: "Chat messages",
+    root: false,
+    allowed_parent_types: ["ChatThread"]
+  )
+
   belongs_to :chat_thread
   has_many :chat_message_attachments, dependent: :destroy
   has_many :attachment_recordings, through: :chat_message_attachments, source: :attachment_recording

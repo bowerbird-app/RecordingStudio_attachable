@@ -21,7 +21,9 @@ module RecordingStudioAttachable
       RecordingStudio.register_recordable_type("RecordingStudioAttachable::Attachment")
       RecordingStudio.register_capability(
         :attachable,
-        RecordingStudio::Capabilities::Attachable::RecordingMethods
+        recording_methods: RecordingStudio::Capabilities::Attachable::RecordingMethods,
+        source: "recording_studio_attachable",
+        child_recordables: ["RecordingStudioAttachable::Attachment"]
       )
     end
 

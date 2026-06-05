@@ -170,6 +170,61 @@ class RecordingMethodsTest < Minitest::Test
     end
   end
 
+  def test_record_attachment_uploads_normalizes_multiple_legacy_signed_blob_ids
+    recording = FakeRecording.new
+    result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: :uploaded)
+    captured_kwargs = nil
+
+    RecordingStudioAttachable::Services::RecordAttachmentUploads.stub(:call, lambda { |**kwargs|
+      captured_kwargs = kwargs
+      result
+    }) do
+      assert_equal :uploaded, recording.record_attachment_uploads(signed_blob_ids: ["blob-1", "blob-2"])
+    end
+
+    assert_equal(
+      {
+        parent_recording: recording,
+        attachments: [
+          { signed_blob_id: "blob-1" },
+          { signed_blob_id: "blob-2" }
+        ]
+      },
+      captured_kwargs
+    )
+  end
+
+  def test_record_attachment_uploads_preserves_new_attachment_payload_shape
+    recording = FakeRecording.new
+    attachments = [{ signed_blob_id: "blob-1", name: "Hero" }]
+    result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: :uploaded)
+    captured_kwargs = nil
+
+    RecordingStudioAttachable::Services::RecordAttachmentUploads.stub(:call, lambda { |**kwargs|
+      captured_kwargs = kwargs
+      result
+    }) do
+      assert_equal :uploaded, recording.record_attachment_uploads(attachments: attachments, signed_blob_ids: ["legacy"])
+    end
+
+    assert_equal({ parent_recording: recording, attachments: attachments }, captured_kwargs)
+  end
+
+  def test_record_attachment_uploads_drops_blank_legacy_signed_blob_ids
+    recording = FakeRecording.new
+    result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: :uploaded)
+    captured_kwargs = nil
+
+    RecordingStudioAttachable::Services::RecordAttachmentUploads.stub(:call, lambda { |**kwargs|
+      captured_kwargs = kwargs
+      result
+    }) do
+      assert_equal :uploaded, recording.record_attachment_uploads(signed_blob_ids: [nil, "", "blob-1"])
+    end
+
+    assert_equal({ parent_recording: recording, attachments: [{ signed_blob_id: "blob-1" }] }, captured_kwargs)
+  end
+
   def test_import_attachment_delegates_to_import_service
     recording = FakeRecording.new
     io = StringIO.new("<svg></svg>")

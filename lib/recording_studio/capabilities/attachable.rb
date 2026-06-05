@@ -107,11 +107,12 @@ module RecordingStudio
         end
 
         def normalize_attachment_uploads_options(options)
-          return options unless options.key?(:signed_blob_ids) && !options.key?(:attachments)
+          return options unless options.key?(:signed_blob_ids)
 
-          options.merge(
-            attachments: Array(options.delete(:signed_blob_ids)).map { |signed_blob_id| { signed_blob_id: signed_blob_id } }
-          )
+          signed_blob_ids = options.delete(:signed_blob_ids)
+          return options if options.key?(:attachments)
+
+          options.merge(attachments: Array(signed_blob_ids).compact_blank.map { |signed_blob_id| { signed_blob_id: signed_blob_id } })
         end
       end
     end

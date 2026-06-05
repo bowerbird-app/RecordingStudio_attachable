@@ -55,9 +55,13 @@ module RecordingStudioAttachable
     private
 
     def attachment_payloads
-      permitted = params.permit(attachments: %i[signed_blob_id name description])
+      permitted = params.permit(
+        attachments: %i[signed_blob_id name description],
+        attachment_upload: { attachments: %i[signed_blob_id name description] }
+      )
+      attachments = permitted[:attachments].presence || permitted.dig(:attachment_upload, :attachments) || []
 
-      Array(permitted.fetch(:attachments, [])).map do |attachment|
+      Array(attachments).map do |attachment|
         attachment.to_h.symbolize_keys
       end
     end

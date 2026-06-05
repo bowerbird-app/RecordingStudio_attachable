@@ -21,10 +21,34 @@ module RecordingStudioAttachable
       @controller.send(
         :params=,
         ActionController::Parameters.new(
+          attachment_upload: {
+            attachments: [
+              {
+                signed_blob_id: "blob-1",
+                name: "bike rack plans",
+                description: "",
+                ignored: "value"
+              }
+            ]
+          }
+        )
+      )
+
+      assert_equal(
+        [{ signed_blob_id: "blob-1", name: "bike rack plans", description: "" }],
+        @controller.send(:attachment_payloads)
+      )
+    end
+
+    def test_attachment_payloads_prefers_top_level_attachments_when_both_shapes_are_present
+      @controller = AttachmentUploadsController.new
+      @controller.send(
+        :params=,
+        ActionController::Parameters.new(
           attachments: [
             {
-              signed_blob_id: "blob-1",
-              name: "bike rack plans",
+              signed_blob_id: "top-level-blob",
+              name: "top level",
               description: ""
             }
           ],
@@ -42,7 +66,7 @@ module RecordingStudioAttachable
       )
 
       assert_equal(
-        [{ signed_blob_id: "blob-1", name: "bike rack plans", description: "" }],
+        [{ signed_blob_id: "top-level-blob", name: "top level", description: "" }],
         @controller.send(:attachment_payloads)
       )
     end

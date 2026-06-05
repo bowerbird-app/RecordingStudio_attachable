@@ -82,6 +82,10 @@ class DummyHomeDemoTest < Minitest::Test
     schema = File.read(File.expand_path("dummy/db/schema.rb", __dir__))
 
     assert_includes page_model, "class Page < ApplicationRecord"
+    assert_includes page_model, "recording_studio_recordable("
+    assert_includes page_model, 'label: "Page"'
+    assert_includes page_model, "root: false"
+    assert_includes page_model, 'allowed_parent_types: ["Workspace"]'
     assert_includes page_model, "RecordingStudio::Capabilities::Attachable"
     assert_includes page_model, 'allowed_content_types: [ "image/*" ]'
     assert_includes page_model, "enabled_attachment_kinds: %i[ image ]"
@@ -89,13 +93,22 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes page_model, "def readonly?"
     assert_includes page_model, "def raise_immutable_error; end"
     assert_includes page_model, "def raise_page_destroy_immutable_error"
+    assert_includes workspace_model, "recording_studio_recordable("
+    assert_includes workspace_model, 'label: "Workspace"'
+    assert_includes workspace_model, "root: true"
     assert_includes workspace_model, 'allowed_content_types: [ "image/*", "application/pdf", "text/plain" ]'
     assert_includes workspace_model, "enabled_attachment_kinds: %i[ image file ]"
     assert_includes chat_thread_model, "class ChatThread < ApplicationRecord"
+    assert_includes chat_thread_model, 'label: "Chat thread"'
+    assert_includes chat_thread_model, "root: false"
+    assert_includes chat_thread_model, 'allowed_parent_types: ["Workspace"]'
     assert_includes chat_thread_model, "has_many :chat_messages, dependent: :destroy"
     assert_includes chat_thread_model, "validates :title, presence: true"
     assert_includes chat_thread_model, "def latest_message"
     assert_includes chat_message_model, "class ChatMessage < ApplicationRecord"
+    assert_includes chat_message_model, 'label: "Chat message"'
+    assert_includes chat_message_model, "root: false"
+    assert_includes chat_message_model, 'allowed_parent_types: ["ChatThread"]'
     assert_includes chat_message_model, "belongs_to :chat_thread"
     assert_includes chat_message_model, "has_many :chat_message_attachments, dependent: :destroy"
     assert_includes chat_message_model, "has_many :attachment_recordings, through: :chat_message_attachments"
@@ -122,6 +135,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes seeds, "ChatMessage.find_or_create_by!(chat_thread: chat_thread, position: attributes[:position])"
     assert_includes seeds, 'message.status = "sent"'
     assert_includes seeds, "message.seeded = true"
+    assert_includes seeds, "RecordingStudio.root_recording_for(workspace)"
     assert_includes seeds, "recordable: page"
     assert_includes seeds, "recordable: chat_thread"
     assert_includes seeds, "recordable: chat_message"

@@ -44,10 +44,14 @@ class RecordAttachmentUploadTest < Minitest::Test
     recordable = Struct.new(:name, :content_type, :byte_size, :attachment_kind).new("photo", "image/png", 1024, "image")
     created_recording = Struct.new(:id, :recordable).new("child-1", recordable)
     event = FakeEvent.new(created_recording)
+    captured_recording_kwargs = nil
 
     ActiveStorage::Blob.stub(:find_signed!, blob) do
       RecordingStudioAttachable::Attachment.stub(:build_from_blob, built_attachment) do
-        RecordingStudio.stub(:record!, event) do
+        RecordingStudio.stub(:record!, lambda { |**kwargs|
+          captured_recording_kwargs = kwargs
+          event
+        }) do
           result = RecordingStudioAttachable::Services::RecordAttachmentUpload.call(
             parent_recording: parent,
             signed_blob_id: "signed-id",
@@ -60,6 +64,13 @@ class RecordAttachmentUploadTest < Minitest::Test
         end
       end
     end
+
+    assert_equal "attachment_uploaded", captured_recording_kwargs[:action]
+    assert_same built_attachment, captured_recording_kwargs[:recordable]
+    assert_same parent, captured_recording_kwargs[:parent_recording]
+    assert_equal parent.root_recording, captured_recording_kwargs[:root_recording]
+    assert_equal "parent-1", captured_recording_kwargs.dig(:metadata, :parent_recording_id)
+    assert_equal "root-1", captured_recording_kwargs.dig(:metadata, :root_recording_id)
   end
 
   def test_uses_per_recordable_upload_constraints_for_server_side_validation

@@ -47,7 +47,7 @@ class DocsController < ApplicationController
   def set_doc_examples
     @setup_prerequisites = [
       "Ruby 3.3+ and Rails 8.1+ in the host app.",
-      "Recording Studio installed in the host app.",
+      "Recording Studio 3.0.0+ installed in the host app.",
       "RecordingStudio Accessible installed for the default authorization adapter.",
       "RecordingStudio Trashable installed if you want restore support for removed attachments."
     ]
@@ -81,21 +81,31 @@ class DocsController < ApplicationController
         BASH
       },
       {
-        title: "Register the attachment recordable",
-        body: "Recording Studio must know about the addon-owned attachment recordable so child attachment recordings can be created and displayed correctly.",
-        code_title: "config/initializers/recording_studio.rb",
+        title: "Declare host-app recordable hierarchy",
+        body: "Recording Studio 3.0.0 requires each configured domain recordable to declare whether it can be a root and which parent types are valid for non-root children.",
+        code_title: "app/models/workspace.rb and app/models/page.rb",
         code: <<~RUBY
-          RecordingStudio.configure do |config|
-            config.recordable_types << "RecordingStudioAttachable::Attachment"
+          class Workspace < ApplicationRecord
+            recording_studio_recordable label: "Workspace", root: true
+          end
+
+          class Page < ApplicationRecord
+            recording_studio_recordable(
+              label: "Page",
+              root: false,
+              allowed_parent_types: ["Workspace"]
+            )
           end
         RUBY
       },
       {
         title: "Opt parent models into the attachable capability",
-        body: "Include the capability on any recordable model that should expose the attachment library and upload flow.",
+        body: "Include the capability on any recordable model that should expose the attachment library and upload flow. The addon declares RecordingStudioAttachable::Attachment as a non-root child recordable and derives its allowed parents from this capability, so host apps should not add host-specific allowed_parent_types to it.",
         code_title: "app/models/workspace.rb",
         code: <<~RUBY
           class Workspace < ApplicationRecord
+            recording_studio_recordable label: "Workspace", root: true
+
             include RecordingStudio::Capabilities::Attachable.to(
               allowed_content_types: ["image/*", "application/pdf", "text/plain"],
               max_file_size: 25.megabytes,

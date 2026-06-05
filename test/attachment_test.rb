@@ -47,6 +47,26 @@ module RecordingStudioAttachable
       assert_nil attachment.preview_target_named(:med)
     end
 
+    def test_declares_attachment_as_non_root_recording_studio_recordable
+      source = File.read(File.expand_path("../app/models/recording_studio_attachable/attachment.rb", __dir__))
+
+      assert_includes source, "recording_studio_recordable("
+      assert_includes source, 'label: "Attachment"'
+      assert_includes source, 'plural_label: "Attachments"'
+      assert_includes source, "root: false"
+      assert_not_includes source, "allowed_parent_types:"
+    end
+
+    def test_attachment_declaration_metadata_when_recording_studio_apis_are_loaded
+      unless defined?(RecordingStudio) && RecordingStudio.respond_to?(:recordable_declaration_defined?)
+        skip "RecordingStudio declaration APIs are unavailable"
+      end
+
+      assert RecordingStudio.recordable_declaration_defined?("RecordingStudioAttachable::Attachment")
+      assert_not RecordingStudio.root_allowed?("RecordingStudioAttachable::Attachment")
+      assert_equal [], RecordingStudio.declared_allowed_parent_types_for("RecordingStudioAttachable::Attachment")
+    end
+
     private
 
     def build_attachment_double(image:)

@@ -114,13 +114,23 @@ class EngineTest < Minitest::Test
     studio = defined?(RecordingStudio) ? RecordingStudio : Object.const_set(:RecordingStudio, Module.new)
 
     studio.define_singleton_method(:register_recordable_type) { |type| recordable_types << type }
-    studio.define_singleton_method(:register_capability) { |name, mod| capabilities << [name, mod] }
+    studio.define_singleton_method(:register_capability) do |name, mod = nil, **kwargs|
+      capabilities << [name, mod, kwargs]
+    end
 
     find_initializer("recording_studio_attachable.register_recording_studio_integration").block.call
 
     assert_equal ["RecordingStudioAttachable::Attachment"], recordable_types
     assert_equal [
-      [:attachable, RecordingStudio::Capabilities::Attachable::RecordingMethods]
+      [
+        :attachable,
+        nil,
+        {
+          recording_methods: RecordingStudio::Capabilities::Attachable::RecordingMethods,
+          source: "recording_studio_attachable",
+          child_recordables: ["RecordingStudioAttachable::Attachment"]
+        }
+      ]
     ], capabilities
   end
 

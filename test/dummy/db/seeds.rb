@@ -43,10 +43,7 @@ chat_messages = [
 end
 
 # Create the root recording
-root_recording = RecordingStudio::Recording.unscoped.find_or_create_by!(
-  recordable: workspace,
-  parent_recording_id: nil
-)
+root_recording = RecordingStudio.root_recording_for(workspace)
 
 RecordingStudio::Recording.unscoped.find_or_create_by!(
   root_recording_id: root_recording.id,

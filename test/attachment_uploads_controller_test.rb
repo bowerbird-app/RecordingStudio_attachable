@@ -288,6 +288,10 @@ module RecordingStudioAttachable
                     suffix = query_params.to_h.to_query
                     suffix.present? ? "/recordings/#{recording.id}/attachments?#{suffix}" : "/recordings/#{recording.id}/attachments"
                   end
+                  @controller.define_singleton_method(:recording_attachment_imports_path) do |_recording, query_params = {}|
+                    suffix = query_params.to_h.to_query
+                    suffix.present? ? "/recordings/#{recording.id}/attachments?#{suffix}" : "/recordings/#{recording.id}/attachments"
+                  end
                   @controller.define_singleton_method(:default_render) do
                     render plain: @create_path
                   end
@@ -307,7 +311,10 @@ module RecordingStudioAttachable
     def test_create_redirects_to_explicit_return_to_when_requested
       @controller = AttachmentUploadsController.new
       recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
-      result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [Object.new])
+      attachment = Struct.new(:name, :description, :content_type, :byte_size, :attachment_kind)
+                         .new("one", "", "image/png", 123, "image")
+      attachment_recording = Struct.new(:id, :recordable).new("att-1", attachment)
+      result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [attachment_recording])
 
       with_routing do |set|
         set.draw do
@@ -324,6 +331,10 @@ module RecordingStudioAttachable
                 suffix = query_params.to_h.to_query
                 suffix.present? ? "/recordings/#{recording.id}/attachments?#{suffix}" : "/recordings/#{recording.id}/attachments"
               end
+              @controller.define_singleton_method(:authorized_attachment_file_path) { |_recording| "/attachments/att-1/file" }
+              @controller.define_singleton_method(:authorized_attachment_preview_path) { |_recording, _variant| nil }
+              @controller.define_singleton_method(:authorized_attachment_inline_variant_urls) { |_recording| {} }
+              @controller.define_singleton_method(:attachment_path) { |_recording| "/attachments/att-1" }
 
               RecordingStudioAttachable::Services::RecordAttachmentUploads.stub(:call, result) do
                 @controller.stub(:protect_against_forgery?, false) do
@@ -347,7 +358,10 @@ module RecordingStudioAttachable
     def test_create_falls_back_to_library_for_unsafe_return_to
       @controller = AttachmentUploadsController.new
       recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
-      result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [Object.new])
+      attachment = Struct.new(:name, :description, :content_type, :byte_size, :attachment_kind)
+                         .new("one", "", "image/png", 123, "image")
+      attachment_recording = Struct.new(:id, :recordable).new("att-1", attachment)
+      result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [attachment_recording])
 
       with_routing do |set|
         set.draw do
@@ -364,6 +378,10 @@ module RecordingStudioAttachable
                 suffix = query_params.to_h.to_query
                 suffix.present? ? "/recordings/#{recording.id}/attachments?#{suffix}" : "/recordings/#{recording.id}/attachments"
               end
+              @controller.define_singleton_method(:authorized_attachment_file_path) { |_recording| "/attachments/att-1/file" }
+              @controller.define_singleton_method(:authorized_attachment_preview_path) { |_recording, _variant| nil }
+              @controller.define_singleton_method(:authorized_attachment_inline_variant_urls) { |_recording| {} }
+              @controller.define_singleton_method(:attachment_path) { |_recording| "/attachments/att-1" }
 
               RecordingStudioAttachable::Services::RecordAttachmentUploads.stub(:call, result) do
                 @controller.stub(:protect_against_forgery?, false) do

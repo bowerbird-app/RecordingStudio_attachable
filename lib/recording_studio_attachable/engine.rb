@@ -26,13 +26,24 @@ module RecordingStudioAttachable
     def self.register_recording_studio_integration
       return unless defined?(RecordingStudio)
 
-      RecordingStudio.register_recordable_type("RecordingStudioAttachable::Attachment")
       RecordingStudio.register_capability(
         :attachable,
         recording_methods: RecordingStudio::Capabilities::Attachable::RecordingMethods,
         source: "recording_studio_attachable",
         child_recordables: ["RecordingStudioAttachable::Attachment"]
       )
+      register_attachment_recordable_type
+    end
+
+    def self.register_attachment_recordable_type
+      return unless attachable_parent_types_registered?
+      return if defined?(RecordingStudio::Recording) && !RecordingStudio::Recording.respond_to?(:delegated_type)
+
+      RecordingStudio.register_recordable_type("RecordingStudioAttachable::Attachment")
+    end
+
+    def self.attachable_parent_types_registered?
+      RecordingStudio.configuration.enabled_recordable_types_for(:attachable).any?
     end
 
     class << self

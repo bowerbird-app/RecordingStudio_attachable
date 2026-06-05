@@ -12,7 +12,7 @@ module RecordingStudio
 
             RecordingStudio.enable_capability(:attachable, on: base.name)
             RecordingStudio.set_capability_options(:attachable, on: base.name, **options)
-            RecordingStudio.register_recordable_type("RecordingStudioAttachable::Attachment")
+            RecordingStudioAttachable::Engine.register_recording_studio_integration
           end
         end
       end

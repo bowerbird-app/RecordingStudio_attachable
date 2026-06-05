@@ -20,6 +20,7 @@ module RecordingStudioAttachable
 end
 
 require "active_support/core_ext/numeric/bytes"
+require "recording_studio"
 
 require "recording_studio_attachable/version"
 require "recording_studio_attachable/configuration"

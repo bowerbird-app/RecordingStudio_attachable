@@ -179,7 +179,7 @@ class RecordingMethodsTest < Minitest::Test
       captured_kwargs = kwargs
       result
     }) do
-      assert_equal :uploaded, recording.record_attachment_uploads(signed_blob_ids: ["blob-1", "blob-2"])
+      assert_equal :uploaded, recording.record_attachment_uploads(signed_blob_ids: %w[blob-1 blob-2])
     end
 
     assert_equal(

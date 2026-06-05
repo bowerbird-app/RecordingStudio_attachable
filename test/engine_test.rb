@@ -119,12 +119,13 @@ class EngineTest < Minitest::Test
     )
     studio = defined?(RecordingStudio) ? RecordingStudio : Object.const_set(:RecordingStudio, Module.new)
 
-    studio.define_singleton_method(:register_recordable_type) { |type| recordable_types << type }
-    studio.define_singleton_method(:register_capability) do |name, mod = nil, **kwargs|
-      capabilities << [name, mod, kwargs]
+    RecordingStudioAttachable::Engine.stub(:attachable_parent_types_registered?, true) do
+      studio.stub(:register_recordable_type, ->(type) { recordable_types << type }) do
+        studio.stub(:register_capability, ->(name, mod = nil, **kwargs) { capabilities << [name, mod, kwargs] }) do
+          find_initializer("recording_studio_attachable.register_recording_studio_integration").block.call(app)
+        end
+      end
     end
-
-    find_initializer("recording_studio_attachable.register_recording_studio_integration").block.call(app)
 
     assert_equal ["RecordingStudioAttachable::Attachment"], recordable_types
     assert_equal [
@@ -152,15 +153,16 @@ class EngineTest < Minitest::Test
     )
     studio = defined?(RecordingStudio) ? RecordingStudio : Object.const_set(:RecordingStudio, Module.new)
 
-    studio.define_singleton_method(:register_recordable_type) { |type| recordable_types << type }
-    studio.define_singleton_method(:register_capability) do |name, mod = nil, **kwargs|
-      capabilities << [name, mod, kwargs]
+    RecordingStudioAttachable::Engine.stub(:attachable_parent_types_registered?, true) do
+      studio.stub(:register_recordable_type, ->(type) { recordable_types << type }) do
+        studio.stub(:register_capability, ->(name, mod = nil, **kwargs) { capabilities << [name, mod, kwargs] }) do
+          find_initializer("recording_studio_attachable.register_recording_studio_integration").block.call(app)
+          recordable_types.clear
+          capabilities.clear
+          app.config.run_after_initialize
+        end
+      end
     end
-
-    find_initializer("recording_studio_attachable.register_recording_studio_integration").block.call(app)
-    recordable_types.clear
-    capabilities.clear
-    app.config.run_after_initialize
 
     assert_equal ["RecordingStudioAttachable::Attachment"], recordable_types
     assert_equal [

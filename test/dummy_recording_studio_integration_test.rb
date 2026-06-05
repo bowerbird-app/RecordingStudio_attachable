@@ -1,9 +1,27 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require_relative "dummy/config/environment"
 
 class DummyRecordingStudioIntegrationTest < ActiveSupport::TestCase
+  def setup
+    restore_recording_studio_api!
+    @original_types = RecordingStudio.configuration.recordable_types
+    @original_capabilities = copy_capabilities
+    @original_registered_capabilities = copy_registered_capabilities
+    @original_declarations = RecordingStudio::RecordableDeclarations.declarations
+
+    ensure_application_record!
+    load_dummy_recordables!
+    RecordingStudioAttachable::Engine.register_recording_studio_integration
+  end
+
+  def teardown
+    RecordingStudio.configuration.recordable_types = @original_types
+    RecordingStudio.configuration.instance_variable_set(:@capabilities, @original_capabilities)
+    RecordingStudio.instance_variable_set(:@registered_capabilities, @original_registered_capabilities)
+    RecordingStudio::RecordableDeclarations.replace_declarations!(@original_declarations)
+  end
+
   def test_dummy_app_recordables_have_recording_studio_3_hierarchy_declarations
     assert RecordingStudio.validate_recordable_declarations!
 
@@ -48,5 +66,58 @@ class DummyRecordingStudioIntegrationTest < ActiveSupport::TestCase
     )
     assert_equal ["image/*"], RecordingStudio.capability_options(:attachable, for: "Page")[:allowed_content_types]
     assert_equal %i[image], RecordingStudio.capability_options(:attachable, for: "Page")[:enabled_attachment_kinds]
+  end
+
+  private
+
+  def ensure_application_record!
+    return if defined?(ApplicationRecord)
+
+    Object.const_set(
+      :ApplicationRecord,
+      Class.new(ActiveRecord::Base) do
+        self.abstract_class = true
+      end
+    )
+  end
+
+  def restore_recording_studio_api!
+    singleton_class = RecordingStudio.singleton_class
+    %i[configuration capability_options record! register_recordable_type register_capability].each do |method_name|
+      singleton_class.send(:remove_method, method_name) if singleton_class.method_defined?(method_name)
+    end
+    load File.join(Gem.loaded_specs.fetch("recording_studio").full_gem_path, "lib/recording_studio.rb")
+  end
+
+  def load_dummy_recordables!
+    RecordingStudio.configuration.recordable_types = %w[Workspace RecordingStudioAttachable::Attachment]
+    load File.expand_path("dummy/app/models/workspace.rb", __dir__)
+    RecordingStudio.configuration.recordable_types = %w[Workspace Page RecordingStudioAttachable::Attachment]
+    load File.expand_path("dummy/app/models/page.rb", __dir__)
+    RecordingStudio.configuration.recordable_types = %w[Workspace Page ChatThread RecordingStudioAttachable::Attachment]
+    load File.expand_path("dummy/app/models/chat_thread.rb", __dir__)
+    RecordingStudio.configuration.recordable_types = recordable_types
+    load File.expand_path("dummy/app/models/chat_message.rb", __dir__)
+  end
+
+  def recordable_types
+    %w[
+      Workspace
+      Page
+      ChatThread
+      ChatMessage
+      RecordingStudioAttachable::Attachment
+    ]
+  end
+
+  def copy_capabilities
+    capabilities = RecordingStudio.configuration.instance_variable_get(:@capabilities) || {}
+    capabilities.transform_values(&:dup)
+  end
+
+  def copy_registered_capabilities
+    RecordingStudio.registered_capabilities.transform_values do |registration|
+      registration.merge(child_recordables: Array(registration[:child_recordables]).dup.freeze)
+    end
   end
 end

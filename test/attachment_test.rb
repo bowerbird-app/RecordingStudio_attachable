@@ -62,12 +62,26 @@ module RecordingStudioAttachable
         skip "RecordingStudio declaration APIs are unavailable"
       end
 
+      restore_recording_studio_api!
+      original_types = RecordingStudio.configuration.recordable_types
+      RecordingStudio.configuration.recordable_types = ["RecordingStudioAttachable::Attachment"]
+
       assert RecordingStudio.recordable_declaration_defined?("RecordingStudioAttachable::Attachment")
       assert_not RecordingStudio.root_allowed?("RecordingStudioAttachable::Attachment")
       assert_equal [], RecordingStudio.declared_allowed_parent_types_for("RecordingStudioAttachable::Attachment")
+    ensure
+      RecordingStudio.configuration.recordable_types = original_types if defined?(original_types)
     end
 
     private
+
+    def restore_recording_studio_api!
+      singleton_class = RecordingStudio.singleton_class
+      %i[configuration capability_options record! register_recordable_type register_capability].each do |method_name|
+        singleton_class.send(:remove_method, method_name) if singleton_class.method_defined?(method_name)
+      end
+      load File.join(Gem.loaded_specs.fetch("recording_studio").full_gem_path, "lib/recording_studio.rb")
+    end
 
     def build_attachment_double(image:)
       Attachment.allocate.tap do |attachment|

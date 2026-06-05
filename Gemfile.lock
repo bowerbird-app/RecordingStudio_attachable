@@ -10,8 +10,8 @@ PATH
   remote: .
   specs:
     recording_studio_attachable (0.1.0)
-      recording_studio (~> 3.0)
       rails (~> 8.1.0)
+      recording_studio (~> 3.0)
 
 GEM
   remote: https://rubygems.org/

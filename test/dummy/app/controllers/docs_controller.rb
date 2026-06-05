@@ -82,7 +82,8 @@ class DocsController < ApplicationController
       },
       {
         title: "Declare host-app recordable hierarchy",
-        body: "Recording Studio 3.0.0 requires each configured domain recordable to declare whether it can be a root and which parent types are valid for non-root children.",
+        body: "Recording Studio 3.0.0 requires each configured domain recordable to declare whether it can be a root " \
+              "and which parent types are valid for non-root children.",
         code_title: "app/models/workspace.rb and app/models/page.rb",
         code: <<~RUBY
           class Workspace < ApplicationRecord
@@ -100,7 +101,9 @@ class DocsController < ApplicationController
       },
       {
         title: "Opt parent models into the attachable capability",
-        body: "Include the capability on any recordable model that should expose the attachment library and upload flow. The addon declares RecordingStudioAttachable::Attachment as a non-root child recordable and derives its allowed parents from this capability, so host apps should not add host-specific allowed_parent_types to it.",
+        body: "Include the capability on any recordable model that should expose the attachment library and upload flow. " \
+              "The addon declares RecordingStudioAttachable::Attachment as a non-root child recordable and derives its " \
+              "allowed parents from this capability, so host apps should not add host-specific allowed_parent_types to it.",
         code_title: "app/models/workspace.rb",
         code: <<~RUBY
           class Workspace < ApplicationRecord

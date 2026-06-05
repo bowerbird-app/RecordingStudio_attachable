@@ -41,12 +41,11 @@
   data-recording-studio-attachable--upload-image-processing-quality-value="<%= @image_processing_quality %>"
       data-recording-studio-attachable--upload-remove-button-template-value="<%= remove_button_template %>"
      data-recording-studio-attachable--upload-allowed-content-types-value="<%= @allowed_content_types.join(',') %>">
-  <%= render FlatPack::Breadcrumb::Component.new(
-    show_back: true,
-    back_text: "Back",
+  <%= render FlatPack::PageNav::Component.new(
     back_icon: "arrow-left",
-    back_href: request.referer.presence || "javascript:history.back()",
-    items: [{ text: "Home", href: main_app.root_path, icon: "home" }]
+    back_label: "Back",
+    anchor_url: attachment_page_nav_anchor_url(fallback: recording_attachments_path(@recording)),
+    anchor_label: "Return to source page"
   ) %>
 
   <%= render FlatPack::PageTitle::Component.new(

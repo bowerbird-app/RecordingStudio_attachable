@@ -178,8 +178,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes controller, "@page_attachment_create_path = recording_studio_attachable.recording_attachment_imports_path("
     assert_includes controller, 'redirect_mode: "return_to"'
     assert_includes controller, "return_to: page_path(@page)"
-    assert_includes show_view, "FlatPack::Breadcrumb::Component.new("
-    assert_includes show_view, 'items: [{ text: "Home", href: root_path, icon: "home" }]'
+    assert_includes show_view, "FlatPack::PageNav::Component.new("
+    assert_includes show_view, "anchor_url: request.referer.presence || root_path"
     assert_includes show_view, "title: @page.title"
     assert_includes show_view, 'subtitle: "Review the inline page content and related page actions."'
     assert_includes show_view, 'class="page-inline-content prose max-w-none text-(--surface-content-color)"'
@@ -195,11 +195,10 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes importmap, 'pin "page_html_preview_addon"'
     assert_includes importmap, 'pin "recording_studio_attachable/tiptap/attachment_image_addon"'
     assert_includes view, "FlatPack::PageTitle::Component.new("
-    assert_includes view, "FlatPack::Breadcrumb::Component.new("
-    assert_includes view, "show_back: true"
-    assert_includes view, 'back_text: "Back"'
+    assert_includes view, "FlatPack::PageNav::Component.new("
+    assert_includes view, 'back_label: "Back"'
     assert_includes view, 'back_icon: "arrow-left"'
-    assert_includes view, 'items: [{ text: "Home", href: root_path, icon: "home" }]'
+    assert_includes view, "anchor_url: request.referer.presence || root_path"
     assert_includes view, 'title: "Edit inline"'
     assert_includes view, 'subtitle: "Update page copy and formatted content for the inline recording demo."'
     assert_includes view, "url: page_path(@page)"
@@ -446,16 +445,16 @@ class DummyHomeDemoTest < Minitest::Test
       File.expand_path("../app/views/recording_studio_attachable/recording_attachments/_list.html.erb", __dir__)
     )
 
-    assert_includes listing_view, "FlatPack::Breadcrumb::Component"
-    assert_includes listing_view, 'items: [{ text: "Home", href: main_app.root_path, icon: "home" }]'
+    assert_includes listing_view, "FlatPack::PageNav::Component"
+    assert_includes listing_view, "anchor_url: attachment_page_nav_anchor_url(fallback: main_app.root_path)"
     assert_includes listing_view, 'title: "Library"'
     assert_includes listing_view, "parent_recordable.respond_to?(:title) && parent_recordable.title.present?"
     assert_includes listing_view, "subtitle: parent_recordable_name"
     assert_includes listing_view, 'text: "Upload"'
     assert_includes listing_view, "view: @view_mode"
     assert_includes listing_view, "FlatPack::Button::Pill::Component.new("
-    assert_includes listing_view, "href: recording_attachments_path(@recording, listing_params.merge(view: :grid))"
-    assert_includes listing_view, "href: recording_attachments_path(@recording, listing_params.merge(view: :list))"
+    assert_includes listing_view, "href: recording_attachments_path(@recording, navigation_params.merge(listing_params.merge(view: :grid)))"
+    assert_includes listing_view, "href: recording_attachments_path(@recording, navigation_params.merge(listing_params.merge(view: :list)))"
     assert_includes listing_view, 'data-controller="recording-studio-attachable--view-mode"'
     assert_includes listing_view, 'turbo_frame: "recording-attachments-results"'
     assert_includes listing_view, "size: :md"
@@ -472,19 +471,19 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes listing_view, '<%= hidden_field_tag :view, @view_mode, data: { recording_studio_attachable__view_mode_target: "viewInput" } %>'
     assert_includes listing_view, 'title: @query.present? ? "Nothing found" : "Nothing uplaoded yet"'
     assert_includes listing_view, '<circle cx="11" cy="11" r="6" />'
-    assert_includes grid_partial, "href: attachment_path(attachment_recording)"
+    assert_includes grid_partial, "href: attachment_path(attachment_recording, navigation_params)"
     assert_includes grid_partial, 'data-controller="recording-studio-attachable--image-fallback"'
     assert_includes grid_partial, 'data-recording-studio-attachable--image-fallback-target="skeleton"'
     assert_includes attachments_page, "view_mode = local_assigns.fetch(:view_mode)"
     assert_includes attachments_page, "list_view = view_mode == :list"
     assert_includes attachments_page, "if list_view"
-    assert_includes listing_view, 'render "attachments_page", attachments: @attachments, listing_params: listing_params, view_mode: @view_mode'
+    assert_includes listing_view, "navigation_params: navigation_params,"
     assert_includes attachments_page, "loading_variant: list_view ? :inline : :cards"
     assert_includes attachments_page, "view: view_mode"
     assert_includes grid_partial, 'FlatPack::Skeleton::Component.new(variant: :rectangle, shimmer: true, width: "100%", height: "100%")'
     assert_includes grid_partial, "preview_path = authorized_attachment_preview_path(attachment_recording, :med)"
     assert_includes grid_partial, "image_tag preview_path"
-    assert_includes grid_partial, "attachment_path(attachment_recording)"
+    assert_includes grid_partial, "attachment_path(attachment_recording, navigation_params)"
     assert_not_includes grid_partial, "authorized_attachment_file_path(attachment_recording)"
     assert_includes list_partial, "FlatPack::Table::Component.new("
     assert_includes list_partial, "data: attachments"
@@ -501,7 +500,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes list_partial, 'number_to_human_size(attachment.byte_size, strip_insignificant_zeros: true).downcase.delete(" ")'
     assert_includes list_partial, "tag.div(\"\#{display_content_type} \#{display_size}\", class: \"text-xs text-(--surface-muted-content-color)\")"
     assert_includes list_partial, 'data: { turbo_frame: "_top" }'
-    assert_operator list_partial.scan("attachment_path(attachment_recording)").length, :>=, 2
+    assert_operator list_partial.scan("attachment_path(attachment_recording, navigation_params)").length, :>=, 2
     assert_includes list_partial, 'FlatPack::Tooltip::Component.new(text: "Download")'
     assert_includes list_partial, 'icon: "arrow-down-tray"'
     assert_includes list_partial, "icon_only: true"

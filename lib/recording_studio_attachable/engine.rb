@@ -16,7 +16,7 @@ module RecordingStudioAttachable
     end
 
     initializer "recording_studio_attachable.register_recording_studio_integration" do |app|
-      register_recording_studio_integration
+      RecordingStudioAttachable::Engine.register_recording_studio_integration
 
       app.config.after_initialize do
         RecordingStudioAttachable::Engine.register_recording_studio_integration
@@ -37,6 +37,7 @@ module RecordingStudioAttachable
 
     def self.register_attachment_recordable_type
       return unless attachable_parent_types_registered?
+      return if Array(RecordingStudio.configuration.recordable_types).map(&:to_s).include?("RecordingStudioAttachable::Attachment")
       return if defined?(RecordingStudio::Recording) && !RecordingStudio::Recording.respond_to?(:delegated_type)
 
       RecordingStudio.register_recordable_type("RecordingStudioAttachable::Attachment")

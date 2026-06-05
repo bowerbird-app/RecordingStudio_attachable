@@ -47,6 +47,6 @@ class DummyUploadProviderDemoTest < Minitest::Test
     assert_includes view, 'text: "Import sample SVG"'
     assert_includes view, "recording_studio_attachable.recording_attachment_upload_path(@recording)"
     assert_includes view, 'text: "Back to upload page"'
-    assert_match(/<div class="mx-auto flex w-full max-w-4xl flex-col gap-6">\s*<%= render FlatPack::Breadcrumb::Component.new\(/m, view)
+    assert_match(/<div class="mx-auto flex w-full max-w-4xl flex-col gap-6">\s*<%= render FlatPack::PageNav::Component.new\(/m, view)
   end
 end

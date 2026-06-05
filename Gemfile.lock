@@ -9,7 +9,7 @@ GIT
 PATH
   remote: .
   specs:
-    recording_studio_attachable (0.1.0)
+    recording_studio_attachable (0.2.0)
       rails (~> 8.1.0)
       recording_studio (~> 3.0)
 
@@ -362,7 +362,7 @@ CHECKSUMS
   rake (13.4.2) sha256=cb825b2bd5f1f8e91ca37bddb4b9aaf345551b4731da62949be002fa89283701
   rdoc (6.16.1) sha256=71357cc208e6da77ba0c4494e01ae870dd18b437c7c7d801dd73ee2f340b9f5c
   recording_studio (3.0.0)
-  recording_studio_attachable (0.1.0)
+  recording_studio_attachable (0.2.0)
   regexp_parser (2.11.3) sha256=ca13f381a173b7a93450e53459075c9b76a10433caadcb2f1180f2c741fc55a4
   reline (0.6.3) sha256=1198b04973565b36ec0f11542ab3f5cfeeec34823f4e54cebde90968092b1835
   rubocop (1.81.7) sha256=6fb5cc298c731691e2a414fe0041a13eb1beed7bab23aec131da1bcc527af094

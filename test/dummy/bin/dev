@@ -5,6 +5,9 @@ if ! gem list foreman -i --silent; then
   gem install foreman
 fi
 
+echo "Preparing database..."
+bin/rails db:prepare
+
 # Default to port 3000 if not specified
 export PORT="${PORT:-3000}"
 

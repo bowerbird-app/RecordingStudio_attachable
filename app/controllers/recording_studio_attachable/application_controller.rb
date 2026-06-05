@@ -15,6 +15,8 @@ module RecordingStudioAttachable
     helper_method :current_attachable_actor
     helper_method :embedded_upload_provider_request?
     helper_method :attachment_redirect_params
+    helper_method :attachment_navigation_params
+    helper_method :attachment_page_nav_anchor_url
     helper_method :authorized_attachment_file_path
     helper_method :authorized_attachment_preview_path
 
@@ -136,6 +138,14 @@ module RecordingStudioAttachable
         redirect_mode: mode,
         return_to: validated_local_redirect_target(return_to)
       }.compact_blank
+    end
+
+    def attachment_navigation_params(fallback_return_to: request.referer)
+      attachment_redirect_params(fallback_return_to: fallback_return_to)
+    end
+
+    def attachment_page_nav_anchor_url(fallback:, fallback_return_to: request.referer)
+      attachment_navigation_params(fallback_return_to: fallback_return_to)[:return_to].presence || fallback
     end
 
     def upload_provider_request_params

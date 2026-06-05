@@ -53,8 +53,8 @@ class RecordingStudioAttachableTest < Minitest::Test
       File.expand_path("../app/javascript/controllers/recording_studio_attachable/upload_controller.js", __dir__)
     )
 
-    assert_includes view_source, "FlatPack::Breadcrumb::Component"
-    assert_includes view_source, 'items: [{ text: "Home", href: main_app.root_path, icon: "home" }]'
+    assert_includes view_source, "FlatPack::PageNav::Component"
+    assert_includes view_source, "anchor_url: attachment_page_nav_anchor_url(fallback: recording_attachments_path(@recording))"
     assert_includes view_source, "FlatPack::PageTitle::Component"
     assert_includes view_source, "FlatPack::Button::Component"
     assert_includes view_source, "rails_direct_uploads_path"
@@ -166,12 +166,12 @@ class RecordingStudioAttachableTest < Minitest::Test
     File.read(theme_variables_path)
 
     assert_includes view_source, 'class="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6"'
-    assert_includes view_source, "FlatPack::Breadcrumb::Component"
-    assert_includes view_source, 'back_text: "Back"'
+    assert_includes view_source, "FlatPack::PageNav::Component"
+    assert_includes view_source, 'back_label: "Back"'
     assert_includes view_source, 'back_icon: "arrow-left"'
-    assert_includes view_source, "back_href: request.referer.presence || main_app.root_path"
-    assert_includes view_source, 'items: [{ text: "Home", href: main_app.root_path, icon: "home" }]'
-    assert_match(/FlatPack::Breadcrumb::Component.*FlatPack::PageTitle::Component/m, view_source)
+    assert_includes view_source, "anchor_url: attachment_page_nav_anchor_url(fallback: main_app.root_path)"
+    assert_includes view_source, 'anchor_label: "Return to source page"'
+    assert_match(/FlatPack::PageNav::Component.*FlatPack::PageTitle::Component/m, view_source)
     assert_includes configuration_source, "DEFAULT_IMAGE_VARIANTS = {"
     assert_includes configuration_source, "square_small: { resize_to_fill: [128, 128] }"
     assert_includes configuration_source, "square_med: { resize_to_fill: [400, 400] }"
@@ -279,13 +279,13 @@ class RecordingStudioAttachableTest < Minitest::Test
       File.expand_path("../app/views/recording_studio_attachable/recording_attachments/_list.html.erb", __dir__)
     )
 
-    assert_includes view_source, "FlatPack::Breadcrumb::Component"
-    assert_includes view_source, 'items: [{ text: "Home", href: main_app.root_path, icon: "home" }]'
+    assert_includes view_source, "FlatPack::PageNav::Component"
+    assert_includes view_source, "anchor_url: attachment_page_nav_anchor_url(fallback: main_app.root_path)"
     assert_includes view_source, 'title: "Library"'
     assert_includes view_source, "view: @view_mode"
     assert_includes view_source, "FlatPack::Button::Pill::Component.new("
-    assert_includes view_source, "href: recording_attachments_path(@recording, listing_params.merge(view: :grid))"
-    assert_includes view_source, "href: recording_attachments_path(@recording, listing_params.merge(view: :list))"
+    assert_includes view_source, "href: recording_attachments_path(@recording, navigation_params.merge(listing_params.merge(view: :grid)))"
+    assert_includes view_source, "href: recording_attachments_path(@recording, navigation_params.merge(listing_params.merge(view: :list)))"
     assert_includes view_source, 'data-controller="recording-studio-attachable--view-mode"'
     assert_includes view_source, 'data-action="popstate@window->recording-studio-attachable--view-mode#syncFromLocation turbo:frame-load@document->recording-studio-attachable--view-mode#syncFromLocation turbo:load@document->recording-studio-attachable--view-mode#syncFromLocation"'
     assert_includes view_source, 'turbo_frame: "recording-attachments-results"'
@@ -300,14 +300,14 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes attachments_page_source, "view_mode = local_assigns.fetch(:view_mode)"
     assert_includes attachments_page_source, "list_view = view_mode == :list"
     assert_includes attachments_page_source, "if list_view"
-    assert_includes view_source, 'render "attachments_page", attachments: @attachments, listing_params: listing_params, view_mode: @view_mode'
+    assert_includes view_source, "navigation_params: navigation_params,"
     assert_includes view_source, 'turbo_frame_tag "recording-attachments-results"'
     assert_includes attachments_page_source, "loading_variant: list_view ? :inline : :cards"
     assert_includes attachments_page_source, "view: view_mode"
     assert_includes grid_partial_source, 'FlatPack::Grid::Component.new(cols: 2, class: "items-stretch gap-6 lg:grid-cols-5", data: { pagination_content: true })'
     assert_includes grid_partial_source, "card.media padding: :none"
     assert_includes grid_partial_source, "clickable: true"
-    assert_includes grid_partial_source, "href: attachment_path(attachment_recording)"
+    assert_includes grid_partial_source, "href: attachment_path(attachment_recording, navigation_params)"
     assert_not_includes grid_partial_source, "card.body do"
     assert_includes grid_partial_source, 'class: "h-full w-full object-cover opacity-0 transition-opacity duration-200"'
     assert_includes grid_partial_source, 'data-recording-studio-attachable--image-fallback-target="skeleton"'
@@ -323,7 +323,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes grid_partial_source, 'class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)"'
     assert_includes grid_partial_source, "preview_path = authorized_attachment_preview_path(attachment_recording, :med)"
     assert_includes grid_partial_source, "image_tag preview_path"
-    assert_includes grid_partial_source, "attachment_path(attachment_recording)"
+    assert_includes grid_partial_source, "attachment_path(attachment_recording, navigation_params)"
     assert_not_includes grid_partial_source, "authorized_attachment_file_path(attachment_recording)"
     assert_not_includes grid_partial_source, '<h2 class="text-base font-semibold"><%= attachment.name %></h2>'
     assert_includes list_partial_source, "FlatPack::Table::Component.new("
@@ -344,7 +344,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes list_partial_source, 'number_to_human_size(attachment.byte_size, strip_insignificant_zeros: true).downcase.delete(" ")'
     assert_includes list_partial_source, "tag.div(\"\#{display_content_type} \#{display_size}\", class: \"text-xs text-(--surface-muted-content-color)\")"
     assert_includes list_partial_source, 'data: { turbo_frame: "_top" }'
-    assert_operator list_partial_source.scan("attachment_path(attachment_recording)").length, :>=, 2
+    assert_operator list_partial_source.scan("attachment_path(attachment_recording, navigation_params)").length, :>=, 2
     assert_includes list_partial_source, "preview_path = authorized_attachment_preview_path(attachment_recording, :square_small)"
     assert_includes list_partial_source, "image_tag(preview_path"
     assert_includes list_partial_source, 'FlatPack::Tooltip::Component.new(text: "Download")'

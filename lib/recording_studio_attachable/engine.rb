@@ -15,8 +15,16 @@ module RecordingStudioAttachable
       RecordingStudioAttachable::Engine.send(:load_x_config, app)
     end
 
-    initializer "recording_studio_attachable.register_recording_studio_integration" do
-      next unless defined?(RecordingStudio)
+    initializer "recording_studio_attachable.register_recording_studio_integration" do |app|
+      register_recording_studio_integration
+
+      app.config.after_initialize do
+        RecordingStudioAttachable::Engine.register_recording_studio_integration
+      end
+    end
+
+    def self.register_recording_studio_integration
+      return unless defined?(RecordingStudio)
 
       RecordingStudio.register_recordable_type("RecordingStudioAttachable::Attachment")
       RecordingStudio.register_capability(

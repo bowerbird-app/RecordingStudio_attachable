@@ -49,7 +49,10 @@ module RecordingStudio
 
         def record_attachment_uploads(**options)
           assert_attachable_capability!
-          RecordingStudioAttachable::Services::RecordAttachmentUploads.call(parent_recording: self, **options).value
+          RecordingStudioAttachable::Services::RecordAttachmentUploads.call(
+            parent_recording: self,
+            **normalize_attachment_uploads_options(options)
+          ).value
         end
 
         def import_attachment(**options)
@@ -101,6 +104,14 @@ module RecordingStudio
 
         def attachable_owner_type
           recordable_type == "RecordingStudioAttachable::Attachment" ? parent_recording&.recordable_type : recordable_type
+        end
+
+        def normalize_attachment_uploads_options(options)
+          return options unless options.key?(:signed_blob_ids) && !options.key?(:attachments)
+
+          options.merge(
+            attachments: Array(options.delete(:signed_blob_ids)).map { |signed_blob_id| { signed_blob_id: signed_blob_id } }
+          )
         end
       end
     end

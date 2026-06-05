@@ -204,137 +204,6 @@ module RecordingStudioAttachable
               end
               @controller.stub(:recording_attachments_path, "/recordings/#{recording.id}/attachments") do
                 result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [])
-                def test_new_preserves_safe_referer_as_return_to_when_redirect_mode_is_referer
-                  @controller = AttachmentUploadsController.new
-                  recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
-
-                  with_routing do |set|
-                    set.draw do
-                      get "/recordings/:recording_id/attachments/upload",
-                          to: "recording_studio_attachable/attachment_uploads#new"
-                    end
-
-                    @routes = set
-
-                    RecordingStudio::Recording.stub(:find, recording) do
-                      @controller.stub(:authorize_attachment_action!, true) do
-                        @controller.stub(:capability_options_for, {}) do
-                          configured_option = lambda { |_recording, option_name|
-                            {
-                              allowed_content_types: ["image/*"],
-                              max_file_size: 25.megabytes,
-                              max_file_count: 20,
-                              image_processing_enabled: true,
-                              image_processing_max_width: 2048,
-                              image_processing_max_height: 2048,
-                              image_processing_quality: 0.8
-                            }.fetch(option_name)
-                          }
-
-                          @controller.stub(:configured_attachable_option, configured_option) do
-                            @controller.stub(:configured_upload_providers, []) do
-                              @controller.define_singleton_method(:recording_attachments_path) do |_recording, query_params = {}|
-                                suffix = query_params.to_h.to_query
-                                suffix.present? ? "/recordings/#{recording.id}/attachments?#{suffix}" : "/recordings/#{recording.id}/attachments"
-                              end
-                              @controller.define_singleton_method(:default_render) do
-                                render plain: @create_path
-                              end
-                              @request.env["HTTP_REFERER"] = "http://test.host/pages/page-1#hero-image"
-                              get :new, params: { recording_id: recording.id, redirect_mode: "referer" }
-                            end
-                          end
-                        end
-                      end
-                    end
-                  end
-
-                  assert_response :success
-                  assert_equal "/recordings/rec-1/attachments?redirect_mode=referer&return_to=%2Fpages%2Fpage-1%23hero-image", @response.body
-                end
-
-                def test_create_redirects_to_explicit_return_to_when_requested
-                  @controller = AttachmentUploadsController.new
-                  recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
-                  result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [Object.new])
-
-                  with_routing do |set|
-                    set.draw do
-                      post "/recordings/:recording_id/attachments",
-                           to: "recording_studio_attachable/attachment_uploads#create"
-                    end
-
-                    @routes = set
-
-                    RecordingStudio::Recording.stub(:find, recording) do
-                      @controller.stub(:authorize_attachment_action!, true) do
-                        @controller.stub(:capability_options_for, {}) do
-                          @controller.define_singleton_method(:recording_attachments_path) do |_recording, query_params = {}|
-                            suffix = query_params.to_h.to_query
-                            suffix.present? ? "/recordings/#{recording.id}/attachments?#{suffix}" : "/recordings/#{recording.id}/attachments"
-                          end
-
-                          RecordingStudioAttachable::Services::RecordAttachmentUploads.stub(:call, result) do
-                            @controller.stub(:protect_against_forgery?, false) do
-                              post :create,
-                                   params: {
-                                     recording_id: recording.id,
-                                     redirect_mode: "return_to",
-                                     return_to: "/pages/page-1#hero-image",
-                                     attachments: [{ signed_blob_id: "blob-1", name: "one", description: "" }]
-                                   }
-                            end
-                          end
-                        end
-                      end
-                    end
-                  end
-
-                  assert_redirected_to "/pages/page-1#hero-image"
-                end
-
-                def test_create_falls_back_to_library_for_unsafe_return_to
-                  @controller = AttachmentUploadsController.new
-                  recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
-                  result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [Object.new])
-
-                  with_routing do |set|
-                    set.draw do
-                      post "/recordings/:recording_id/attachments",
-                           to: "recording_studio_attachable/attachment_uploads#create"
-                    end
-
-                    @routes = set
-
-                    RecordingStudio::Recording.stub(:find, recording) do
-                      @controller.stub(:authorize_attachment_action!, true) do
-                        @controller.stub(:capability_options_for, {}) do
-                          @controller.define_singleton_method(:recording_attachments_path) do |_recording, query_params = {}|
-                            suffix = query_params.to_h.to_query
-                            suffix.present? ? "/recordings/#{recording.id}/attachments?#{suffix}" : "/recordings/#{recording.id}/attachments"
-                          end
-
-                          RecordingStudioAttachable::Services::RecordAttachmentUploads.stub(:call, result) do
-                            @controller.stub(:protect_against_forgery?, false) do
-                              post :create,
-                                   params: {
-                                     recording_id: recording.id,
-                                     redirect_mode: "return_to",
-                                     return_to: "https://evil.example/steal",
-                                     attachments: [{ signed_blob_id: "blob-1", name: "one", description: "" }]
-                                   },
-                                   as: :json
-                            end
-                          end
-                        end
-                      end
-                    end
-                  end
-
-                  assert_response :created
-                  assert_equal "/recordings/rec-1/attachments", JSON.parse(@response.body).fetch("redirect_path")
-                end
-
                 RecordingStudioAttachable::Services::RecordAttachmentUploads.stub(:call, lambda { |**kwargs|
                   captured = kwargs
                   result
@@ -360,6 +229,137 @@ module RecordingStudioAttachable
       current.singleton_class.send(:remove_method, :actor) if current.respond_to?(:actor)
       Object.send(:remove_const, :Current) if defined?(Current)
       Object.const_set(:Current, original_current) if original_current
+    end
+
+    def test_new_preserves_safe_referer_as_return_to_when_redirect_mode_is_referer
+      @controller = AttachmentUploadsController.new
+      recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+
+      with_routing do |set|
+        set.draw do
+          get "/recordings/:recording_id/attachments/upload",
+              to: "recording_studio_attachable/attachment_uploads#new"
+        end
+
+        @routes = set
+
+        RecordingStudio::Recording.stub(:find, recording) do
+          @controller.stub(:authorize_attachment_action!, true) do
+            @controller.stub(:capability_options_for, {}) do
+              configured_option = lambda { |_recording, option_name|
+                {
+                  allowed_content_types: ["image/*"],
+                  max_file_size: 25.megabytes,
+                  max_file_count: 20,
+                  image_processing_enabled: true,
+                  image_processing_max_width: 2048,
+                  image_processing_max_height: 2048,
+                  image_processing_quality: 0.8
+                }.fetch(option_name)
+              }
+
+              @controller.stub(:configured_attachable_option, configured_option) do
+                @controller.stub(:configured_upload_providers, []) do
+                  @controller.define_singleton_method(:recording_attachments_path) do |_recording, query_params = {}|
+                    suffix = query_params.to_h.to_query
+                    suffix.present? ? "/recordings/#{recording.id}/attachments?#{suffix}" : "/recordings/#{recording.id}/attachments"
+                  end
+                  @controller.define_singleton_method(:default_render) do
+                    render plain: @create_path
+                  end
+                  @request.env["HTTP_REFERER"] = "http://test.host/pages/page-1#hero-image"
+                  get :new, params: { recording_id: recording.id, redirect_mode: "referer" }
+                end
+              end
+            end
+          end
+        end
+      end
+
+      assert_response :success
+      assert_equal "/recordings/rec-1/attachments?redirect_mode=referer&return_to=%2Fpages%2Fpage-1%23hero-image", @response.body
+    end
+
+    def test_create_redirects_to_explicit_return_to_when_requested
+      @controller = AttachmentUploadsController.new
+      recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+      result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [Object.new])
+
+      with_routing do |set|
+        set.draw do
+          post "/recordings/:recording_id/attachments",
+               to: "recording_studio_attachable/attachment_uploads#create"
+        end
+
+        @routes = set
+
+        RecordingStudio::Recording.stub(:find, recording) do
+          @controller.stub(:authorize_attachment_action!, true) do
+            @controller.stub(:capability_options_for, {}) do
+              @controller.define_singleton_method(:recording_attachments_path) do |_recording, query_params = {}|
+                suffix = query_params.to_h.to_query
+                suffix.present? ? "/recordings/#{recording.id}/attachments?#{suffix}" : "/recordings/#{recording.id}/attachments"
+              end
+
+              RecordingStudioAttachable::Services::RecordAttachmentUploads.stub(:call, result) do
+                @controller.stub(:protect_against_forgery?, false) do
+                  post :create,
+                       params: {
+                         recording_id: recording.id,
+                         redirect_mode: "return_to",
+                         return_to: "/pages/page-1#hero-image",
+                         attachments: [{ signed_blob_id: "blob-1", name: "one", description: "" }]
+                       }
+                end
+              end
+            end
+          end
+        end
+      end
+
+      assert_redirected_to "/pages/page-1#hero-image"
+    end
+
+    def test_create_falls_back_to_library_for_unsafe_return_to
+      @controller = AttachmentUploadsController.new
+      recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+      result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [Object.new])
+
+      with_routing do |set|
+        set.draw do
+          post "/recordings/:recording_id/attachments",
+               to: "recording_studio_attachable/attachment_uploads#create"
+        end
+
+        @routes = set
+
+        RecordingStudio::Recording.stub(:find, recording) do
+          @controller.stub(:authorize_attachment_action!, true) do
+            @controller.stub(:capability_options_for, {}) do
+              @controller.define_singleton_method(:recording_attachments_path) do |_recording, query_params = {}|
+                suffix = query_params.to_h.to_query
+                suffix.present? ? "/recordings/#{recording.id}/attachments?#{suffix}" : "/recordings/#{recording.id}/attachments"
+              end
+
+              RecordingStudioAttachable::Services::RecordAttachmentUploads.stub(:call, result) do
+                @controller.stub(:protect_against_forgery?, false) do
+                  post :create,
+                       params: {
+                         recording_id: recording.id,
+                         redirect_mode: "return_to",
+                         return_to: "https://evil.example/steal",
+                         attachments: [{ signed_blob_id: "blob-1", name: "one", description: "" }]
+                       },
+                       as: :json
+                end
+              end
+            end
+          end
+        end
+      end
+
+      assert_response :created
+      assert_equal "/recordings/rec-1/attachments", JSON.parse(@response.body).fetch("redirect_path")
     end
 
     private

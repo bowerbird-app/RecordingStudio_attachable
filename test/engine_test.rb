@@ -111,6 +111,12 @@ class EngineTest < Minitest::Test
   def test_register_initializer_registers_attachable_capability
     recordable_types = []
     capabilities = []
+    after_initialize = nil
+    app = Struct.new(:config).new(
+      Object.new.tap do |config|
+        config.define_singleton_method(:after_initialize) { |&block| after_initialize = block }
+      end
+    )
     studio = defined?(RecordingStudio) ? RecordingStudio : Object.const_set(:RecordingStudio, Module.new)
 
     studio.define_singleton_method(:register_recordable_type) { |type| recordable_types << type }
@@ -118,7 +124,7 @@ class EngineTest < Minitest::Test
       capabilities << [name, mod, kwargs]
     end
 
-    find_initializer("recording_studio_attachable.register_recording_studio_integration").block.call
+    find_initializer("recording_studio_attachable.register_recording_studio_integration").block.call(app)
 
     assert_equal ["RecordingStudioAttachable::Attachment"], recordable_types
     assert_equal [
@@ -132,6 +138,27 @@ class EngineTest < Minitest::Test
         }
       ]
     ], capabilities
+    assert_not_nil after_initialize
+  end
+
+  def test_register_initializer_re_registers_attachment_type_after_app_initializers
+    recordable_types = []
+    app = Struct.new(:config).new(
+      Object.new.tap do |config|
+        config.define_singleton_method(:after_initialize) { |&block| @after_initialize = block }
+        config.define_singleton_method(:run_after_initialize) { @after_initialize.call }
+      end
+    )
+    studio = defined?(RecordingStudio) ? RecordingStudio : Object.const_set(:RecordingStudio, Module.new)
+
+    studio.define_singleton_method(:register_recordable_type) { |type| recordable_types << type }
+    studio.define_singleton_method(:register_capability) { |*args, **kwargs| [args, kwargs] }
+
+    find_initializer("recording_studio_attachable.register_recording_studio_integration").block.call(app)
+    recordable_types.clear
+    app.config.run_after_initialize
+
+    assert_equal ["RecordingStudioAttachable::Attachment"], recordable_types
   end
 
   def test_google_drive_initializer_registers_provider_when_picker_is_configured

@@ -145,7 +145,7 @@ class RecordingMethodsTest < Minitest::Test
         :record_attachment_uploads,
         RecordingStudioAttachable::Services::RecordAttachmentUploads,
         { signed_blob_ids: ["blob-1"] },
-        { parent_recording: recording, signed_blob_ids: ["blob-1"] }
+        { parent_recording: recording, attachments: [{ signed_blob_id: "blob-1" }] }
       ],
       [
         :remove_attachments,

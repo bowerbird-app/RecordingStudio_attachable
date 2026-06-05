@@ -1,10 +1,11 @@
+<% navigation_params = local_assigns.fetch(:navigation_params) %>
 <%= render FlatPack::Grid::Component.new(cols: 2, class: "items-stretch gap-6 lg:grid-cols-5", data: { pagination_content: true }) do %>
   <% attachments.each do |attachment_recording| %>
     <% attachment = attachment_recording.recordable %>
     <%= render FlatPack::Card::Component.new(
       style: :default,
       clickable: true,
-      href: attachment_path(attachment_recording),
+      href: attachment_path(attachment_recording, navigation_params),
       class: "rounded-xl focus:outline-none focus:ring-2 focus:ring-(--brand-color)",
       data: { turbo_frame: "_top" }
     ) do |card| %>

@@ -12,7 +12,7 @@ module RecordingStudio
 
             RecordingStudio.enable_capability(:attachable, on: base.name)
             RecordingStudio.set_capability_options(:attachable, on: base.name, **options)
-            RecordingStudio.register_recordable_type("RecordingStudioAttachable::Attachment")
+            RecordingStudioAttachable::Engine.register_recording_studio_integration
           end
         end
       end
@@ -49,7 +49,10 @@ module RecordingStudio
 
         def record_attachment_uploads(**options)
           assert_attachable_capability!
-          RecordingStudioAttachable::Services::RecordAttachmentUploads.call(parent_recording: self, **options).value
+          RecordingStudioAttachable::Services::RecordAttachmentUploads.call(
+            parent_recording: self,
+            **normalize_attachment_uploads_options(options)
+          ).value
         end
 
         def import_attachment(**options)
@@ -101,6 +104,17 @@ module RecordingStudio
 
         def attachable_owner_type
           recordable_type == "RecordingStudioAttachable::Attachment" ? parent_recording&.recordable_type : recordable_type
+        end
+
+        def normalize_attachment_uploads_options(options)
+          return options unless options.key?(:signed_blob_ids)
+
+          signed_blob_ids = options.delete(:signed_blob_ids)
+          return options if options.key?(:attachments)
+
+          options.merge(
+            attachments: Array(signed_blob_ids).compact_blank.map { |signed_blob_id| { signed_blob_id: signed_blob_id } }
+          )
         end
       end
     end

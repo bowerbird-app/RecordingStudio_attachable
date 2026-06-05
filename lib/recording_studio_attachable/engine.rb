@@ -15,14 +15,36 @@ module RecordingStudioAttachable
       RecordingStudioAttachable::Engine.send(:load_x_config, app)
     end
 
-    initializer "recording_studio_attachable.register_recording_studio_integration" do
-      next unless defined?(RecordingStudio)
+    initializer "recording_studio_attachable.register_recording_studio_integration" do |app|
+      RecordingStudioAttachable::Engine.register_recording_studio_integration
 
-      RecordingStudio.register_recordable_type("RecordingStudioAttachable::Attachment")
+      app.config.after_initialize do
+        RecordingStudioAttachable::Engine.register_recording_studio_integration
+      end
+    end
+
+    def self.register_recording_studio_integration
+      return unless defined?(RecordingStudio)
+
       RecordingStudio.register_capability(
         :attachable,
-        RecordingStudio::Capabilities::Attachable::RecordingMethods
+        recording_methods: RecordingStudio::Capabilities::Attachable::RecordingMethods,
+        source: "recording_studio_attachable",
+        child_recordables: ["RecordingStudioAttachable::Attachment"]
       )
+      register_attachment_recordable_type
+    end
+
+    def self.register_attachment_recordable_type
+      return unless attachable_parent_types_registered?
+      return if Array(RecordingStudio.configuration.recordable_types).map(&:to_s).include?("RecordingStudioAttachable::Attachment")
+      return if defined?(RecordingStudio::Recording) && !RecordingStudio::Recording.respond_to?(:delegated_type)
+
+      RecordingStudio.register_recordable_type("RecordingStudioAttachable::Attachment")
+    end
+
+    def self.attachable_parent_types_registered?
+      RecordingStudio.configuration.enabled_recordable_types_for(:attachable).any?
     end
 
     class << self

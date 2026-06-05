@@ -1,10 +1,10 @@
+<% navigation_params = attachment_navigation_params %>
 <div class="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6">
-  <%= render FlatPack::Breadcrumb::Component.new(
-    show_back: true,
-    back_text: "Back",
+  <%= render FlatPack::PageNav::Component.new(
     back_icon: "arrow-left",
-    back_href: request.referer.presence || main_app.root_path,
-    items: [{ text: "Home", href: main_app.root_path, icon: "home" }]
+    back_label: "Back",
+    anchor_url: attachment_page_nav_anchor_url(fallback: main_app.root_path),
+    anchor_label: "Return to source page"
   ) %>
 
   <%= render FlatPack::PageTitle::Component.new(
@@ -80,7 +80,7 @@
     </div>
 
     <div id="edit-attachment" class="space-y-4 lg:col-start-2">
-      <%= form_with model: @attachment, url: attachment_path(@attachment_recording), method: :patch, class: "space-y-4" do |form| %>
+      <%= form_with model: @attachment, url: attachment_path(@attachment_recording, navigation_params), method: :patch, class: "space-y-4" do |form| %>
         <div class="space-y-4">
           <%= render FlatPack::TextInput::Component.new(name: "attachment[name]", label: "Name", value: @attachment.name, required: true) %>
 

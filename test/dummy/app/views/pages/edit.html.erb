@@ -1,10 +1,9 @@
 <div class="mx-auto flex w-full max-w-4xl flex-col gap-6">
-  <%= render FlatPack::Breadcrumb::Component.new(
-    show_back: true,
-    back_text: "Back",
+  <%= render FlatPack::PageNav::Component.new(
     back_icon: "arrow-left",
-    back_href: request.referer.presence || root_path,
-    items: [{ text: "Home", href: root_path, icon: "home" }]
+    back_label: "Back",
+    anchor_url: request.referer.presence || root_path,
+    anchor_label: "Return to source page"
   ) %>
 
   <%= render FlatPack::PageTitle::Component.new(

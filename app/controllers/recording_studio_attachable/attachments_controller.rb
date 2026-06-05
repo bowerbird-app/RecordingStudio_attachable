@@ -39,10 +39,19 @@ module RecordingStudioAttachable
                  )
                end
 
+      redirect_params = attachment_navigation_params
+
       if result.success?
-        redirect_to attachment_path(result.value), notice: I18n.t("recording_studio_attachable.attachments.updated", default: "Saved")
+        success_path = redirect_params.present? ? attachment_path(result.value, redirect_params) : attachment_path(result.value)
+        redirect_to success_path, notice: I18n.t("recording_studio_attachable.attachments.updated", default: "Saved")
       else
-        redirect_to attachment_path(@attachment_recording), alert: result.error
+        failure_path =
+          if redirect_params.present?
+            attachment_path(@attachment_recording, redirect_params)
+          else
+            attachment_path(@attachment_recording)
+          end
+        redirect_to failure_path, alert: result.error
       end
     end
 

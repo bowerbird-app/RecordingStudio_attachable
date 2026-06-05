@@ -6,6 +6,7 @@ source "https://rubygems.org"
 gemspec
 
 gem "puma"
+gem "recording_studio", github: "bowerbird-app/RecordingStudio", tag: "recording_studio/v3.0.0"
 gem "sprockets-rails"
 
 group :development, :test do

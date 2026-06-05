@@ -10,6 +10,11 @@ class ApplicationControllerTest < Minitest::Test
   def setup
     @original_layout = RecordingStudioAttachable.configuration.layout
     @controller = LayoutProbeController.new
+    @request = ActionDispatch::TestRequest.create
+    @response = ActionDispatch::TestResponse.create
+    @request.env["action_dispatch.request.flash_hash"] = ActionDispatch::Flash::FlashHash.new
+    @controller.set_request!(@request)
+    @controller.set_response!(@response)
     stub_recording_lookup!
   end
 
@@ -194,6 +199,19 @@ class ApplicationControllerTest < Minitest::Test
     end
 
     assert_equal "/attachments/att-1/preview/large", @controller.send(:authorized_attachment_preview_path, recording, :large)
+  end
+
+  def test_attachment_page_nav_anchor_url_ignores_referer_without_redirect_params
+    @request.env["HTTP_REFERER"] = "http://test.host/recordings/rec-1/attachments/upload"
+
+    assert_equal "/fallback", @controller.send(:attachment_page_nav_anchor_url, fallback: "/fallback")
+  end
+
+  def test_attachment_page_nav_anchor_url_uses_safe_referer_when_redirect_mode_is_referer
+    @request.env["HTTP_REFERER"] = "http://test.host/pages/page-1#hero-image"
+    @controller.params = ActionController::Parameters.new(redirect_mode: "referer")
+
+    assert_equal "/pages/page-1#hero-image", @controller.send(:attachment_page_nav_anchor_url, fallback: "/fallback")
   end
 
   private

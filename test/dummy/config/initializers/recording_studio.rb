@@ -8,6 +8,7 @@ RecordingStudio.configure do |config|
     "ChatMessage",
     "RecordingStudioAttachable::Attachment"
   ]
+  config.require_recordable_declarations = false
   config.actor = -> { Current.actor }
   config.event_notifications_enabled = true
   config.idempotency_mode = :return_existing

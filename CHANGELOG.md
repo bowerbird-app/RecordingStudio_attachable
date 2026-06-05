@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking
+- Upgraded RecordingStudio support to `3.0.0`, including declaration-based recordable hierarchy requirements and capability-derived attachment parent allowances.
+
 ### Changed
 - Bumped the dummy app FlatPack dependency from `0.1.41` to `0.1.49`
 - Refreshed the root documentation to match the current gem setup, query API, and repository links

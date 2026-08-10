@@ -1,5 +1,9 @@
 1. Mount the engine and review `config/initializers/recording_studio_attachable.rb`.
 2. Ensure Active Storage is installed and direct uploads are wired in your host app.
+   Add `gem "image_processing", "~> 1.2"` and install the native library selected by
+   `config.active_storage.variant_processor`. The Ruby gems do not install native libraries:
+   - vips: `apt-get install libvips-tools`, `brew install vips`, or `apk add vips`
+   - mini_magick: `apt-get install imagemagick`, `brew install imagemagick`, or `apk add imagemagick`
 3. Ensure Recording Studio 3.0.0+ and RecordingStudio Accessible are installed before using the default authorization flow.
 4. Run `rails generate recording_studio_attachable:migrations` and then `rails db:migrate`.
 5. Declare each host-app domain recordable with `recording_studio_recordable(...)`, including `root:` and `allowed_parent_types:` for non-root domain recordables.
@@ -21,3 +25,5 @@
    - run `bundle install` inside `test/dummy`
    - run `bundle exec rake db:migrate RAILS_ENV=test` inside `test/dummy`
    - return to the repo root and run `bundle exec rubocop` and `bundle exec rake test`
+12. Run `bin/rails recording_studio_attachable:doctor` after installation and during deployment validation.
+    Upload success alone does not prove that image variants can be processed.

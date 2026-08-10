@@ -254,7 +254,74 @@ module RecordingStudioAttachable
       assert_equal "inline; filename=\"hero.png\"; filename*=UTF-8''hero.png", @response.headers["Content-Disposition"]
     end
 
+    def test_preview_returns_service_unavailable_when_processor_is_unavailable
+      variant = Object.new
+      variant.define_singleton_method(:processed) { nil.new }
+      file = Struct.new(:variable?).new(true)
+      attachment = Struct.new(:file, :original_filename, :content_type) do
+        define_method(:preview_target_named) { |_variant_name| variant }
+      end.new(file, "hero.png", "image/png")
+      attachment_recording = FakeRecording.new(
+        id: "att-1",
+        recordable_type: "RecordingStudioAttachable::Attachment",
+        recordable: attachment
+      )
+      log_messages = []
+      test_logger = Object.new
+      test_logger.define_singleton_method(:error) { |message| log_messages << message }
+
+      with_preview_request(attachment_recording) do
+        @controller.stub(:logger, test_logger) do
+          ActiveStorage.stub(:variant_transformer, nil) do
+            get :preview, params: { id: attachment_recording.id, variant_name: "large" }
+          end
+        end
+      end
+
+      assert_response :service_unavailable
+      assert_equal "Image preview is temporarily unavailable", @response.body
+      assert_includes log_messages.first, "attachment_recording_id=att-1"
+      assert_includes log_messages.first, "variant=large"
+      assert_includes log_messages.first, "NoMethodError"
+    end
+
+    def test_preview_does_not_rescue_unrelated_processing_errors
+      variant = Object.new
+      variant.define_singleton_method(:processed) { raise "storage unavailable" }
+      file = Struct.new(:variable?).new(true)
+      attachment = Struct.new(:file, :original_filename, :content_type) do
+        define_method(:preview_target_named) { |_variant_name| variant }
+      end.new(file, "hero.png", "image/png")
+      attachment_recording = FakeRecording.new(
+        id: "att-1",
+        recordable_type: "RecordingStudioAttachable::Attachment",
+        recordable: attachment
+      )
+
+      error = assert_raises(RuntimeError) do
+        with_preview_request(attachment_recording) do
+          get :preview, params: { id: attachment_recording.id, variant_name: "large" }
+        end
+      end
+
+      assert_equal "storage unavailable", error.message
+    end
+
     private
+
+    def with_preview_request(attachment_recording)
+      with_routing do |set|
+        set.draw do
+          get "/attachments/:id/preview/:variant_name", to: "recording_studio_attachable/attachments#preview"
+        end
+
+        @routes = set
+
+        RecordingStudio::Recording.stub(:find, attachment_recording) do
+          @controller.stub(:authorize_attachment_owner_action!, true) { yield }
+        end
+      end
+    end
 
     def ensure_recording_lookup!
       studio = defined?(RecordingStudio) ? RecordingStudio : Object.const_set(:RecordingStudio, Module.new)

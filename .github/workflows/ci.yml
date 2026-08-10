@@ -34,6 +34,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install libvips
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libvips-tools
+
       - name: Set up Ruby ${{ matrix.ruby-version }}
         uses: ruby/setup-ruby@v1
         with:
@@ -54,6 +59,19 @@ jobs:
         working-directory: test/dummy
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/recording_studio_attachable_test
+
+      - name: Run RecordingStudioAttachable doctor
+        run: bin/rails recording_studio_attachable:doctor
+        working-directory: test/dummy
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: ******localhost:5432/recording_studio_attachable_test
+
+      - name: Run real attachment preview test
+        run: bin/rails test test/integration/attachment_preview_test.rb
+        working-directory: test/dummy
+        env:
+          DATABASE_URL: ******localhost:5432/recording_studio_attachable_test
 
       - name: Run RuboCop
         run: bundle exec rubocop

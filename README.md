@@ -16,6 +16,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - Ruby 3.3+
 - Rails 8.1+
 - Active Storage installed in the host app
+- `image_processing` plus the native library for the configured Active Storage variant processor
 - Recording Studio 3.0.0 or newer installed in the host app
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
@@ -29,6 +30,59 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 5. Run `rails db:migrate`.
 6. Declare each host-app domain recordable with `recording_studio_recordable(...)`.
 7. Opt parent recordables into `RecordingStudio::Capabilities::Attachable.to(...)`.
+
+### Image processor requirements
+
+Active Storage image variants require both a Ruby integration and a native image-processing library. The
+`image_processing`, `ruby-vips`, and MiniMagick gems do not install libvips or ImageMagick on the host operating
+system. An upload can therefore succeed even when preview and variant routes cannot process the stored image.
+
+For the default `:vips` processor, add `gem "image_processing", "~> 1.2"` to the host Gemfile and install libvips:
+
+```dockerfile
+# Debian/Ubuntu
+RUN apt-get update && \
+    apt-get install -y libvips-tools && \
+    rm -rf /var/lib/apt/lists/*
+```
+
+```sh
+# macOS
+brew install vips
+```
+
+```dockerfile
+# Alpine
+RUN apk add --no-cache vips
+```
+
+Hosts configured with `config.active_storage.variant_processor = :mini_magick` need the same `image_processing`
+gem and native ImageMagick instead:
+
+```sh
+# Debian/Ubuntu
+apt-get install imagemagick
+
+# macOS
+brew install imagemagick
+
+# Alpine
+apk add imagemagick
+```
+
+The install generator performs a real transformation and stops with platform-specific setup instructions when
+the configured processor is unavailable. Use `--skip-image-processor-check` only to defer this validation; image
+previews will remain unavailable until the dependency is installed.
+
+Run the environment doctor after installation and as part of deployment validation:
+
+```sh
+bin/rails recording_studio_attachable:doctor
+```
+
+The doctor validates Active Storage, its configured service and processor, a real image transformation, engine and
+direct-upload routes, and detectable Importmap/JavaScript wiring. It exits nonzero when a required server-side check
+fails.
 
 ## Host app setup
 

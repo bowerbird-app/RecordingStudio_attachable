@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     ca-certificates \
     libpq-dev \
-    libvips42 \
+    libvips-tools \
     postgresql-client \
     libyaml-dev \
     pkg-config \

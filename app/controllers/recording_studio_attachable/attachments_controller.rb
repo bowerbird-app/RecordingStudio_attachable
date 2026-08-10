@@ -76,7 +76,7 @@ module RecordingStudioAttachable
       preview_target = @attachment_recording.recordable.preview_target_named(params[:variant_name])
       raise ActiveRecord::RecordNotFound if preview_target.blank?
 
-      send_preview_data(@attachment_recording.recordable, preview_target)
+      send_preview_with_processor_handling(@attachment_recording.recordable, preview_target)
     end
 
     private
@@ -102,6 +102,26 @@ module RecordingStudioAttachable
              end
 
       send_data data, filename: attachment.original_filename, type: attachment.content_type, disposition: :inline
+    end
+
+    def send_preview_with_processor_handling(attachment, preview_target)
+      send_preview_data(attachment, preview_target)
+    rescue LoadError => error
+      handle_unavailable_image_processor(error)
+    rescue StandardError => error
+      raise unless RecordingStudioAttachable::ImageProcessorDiagnostics.processor_unavailable_error?(error)
+
+      handle_unavailable_image_processor(error)
+    end
+
+    def handle_unavailable_image_processor(error)
+      logger.error(
+        "RecordingStudioAttachable preview processor unavailable " \
+        "attachment_recording_id=#{@attachment_recording.id} variant=#{params[:variant_name]} " \
+        "#{error.class}: #{error.message}\n#{Array(error.backtrace).join("\n")}"
+      )
+
+      render plain: "Image preview is temporarily unavailable", status: :service_unavailable
     end
   end
 end

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rails/generators"
+require "recording_studio_attachable/image_processor_diagnostics"
 
 module RecordingStudioAttachable
   module Generators
@@ -13,6 +14,24 @@ module RecordingStudioAttachable
                    type: :string,
                    default: "/recording_studio_attachable",
                    desc: "Route prefix used when mounting the engine"
+
+      class_option :skip_image_processor_check,
+                   type: :boolean,
+                   default: false,
+                   desc: "Skip validation of the configured Active Storage image processor"
+
+      def verify_image_processor
+        if options[:skip_image_processor_check]
+          say "WARNING: Image processor validation was skipped. Image previews will not work until a processor is installed.",
+              :yellow
+          return
+        end
+
+        result = RecordingStudioAttachable::ImageProcessorDiagnostics.call
+        return if result.success?
+
+        raise Thor::Error, result.installation_help
+      end
 
       def mount_engine
         route %(mount RecordingStudioAttachable::Engine, at: "#{options[:mount_path]}")

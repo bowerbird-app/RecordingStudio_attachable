@@ -114,6 +114,18 @@ class ImageProcessorDiagnosticsTest < Minitest::Test
     assert_includes result.installation_help, "bin/rails generate recording_studio_attachable:install"
   end
 
+  def test_missing_active_storage_returns_structured_failure
+    hidden = Object.send(:remove_const, :ActiveStorage)
+
+    result = RecordingStudioAttachable::ImageProcessorDiagnostics.call
+
+    assert_not result.success?
+    assert_equal :active_storage, result.stage
+    assert_includes result.error, "Active Storage is not loaded"
+  ensure
+    Object.const_set(:ActiveStorage, hidden) if hidden
+  end
+
   private
 
   def call_with(processor:, transformer:, &integration_loader)

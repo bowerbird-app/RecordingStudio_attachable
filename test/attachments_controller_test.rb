@@ -307,9 +307,49 @@ module RecordingStudioAttachable
       assert_equal "storage unavailable", error.message
     end
 
+    def test_preview_does_not_rescue_unrelated_load_errors
+      variant = Object.new
+      variant.define_singleton_method(:processed) { raise LoadError, "cannot load such file -- storage_adapter" }
+      file = Struct.new(:variable?).new(true)
+      attachment = Struct.new(:file, :original_filename, :content_type) do
+        define_method(:preview_target_named) { |_variant_name| variant }
+      end.new(file, "hero.png", "image/png")
+      attachment_recording = FakeRecording.new(
+        id: "att-1",
+        recordable_type: "RecordingStudioAttachable::Attachment",
+        recordable: attachment
+      )
+
+      assert_raises(LoadError) do
+        with_preview_request(attachment_recording) do
+          get :preview, params: { id: attachment_recording.id, variant_name: "large" }
+        end
+      end
+    end
+
+    def test_non_variable_unsafe_image_is_forced_to_download
+      file = FakeFile.new(downloaded_data: "<svg></svg>")
+      file.define_singleton_method(:variable?) { false }
+      attachment = Struct.new(:file, :original_filename, :content_type) do
+        define_method(:preview_target_named) { |_variant_name| self }
+      end.new(file, "image.svg", "image/svg+xml")
+      attachment_recording = FakeRecording.new(
+        id: "att-1",
+        recordable_type: "RecordingStudioAttachable::Attachment",
+        recordable: attachment
+      )
+
+      with_preview_request(attachment_recording) do
+        get :preview, params: { id: attachment_recording.id, variant_name: "large" }
+      end
+
+      assert_response :success
+      assert_equal "attachment; filename=\"image.svg\"; filename*=UTF-8''image.svg", @response.headers["Content-Disposition"]
+    end
+
     private
 
-    def with_preview_request(attachment_recording)
+    def with_preview_request(attachment_recording, &block)
       with_routing do |set|
         set.draw do
           get "/attachments/:id/preview/:variant_name", to: "recording_studio_attachable/attachments#preview"
@@ -318,7 +358,7 @@ module RecordingStudioAttachable
         @routes = set
 
         RecordingStudio::Recording.stub(:find, attachment_recording) do
-          @controller.stub(:authorize_attachment_owner_action!, true) { yield }
+          @controller.stub(:authorize_attachment_owner_action!, true, &block)
         end
       end
     end

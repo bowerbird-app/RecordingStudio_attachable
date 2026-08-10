@@ -19,9 +19,7 @@ namespace :test do
   end
 end
 
-namespace :app do
-  desc "Run all tests for the gem"
-  task test: :test
-end
+desc "Run all tests for the gem"
+task "app:test" => :test
 
 task default: :test

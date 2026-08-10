@@ -58,15 +58,25 @@ module RecordingStudioAttachable
         importmap_path = Rails.root.join("config/importmap.rb")
         return unless File.exist?(importmap_path)
 
-        append_to_file importmap_path, <<~RUBY unless File.read(importmap_path).include?("controllers/recording_studio_attachable")
+        importmap = File.read(importmap_path)
+        append_to_file importmap_path, %(pin "@rails/activestorage", to: "activestorage.esm.js"\n) unless importmap.include?(
+          '"@rails/activestorage"'
+        )
 
-          pin "@rails/activestorage", to: "activestorage.esm.js"
-          pin_all_from RecordingStudioAttachable::Engine.root.join("app/javascript/controllers/recording_studio_attachable"),
-            under: "controllers/recording_studio_attachable",
-            to: "controllers/recording_studio_attachable"
-          pin "recording_studio_attachable/tiptap/attachment_image_addon",
-            to: "recording_studio_attachable/tiptap/attachment_image_addon.js"
-        RUBY
+        unless importmap.include?("controllers/recording_studio_attachable")
+          append_to_file importmap_path, <<~RUBY
+            pin_all_from RecordingStudioAttachable::Engine.root.join("app/javascript/controllers/recording_studio_attachable"),
+              under: "controllers/recording_studio_attachable",
+              to: "controllers/recording_studio_attachable"
+          RUBY
+        end
+
+        unless importmap.include?('"recording_studio_attachable/tiptap/attachment_image_addon"')
+          append_to_file importmap_path, <<~RUBY
+            pin "recording_studio_attachable/tiptap/attachment_image_addon",
+              to: "recording_studio_attachable/tiptap/attachment_image_addon.js"
+          RUBY
+        end
 
         wire_javascript_entrypoints
       end

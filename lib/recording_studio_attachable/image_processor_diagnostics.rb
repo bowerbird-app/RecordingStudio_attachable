@@ -2,6 +2,8 @@
 
 require "base64"
 require "tempfile"
+require "recording_studio_attachable/image_processor_error_classifier"
+require "recording_studio_attachable/image_processor_diagnostics/result"
 
 module RecordingStudioAttachable
   class ImageProcessorDiagnostics
@@ -10,77 +12,36 @@ module RecordingStudioAttachable
       "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFElEQVR4nGP8z8DAwMDAxMDAwMDAAAANHQEDasKb6QAAAABJRU5ErkJggg=="
     ).freeze
 
-    class Result
-      attr_reader :processor, :error, :installation_help, :stage
-
-      def initialize(success:, processor:, error: nil, installation_help: nil, stage: nil)
-        @success = success
-        @processor = processor
-        @error = error
-        @installation_help = installation_help
-        @stage = stage
-      end
-
-      def success?
-        @success
-      end
-    end
-
     class TransformerUnavailable < StandardError; end
 
-    class << self
-      def call
-        new.call
-      end
+    extend ImageProcessorErrorClassifier
 
-      def processor_unavailable_error?(error)
-        return true if error.is_a?(LoadError)
-        return true if nil_transformer_error?(error)
-
-        native_dependency_error?(error)
-      end
-
-      def native_dependency_error?(error)
-        error_message(error).match?(
-          /(?:libvips|vips\.(?:so|dylib)|imagemagick|graphicsmagick|magick command|convert command|executable.*not found)/i
-        )
-      end
-
-      private
-
-      def nil_transformer_error?(error)
-        error.is_a?(NoMethodError) &&
-          error.respond_to?(:name) &&
-          error.name == :new &&
-          defined?(ActiveStorage) &&
-          ActiveStorage.variant_transformer.nil?
-      end
-
-      def error_message(error)
-        [error.class.name, error.message].compact.join(": ")
-      end
+    def self.call
+      new.call
     end
 
     def call
+      return failure(nil, :active_storage, "Active Storage is not loaded") unless defined?(ActiveStorage)
+
       processor = configured_processor
       return failure(processor, :unsupported, "unsupported Active Storage variant processor") unless supported?(processor)
 
-      stage = :integration
-      load_integration!(processor)
-
-      stage = :transformer
-      transformer = build_transformer(processor)
-
-      stage = :transformation
-      transform_image(transformer)
-
-      Result.new(success: true, processor: processor)
-    rescue LoadError, StandardError => error
-      stage = :native_dependency if self.class.native_dependency_error?(error)
-      failure(processor, stage, reason_for(processor, stage, error))
+      run_diagnostic(processor)
     end
 
     private
+
+    def run_diagnostic(processor)
+      stage = :integration
+      load_integration!(processor)
+      stage = :transformer
+      transformer = build_transformer(processor)
+      stage = :transformation
+      transform_image(transformer)
+      Result.new(success: true, processor: processor)
+    rescue LoadError, StandardError => e
+      failure_from_error(processor, stage, e)
+    end
 
     def configured_processor
       ActiveStorage.variant_processor
@@ -103,8 +64,8 @@ module RecordingStudioAttachable
       transformer_class.new(TRANSFORMATIONS)
     rescue TransformerUnavailable
       raise
-    rescue StandardError => error
-      raise TransformerUnavailable, "#{processor} transformer construction failed: #{error.message}"
+    rescue StandardError => e
+      raise TransformerUnavailable, "#{processor} transformer construction failed: #{e.message}"
     end
 
     def transform_image(transformer)
@@ -125,70 +86,37 @@ module RecordingStudioAttachable
         success: false,
         processor: processor,
         error: reason,
-        installation_help: installation_help(processor, reason),
+        installation_help: InstallationHelp.new(processor, reason).call,
         stage: stage
       )
     end
 
+    def failure_from_error(processor, stage, error)
+      stage = :native_dependency if self.class.native_dependency_error?(error)
+      failure(processor, stage, reason_for(processor, stage, error))
+    end
+
     def reason_for(processor, stage, error)
       detail = error.message.to_s.gsub(/\s+/, " ").strip
-
-      case stage
-      when :integration
-        "#{processor} Ruby integration could not be loaded: #{detail}"
-      when :native_dependency
-        "native #{native_processor_name(processor)} could not be loaded: #{detail}"
-      when :transformer
-        "Active Storage could not construct a #{processor} transformer: #{detail}"
-      else
-        "#{processor} image transformation failed: #{detail}"
-      end
+      "#{reason_prefix(processor, stage)}: #{detail}"
     end
 
-    def installation_help(processor, reason)
-      <<~HELP
-        RecordingStudioAttachable could not use the configured Active Storage
-        image processor.
-
-        Configured processor: #{processor || "not configured"}
-        Reason: #{reason}
-
-        #{installation_instructions(processor)}
-
-        Then rerun:
-
-          bin/rails generate recording_studio_attachable:install
-      HELP
-    end
-
-    def installation_instructions(processor)
+    def reason_prefix(processor, stage)
       case processor
-      when :vips
-        <<~HELP.chomp
-          Install the Ruby integration (`gem "image_processing"`) and libvips:
-
-            Debian/Ubuntu: apt-get install libvips-tools
-            macOS:         brew install vips
-            Alpine:        apk add vips
-        HELP
-      when :mini_magick
-        <<~HELP.chomp
-          Install the Ruby integration (`gem "image_processing"`) and ImageMagick:
-
-            Debian/Ubuntu: apt-get install imagemagick
-            macOS:         brew install imagemagick
-            Alpine:        apk add imagemagick
-        HELP
+      when :vips, :mini_magick
+        supported_reason_prefix(processor, stage)
       else
-        <<~HELP.chomp
-          Configure `config.active_storage.variant_processor` as `:vips` or `:mini_magick`,
-          then install its Ruby integration and native image-processing library.
-        HELP
+        "unsupported Active Storage variant processor"
       end
     end
 
-    def native_processor_name(processor)
-      processor == :mini_magick ? "ImageMagick" : "libvips"
+    def supported_reason_prefix(processor, stage)
+      {
+        integration: "#{processor} Ruby integration could not be loaded",
+        native_dependency: "native #{processor == :mini_magick ? 'ImageMagick' : 'libvips'} could not be loaded",
+        transformer: "Active Storage could not construct a #{processor} transformer",
+        transformation: "#{processor} image transformation failed"
+      }.fetch(stage)
     end
   end
 end

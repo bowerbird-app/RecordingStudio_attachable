@@ -33,50 +33,50 @@ class InstallGeneratorTest < Minitest::Test
       generator.mount_engine
     end
 
-    def test_verify_image_processor_succeeds_when_diagnostics_pass
-      generator = build_generator("/tmp")
-      result = RecordingStudioAttachable::ImageProcessorDiagnostics::Result.new(success: true, processor: :vips)
-
-      RecordingStudioAttachable::ImageProcessorDiagnostics.stub(:call, result) do
-        assert_nil generator.verify_image_processor
-      end
-    end
-
-    def test_verify_image_processor_raises_actionable_error_when_diagnostics_fail
-      generator = build_generator("/tmp")
-      help = "Configured processor: vips\napt-get install libvips-tools\nThen rerun"
-      result = RecordingStudioAttachable::ImageProcessorDiagnostics::Result.new(
-        success: false,
-        processor: :vips,
-        error: "native libvips could not be loaded",
-        installation_help: help
-      )
-
-      error = assert_raises(Thor::Error) do
-        RecordingStudioAttachable::ImageProcessorDiagnostics.stub(:call, result) do
-          generator.verify_image_processor
-        end
-      end
-
-      assert_includes error.message, "Configured processor: vips"
-      assert_includes error.message, "apt-get install libvips-tools"
-      assert_includes error.message, "Then rerun"
-    end
-
-    def test_skip_image_processor_check_bypasses_diagnostics_and_warns
-      generator = build_generator("/tmp", skip_image_processor_check: true)
-
-      output, = capture_io do
-        RecordingStudioAttachable::ImageProcessorDiagnostics.stub(:call, -> { flunk "diagnostics should not run" }) do
-          generator.verify_image_processor
-        end
-      end
-
-      assert_includes output, "Image processor validation was skipped"
-      assert_includes output, "Image previews will not work"
-    end
-
     assert_equal ['mount RecordingStudioAttachable::Engine, at: "/studio/files"'], routes
+  end
+
+  def test_verify_image_processor_succeeds_when_diagnostics_pass
+    generator = build_generator("/tmp")
+    result = RecordingStudioAttachable::ImageProcessorDiagnostics::Result.new(success: true, processor: :vips)
+
+    RecordingStudioAttachable::ImageProcessorDiagnostics.stub(:call, result) do
+      assert_nil generator.verify_image_processor
+    end
+  end
+
+  def test_verify_image_processor_raises_actionable_error_when_diagnostics_fail
+    generator = build_generator("/tmp")
+    help = "Configured processor: vips\napt-get install libvips-tools\nThen rerun"
+    result = RecordingStudioAttachable::ImageProcessorDiagnostics::Result.new(
+      success: false,
+      processor: :vips,
+      error: "native libvips could not be loaded",
+      installation_help: help
+    )
+
+    error = assert_raises(Thor::Error) do
+      RecordingStudioAttachable::ImageProcessorDiagnostics.stub(:call, result) do
+        generator.verify_image_processor
+      end
+    end
+
+    assert_includes error.message, "Configured processor: vips"
+    assert_includes error.message, "apt-get install libvips-tools"
+    assert_includes error.message, "Then rerun"
+  end
+
+  def test_skip_image_processor_check_bypasses_diagnostics_and_warns
+    generator = build_generator("/tmp", skip_image_processor_check: true)
+
+    output, = capture_io do
+      RecordingStudioAttachable::ImageProcessorDiagnostics.stub(:call, -> { flunk "diagnostics should not run" }) do
+        generator.verify_image_processor
+      end
+    end
+
+    assert_includes output, "Image processor validation was skipped"
+    assert_includes output, "Image previews will not work"
   end
 
   def test_add_tailwind_source_injects_attachable_sources
@@ -116,6 +116,21 @@ class InstallGeneratorTest < Minitest::Test
       assert_equal 1, importmap.scan("@rails/activestorage").size
       assert_equal 1, application_js.scan("ActiveStorage.start()").size
       assert_equal 1, controllers_index.scan("controllers/recording_studio_attachable").size
+    end
+  end
+
+  def test_add_importmap_entries_completes_partial_wiring_without_duplicates
+    with_temp_app do |dir|
+      importmap_path = File.join(dir, "config/importmap.rb")
+      File.write(importmap_path, %(pin "@rails/activestorage", to: "activestorage.esm.js"\n))
+      generator = build_generator(dir)
+
+      Rails.stub(:root, Pathname.new(dir)) { generator.add_importmap_entries }
+
+      importmap = File.read(importmap_path)
+      assert_equal 1, importmap.scan("@rails/activestorage").size
+      assert_includes importmap, "controllers/recording_studio_attachable"
+      assert_includes importmap, "recording_studio_attachable/tiptap/attachment_image_addon"
     end
   end
 

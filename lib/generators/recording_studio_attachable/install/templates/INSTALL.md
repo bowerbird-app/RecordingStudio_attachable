@@ -1,6 +1,6 @@
 1. Mount the engine and review `config/initializers/recording_studio_attachable.rb`.
 2. Ensure Active Storage is installed and direct uploads are wired in your host app.
-3. Ensure Recording Studio 3.0.0+ and RecordingStudio Accessible are installed before using the default authorization flow.
+3. Ensure Recording Studio 4.1.0+ and RecordingStudio Accessible are installed before using the default authorization flow.
 4. Run `rails generate recording_studio_attachable:migrations` and then `rails db:migrate`.
 5. Declare each host-app domain recordable with `recording_studio_recordable(...)`, including `root:` and `allowed_parent_types:` for non-root domain recordables.
 6. Opt each parent recordable into `RecordingStudio::Capabilities::Attachable.to(...)` and set any per-recordable overrides there.

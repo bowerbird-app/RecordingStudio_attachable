@@ -47,7 +47,7 @@ class DocsController < ApplicationController
   def set_doc_examples
     @setup_prerequisites = [
       "Ruby 3.3+ and Rails 8.1+ in the host app.",
-      "Recording Studio 3.0.0+ installed in the host app.",
+      "Recording Studio 4.1.0+ installed in the host app.",
       "RecordingStudio Accessible installed for the default authorization adapter.",
       "RecordingStudio Trashable installed if you want restore support for removed attachments."
     ]
@@ -82,8 +82,8 @@ class DocsController < ApplicationController
       },
       {
         title: "Declare host-app recordable hierarchy",
-        body: "Recording Studio 3.0.0 requires each configured domain recordable to declare whether it can be a root " \
-              "and which parent types are valid for non-root children.",
+        body: "Recording Studio 4 requires each configured domain recordable to declare whether it can be a root " \
+              "and which parent types are valid for non-root children. Do not enable attachable on a shared root.",
         code_title: "app/models/workspace.rb and app/models/page.rb",
         code: <<~RUBY
           class Workspace < ApplicationRecord

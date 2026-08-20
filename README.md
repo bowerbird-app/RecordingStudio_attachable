@@ -16,7 +16,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - Ruby 3.3+
 - Rails 8.1+
 - Active Storage installed in the host app
-- Recording Studio 3.0.0 or newer installed in the host app
+- Recording Studio 4.1.0 or newer installed in the host app
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
 
@@ -55,7 +55,9 @@ class Page < ApplicationRecord
 end
 ```
 
-Recording Studio 3.0.0 requires every configured host-app recordable to declare whether it can be a root and, for non-root domain recordables, which parent types are allowed.
+Recording Studio 4 requires every configured host-app recordable to declare whether it can be a root and, for non-root domain recordables, which parent types are allowed.
+
+Do not enable `:attachable` on a shared root (`shared: true`). Attachments are capability-owned children, so enable the capability on domain recordables beneath that shared root instead.
 
 `RecordingStudioAttachable::Attachment` is owned by this addon. The addon declares it as `root: false` and registers it as a child recordable of the `:attachable` capability, so host apps should not add host-specific `allowed_parent_types:` to the attachment model.
 
@@ -492,6 +494,7 @@ The dummy app in `test/dummy` mounts both Recording Studio and this engine so yo
 
 - the dummy app is a validation shell, not a production template
 - CI installs the dummy app bundle and runs dummy-app migrations before the root checks
+- the dummy app pins RecordingStudio `v4.1.0` and Recording Studio Accessible `v0.6.0`
 - make sure engine, Active Storage, and Recording Studio tables are migrated in the dummy app before validating upload flows locally
 - set `DUMMY_ACTIVE_STORAGE_SERVICE=amazon` plus `DUMMY_AWS_ACCESS_KEY_ID`, `DUMMY_AWS_SECRET_ACCESS_KEY`, `DUMMY_AWS_REGION`, and `DUMMY_AWS_BUCKET` to exercise S3-backed uploads in the dummy app; `DUMMY_AWS_BUCKET` may be either the plain bucket name or a bucket ARN
 

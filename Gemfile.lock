@@ -1,17 +1,17 @@
 GIT
   remote: https://github.com/bowerbird-app/RecordingStudio.git
-  revision: 7667687155bf05ab41b66dfccae330dc3834c39c
-  tag: recording_studio/v3.0.0
+  revision: 8d00bdc840a06a7ed5b5cc692fce00bb66916fbf
+  tag: v4.1.0
   specs:
-    recording_studio (3.0.0)
+    recording_studio (4.1.0)
       rails (>= 8.1.0)
 
 PATH
   remote: .
   specs:
-    recording_studio_attachable (0.2.0)
+    recording_studio_attachable (0.3.0)
       rails (~> 8.1.0)
-      recording_studio (~> 3.0)
+      recording_studio (~> 4.1)
 
 GEM
   remote: https://rubygems.org/
@@ -130,6 +130,7 @@ GEM
     marcel (1.1.0)
     mini_mime (1.1.5)
     minitest (5.26.2)
+    minitest-mock (5.27.0)
     net-imap (0.6.4)
       date
       net-protocol
@@ -282,6 +283,7 @@ PLATFORMS
 
 DEPENDENCIES
   debug
+  minitest-mock
   puma
   recording_studio!
   recording_studio_attachable!
@@ -329,6 +331,7 @@ CHECKSUMS
   marcel (1.1.0) sha256=fdcfcfa33cc52e93c4308d40e4090a5d4ea279e160a7f6af988260fa970e0bee
   mini_mime (1.1.5) sha256=8681b7e2e4215f2a159f9400b5816d85e9d8c6c6b491e96a12797e798f8bccef
   minitest (5.26.2) sha256=f021118a6185b9ba9f5af71f2ba103ad770c75afde9f2ab8da512677c550cde3
+  minitest-mock (5.27.0) sha256=7040ed7185417a966920987eaa6eaf1be4ea1fc5b25bb03ff4703f98564a55b0
   net-imap (0.6.4) sha256=9a5598c67a3022c284d98430ef1d4948e7dbdb62596f61081ea8ca933270a02b
   net-pop (0.1.2) sha256=848b4e982013c15b2f0382792268763b748cce91c9e91e36b0f27ed26420dff3
   net-protocol (0.2.2) sha256=aa73e0cba6a125369de9837b8d8ef82a61849360eba0521900e2c3713aa162a8
@@ -361,8 +364,8 @@ CHECKSUMS
   rainbow (3.1.1) sha256=039491aa3a89f42efa1d6dec2fc4e62ede96eb6acd95e52f1ad581182b79bc6a
   rake (13.4.2) sha256=cb825b2bd5f1f8e91ca37bddb4b9aaf345551b4731da62949be002fa89283701
   rdoc (6.16.1) sha256=71357cc208e6da77ba0c4494e01ae870dd18b437c7c7d801dd73ee2f340b9f5c
-  recording_studio (3.0.0)
-  recording_studio_attachable (0.2.0)
+  recording_studio (4.1.0)
+  recording_studio_attachable (0.3.0)
   regexp_parser (2.11.3) sha256=ca13f381a173b7a93450e53459075c9b76a10433caadcb2f1180f2c741fc55a4
   reline (0.6.3) sha256=1198b04973565b36ec0f11542ab3f5cfeeec34823f4e54cebde90968092b1835
   rubocop (1.81.7) sha256=6fb5cc298c731691e2a414fe0041a13eb1beed7bab23aec131da1bcc527af094

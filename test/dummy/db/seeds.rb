@@ -43,6 +43,7 @@ chat_messages = [
 end
 
 # Create the root recording
+Current.actor = user
 root_recording = RecordingStudio.root_recording_for(workspace)
 
 RecordingStudio::Recording.unscoped.find_or_create_by!(
@@ -66,13 +67,19 @@ chat_messages.each do |chat_message|
 end
 
 # Grant root-level admin access to the admin user
-Current.actor = user
-access = RecordingStudio::Access.find_or_create_by!(actor: user, role: :admin)
-RecordingStudio::Recording.unscoped.find_or_create_by!(
-  root_recording_id: root_recording.id,
-  parent_recording_id: root_recording.id,
-  recordable: access
-)
+original_access_authorizer = RecordingStudioAccessible.configuration.access_management_authorizer
+RecordingStudioAccessible.configuration.access_management_authorizer = ->(**) { true }
+begin
+  grant_result = RecordingStudioAccessible.grant_access(
+    recording: root_recording,
+    actor: user,
+    role: :admin,
+    manager_actor: user
+  )
+  raise grant_result.error if grant_result.failure?
+ensure
+  RecordingStudioAccessible.configuration.access_management_authorizer = original_access_authorizer
+end
 
 puts "Seeded: #{admin_email} / #{admin_password}"
 puts "Seeded: Workspace '#{workspace.name}' with root recording ##{root_recording.id}"

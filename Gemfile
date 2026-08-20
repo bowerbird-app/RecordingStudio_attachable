@@ -6,11 +6,12 @@ source "https://rubygems.org"
 gemspec
 
 gem "puma"
-gem "recording_studio", github: "bowerbird-app/RecordingStudio", tag: "recording_studio/v3.0.0"
+gem "recording_studio", github: "bowerbird-app/RecordingStudio", tag: "v4.1.0"
 gem "sprockets-rails"
 
 group :development, :test do
   gem "debug"
+  gem "minitest-mock"
   gem "simplecov", require: false
 end
 

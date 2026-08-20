@@ -22,7 +22,7 @@ class DummyRecordingStudioIntegrationTest < ActiveSupport::TestCase
     RecordingStudio::RecordableDeclarations.replace_declarations!(@original_declarations)
   end
 
-  def test_dummy_app_recordables_have_recording_studio_3_hierarchy_declarations
+  def test_dummy_app_recordables_have_recording_studio_hierarchy_declarations
     assert RecordingStudio.validate_recordable_declarations!
 
     assert RecordingStudio.root_allowed?("Workspace")

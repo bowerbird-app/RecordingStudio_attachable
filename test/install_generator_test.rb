@@ -82,7 +82,7 @@ class InstallGeneratorTest < Minitest::Test
     assert_includes initializer_template, 'host app layout like "application"'
   end
 
-  def test_install_docs_describe_recording_studio_3_hierarchy_setup
+  def test_install_docs_describe_recording_studio_4_hierarchy_setup
     install_docs = File.read(
       File.expand_path(
         "../lib/generators/recording_studio_attachable/install/templates/INSTALL.md",
@@ -90,7 +90,7 @@ class InstallGeneratorTest < Minitest::Test
       )
     )
 
-    assert_includes install_docs, "Recording Studio 3.0.0+"
+    assert_includes install_docs, "Recording Studio 4.1.0+"
     assert_includes install_docs, "recording_studio_recordable"
     assert_includes install_docs, "allowed_parent_types"
     assert_includes install_docs, "RecordingStudioAttachable::Attachment"

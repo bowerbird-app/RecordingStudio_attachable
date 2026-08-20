@@ -7,6 +7,15 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_not_nil RecordingStudioAttachable::VERSION
   end
 
+  def test_recording_studio_dependency_is_4_1_or_newer
+    spec = Gem.loaded_specs.fetch("recording_studio")
+    gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
+
+    assert spec.version >= Gem::Version.new("4.1.0"),
+           "expected recording_studio >= 4.1.0, got #{spec.version}"
+    assert_includes gemspec, 'spec.add_dependency "recording_studio", "~> 4.1"'
+  end
+
   def test_engine_exists
     assert_kind_of Class, RecordingStudioAttachable::Engine
   end

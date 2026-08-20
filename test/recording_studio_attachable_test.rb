@@ -12,7 +12,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
 
     assert spec.version >= Gem::Version.new("4.1.0"),
-          "expected recording_studio >= 4.1.0, got #{spec.version}"
+           "expected recording_studio >= 4.1.0, got #{spec.version}"
     assert_includes gemspec, 'spec.add_dependency "recording_studio", "~> 4.1"'
   end
 

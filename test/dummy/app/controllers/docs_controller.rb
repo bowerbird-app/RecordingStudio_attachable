@@ -47,7 +47,7 @@ class DocsController < ApplicationController
   def set_doc_examples
     @setup_prerequisites = [
       "Ruby 3.3+ and Rails 8.1+ in the host app.",
-      "Recording Studio 4.1.0+ installed in the host app.",
+      "Recording Studio 4.2.0+ installed in the host app.",
       "RecordingStudio Accessible installed for the default authorization adapter.",
       "RecordingStudio Trashable installed if you want restore support for removed attachments."
     ]

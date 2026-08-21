@@ -4,17 +4,7 @@ module RecordingStudio
   module Capabilities
     module Attachable
       def self.to(**options)
-        Module.new do
-          extend ActiveSupport::Concern
-
-          included do |base|
-            next unless defined?(RecordingStudio)
-
-            RecordingStudio.enable_capability(:attachable, on: base.name)
-            RecordingStudio.set_capability_options(:attachable, on: base.name, **options)
-            RecordingStudioAttachable::Engine.register_recording_studio_integration
-          end
-        end
+        RecordingStudio::Capabilities.include_for(:attachable, **options)
       end
 
       module RecordingMethods

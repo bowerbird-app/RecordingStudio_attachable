@@ -48,12 +48,18 @@ class DummyHomeDemoTest < Minitest::Test
 
   def test_dummy_sign_in_view_keeps_title_in_card_body_without_header
     sign_in_view = File.read(File.expand_path("dummy/app/views/devise/sessions/new.html.erb", __dir__))
+    application_layout = File.read(File.expand_path("dummy/app/views/layouts/application.html.erb", __dir__))
 
     assert_includes sign_in_view, "FlatPack::PageTitle::Component.new("
     assert_includes sign_in_view, 'title: "Sign In"'
-    assert_includes sign_in_view, 'class: "mb-6"'
     assert_includes sign_in_view, "<% card.body do %>"
+    assert_includes sign_in_view, 'class="space-y-6"'
     assert_not_includes sign_in_view, "<% card.header do %>"
+    assert_not_includes sign_in_view, "fixed inset-0"
+    assert_not_includes sign_in_view, "h-auto"
+    assert_includes application_layout, 'class="flex min-h-screen items-center justify-center p-6"'
+    assert_not_includes application_layout, "mt-28"
+    assert_not_includes application_layout, "container mx-auto"
   end
 
   def test_dummy_home_controller_builds_root_and_page_attachment_paths
@@ -86,7 +92,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes page_model, 'label: "Page"'
     assert_includes page_model, "root: false"
     assert_includes page_model, 'allowed_parent_types: ["Workspace"]'
-    assert_includes page_model, "RecordingStudio::Capabilities::Attachable"
+    assert_includes page_model, "include RecordingStudio::Capabilities::Attachable.to("
     assert_includes page_model, 'allowed_content_types: [ "image/*" ]'
     assert_includes page_model, "enabled_attachment_kinds: %i[ image ]"
     assert_includes page_model, "before_destroy :raise_page_destroy_immutable_error"
@@ -97,12 +103,15 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes workspace_model, 'label: "Workspace"'
     assert_includes workspace_model, "root: true"
     assert_includes workspace_model, 'allowed_content_types: [ "image/*", "application/pdf", "text/plain" ]'
+    assert_includes workspace_model, "include RecordingStudio::Capabilities::Attachable.to("
     assert_includes workspace_model, "enabled_attachment_kinds: %i[ image file ]"
     assert_includes chat_thread_model, "class ChatThread < ApplicationRecord"
     assert_includes chat_thread_model, 'label: "Chat thread"'
     assert_includes chat_thread_model, "root: false"
     assert_includes chat_thread_model, 'allowed_parent_types: ["Workspace"]'
     assert_includes chat_thread_model, "has_many :chat_messages, dependent: :destroy"
+    assert_not_includes chat_thread_model, "RecordingStudio::Capabilities::Attachable"
+    assert_not_includes chat_message_model, "RecordingStudio::Capabilities::Attachable"
     assert_includes chat_thread_model, "validates :title, presence: true"
     assert_includes chat_thread_model, "def latest_message"
     assert_includes chat_message_model, "class ChatMessage < ApplicationRecord"
@@ -179,6 +188,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes controller, 'redirect_mode: "return_to"'
     assert_includes controller, "return_to: page_path(@page)"
     assert_includes show_view, "FlatPack::PageNav::Component.new("
+    assert_includes show_view, 'back_icon: "chevron-left"'
+    assert_includes show_view, 'back_label: "Go back"'
     assert_includes show_view, "anchor_url: request.referer.presence || root_path"
     assert_includes show_view, "title: @page.title"
     assert_includes show_view, 'subtitle: "Review the inline page content and related page actions."'
@@ -196,8 +207,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes importmap, 'pin "recording_studio_attachable/tiptap/attachment_image_addon"'
     assert_includes view, "FlatPack::PageTitle::Component.new("
     assert_includes view, "FlatPack::PageNav::Component.new("
-    assert_includes view, 'back_label: "Back"'
-    assert_includes view, 'back_icon: "arrow-left"'
+    assert_includes view, 'back_label: "Go back"'
+    assert_includes view, 'back_icon: "chevron-left"'
     assert_includes view, "anchor_url: request.referer.presence || root_path"
     assert_includes view, 'title: "Edit inline"'
     assert_includes view, 'subtitle: "Update page copy and formatted content for the inline recording demo."'

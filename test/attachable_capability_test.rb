@@ -3,43 +3,82 @@
 require "test_helper"
 
 class AttachableCapabilityTest < Minitest::Test
-  def test_to_registers_capability_options_and_attachment_recordable_type_when_recording_studio_is_loaded
-    studio = defined?(RecordingStudio) ? RecordingStudio : Object.const_set(:RecordingStudio, Module.new)
-    enabled = []
-    options_calls = []
-    integration_registered = false
-
-    studio.stub(:enable_capability, ->(name, on:) { enabled << [name, on] }) do
-      studio.stub(:set_capability_options, ->(name, on:, **options) { options_calls << [name, on, options] }) do
-        RecordingStudioAttachable::Engine.stub(:register_recording_studio_integration, -> { integration_registered = true }) do
-          klass = Class.new do
-            def self.name
-              "ExampleRecord"
-            end
-
-            include RecordingStudio::Capabilities::Attachable.to(max_file_count: 5)
-          end
-
-          assert_equal "ExampleRecord", klass.name
-        end
-      end
-    end
-
-    assert_equal [[:attachable, "ExampleRecord"]], enabled
-    assert_equal [[:attachable, "ExampleRecord", { max_file_count: 5 }]], options_calls
-    assert integration_registered
+  module Probe
+    HostType = Class.new
+    OtherType = Class.new
   end
 
-  def test_to_skips_registration_when_recording_studio_is_not_loaded
-    concern = RecordingStudio::Capabilities::Attachable
-    original = Object.send(:remove_const, :RecordingStudio) if defined?(RecordingStudio)
+  def setup
+    restore_recording_studio_api!
+  end
 
-    klass = Class.new do
-      include concern.to(max_file_count: 5)
+  def test_to_is_a_thin_wrapper_around_include_for
+    captured_name = nil
+    captured_options = nil
+    returned = Module.new
+
+    RecordingStudio::Capabilities.stub(:include_for, lambda { |name, **options|
+      captured_name = name
+      captured_options = options
+      returned
+    }) do
+      result = RecordingStudio::Capabilities::Attachable.to(
+        max_file_count: 5,
+        allowed_content_types: ["image/*"]
+      )
+
+      assert_same returned, result
     end
 
-    assert klass
-  ensure
-    Object.const_set(:RecordingStudio, original) if original
+    assert_equal :attachable, captured_name
+    assert_equal({ max_file_count: 5, allowed_content_types: ["image/*"] }, captured_options)
+  end
+
+  def test_to_enables_attachable_and_sets_options
+    Probe::HostType.include(
+      RecordingStudio::Capabilities::Attachable.to(
+        max_file_count: 5,
+        allowed_content_types: ["image/*"]
+      )
+    )
+
+    assert RecordingStudio.capability_enabled?(:attachable, for: Probe::HostType)
+    assert_equal(
+      { max_file_count: 5, allowed_content_types: ["image/*"] },
+      RecordingStudio.capability_options(:attachable, for: Probe::HostType)
+    )
+    refute RecordingStudio.capability_enabled?(:attachable, for: Probe::OtherType)
+  end
+
+  def test_installing_the_gem_does_not_enable_attachable
+    RecordingStudioAttachable::Engine.register_recording_studio_integration
+
+    assert RecordingStudio.registered_capabilities.key?(:attachable)
+    refute RecordingStudio.capability_enabled?(:attachable, for: Probe::OtherType)
+    refute RecordingStudio.capability_enabled?(:attachable, for: "UnenabledRecordable")
+  end
+
+  def test_to_does_not_register_the_capability
+    register_called = false
+
+    RecordingStudio.stub(:register_capability, lambda { |*|
+      register_called = true
+    }) do
+      Probe::HostType.include(RecordingStudio::Capabilities::Attachable.to(max_file_count: 5))
+    end
+
+    refute register_called
+    assert RecordingStudio.capability_enabled?(:attachable, for: Probe::HostType)
+  end
+
+  private
+
+  def restore_recording_studio_api!
+    singleton_class = RecordingStudio.singleton_class
+    %i[configuration capability_options record! register_recordable_type register_capability enable_capability].each do |method_name|
+      singleton_class.send(:remove_method, method_name) if singleton_class.method_defined?(method_name)
+    end
+    RecordingStudio.instance_variable_set(:@configuration, nil)
+    load File.join(Gem.loaded_specs.fetch("recording_studio").full_gem_path, "lib/recording_studio.rb")
   end
 end

@@ -4,7 +4,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 
 ## Highlights
 
-- `RecordingStudio::Capabilities::Attachable.to(...)` opt-in API for parent recordables
+- `include RecordingStudio::Capabilities::Attachable.to(...)` opt-in API for parent recordables
 - addon-owned `RecordingStudioAttachable::Attachment` recordable with `has_one_attached :file`
 - child recording identity with append-only recordable revisions
 - FlatPack-based grid/list library, search, bulk remove, upload, and picker UI slice
@@ -16,7 +16,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - Ruby 3.3+
 - Rails 8.1+
 - Active Storage installed in the host app
-- Recording Studio 4.1.0 or newer installed in the host app
+- Recording Studio 4.2.0 or newer installed in the host app
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
 
@@ -28,7 +28,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 4. Run `rails generate recording_studio_attachable:migrations`.
 5. Run `rails db:migrate`.
 6. Declare each host-app domain recordable with `recording_studio_recordable(...)`.
-7. Opt parent recordables into `RecordingStudio::Capabilities::Attachable.to(...)`.
+7. Opt parent recordables into `include RecordingStudio::Capabilities::Attachable.to(...)`. Installing the gem does not enable `:attachable`.
 
 ## Host app setup
 
@@ -62,6 +62,8 @@ Do not enable `:attachable` on a shared root (`shared: true`). Attachments are c
 `RecordingStudioAttachable::Attachment` is owned by this addon. The addon declares it as `root: false` and registers it as a child recordable of the `:attachable` capability, so host apps should not add host-specific `allowed_parent_types:` to the attachment model.
 
 ### 3. Opt parent recordables into attachable
+
+Installing this gem does not enable `:attachable`. Include `.to` on each parent recordable that should accept attachments. Parent rules stay on `recording_studio_recordable`.
 
 ```ruby
 class Workspace < ApplicationRecord
@@ -494,7 +496,7 @@ The dummy app in `test/dummy` mounts both Recording Studio and this engine so yo
 
 - the dummy app is a validation shell, not a production template
 - CI installs the dummy app bundle and runs dummy-app migrations before the root checks
-- the dummy app pins RecordingStudio `v4.1.0` and Recording Studio Accessible `v0.6.0`
+- the dummy app pins RecordingStudio `v4.2.0` and Recording Studio Accessible `v0.6.0`
 - make sure engine, Active Storage, and Recording Studio tables are migrated in the dummy app before validating upload flows locally
 - set `DUMMY_ACTIVE_STORAGE_SERVICE=amazon` plus `DUMMY_AWS_ACCESS_KEY_ID`, `DUMMY_AWS_SECRET_ACCESS_KEY`, `DUMMY_AWS_REGION`, and `DUMMY_AWS_BUCKET` to exercise S3-backed uploads in the dummy app; `DUMMY_AWS_BUCKET` may be either the plain bucket name or a bucket ARN
 

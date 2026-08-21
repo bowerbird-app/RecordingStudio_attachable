@@ -1,10 +1,10 @@
 <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
-  <%= render FlatPack::PageNav::Component.new(
-    back_icon: "arrow-left",
-    back_label: "Back",
-    anchor_url: root_path,
-    anchor_label: "Return to source page"
-  ) %>
+    <%= render FlatPack::PageNav::Component.new(
+      back_icon: "chevron-left",
+      back_label: "Go back",
+      anchor_url: root_path,
+      anchor_label: "Close"
+    ) %>
 
   <%= render FlatPack::PageTitle::Component.new(
     title: "Chat demo",

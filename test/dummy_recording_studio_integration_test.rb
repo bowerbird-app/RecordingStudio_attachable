@@ -66,6 +66,8 @@ class DummyRecordingStudioIntegrationTest < ActiveSupport::TestCase
     )
     assert_equal ["image/*"], RecordingStudio.capability_options(:attachable, for: "Page")[:allowed_content_types]
     assert_equal %i[image], RecordingStudio.capability_options(:attachable, for: "Page")[:enabled_attachment_kinds]
+    refute RecordingStudio.capability_enabled?(:attachable, for: "ChatThread")
+    refute RecordingStudio.capability_enabled?(:attachable, for: "ChatMessage")
   end
 
   private

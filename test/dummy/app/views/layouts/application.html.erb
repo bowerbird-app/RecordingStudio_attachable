@@ -28,10 +28,10 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body>
+  <body class="m-0 min-h-screen bg-(--surface-page-background-color) text-(--surface-content-color)">
     <%= render "layouts/icon_sprite" %>
 
-    <main class="container mx-auto mt-28 px-5 flex">
+    <main class="flex min-h-screen items-center justify-center p-6">
       <%= yield %>
     </main>
   </body>

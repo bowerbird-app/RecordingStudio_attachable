@@ -148,7 +148,7 @@ class DummyDocsTest < Minitest::Test
     assert_includes setup_source, "FlatPack::CodeBlock::Component"
     assert_includes controller_source, "bin/rails active_storage:install"
     assert_includes controller_source, "generate recording_studio_attachable:install"
-    assert_includes controller_source, "Recording Studio 4.1.0+"
+    assert_includes controller_source, "Recording Studio 4.2.0+"
     assert_includes controller_source, "recording_studio_recordable label: \"Workspace\", root: true"
     assert_includes controller_source, 'allowed_parent_types: ["Workspace"]'
     assert_includes controller_source, "capability"

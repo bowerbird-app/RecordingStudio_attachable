@@ -10,27 +10,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.5.0] - 2026-08-28
 
 ### Added
-- Attachment chromes for single-file parents (`max_file_count: 1`) that stay on the parent page
-- `render_attachment_file_button(recording, return_to:)` — Flatpack secondary Add/Change button (no Avatar)
-- `render_attachment_image_slot(recording, return_to:, shape:, size:)` — Flatpack Avatar + the same Add/Change button
-- Chrome identity hidden fields (`attachment_chrome[kind|shape|size|add_label|change_label]`) so Turbo Stream redraws the same helper chrome after upload
-- Turbo Stream refresh replaces the chrome **frame** (not the bare chrome) so a second pick still redraws
+- `render_attachment_file_button(recording, return_to:, target: nil)` — Flatpack secondary Add/Change button with hidden file pick, direct upload, and auto-submit. Does **not** wrap a Turbo frame; optional `target:` sets `data-turbo-frame`
+- `attachment_preview_url(recording, variant: :square_med)` so hosts can set Flatpack Avatar `src` for the parent's first file
+- On file replace/import success with `redirect_mode=return_to`, responds with **303 See Other** to `return_to` (flash "File updated"); failures redirect to `return_to` with alert
 
 ### Changed
-- Requires Flatpack `>= 0.1.135` (Avatar `size: :2xl` supported; pass through any Avatar size the kit accepts)
-- Dummy app pins Flatpack `v0.1.135` and demos both chromes on a generic Page parent (`max_file_count: 1`)
+- Requires Flatpack `>= 0.1.135` (dummy pins `v0.1.135`)
+- Host owns Turbo frames and Avatar composition; Attachable only supplies the file button + preview URL
 
 ### Removed
+- `render_attachment_image_slot`
 - `render_parent_attachment` and aliases
+- Attachable-owned `turbo_frame_tag` wrappers and `turbo_stream.replace` of chrome partials
+- Chrome identity hidden fields (`attachment_chrome[...]`)
 - `GET /recordings/:recording_id/parent_attachment` product endpoint
-- Empty-state title/description leftovers on the parent chrome
 
 ### Upgrade Notes
-- Replace `render_parent_attachment(...)` with either:
-  - `render_attachment_file_button(recording, return_to: parent_show_path)` for a button-only control
-  - `render_attachment_image_slot(recording, return_to: parent_show_path, shape: :circle, size: :xl)` for Avatar + button
-- Do not call the removed parent attachment show route; embed the helpers on the parent page
-- Optional `shape:` / `size:` apply only to the image-slot Avatar; defaults are `:circle` / `:xl`; `:2xl` is valid with Flatpack 0.1.135+
+- Replace any previous parent-slot helpers with host-owned frames, for example:
+
+```erb
+<%= turbo_frame_tag "profile-photo" do %>
+  <%= render FlatPack::Avatar::Component.new(src: attachment_preview_url(@recording), size: :xl, shape: :circle) %>
+  <%= render_attachment_file_button(@recording, return_to: user_path(@user)) %>
+<% end %>
+```
+
+- Optional `target:` on the button sets `data-turbo-frame` when the form is outside the frame or should target `"_top"`
 - Keep `attachments#show` for gallery/library metadata editing only
 
 ## [0.4.0] - 2026-08-21

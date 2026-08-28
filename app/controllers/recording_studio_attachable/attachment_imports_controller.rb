@@ -4,7 +4,7 @@ require_relative "../../services/recording_studio_attachable/services/import_att
 
 module RecordingStudioAttachable
   class AttachmentImportsController < ApplicationController
-    include AttachmentChromeResponses
+    include AttachmentFileButtonResponses
 
     def create
       @recording = find_recording
@@ -110,32 +110,40 @@ module RecordingStudioAttachable
     end
 
     def respond_to_successful_import(result)
-      parent_return_to = AttachmentChrome.return_to_from(attachment_redirect_params)
-      chrome = attachment_chrome_from_params
+      parent_return_to = AttachmentFileButton.return_to_from(attachment_redirect_params)
+      notice =
+        if parent_return_to.present?
+          I18n.t("recording_studio_attachable.attachment_file_buttons.updated", default: "File updated")
+        else
+          "Imported #{result.value.size} attachment(s)."
+        end
 
       respond_to do |format|
-        if parent_return_to.present? && chrome.present?
-          format.turbo_stream do
-            render turbo_stream: render_attachment_chrome_stream(
-              recording: @recording,
-              return_to: parent_return_to,
-              chrome: chrome
-            )
-          end
+        format.html do
+          redirect_to(parent_return_to.presence || resolved_attachment_redirect_path(@recording),
+                      status: :see_other,
+                      notice: notice)
         end
-        format.html { redirect_to resolved_attachment_redirect_path(@recording), notice: "Imported #{result.value.size} attachment(s)." }
         format.json do
           render json: {
             attachments: Array(result.value).map { |recording| attachment_json(recording) },
-            redirect_path: resolved_attachment_redirect_path(@recording)
+            redirect_path: parent_return_to.presence || resolved_attachment_redirect_path(@recording)
           }, status: :created
         end
       end
     end
 
     def respond_to_failed_import(result)
+      parent_return_to = AttachmentFileButton.return_to_from(attachment_redirect_params)
+
       respond_to do |format|
-        format.html { redirect_to recording_attachment_upload_path(@recording, attachment_redirect_params), alert: result.error }
+        format.html do
+          redirect_to(
+            parent_return_to.presence || recording_attachment_upload_path(@recording, attachment_redirect_params),
+            status: :see_other,
+            alert: result.error
+          )
+        end
         format.json { render json: { error: result.error, errors: result.errors }, status: :unprocessable_content }
       end
     end

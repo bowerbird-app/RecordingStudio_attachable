@@ -1,17 +1,30 @@
 <div id="attachment-chromes-demo" class="mx-auto flex w-full max-w-4xl flex-col gap-10">
   <%= render FlatPack::PageTitle::Component.new(
     title: @page.title,
-    subtitle: "Single-file attachable parent with file button and image slot chromes.",
+    subtitle: "Single-file attachable parent. Host owns the Turbo frames; Attachable supplies the file button and preview URL.",
     variant: :h1
   ) %>
 
   <section class="flex flex-col gap-3">
-    <h2 class="text-base font-medium text-(--surface-content-color)">File button</h2>
-    <%= render_attachment_file_button(@page_recording, return_to: @return_to) %>
+    <h2 class="text-base font-medium text-(--surface-content-color)">Avatar + file button</h2>
+    <%= turbo_frame_tag "page-avatar-attachment" do %>
+      <div class="inline-flex items-end gap-3">
+        <%= render FlatPack::Avatar::Component.new(
+          src: attachment_preview_url(@page_recording),
+          alt: attachment_preview_url(@page_recording).present? ? @page.title : nil,
+          size: :"2xl",
+          shape: :circle,
+          show_tooltip: false
+        ) %>
+        <%= render_attachment_file_button(@page_recording, return_to: @return_to) %>
+      </div>
+    <% end %>
   </section>
 
   <section class="flex flex-col gap-3">
-    <h2 class="text-base font-medium text-(--surface-content-color)">Image slot</h2>
-    <%= render_attachment_image_slot(@page_recording, return_to: @return_to, size: :"2xl") %>
+    <h2 class="text-base font-medium text-(--surface-content-color)">File button only</h2>
+    <%= turbo_frame_tag "page-file-button" do %>
+      <%= render_attachment_file_button(@page_recording, return_to: @return_to) %>
+    <% end %>
   </section>
 </div>

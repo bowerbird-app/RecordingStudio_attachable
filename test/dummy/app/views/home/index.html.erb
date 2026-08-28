@@ -76,13 +76,13 @@
       <% card.body do %>
         <div class="space-y-4">
           <%= render FlatPack::SectionTitle::Component.new(
-            title: "Attachment chromes",
-            subtitle: "Single-file parent with file button and image slot helpers.",
+            title: "Attachment file button",
+            subtitle: "Single-file parent. Host owns Turbo frames; Attachable supplies the file button.",
             anchor_link: true
           ) %>
 
           <div class="flex flex-wrap gap-3">
-            <%= render FlatPack::Button::Component.new(text: "Open chromes", style: :primary, size: :md, url: @attachment_chromes_path) %>
+            <%= render FlatPack::Button::Component.new(text: "Open demo", style: :primary, size: :md, url: @attachment_chromes_path) %>
           </div>
         </div>
       <% end %>

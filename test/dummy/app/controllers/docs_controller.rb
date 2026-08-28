@@ -477,10 +477,10 @@ class DocsController < ApplicationController
         icon: :plus
       },
       {
-        title: "Attachment chromes",
-        path: "recording_studio_attachable/attachment_chromes/_chrome.html.erb",
-        description: "Embed file-button or image-slot chromes with Flatpack Add/Change controls for single-file parents.",
-        example: "Use render_attachment_file_button(recording, return_to:) or render_attachment_image_slot(recording, return_to:, shape:, size:) on parents with max_file_count: 1.",
+        title: "Attachment file button",
+        path: "recording_studio_attachable/attachment_file_buttons/_button.html.erb",
+        description: "Embed a Flatpack Add/Change file button for single-file parents. Host owns Turbo frames and Avatar.",
+        example: "Use render_attachment_file_button(recording, return_to:) and attachment_preview_url(recording) on parents with max_file_count: 1.",
         icon: :user
       },
       {

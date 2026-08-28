@@ -485,16 +485,28 @@ The engine ships with:
 - name search, pagination, and bulk remove from the attachment listing page
 - an upload page with direct uploads, previews, progress, and server-side batch validation
 - an attachment detail page for gallery/library metadata editing and download/trash actions
-- attachment chromes for single-file parents (`max_file_count: 1`) with file-only Add/Change controls that stay on the parent page
+- an attachment file button for single-file parents (`max_file_count: 1`) that stays on the parent page via `return_to`
 
-For logos, covers, and similar single-file parents, embed a chrome on the parent show screen:
+Host owns Turbo frames and Avatar. Attachable supplies the file button and a preview URL helper:
 
 ```erb
-<%= render_attachment_file_button(@recording, return_to: page_path(@page)) %>
-<%= render_attachment_image_slot(@recording, return_to: page_path(@page), shape: :circle, size: :xl) %>
-<%# Flatpack 0.1.135+ also accepts size: :2xl %>
-<%= render_attachment_image_slot(@recording, return_to: page_path(@page), size: :2xl) %>
+<%= turbo_frame_tag "page-avatar-attachment" do %>
+  <div class="inline-flex items-end gap-3">
+    <%= render FlatPack::Avatar::Component.new(
+      src: attachment_preview_url(@recording),
+      size: :"2xl",
+      shape: :circle
+    ) %>
+    <%= render_attachment_file_button(@recording, return_to: page_path(@page)) %>
+  </div>
+<% end %>
+
+<%= turbo_frame_tag "page-file-button" do %>
+  <%= render_attachment_file_button(@recording, return_to: page_path(@page)) %>
+<% end %>
 ```
+
+Optional `target:` sets `data-turbo-frame` on the form (host frame id, or `"_top"`). Default inherits the enclosing frame.
 
 Replace never navigates to the attachment details screen. Keep `attachments#show` for gallery/library cases where the attachment itself is the record.
 

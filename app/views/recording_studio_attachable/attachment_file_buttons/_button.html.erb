@@ -1,0 +1,54 @@
+<% pick_button_text = attachment_recording.present? ? change_label : add_label %>
+<% form_url = attachment_recording.present? ? attachable_attachment_path(attachment_recording, **redirect_params) : attachable_attachment_imports_path(recording, **redirect_params) %>
+<% form_method = attachment_recording.present? ? :patch : :post %>
+<% accept_attribute = attachment_file_button_accept_attribute(allowed_content_types) %>
+<% form_controller_values = {
+  direct_upload_url: main_app.rails_direct_uploads_path,
+  max_file_size: max_file_size,
+  image_processing_enabled: image_processing_enabled,
+  image_processing_max_width: image_processing_max_width,
+  image_processing_max_height: image_processing_max_height,
+  image_processing_quality: image_processing_quality,
+  auto_submit: true
+} %>
+<% revision_upload_data = {
+  controller: "recording-studio-attachable--attachment-revision-upload",
+  action: "submit->recording-studio-attachable--attachment-revision-upload#handleSubmit",
+  recording_studio_attachable__attachment_revision_upload_direct_upload_url_value: form_controller_values[:direct_upload_url],
+  recording_studio_attachable__attachment_revision_upload_max_file_size_value: form_controller_values[:max_file_size],
+  recording_studio_attachable__attachment_revision_upload_image_processing_enabled_value: form_controller_values[:image_processing_enabled],
+  recording_studio_attachable__attachment_revision_upload_image_processing_max_width_value: form_controller_values[:image_processing_max_width],
+  recording_studio_attachable__attachment_revision_upload_image_processing_max_height_value: form_controller_values[:image_processing_max_height],
+  recording_studio_attachable__attachment_revision_upload_image_processing_quality_value: form_controller_values[:image_processing_quality],
+  recording_studio_attachable__attachment_revision_upload_auto_submit_value: form_controller_values[:auto_submit]
+} %>
+<% form_data = revision_upload_data.merge(
+  attachment_recording.blank? ? {
+    recording_studio_attachable__attachment_revision_upload_signed_blob_field_name_value: "attachment_import[attachments][][signed_blob_id]"
+  } : {}
+) %>
+<% form_data = form_data.merge(turbo_frame: turbo_frame_target) if turbo_frame_target.present? %>
+
+<%= form_with url: form_url,
+              method: form_method,
+              class: "inline-flex",
+              data: form_data do %>
+  <% if attachment_recording.present? %>
+    <%= hidden_field_tag "attachment[signed_blob_id]", "", data: { recording_studio_attachable__attachment_revision_upload_target: "signedBlobInput" } %>
+  <% else %>
+    <%= hidden_field_tag "attachment_import[attachments][][signed_blob_id]", "", data: { recording_studio_attachable__attachment_revision_upload_target: "signedBlobInput" } %>
+  <% end %>
+  <input type="file"
+         class="hidden"
+         accept="<%= accept_attribute %>"
+         data-recording-studio-attachable--attachment-revision-upload-target="fileInput"
+         data-action="change->recording-studio-attachable--attachment-revision-upload#fileSelected">
+  <%= render FlatPack::Button::Component.new(
+    text: pick_button_text,
+    style: :secondary,
+    size: :md,
+    type: "button",
+    data: { action: "recording-studio-attachable--attachment-revision-upload#browse" }
+  ) %>
+  <p class="hidden text-sm text-(--surface-muted-content-color)" data-recording-studio-attachable--attachment-revision-upload-target="status"></p>
+<% end %>

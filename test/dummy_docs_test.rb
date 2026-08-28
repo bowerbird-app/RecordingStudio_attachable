@@ -179,9 +179,9 @@ class DummyDocsTest < Minitest::Test
     assert_includes controller_source,
                     "Use it when a host-app screen needs the bundled image picker inside a modal instead of sending editors to the full library page."
     assert_includes controller_source,
-                    "Embed file-button or image-slot chromes with Flatpack Add/Change controls for single-file parents."
+                    "Embed a Flatpack Add/Change file button for single-file parents. Host owns Turbo frames and Avatar."
     assert_includes controller_source,
-                    "Use render_attachment_file_button(recording, return_to:) or render_attachment_image_slot(recording, return_to:, shape:, size:) on parents with max_file_count: 1."
+                    "Use render_attachment_file_button(recording, return_to:) and attachment_preview_url(recording) on parents with max_file_count: 1."
     assert_includes controller_source,
                     "Show a single attachment with preview context, download/trash actions, and metadata editing for gallery/library cases."
     assert_includes controller_source,

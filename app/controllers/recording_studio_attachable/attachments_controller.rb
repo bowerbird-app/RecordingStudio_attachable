@@ -2,7 +2,7 @@
 
 module RecordingStudioAttachable
   class AttachmentsController < ApplicationController
-    include AttachmentChromeResponses
+    include AttachmentFileButtonResponses
 
     def show
       @attachment_recording = find_attachment_recording
@@ -43,29 +43,16 @@ module RecordingStudioAttachable
 
       redirect_params = attachment_navigation_params
       file_replacement = attachment_params[:signed_blob_id].present?
-      parent_return_to = AttachmentChrome.return_to_from(redirect_params)
-      chrome = attachment_chrome_from_params
+      parent_return_to = AttachmentFileButton.return_to_from(redirect_params)
 
-      respond_to do |format|
-        if result.success?
-          notice = success_notice_for(file_replacement, parent_return_to)
-
-          if file_replacement && parent_return_to.present? && chrome.present?
-            format.turbo_stream do
-              render turbo_stream: render_attachment_chrome_stream(
-                recording: attachable_owner_recording(result.value),
-                return_to: parent_return_to,
-                chrome: chrome
-              )
-            end
-          end
-
-          format.html { redirect_to success_path_for(result.value, file_replacement, parent_return_to, redirect_params), notice: notice }
-        else
-          format.html do
-            redirect_to failure_path_for(@attachment_recording, file_replacement, parent_return_to, redirect_params), alert: result.error
-          end
-        end
+      if result.success?
+        redirect_to success_path_for(result.value, file_replacement, parent_return_to, redirect_params),
+                    status: :see_other,
+                    notice: success_notice_for(file_replacement, parent_return_to)
+      else
+        redirect_to failure_path_for(@attachment_recording, file_replacement, parent_return_to, redirect_params),
+                    status: :see_other,
+                    alert: result.error
       end
     end
 

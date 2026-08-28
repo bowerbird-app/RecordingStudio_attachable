@@ -142,6 +142,7 @@ module RecordingStudioAttachable
       end
 
       assert_redirected_to "/users/1"
+      assert_equal 303, @response.status
       assert_equal "File updated", flash[:notice]
     end
 

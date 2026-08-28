@@ -1,0 +1,17 @@
+<div id="attachment-chromes-demo" class="mx-auto flex w-full max-w-4xl flex-col gap-10">
+  <%= render FlatPack::PageTitle::Component.new(
+    title: @page.title,
+    subtitle: "Single-file attachable parent with file button and image slot chromes.",
+    variant: :h1
+  ) %>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="text-base font-medium text-(--surface-content-color)">File button</h2>
+    <%= render_attachment_file_button(@page_recording, return_to: @return_to) %>
+  </section>
+
+  <section class="flex flex-col gap-3">
+    <h2 class="text-base font-medium text-(--surface-content-color)">Image slot</h2>
+    <%= render_attachment_image_slot(@page_recording, return_to: @return_to, size: :"2xl") %>
+  </section>
+</div>

@@ -10,23 +10,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.5.0] - 2026-08-28
 
 ### Added
-- Parent attachment slot for single-image parents (`max_file_count: 1`) with file-only replace/add controls that stay on the parent page
-- `render_parent_attachment` helper and `GET /recordings/:recording_id/parent_attachment` frame endpoint
-- Turbo Stream refresh of the parent attachment frame after file replace or first import when `redirect_mode=return_to`
+- Attachment chromes for single-file parents (`max_file_count: 1`) that stay on the parent page
+- `render_attachment_file_button(recording, return_to:)` — Flatpack secondary Add/Change button (no Avatar)
+- `render_attachment_image_slot(recording, return_to:, shape:, size:)` — Flatpack Avatar + the same Add/Change button
+- Chrome identity hidden fields (`attachment_chrome[kind|shape|size|add_label|change_label]`) so Turbo Stream redraws the same helper chrome after upload
+- Turbo Stream refresh replaces the chrome **frame** (not the bare chrome) so a second pick still redraws
 
 ### Changed
-- Parent attachment slot uses Flatpack `Avatar::Component` with Add/Change text buttons instead of full-page empty state or metadata forms on `attachments#show`
-- `render_parent_attachment` accepts optional `shape:` and `size:` keyword arguments (defaults: `:circle`, `:xl`)
-- `attachment_revision_upload_controller.js` now supports browse-triggered hidden file inputs, auto-submit, and import field names for parent-slot uploads
-- File replacement through `PATCH /attachments/:id` redirects back to `return_to` when `redirect_mode=return_to` is present
+- Requires Flatpack `>= 0.1.135` (Avatar `size: :2xl` supported; pass through any Avatar size the kit accepts)
+- Dummy app pins Flatpack `v0.1.135` and demos both chromes on a generic Page parent (`max_file_count: 1`)
 
-### Fixed
-- Parent attachment Turbo Stream responses now replace the `_frame` partial (wrapping `turbo_frame_tag`) instead of the bare `_slot`, so a second file replace still refreshes the slot UI
+### Removed
+- `render_parent_attachment` and aliases
+- `GET /recordings/:recording_id/parent_attachment` product endpoint
+- Empty-state title/description leftovers on the parent chrome
 
 ### Upgrade Notes
-- For profile photos, logos, and other single-image parents, render `render_parent_attachment(recording, return_to: parent_show_path)` on the parent show screen instead of linking replace flows to `attachments#show`.
-- Optional `shape:` (`:circle`, `:rounded`, `:square`) and `size:` (`:xs` through `:xl`) customize the Flatpack avatar; defaults are `:circle` and `:xl`.
-- Pass `redirect_mode=return_to` and `return_to=<parent_show_path>` through the slot forms automatically via the helper; keep `attachments#show` for gallery/library metadata editing only.
+- Replace `render_parent_attachment(...)` with either:
+  - `render_attachment_file_button(recording, return_to: parent_show_path)` for a button-only control
+  - `render_attachment_image_slot(recording, return_to: parent_show_path, shape: :circle, size: :xl)` for Avatar + button
+- Do not call the removed parent attachment show route; embed the helpers on the parent page
+- Optional `shape:` / `size:` apply only to the image-slot Avatar; defaults are `:circle` / `:xl`; `:2xl` is valid with Flatpack 0.1.135+
+- Keep `attachments#show` for gallery/library metadata editing only
 
 ## [0.4.0] - 2026-08-21
 

@@ -491,30 +491,34 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, 'hidden_field_tag :embed, "modal" if embedded_upload_provider_request?'
   end
 
-  def test_parent_attachment_slot_uses_file_only_replace_controls
-    slot_source = File.read(
-      File.expand_path("../app/views/recording_studio_attachable/parent_attachments/_slot.html.erb", __dir__)
+  def test_attachment_chrome_helpers_use_file_only_replace_controls
+    chrome_source = File.read(
+      File.expand_path("../app/views/recording_studio_attachable/attachment_chromes/_chrome.html.erb", __dir__)
+    )
+    helper_source = File.read(
+      File.expand_path("../app/helpers/recording_studio_attachable/attachment_chromes_helper.rb", __dir__)
     )
 
-    assert_includes slot_source, "recording-studio-attachable--attachment-revision-upload"
-    assert_includes slot_source, "recording-studio-attachable--attachment-revision-upload#browse"
-    assert_includes slot_source, 'type: "button"'
-    assert_includes slot_source, "FlatPack::Button::Component.new("
-    assert_includes slot_source, "text: pick_button_text"
-    assert_includes slot_source, "FlatPack::Avatar::Component.new("
-    assert_not_includes slot_source, 'icon: "camera"'
-    assert_not_includes slot_source, "icon_only: true"
-    assert_includes slot_source, 'class="hidden"'
-    assert_includes slot_source, "attachable_attachment_path(attachment_recording"
-    assert_includes slot_source, "form_method = attachment_recording.present? ? :patch : :post"
-    assert_includes slot_source, "attachable_attachment_imports_path"
-    assert_not_includes slot_source, "FlatPack::EmptyState::Component.new("
-    assert_not_includes slot_source, "FlatPack::FileInput::Component"
-    assert_not_includes slot_source, "href: attachment_path("
-    assert_not_includes slot_source, "FlatPack::TextInput::Component"
-    assert_not_includes slot_source, 'text: "Save"'
-    assert_not_includes slot_source, "Replace photo"
-    assert_not_includes slot_source, "Add photo"
+    assert_includes helper_source, "def render_attachment_file_button(recording, return_to:)"
+    assert_includes helper_source, "def render_attachment_image_slot(recording, return_to:, shape:"
+    assert_includes chrome_source, "recording-studio-attachable--attachment-revision-upload"
+    assert_includes chrome_source, "recording-studio-attachable--attachment-revision-upload#browse"
+    assert_includes chrome_source, 'type: "button"'
+    assert_includes chrome_source, "FlatPack::Button::Component.new("
+    assert_includes chrome_source, "text: pick_button_text"
+    assert_includes chrome_source, "FlatPack::Avatar::Component.new("
+    assert_includes chrome_source, 'hidden_field_tag "attachment_chrome[#{key}]"'
+    assert_not_includes chrome_source, 'icon: "camera"'
+    assert_not_includes chrome_source, "icon_only: true"
+    assert_includes chrome_source, 'class="hidden"'
+    assert_includes chrome_source, "attachable_attachment_path(attachment_recording"
+    assert_includes chrome_source, "form_method = attachment_recording.present? ? :patch : :post"
+    assert_includes chrome_source, "attachable_attachment_imports_path"
+    assert_not_includes chrome_source, "FlatPack::EmptyState::Component.new("
+    assert_not_includes chrome_source, "FlatPack::FileInput::Component"
+    assert_not_includes chrome_source, "href: attachment_path("
+    assert_not_includes chrome_source, "FlatPack::TextInput::Component"
+    assert_not_includes chrome_source, 'text: "Save"'
   end
 
   def test_attachment_revision_upload_controller_supports_browse_and_auto_submit

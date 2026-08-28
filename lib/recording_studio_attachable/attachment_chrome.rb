@@ -1,21 +1,25 @@
 # frozen_string_literal: true
 
 module RecordingStudioAttachable
-  module ParentAttachmentSlot
+  module AttachmentChrome
+    KIND_FILE_BUTTON = "file_button"
+    KIND_IMAGE_SLOT = "image_slot"
+    KINDS = [KIND_FILE_BUTTON, KIND_IMAGE_SLOT].freeze
+
     DEFAULT_SHAPE = :circle
     DEFAULT_SIZE = :xl
+    DEFAULT_ADD_LABEL = "Add"
+    DEFAULT_CHANGE_LABEL = "Change"
+    PARAM_KEY = :attachment_chrome
 
     module_function
 
-    def frame_dom_id(recording)
-      "parent-attachment-#{recording.id}"
+    def frame_dom_id(recording, kind:)
+      "attachment-chrome-#{kind}-#{recording.id}"
     end
 
     def redirect_params(return_to:)
-      {
-        redirect_mode: "return_to",
-        return_to: return_to
-      }.compact_blank
+      { redirect_mode: "return_to", return_to: return_to }.compact_blank
     end
 
     def return_to_from(redirect_params)
@@ -24,15 +28,48 @@ module RecordingStudioAttachable
       redirect_params[:return_to]
     end
 
-    def locals(recording:, return_to:, shape: ParentAttachmentSlot::DEFAULT_SHAPE, size: ParentAttachmentSlot::DEFAULT_SIZE)
+    def from_params(params)
+      raw = params[PARAM_KEY] || params[PARAM_KEY.to_s]
+      raw = raw.to_unsafe_h if raw.respond_to?(:to_unsafe_h)
+      raw = raw.to_h if raw.respond_to?(:to_h)
+      return if raw.blank?
+
+      kind = raw[:kind].presence || raw["kind"].presence
+      return unless KINDS.include?(kind.to_s)
+
+      identity_for(
+        kind: kind,
+        shape: raw[:shape].presence || raw["shape"].presence || DEFAULT_SHAPE,
+        size: raw[:size].presence || raw["size"].presence || DEFAULT_SIZE,
+        add_label: raw[:add_label].presence || raw["add_label"].presence || DEFAULT_ADD_LABEL,
+        change_label: raw[:change_label].presence || raw["change_label"].presence || DEFAULT_CHANGE_LABEL
+      )
+    end
+
+    def identity_for(kind:, shape: DEFAULT_SHAPE, size: DEFAULT_SIZE,
+                     add_label: DEFAULT_ADD_LABEL, change_label: DEFAULT_CHANGE_LABEL)
+      {
+        kind: kind.to_s,
+        shape: shape.to_sym,
+        size: size.to_sym,
+        add_label: add_label,
+        change_label: change_label
+      }
+    end
+
+    def locals(recording:, return_to:, identity:)
       configuration_locals(recording).merge(
         recording: recording,
         attachment_recording: attachment_recording_for(recording),
         return_to: return_to,
         redirect_params: redirect_params(return_to:),
-        avatar_shape: shape,
-        avatar_size: size
-      ).merge(copy_locals(recording))
+        chrome_kind: identity.fetch(:kind),
+        avatar_shape: identity.fetch(:shape),
+        avatar_size: identity.fetch(:size),
+        add_label: identity.fetch(:add_label),
+        change_label: identity.fetch(:change_label),
+        chrome_params: identity
+      )
     end
 
     def configuration_locals(recording)
@@ -43,15 +80,6 @@ module RecordingStudioAttachable
         image_processing_max_width: configured_option(recording, :image_processing_max_width),
         image_processing_max_height: configured_option(recording, :image_processing_max_height),
         image_processing_quality: configured_option(recording, :image_processing_quality)
-      }
-    end
-
-    def copy_locals(recording)
-      {
-        replace_button_text: replace_button_text(recording),
-        add_button_text: add_button_text(recording),
-        empty_state_title: empty_state_title(recording),
-        empty_state_description: empty_state_description(recording)
       }
     end
 
@@ -77,31 +105,6 @@ module RecordingStudioAttachable
       capability_options.fetch(option_name) do
         RecordingStudioAttachable.configuration.public_send(option_name)
       end
-    end
-
-    def replace_button_text(recording)
-      copy_for(recording, image: "Change", file: "Change", default: "Change")
-    end
-
-    def add_button_text(recording)
-      copy_for(recording, image: "Add", file: "Add", default: "Add")
-    end
-
-    def empty_state_title(recording)
-      copy_for(recording, image: "No photo yet", file: "No file yet", default: "No file yet")
-    end
-
-    def empty_state_description(recording)
-      copy_for(recording, image: "Choose a photo to show here.", file: "Choose a file to attach here.",
-                          default: "Choose a file to attach here.")
-    end
-
-    def copy_for(recording, image:, file:, default:)
-      kinds = Array(configured_option(recording, :enabled_attachment_kinds)).map(&:to_sym)
-      return image if kinds == [:image]
-      return file if kinds == [:file]
-
-      default
     end
   end
 end

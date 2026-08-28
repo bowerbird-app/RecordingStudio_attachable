@@ -2,7 +2,7 @@
 
 module RecordingStudioAttachable
   module ApplicationHelper
-    include ParentAttachmentsHelper
+    include AttachmentChromesHelper
 
     def authorized_attachment_preview_path(recording, variant_name)
       attachment = recording&.recordable
@@ -15,10 +15,6 @@ module RecordingStudioAttachable
 
     def authorized_attachment_file_path(recording)
       attachable_routes.attachment_file_path(recording)
-    end
-
-    def parent_attachment_path(recording, **options)
-      attachable_routes.parent_attachment_path(recording, **options)
     end
 
     def attachable_attachment_path(attachment_recording, **options)

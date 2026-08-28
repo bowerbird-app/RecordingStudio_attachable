@@ -4,7 +4,6 @@ RecordingStudioAttachable::Engine.routes.draw do
   mount RecordingStudioAttachable::GoogleDrive::Engine, at: "/google_drive", as: :google_drive
 
   resources :recordings, only: [] do
-    resource :parent_attachment, only: :show, controller: "parent_attachments"
     resources :attachments, only: :index, controller: "recording_attachments"
     get "attachments/picker", to: "attachment_pickers#index", as: :attachment_picker
     get "attachments/upload", to: "attachment_uploads#new", as: :attachment_upload

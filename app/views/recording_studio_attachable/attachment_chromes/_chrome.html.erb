@@ -1,9 +1,9 @@
 <% attachment = attachment_recording&.recordable %>
 <% preview_path = attachment_recording.present? ? authorized_attachment_preview_path(attachment_recording, :square_med) : nil %>
-<% pick_button_text = attachment_recording.present? ? replace_button_text : add_button_text %>
+<% pick_button_text = attachment_recording.present? ? change_label : add_label %>
 <% form_url = attachment_recording.present? ? attachable_attachment_path(attachment_recording, **redirect_params) : attachable_attachment_imports_path(recording, **redirect_params) %>
 <% form_method = attachment_recording.present? ? :patch : :post %>
-<% accept_attribute = parent_attachment_accept_attribute(allowed_content_types) %>
+<% accept_attribute = attachment_chrome_accept_attribute(allowed_content_types) %>
 <% form_controller_values = {
   direct_upload_url: main_app.rails_direct_uploads_path,
   max_file_size: max_file_size,
@@ -25,14 +25,16 @@
   recording_studio_attachable__attachment_revision_upload_auto_submit_value: form_controller_values[:auto_submit]
 } %>
 
-<div id="parent-attachment-slot" class="inline-flex items-end gap-3">
-  <%= render FlatPack::Avatar::Component.new(
-    src: preview_path,
-    alt: attachment&.name,
-    size: avatar_size,
-    shape: avatar_shape,
-    show_tooltip: false
-  ) %>
+<div id="attachment-chrome-<%= chrome_kind %>" class="inline-flex items-end gap-3">
+  <% if chrome_kind == RecordingStudioAttachable::AttachmentChrome::KIND_IMAGE_SLOT %>
+    <%= render FlatPack::Avatar::Component.new(
+      src: preview_path,
+      alt: attachment&.name,
+      size: avatar_size,
+      shape: avatar_shape,
+      show_tooltip: false
+    ) %>
+  <% end %>
 
   <%= form_with url: form_url,
                 method: form_method,
@@ -42,6 +44,9 @@
                     recording_studio_attachable__attachment_revision_upload_signed_blob_field_name_value: "attachment_import[attachments][][signed_blob_id]"
                   } : {}
                 ) do %>
+    <% chrome_params.each do |key, value| %>
+      <%= hidden_field_tag "attachment_chrome[#{key}]", value %>
+    <% end %>
     <% if attachment_recording.present? %>
       <%= hidden_field_tag "attachment[signed_blob_id]", "", data: { recording_studio_attachable__attachment_revision_upload_target: "signedBlobInput" } %>
     <% else %>

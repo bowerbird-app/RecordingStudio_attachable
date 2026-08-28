@@ -10,67 +10,67 @@
   <% sidebar.items do %>
     <nav class="py-4 space-y-1" aria-label="Main navigation">
       <%= render FlatPack::Sidebar::Item::Component.new(
-        label: "Home",
+        text: "Home",
         href: "/",
         icon: :home
       ) %>
 
       <%= render FlatPack::Sidebar::Item::Component.new(
-        label: "Setup",
+        text: "Setup",
         href: setup_docs_path,
         icon: :folder
       ) %>
 
       <%= render FlatPack::Sidebar::Item::Component.new(
-        label: "Config",
+        text: "Config",
         href: configuration_docs_path,
         icon: :settings
       ) %>
 
       <%= render FlatPack::Sidebar::Item::Component.new(
-        label: "Methods",
+        text: "Methods",
         href: methods_docs_path,
         icon: :folder
       ) %>
 
       <%= render FlatPack::Sidebar::Item::Component.new(
-        label: "Plugins",
+        text: "Plugins",
         href: plugins_docs_path,
         icon: :box
       ) %>
 
       <%= render FlatPack::Sidebar::Item::Component.new(
-        label: "Picker",
+        text: "Picker",
         href: picker_docs_path,
         icon: :image
       ) %>
 
       <%= render FlatPack::Sidebar::Item::Component.new(
-        label: "Resizing",
+        text: "Resizing",
         href: resizing_docs_path,
         icon: :image
       ) %>
 
       <%= render FlatPack::Sidebar::Item::Component.new(
-        label: "Gem views",
+        text: "Gem views",
         href: gem_views_docs_path,
         icon: :file
       ) %>
 
       <%= render FlatPack::Sidebar::Item::Component.new(
-        label: "Recordables",
+        text: "Recordables",
         href: recordables_docs_path,
         icon: :folder
       ) %>
 
       <%= render FlatPack::Sidebar::Item::Component.new(
-        label: "Query",
+        text: "Query",
         href: query_docs_path,
         icon: :file
       ) %>
 
       <%= render FlatPack::Sidebar::Item::Component.new(
-        label: "Recording tree",
+        text: "Recording tree",
         href: recording_tree_path,
         icon: :folder
       ) %>
@@ -80,7 +80,7 @@
   <% sidebar.footer do %>
     <%= render FlatPack::Sidebar::Footer::Component.new(class: "text-sm text-[var(--surface-muted-content-color)]") do %>
       <%= render FlatPack::Sidebar::Item::Component.new(
-        label: "Sign out",
+        text: "Sign out",
         href: destroy_user_session_path,
         icon: :lock,
         class: "mx-0",

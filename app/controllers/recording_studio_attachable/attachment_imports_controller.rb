@@ -4,7 +4,7 @@ require_relative "../../services/recording_studio_attachable/services/import_att
 
 module RecordingStudioAttachable
   class AttachmentImportsController < ApplicationController
-    include ParentAttachmentResponses
+    include AttachmentChromeResponses
 
     def create
       @recording = find_recording
@@ -110,13 +110,17 @@ module RecordingStudioAttachable
     end
 
     def respond_to_successful_import(result)
-      parent_return_to = ParentAttachmentSlot.return_to_from(attachment_redirect_params)
+      parent_return_to = AttachmentChrome.return_to_from(attachment_redirect_params)
+      chrome = attachment_chrome_from_params
 
       respond_to do |format|
-        if parent_return_to.present?
+        if parent_return_to.present? && chrome.present?
           format.turbo_stream do
-            render turbo_stream: render_parent_attachment_slot_stream(recording: @recording,
-                                                                      return_to: parent_return_to)
+            render turbo_stream: render_attachment_chrome_stream(
+              recording: @recording,
+              return_to: parent_return_to,
+              chrome: chrome
+            )
           end
         end
         format.html { redirect_to resolved_attachment_redirect_path(@recording), notice: "Imported #{result.value.size} attachment(s)." }

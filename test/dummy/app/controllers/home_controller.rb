@@ -18,8 +18,7 @@ class HomeController < ApplicationController
     @root_attachment_upload_path = attachment_upload_path(@root_recording)
     @page_attachment_listing_path = attachment_listing_path(@page_recording)
     @page_attachment_upload_path = page_attachment_upload_path
-    @profile_user = User.find_by(email: "admin@admin.com")
-    @profile_show_path = @profile_user.present? ? user_path(@profile_user) : nil
+    @attachment_chromes_path = attachment_chromes_path
   end
 
   private

@@ -9,6 +9,7 @@ class Page < ApplicationRecord
   include RecordingStudio::Capabilities::Attachable.to(
     allowed_content_types: [ "image/*" ],
     max_file_size: 25.megabytes,
+    max_file_count: 1,
     enabled_attachment_kinds: %i[ image ]
   )
 

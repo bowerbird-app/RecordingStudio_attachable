@@ -51,7 +51,7 @@ class DummyRecordingStudioIntegrationTest < ActiveSupport::TestCase
     assert_equal "recording_studio_attachable", registration.fetch(:source)
     assert_equal ["RecordingStudioAttachable::Attachment"], registration.fetch(:child_recordables)
     assert_equal ["RecordingStudioAttachable::Attachment"], RecordingStudio.capability_child_recordables_for(:attachable)
-    assert_equal %w[Page User Workspace], RecordingStudio.allowed_parent_types_for("RecordingStudioAttachable::Attachment")
+    assert_equal %w[Page Workspace], RecordingStudio.allowed_parent_types_for("RecordingStudioAttachable::Attachment")
   end
 
   def test_dummy_app_attachable_capability_options_are_available_for_parent_types
@@ -67,11 +67,10 @@ class DummyRecordingStudioIntegrationTest < ActiveSupport::TestCase
         :enabled_attachment_kinds
       )
     )
+    assert_equal 1, RecordingStudio.capability_options(:attachable, for: "Page")[:max_file_count]
     assert_equal ["image/*"], RecordingStudio.capability_options(:attachable, for: "Page")[:allowed_content_types]
     assert_equal %i[image], RecordingStudio.capability_options(:attachable, for: "Page")[:enabled_attachment_kinds]
-    assert_equal 1, RecordingStudio.capability_options(:attachable, for: "User")[:max_file_count]
-    assert_equal ["image/*"], RecordingStudio.capability_options(:attachable, for: "User")[:allowed_content_types]
-    assert_equal %i[image], RecordingStudio.capability_options(:attachable, for: "User")[:enabled_attachment_kinds]
+    refute RecordingStudio.capability_enabled?(:attachable, for: "User")
     refute RecordingStudio.capability_enabled?(:attachable, for: "ChatThread")
     refute RecordingStudio.capability_enabled?(:attachable, for: "ChatMessage")
   end

@@ -477,10 +477,10 @@ class DocsController < ApplicationController
         icon: :plus
       },
       {
-        title: "Parent attachment slot",
-        path: "recording_studio_attachable/parent_attachments/_slot.html.erb",
-        description: "Embed a compact single-image parent slot with a Flatpack avatar and Add/Change text buttons for file-only replace/add.",
-        example: "Use render_parent_attachment(recording, return_to:, shape:, size:) on profile or logo parent show screens with max_file_count: 1.",
+        title: "Attachment chromes",
+        path: "recording_studio_attachable/attachment_chromes/_chrome.html.erb",
+        description: "Embed file-button or image-slot chromes with Flatpack Add/Change controls for single-file parents.",
+        example: "Use render_attachment_file_button(recording, return_to:) or render_attachment_image_slot(recording, return_to:, shape:, size:) on parents with max_file_count: 1.",
         icon: :user
       },
       {

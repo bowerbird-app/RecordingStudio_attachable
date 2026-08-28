@@ -2,7 +2,7 @@
 
 module RecordingStudioAttachable
   class AttachmentsController < ApplicationController
-    include ParentAttachmentResponses
+    include AttachmentChromeResponses
 
     def show
       @attachment_recording = find_attachment_recording
@@ -43,16 +43,20 @@ module RecordingStudioAttachable
 
       redirect_params = attachment_navigation_params
       file_replacement = attachment_params[:signed_blob_id].present?
-      parent_return_to = ParentAttachmentSlot.return_to_from(redirect_params)
+      parent_return_to = AttachmentChrome.return_to_from(redirect_params)
+      chrome = attachment_chrome_from_params
 
       respond_to do |format|
         if result.success?
           notice = success_notice_for(file_replacement, parent_return_to)
 
-          if file_replacement && parent_return_to.present?
+          if file_replacement && parent_return_to.present? && chrome.present?
             format.turbo_stream do
-              render turbo_stream: render_parent_attachment_slot_stream(recording: attachable_owner_recording(result.value),
-                                                                        return_to: parent_return_to)
+              render turbo_stream: render_attachment_chrome_stream(
+                recording: attachable_owner_recording(result.value),
+                return_to: parent_return_to,
+                chrome: chrome
+              )
             end
           end
 

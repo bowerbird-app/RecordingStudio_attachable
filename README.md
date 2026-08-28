@@ -485,19 +485,20 @@ The engine ships with:
 - name search, pagination, and bulk remove from the attachment listing page
 - an upload page with direct uploads, previews, progress, and server-side batch validation
 - an attachment detail page for gallery/library metadata editing and download/trash actions
-- a parent attachment slot for single-image parents (`max_file_count: 1`) with file-only replace/add controls that stay on the parent page
+- attachment chromes for single-file parents (`max_file_count: 1`) with file-only Add/Change controls that stay on the parent page
 
-For profile photos, logos, and similar single-image parents, render the parent attachment slot on the parent show screen:
+For logos, covers, and similar single-file parents, embed a chrome on the parent show screen:
 
 ```erb
-<%= render_parent_attachment(@recording, return_to: user_path(@user)) %>
-<%# Optional avatar presentation for logos or profile photos %>
-<%= render_parent_attachment(@recording, return_to: user_path(@user), shape: :square, size: :lg) %>
+<%= render_attachment_file_button(@recording, return_to: page_path(@page)) %>
+<%= render_attachment_image_slot(@recording, return_to: page_path(@page), shape: :circle, size: :xl) %>
+<%# Flatpack 0.1.135+ also accepts size: :2xl %>
+<%= render_attachment_image_slot(@recording, return_to: page_path(@page), size: :2xl) %>
 ```
 
 Replace never navigates to the attachment details screen. Keep `attachments#show` for gallery/library cases where the attachment itself is the record.
 
-FlatPack is the default UI system for the engine and the dummy app.
+FlatPack is the default UI system for the engine and the dummy app (pinned to `v0.1.135` in the dummy app; gem requires `>= 0.1.135`).
 
 ## Development
 

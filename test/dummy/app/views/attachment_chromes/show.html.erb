@@ -1,4 +1,6 @@
-<div id="attachment-chromes-demo" class="mx-auto flex w-full max-w-4xl flex-col gap-10">
+<% recording_studio_page_nav(page_nav_anchor_url: root_path, page_nav_back_url: root_path) if respond_to?(:recording_studio_page_nav) %>
+
+<div id="attachment-chromes-demo" class="flex w-full flex-col gap-10">
   <%= render FlatPack::PageTitle::Component.new(
     title: @page.title,
     subtitle: "Single-file attachable parent. Host owns the Turbo frames; Attachable supplies the file button and preview URL.",

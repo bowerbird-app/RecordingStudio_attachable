@@ -12,7 +12,9 @@
     variant: :h1
   ) %>
 
-  <%= render_parent_attachment(@user_recording, return_to: @return_to) %>
+  <div class="w-64">
+    <%= render_parent_attachment(@user_recording, return_to: @return_to) %>
+  </div>
 </div>
 
 <dl class="mx-auto mt-6 grid w-full max-w-4xl gap-3 text-sm">

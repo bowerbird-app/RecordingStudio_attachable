@@ -4,6 +4,8 @@ require_relative "../../services/recording_studio_attachable/services/import_att
 
 module RecordingStudioAttachable
   class AttachmentImportsController < ApplicationController
+    include ParentAttachmentResponses
+
     def create
       @recording = find_recording
       capability_options = capability_options_for(@recording)
@@ -11,37 +13,10 @@ module RecordingStudioAttachable
       authorize_attachment_action!(:upload, @recording, capability_options: capability_options)
       result = import_result
 
-      respond_to do |format|
-        if result.success?
-          parent_return_to = ParentAttachmentSlot.return_to_from(attachment_redirect_params)
-
-          if parent_return_to.present?
-            format.turbo_stream do
-              render turbo_stream: turbo_stream.replace(
-                ParentAttachmentSlot.frame_dom_id(@recording),
-                partial: "recording_studio_attachable/parent_attachments/slot",
-                locals: ParentAttachmentSlot.locals(recording: @recording, return_to: parent_return_to)
-              )
-            end
-          end
-
-          format.html do
-            redirect_to resolved_attachment_redirect_path(@recording), notice: "Imported #{result.value.size} attachment(s)."
-          end
-          format.json do
-            render json: {
-              attachments: Array(result.value).map { |recording| attachment_json(recording) },
-              redirect_path: resolved_attachment_redirect_path(@recording)
-            }, status: :created
-          end
-        else
-          format.html do
-            redirect_to recording_attachment_upload_path(@recording, attachment_redirect_params), alert: result.error
-          end
-          format.json do
-            render json: { error: result.error, errors: result.errors }, status: :unprocessable_content
-          end
-        end
+      if result.success?
+        respond_to_successful_import(result)
+      else
+        respond_to_failed_import(result)
       end
     end
 
@@ -132,6 +107,33 @@ module RecordingStudioAttachable
 
     def attachment_import_params
       params.fetch(:attachment_import, ActionController::Parameters.new)
+    end
+
+    def respond_to_successful_import(result)
+      parent_return_to = ParentAttachmentSlot.return_to_from(attachment_redirect_params)
+
+      respond_to do |format|
+        if parent_return_to.present?
+          format.turbo_stream do
+            render turbo_stream: render_parent_attachment_slot_stream(recording: @recording,
+                                                                      return_to: parent_return_to)
+          end
+        end
+        format.html { redirect_to resolved_attachment_redirect_path(@recording), notice: "Imported #{result.value.size} attachment(s)." }
+        format.json do
+          render json: {
+            attachments: Array(result.value).map { |recording| attachment_json(recording) },
+            redirect_path: resolved_attachment_redirect_path(@recording)
+          }, status: :created
+        end
+      end
+    end
+
+    def respond_to_failed_import(result)
+      respond_to do |format|
+        format.html { redirect_to recording_attachment_upload_path(@recording, attachment_redirect_params), alert: result.error }
+        format.json { render json: { error: result.error, errors: result.errors }, status: :unprocessable_content }
+      end
     end
 
     def attachment_json(recording)

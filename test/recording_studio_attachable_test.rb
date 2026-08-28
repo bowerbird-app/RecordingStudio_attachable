@@ -502,7 +502,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes slot_source, "FlatPack::Button::Component.new("
     assert_includes slot_source, "FlatPack::EmptyState::Component.new("
     assert_includes slot_source, 'class="hidden"'
-    assert_includes slot_source, 'method: :patch'
+    assert_includes slot_source, "method: :patch"
     assert_includes slot_source, "attachable_attachment_imports_path"
     assert_not_includes slot_source, "FlatPack::FileInput::Component"
     assert_not_includes slot_source, "href: attachment_path("

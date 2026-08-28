@@ -35,24 +35,24 @@ module RecordingStudioAttachable
         RecordingStudio::Recording.stub(:find, parent) do
           @controller.stub(:authorize_attachment_action!, true) do
             RecordingStudio.stub(:capability_options, {
-                                     allowed_content_types: ["image/*"],
-                                     enabled_attachment_kinds: [:image],
-                                     max_file_size: 25.megabytes,
-                                     image_processing_enabled: true,
-                                     image_processing_max_width: 1200,
-                                     image_processing_max_height: 1200,
-                                     image_processing_quality: 0.75
-                                   }) do
+                                   allowed_content_types: ["image/*"],
+                                   enabled_attachment_kinds: [:image],
+                                   max_file_size: 25.megabytes,
+                                   image_processing_enabled: true,
+                                   image_processing_max_width: 1200,
+                                   image_processing_max_height: 1200,
+                                   image_processing_quality: 0.75
+                                 }) do
               @controller.define_singleton_method(:default_render) do
-              render plain: [
-                @attachment_recording&.id,
-                @return_to,
-                @replace_button_text,
-                @add_button_text
-              ].join("|")
-            end
+                render plain: [
+                  @attachment_recording&.id,
+                  @return_to,
+                  @replace_button_text,
+                  @add_button_text
+                ].join("|")
+              end
 
-            get :show, params: { recording_id: parent.id, return_to: "/users/parent-1" }
+              get :show, params: { recording_id: parent.id, return_to: "/users/parent-1" }
             end
           end
         end

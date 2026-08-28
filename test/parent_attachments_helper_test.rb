@@ -31,14 +31,14 @@ module RecordingStudioAttachable
       recording.define_singleton_method(:attachments) { |**| relation }
 
       RecordingStudio.stub(:capability_options, {
-                               allowed_content_types: ["image/*"],
-                               enabled_attachment_kinds: [:image],
-                               max_file_size: 25.megabytes,
-                               image_processing_enabled: true,
-                               image_processing_max_width: 1200,
-                               image_processing_max_height: 1200,
-                               image_processing_quality: 0.75
-                             }) do
+                             allowed_content_types: ["image/*"],
+                             enabled_attachment_kinds: [:image],
+                             max_file_size: 25.megabytes,
+                             image_processing_enabled: true,
+                             image_processing_max_width: 1200,
+                             image_processing_max_height: 1200,
+                             image_processing_quality: 0.75
+                           }) do
         locals = parent_attachment_slot_locals(recording:, return_to: "/users/1")
 
         assert_nil locals[:attachment_recording]

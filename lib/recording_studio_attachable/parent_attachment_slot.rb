@@ -22,19 +22,27 @@ module RecordingStudioAttachable
     end
 
     def locals(recording:, return_to:)
-      attachment_recording = attachment_recording_for(recording)
-
-      {
+      configuration_locals(recording).merge(
         recording: recording,
-        attachment_recording: attachment_recording,
+        attachment_recording: attachment_recording_for(recording),
         return_to: return_to,
-        redirect_params: redirect_params(return_to:),
+        redirect_params: redirect_params(return_to:)
+      ).merge(copy_locals(recording))
+    end
+
+    def configuration_locals(recording)
+      {
         allowed_content_types: configured_option(recording, :allowed_content_types),
         max_file_size: configured_option(recording, :max_file_size),
         image_processing_enabled: configured_option(recording, :image_processing_enabled),
         image_processing_max_width: configured_option(recording, :image_processing_max_width),
         image_processing_max_height: configured_option(recording, :image_processing_max_height),
-        image_processing_quality: configured_option(recording, :image_processing_quality),
+        image_processing_quality: configured_option(recording, :image_processing_quality)
+      }
+    end
+
+    def copy_locals(recording)
+      {
         replace_button_text: replace_button_text(recording),
         add_button_text: add_button_text(recording),
         empty_state_title: empty_state_title(recording),
@@ -80,7 +88,7 @@ module RecordingStudioAttachable
 
     def empty_state_description(recording)
       copy_for(recording, image: "Choose a photo to show here.", file: "Choose a file to attach here.",
-               default: "Choose a file to attach here.")
+                          default: "Choose a file to attach here.")
     end
 
     def copy_for(recording, image:, file:, default:)

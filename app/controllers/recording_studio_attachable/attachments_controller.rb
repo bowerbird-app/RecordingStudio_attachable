@@ -2,6 +2,8 @@
 
 module RecordingStudioAttachable
   class AttachmentsController < ApplicationController
+    include ParentAttachmentResponses
+
     def show
       @attachment_recording = find_attachment_recording
       authorize_attachment_owner_action!(:view, @attachment_recording)
@@ -49,21 +51,15 @@ module RecordingStudioAttachable
 
           if file_replacement && parent_return_to.present?
             format.turbo_stream do
-              render turbo_stream: turbo_stream.replace(
-                ParentAttachmentSlot.frame_dom_id(attachable_owner_recording(result.value)),
-                partial: "recording_studio_attachable/parent_attachments/slot",
-                locals: ParentAttachmentSlot.locals(
-                  recording: attachable_owner_recording(result.value),
-                  return_to: parent_return_to
-                )
-              )
+              render turbo_stream: render_parent_attachment_slot_stream(recording: attachable_owner_recording(result.value),
+                                                                        return_to: parent_return_to)
             end
           end
 
           format.html { redirect_to success_path_for(result.value, file_replacement, parent_return_to, redirect_params), notice: notice }
         else
           format.html do
-            redirect_to failure_path_for(file_replacement, parent_return_to, redirect_params), alert: result.error
+            redirect_to failure_path_for(@attachment_recording, file_replacement, parent_return_to, redirect_params), alert: result.error
           end
         end
       end
@@ -97,30 +93,6 @@ module RecordingStudioAttachable
 
     def attachment_params
       params.expect(attachment: %i[name description signed_blob_id])
-    end
-
-    def parent_attachment_replaced_notice
-      I18n.t("recording_studio_attachable.parent_attachments.replaced", default: "File updated")
-    end
-
-    def success_notice_for(file_replacement, parent_return_to)
-      return parent_attachment_replaced_notice if file_replacement && parent_return_to.present?
-
-      I18n.t("recording_studio_attachable.attachments.updated", default: "Saved")
-    end
-
-    def success_path_for(updated_recording, file_replacement, parent_return_to, redirect_params)
-      return parent_return_to if file_replacement && parent_return_to.present?
-      return attachment_path(updated_recording, redirect_params) if redirect_params.present?
-
-      attachment_path(updated_recording)
-    end
-
-    def failure_path_for(file_replacement, parent_return_to, redirect_params)
-      return parent_return_to if file_replacement && parent_return_to.present?
-      return attachment_path(@attachment_recording, redirect_params) if redirect_params.present?
-
-      attachment_path(@attachment_recording)
     end
 
     def send_attachment_data(attachment_recording, disposition:)

@@ -9,7 +9,7 @@ module RecordingStudioAttachable
 
       assert_includes source, "ParentAttachmentSlot.frame_dom_id(recording)"
       assert_includes source, 'partial: "recording_studio_attachable/parent_attachments/frame"'
-      assert_no_match(/partial:\s*"recording_studio_attachable\/parent_attachments\/slot"/, source)
+      assert_no_match(%r{partial:\s*"recording_studio_attachable/parent_attachments/slot"}, source)
     end
 
     def test_parent_attachment_frame_partial_wraps_slot_in_matching_turbo_frame
@@ -36,8 +36,8 @@ module RecordingStudioAttachable
 
       assert_includes attachments_source, "render_parent_attachment_slot_stream"
       assert_includes imports_source, "render_parent_attachment_slot_stream"
-      assert_no_match(/parent_attachments\/slot"/, attachments_source)
-      assert_no_match(/parent_attachments\/slot"/, imports_source)
+      assert_no_match(%r{parent_attachments/slot"}, attachments_source)
+      assert_no_match(%r{parent_attachments/slot"}, imports_source)
     end
   end
 end

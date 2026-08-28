@@ -31,7 +31,7 @@ module RecordingStudioAttachable
     end
 
     def render_parent_attachment_slot_stream(recording:, return_to:, shape: ParentAttachmentSlot::DEFAULT_SHAPE,
-                                            size: ParentAttachmentSlot::DEFAULT_SIZE)
+                                             size: ParentAttachmentSlot::DEFAULT_SIZE)
       turbo_stream.replace(
         ParentAttachmentSlot.frame_dom_id(recording),
         partial: "recording_studio_attachable/parent_attachments/frame",

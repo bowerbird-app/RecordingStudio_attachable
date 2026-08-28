@@ -12,6 +12,11 @@ class AttachableCapabilityTest < Minitest::Test
     restore_recording_studio_api!
   end
 
+  def teardown
+    restore_recording_studio_api!
+    reset_probe_types!
+  end
+
   def test_to_is_a_thin_wrapper_around_include_for
     captured_name = nil
     captured_options = nil
@@ -80,5 +85,12 @@ class AttachableCapabilityTest < Minitest::Test
     end
     RecordingStudio.instance_variable_set(:@configuration, nil)
     load File.join(Gem.loaded_specs.fetch("recording_studio").full_gem_path, "lib/recording_studio.rb")
+  end
+
+  def reset_probe_types!
+    Probe.send(:remove_const, :HostType) if Probe.const_defined?(:HostType, false)
+    Probe.send(:remove_const, :OtherType) if Probe.const_defined?(:OtherType, false)
+    Probe.const_set(:HostType, Class.new)
+    Probe.const_set(:OtherType, Class.new)
   end
 end

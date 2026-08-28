@@ -52,7 +52,7 @@
       <% end %>
     </div>
 
-    <%= form_with url: attachable_attachment_path(attachment_recording, redirect_params),
+    <%= form_with url: attachable_attachment_path(attachment_recording, **redirect_params),
                   method: :patch,
                   class: "space-y-3",
                   data: {
@@ -91,7 +91,7 @@
       icon: "photo"
     ) do |empty_state| %>
       <% empty_state.actions do %>
-        <%= form_with url: attachable_attachment_imports_path(recording, redirect_params),
+        <%= form_with url: attachable_attachment_imports_path(recording, **redirect_params),
                       method: :post,
                       class: "inline-flex",
                       data: {

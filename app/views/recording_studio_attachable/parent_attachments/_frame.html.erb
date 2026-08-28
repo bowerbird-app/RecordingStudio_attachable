@@ -1,3 +1,3 @@
 <%= turbo_frame_tag parent_attachment_frame_dom_id(recording) do %>
-  <%= render "slot", **parent_attachment_slot_locals(recording:, return_to:) %>
+  <%= render "recording_studio_attachable/parent_attachments/slot", **parent_attachment_slot_locals(recording:, return_to:) %>
 <% end %>

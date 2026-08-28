@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `attachment_revision_upload_controller.js` now supports browse-triggered hidden file inputs, auto-submit, and import field names for parent-slot uploads
 - File replacement through `PATCH /attachments/:id` redirects back to `return_to` when `redirect_mode=return_to` is present
 
+### Fixed
+- Parent attachment Turbo Stream responses now replace the `_frame` partial (wrapping `turbo_frame_tag`) instead of the bare `_slot`, so a second file replace still refreshes the slot UI
+
 ### Upgrade Notes
 - For profile photos, logos, and other single-image parents, render `render_parent_attachment(recording, return_to: parent_show_path)` on the parent show screen instead of linking replace flows to `attachments#show`.
 - Optional `shape:` (`:circle`, `:rounded`, `:square`) and `size:` (`:xs` through `:xl`) customize the Flatpack avatar; defaults are `:circle` and `:xl`.

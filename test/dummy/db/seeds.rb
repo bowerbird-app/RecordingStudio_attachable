@@ -2,6 +2,36 @@
 # development, test). The code here should be idempotent so that it can be executed at any point in every environment.
 # The data can then be loaded with the bin/rails db:seed command (or created alongside the database with db:setup).
 
+def seed_avery_profile_photo!(user_recording, user)
+  existing = user_recording.images(scope: :direct).first
+  if existing
+    attachment = existing.recordable
+    return if attachment.byte_size > 1_000 && attachment.previewable?
+
+    user_recording.remove_attachments(
+      attachment_recordings: [existing],
+      actor: user
+    )
+  end
+
+  fixture_path = Rails.root.join("db/fixtures/files/avery_profile.png")
+  return unless fixture_path.exist?
+
+  File.open(fixture_path, "rb") do |io|
+    result = RecordingStudioAttachable::Services::ImportAttachment.call(
+      parent_recording: user_recording,
+      io: io,
+      filename: "avery_profile.png",
+      content_type: "image/png",
+      actor: user,
+      name: "Profile photo"
+    )
+    raise result.error if result.failure?
+  end
+
+  puts "Seeded: Avery profile photo on user recording ##{user_recording.id}"
+end
+
 # Create the admin user
 admin_email = "admin@admin.com"
 admin_password = "Password"
@@ -54,11 +84,13 @@ RecordingStudio::Recording.unscoped.find_or_create_by!(
   recordable: page
 )
 
-RecordingStudio::Recording.unscoped.find_or_create_by!(
+user_recording = RecordingStudio::Recording.unscoped.find_or_create_by!(
   root_recording_id: root_recording.id,
   parent_recording_id: root_recording.id,
   recordable: user
 )
+
+seed_avery_profile_photo!(user_recording, user)
 
 chat_thread_recording = RecordingStudio::Recording.unscoped.find_or_create_by!(
   root_recording_id: root_recording.id,

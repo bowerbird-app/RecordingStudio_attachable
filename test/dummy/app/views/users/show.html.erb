@@ -1,4 +1,4 @@
-<div class="mx-auto flex w-full max-w-4xl flex-col gap-6">
+<div id="user-profile-product" class="mx-auto flex w-full max-w-4xl flex-col gap-6">
   <%= render FlatPack::PageNav::Component.new(
     back_icon: "chevron-left",
     back_label: "Go back",
@@ -8,26 +8,16 @@
 
   <%= render FlatPack::PageTitle::Component.new(
     title: @user.name,
-    subtitle: "Profile photo stays on this page. Replace opens a file picker only.",
+    subtitle: "Product designer · Melbourne",
     variant: :h1
   ) %>
 
-  <div class="grid gap-6 lg:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] lg:items-start">
-    <div>
-      <%= render_parent_attachment(@user_recording, return_to: @return_to) %>
-    </div>
-
-    <div class="space-y-4 rounded-xl border border-(--surface-border-color) bg-(--surface-background-color) p-6">
-      <p class="text-sm text-(--surface-muted-content-color)">
-        This demo models a single-image parent such as a user profile or logo slot.
-        Replace never sends you to the attachment details screen with name and description fields.
-      </p>
-      <dl class="grid gap-3 text-sm">
-        <div>
-          <dt class="font-medium text-(--surface-content-color)">Email</dt>
-          <dd class="text-(--surface-muted-content-color)"><%= @user.email %></dd>
-        </div>
-      </dl>
-    </div>
-  </div>
+  <%= render_parent_attachment(@user_recording, return_to: @return_to) %>
 </div>
+
+<dl class="mx-auto mt-6 grid w-full max-w-4xl gap-3 text-sm">
+  <div>
+    <dt class="font-medium text-(--surface-content-color)">Email</dt>
+    <dd class="text-(--surface-muted-content-color)"><%= @user.email %></dd>
+  </div>
+</dl>

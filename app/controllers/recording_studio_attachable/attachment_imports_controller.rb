@@ -12,20 +12,33 @@ module RecordingStudioAttachable
       result = import_result
 
       respond_to do |format|
-        format.html do
-          if result.success?
-            redirect_to resolved_attachment_redirect_path(@recording), notice: "Imported #{result.value.size} attachment(s)."
-          else
-            redirect_to recording_attachment_upload_path(@recording, attachment_redirect_params), alert: result.error
+        if result.success?
+          parent_return_to = ParentAttachmentSlot.return_to_from(attachment_redirect_params)
+
+          if parent_return_to.present?
+            format.turbo_stream do
+              render turbo_stream: turbo_stream.replace(
+                ParentAttachmentSlot.frame_dom_id(@recording),
+                partial: "recording_studio_attachable/parent_attachments/slot",
+                locals: ParentAttachmentSlot.locals(recording: @recording, return_to: parent_return_to)
+              )
+            end
           end
-        end
-        format.json do
-          if result.success?
+
+          format.html do
+            redirect_to resolved_attachment_redirect_path(@recording), notice: "Imported #{result.value.size} attachment(s)."
+          end
+          format.json do
             render json: {
               attachments: Array(result.value).map { |recording| attachment_json(recording) },
               redirect_path: resolved_attachment_redirect_path(@recording)
             }, status: :created
-          else
+          end
+        else
+          format.html do
+            redirect_to recording_attachment_upload_path(@recording, attachment_redirect_params), alert: result.error
+          end
+          format.json do
             render json: { error: result.error, errors: result.errors }, status: :unprocessable_content
           end
         end

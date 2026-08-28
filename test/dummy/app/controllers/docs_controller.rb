@@ -477,10 +477,17 @@ class DocsController < ApplicationController
         icon: :plus
       },
       {
+        title: "Parent attachment slot",
+        path: "recording_studio_attachable/parent_attachments/_slot.html.erb",
+        description: "Embed a single-image parent slot with preview, empty state, and file-only replace/add controls.",
+        example: "Use it on profile or logo parent show screens with max_file_count: 1 instead of sending replace flows to attachments#show.",
+        icon: :user
+      },
+      {
         title: "Attachment details",
         path: "recording_studio_attachable/attachments/show.html.erb",
-        description: "Show a single attachment with preview context, download/trash actions, and metadata editing.",
-        example: "Use it when editors need to rename an attachment, update the description, or download the current file.",
+        description: "Show a single attachment with preview context, download/trash actions, and metadata editing for gallery/library cases.",
+        example: "Use it when the attachment itself is the record and editors need to rename it or update the description.",
         icon: :eye
       },
       {

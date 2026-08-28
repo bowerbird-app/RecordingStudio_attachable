@@ -11,12 +11,18 @@ export default class extends Controller {
     imageProcessingEnabled: Boolean,
     imageProcessingMaxWidth: Number,
     imageProcessingMaxHeight: Number,
-    imageProcessingQuality: Number
+    imageProcessingQuality: Number,
+    autoSubmit: { type: Boolean, default: false },
+    signedBlobFieldName: { type: String, default: "attachment[signed_blob_id]" }
   }
 
   connect() {
     this.uploadInFlight = false
     this.pendingSubmit = false
+  }
+
+  browse() {
+    this.fileInputTarget.click()
   }
 
   async fileSelected() {
@@ -37,8 +43,13 @@ export default class extends Controller {
       this.showStatus(processed.transformed ? `Optimizing complete. Uploading ${uploadFile.name}…` : `Uploading ${uploadFile.name}…`)
 
       const blob = await this.directUpload(uploadFile)
+      this.signedBlobInputTarget.name = this.signedBlobFieldNameValue
       this.signedBlobInputTarget.value = blob.signed_id
-      this.showStatus(`${uploadFile.name} is ready to save.`)
+      this.showStatus(`${uploadFile.name} is ready.`)
+
+      if (this.autoSubmitValue) {
+        this.element.requestSubmit()
+      }
     } catch (error) {
       this.signedBlobInputTarget.value = ""
       this.showStatus(error?.message || "Upload failed")

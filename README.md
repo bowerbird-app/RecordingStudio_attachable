@@ -484,7 +484,16 @@ The engine ships with:
 - an attachment listing page with scope and kind filters plus grid/list view toggles
 - name search, pagination, and bulk remove from the attachment listing page
 - an upload page with direct uploads, previews, progress, and server-side batch validation
-- an attachment detail page for metadata revision and optional file replacement via direct upload
+- an attachment detail page for gallery/library metadata editing and download/trash actions
+- a parent attachment slot for single-image parents (`max_file_count: 1`) with file-only replace/add controls that stay on the parent page
+
+For profile photos, logos, and similar single-image parents, render the parent attachment slot on the parent show screen:
+
+```erb
+<%= render_parent_attachment(@recording, return_to: user_path(@user)) %>
+```
+
+Replace never navigates to the attachment details screen. Keep `attachments#show` for gallery/library cases where the attachment itself is the record.
 
 FlatPack is the default UI system for the engine and the dummy app.
 

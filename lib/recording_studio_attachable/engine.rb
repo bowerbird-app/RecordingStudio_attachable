@@ -23,6 +23,12 @@ module RecordingStudioAttachable
       end
     end
 
+    initializer "recording_studio_attachable.action_view_helpers" do
+      ActiveSupport.on_load(:action_view) do
+        include RecordingStudioAttachable::ApplicationHelper
+      end
+    end
+
     def self.register_recording_studio_integration
       return unless defined?(RecordingStudio)
 

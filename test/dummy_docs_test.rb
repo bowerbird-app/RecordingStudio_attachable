@@ -179,9 +179,11 @@ class DummyDocsTest < Minitest::Test
     assert_includes controller_source,
                     "Use it when a host-app screen needs the bundled image picker inside a modal instead of sending editors to the full library page."
     assert_includes controller_source,
-                    "Show a single attachment with preview context, download/trash actions, and metadata editing."
+                    "Embed a single-image parent slot with preview, empty state, and file-only replace/add controls."
     assert_includes controller_source,
-                    "Use it when editors need to rename an attachment, update the description, or download the current file."
+                    "Show a single attachment with preview context, download/trash actions, and metadata editing for gallery/library cases."
+    assert_includes controller_source,
+                    "Use it when the attachment itself is the record and editors need to rename it or update the description."
     assert_includes icon_sprite_source, 'symbol id="icon-grid"'
     assert_includes icon_sprite_source, 'symbol id="icon-plus"'
     assert_includes icon_sprite_source, 'symbol id="icon-eye"'

@@ -490,4 +490,37 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, "recording-studio-attachable--provider-modal-frame#openPopup"
     assert_includes view_source, 'hidden_field_tag :embed, "modal" if embedded_upload_provider_request?'
   end
+
+  def test_parent_attachment_slot_uses_file_only_replace_controls
+    slot_source = File.read(
+      File.expand_path("../app/views/recording_studio_attachable/parent_attachments/_slot.html.erb", __dir__)
+    )
+
+    assert_includes slot_source, "recording-studio-attachable--attachment-revision-upload"
+    assert_includes slot_source, "recording-studio-attachable--attachment-revision-upload#browse"
+    assert_includes slot_source, 'type: "button"'
+    assert_includes slot_source, "FlatPack::Button::Component.new("
+    assert_includes slot_source, "FlatPack::EmptyState::Component.new("
+    assert_includes slot_source, 'class="hidden"'
+    assert_includes slot_source, 'method: :patch'
+    assert_includes slot_source, "attachable_attachment_imports_path"
+    assert_not_includes slot_source, "FlatPack::FileInput::Component"
+    assert_not_includes slot_source, "href: attachment_path("
+    assert_not_includes slot_source, "FlatPack::TextInput::Component"
+    assert_not_includes slot_source, 'text: "Save"'
+  end
+
+  def test_attachment_revision_upload_controller_supports_browse_and_auto_submit
+    controller_path = File.expand_path(
+      "../app/javascript/controllers/recording_studio_attachable/attachment_revision_upload_controller.js", __dir__
+    )
+    controller_source = File.read(controller_path)
+
+    assert_includes controller_source, "autoSubmit: { type: Boolean, default: false }"
+    assert_includes controller_source, "signedBlobFieldName"
+    assert_includes controller_source, "browse() {"
+    assert_includes controller_source, "this.fileInputTarget.click()"
+    assert_includes controller_source, "if (this.autoSubmitValue) {"
+    assert_includes controller_source, "this.element.requestSubmit()"
+  end
 end

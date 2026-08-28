@@ -110,6 +110,41 @@ module RecordingStudioAttachable
       assert_equal "blob-1", captured[:signed_blob_id]
     end
 
+    def test_update_redirects_to_return_to_after_file_replacement_when_requested
+      attachment_recording = FakeRecording.new(id: "att-1", recordable_type: "RecordingStudioAttachable::Attachment")
+      updated_recording = FakeRecording.new(id: "att-2", recordable_type: "RecordingStudioAttachable::Attachment")
+      result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: updated_recording)
+
+      with_routing do |set|
+        set.draw do
+          patch "/attachments/:id", to: "recording_studio_attachable/attachments#update"
+        end
+
+        @routes = set
+
+        RecordingStudio::Recording.stub(:find, attachment_recording) do
+          @controller.stub(:authorize_attachment_owner_action!, true) do
+            @controller.define_singleton_method(:attachment_path) { |recording| "/attachments/#{recording.id}" }
+            @controller.stub(:attachable_owner_recording, FakeRecording.new(id: "parent-1", recordable_type: "User")) do
+              RecordingStudioAttachable::Services::ReplaceAttachmentFile.stub(:call, ->(**) { result }) do
+                @controller.stub(:protect_against_forgery?, false) do
+                  patch :update, params: {
+                    id: attachment_recording.id,
+                    redirect_mode: "return_to",
+                    return_to: "/users/1",
+                    attachment: { signed_blob_id: "blob-1" }
+                  }
+                end
+              end
+            end
+          end
+        end
+      end
+
+      assert_redirected_to "/users/1"
+      assert_equal "File updated", flash[:notice]
+    end
+
     def test_update_revises_metadata_when_signed_blob_id_is_blank
       attachment_recording = FakeRecording.new(id: "att-1", recordable_type: "RecordingStudioAttachable::Attachment")
       result = RecordingStudioAttachable::Services::BaseService::Result.new(success: false, error: "revision failed")

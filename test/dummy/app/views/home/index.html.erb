@@ -71,5 +71,25 @@
         </div>
       <% end %>
     <% end %>
+  <section>
+    <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
+      <% card.body do %>
+        <div class="space-y-4">
+          <%= render FlatPack::SectionTitle::Component.new(
+            title: "User profile",
+            subtitle: "Single-image parent with file-only replace on the profile page.",
+            anchor_link: true
+          ) %>
+
+          <% if @profile_show_path.present? %>
+            <div class="flex flex-wrap gap-3">
+              <%= render FlatPack::Button::Component.new(text: "Open profile", style: :primary, size: :md, url: @profile_show_path) %>
+            </div>
+          <% else %>
+            <p class="text-sm text-(--surface-muted-content-color)">Seed the Avery user recording to enable the profile demo.</p>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
   </section>
 </div>

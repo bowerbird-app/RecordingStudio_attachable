@@ -25,6 +25,7 @@ Rails.application.routes.draw do
   get "upload_providers/demo", to: "upload_providers#show", as: :demo_upload_provider
   post "upload_providers/demo", to: "upload_providers#create"
   resources :pages, only: %i[show edit update]
+  resources :users, only: :show
 
   root "home#index"
 end

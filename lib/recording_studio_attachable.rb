@@ -24,6 +24,7 @@ require "recording_studio"
 
 require "recording_studio_attachable/version"
 require "recording_studio_attachable/configuration"
+require "recording_studio_attachable/parent_attachment_slot"
 require "recording_studio_attachable/upload_provider"
 require "recording_studio_attachable/authorization"
 require "recording_studio_attachable/services/base_service"

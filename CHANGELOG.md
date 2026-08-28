@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-08-28
+
+### Added
+- Parent attachment slot for single-image parents (`max_file_count: 1`) with file-only replace/add controls that stay on the parent page
+- `render_parent_attachment` helper and `GET /recordings/:recording_id/parent_attachment` frame endpoint
+- Turbo Stream refresh of the parent attachment frame after file replace or first import when `redirect_mode=return_to`
+
+### Changed
+- `attachment_revision_upload_controller.js` now supports browse-triggered hidden file inputs, auto-submit, and import field names for parent-slot uploads
+- File replacement through `PATCH /attachments/:id` redirects back to `return_to` when `redirect_mode=return_to` is present
+
+### Upgrade Notes
+- For profile photos, logos, and other single-image parents, render `render_parent_attachment(recording, return_to: parent_show_path)` on the parent show screen instead of linking replace flows to `attachments#show`.
+- Pass `redirect_mode=return_to` and `return_to=<parent_show_path>` through the slot forms automatically via the helper; keep `attachments#show` for gallery/library metadata editing only.
+
 ## [0.4.0] - 2026-08-21
 
 ### Changed
@@ -69,7 +84,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.1.1...v0.2.0

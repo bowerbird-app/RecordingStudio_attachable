@@ -1,0 +1,128 @@
+<% attachment = attachment_recording&.recordable %>
+<% preview_path = attachment_recording.present? ? authorized_attachment_preview_path(attachment_recording, :large) : nil %>
+<% file_extension = attachment.present? ? File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || "FILE" : "FILE" %>
+<% accept_attribute = parent_attachment_accept_attribute(allowed_content_types) %>
+<% form_controller_values = {
+  direct_upload_url: main_app.rails_direct_uploads_path,
+  max_file_size: max_file_size,
+  image_processing_enabled: image_processing_enabled,
+  image_processing_max_width: image_processing_max_width,
+  image_processing_max_height: image_processing_max_height,
+  image_processing_quality: image_processing_quality,
+  auto_submit: true
+} %>
+
+<div class="space-y-4">
+  <% if attachment_recording.present? %>
+    <div class="overflow-hidden rounded-xl border border-(--surface-border-color) bg-(--surface-muted-background-color)">
+      <% if preview_path.present? %>
+        <div class="relative aspect-square" data-controller="recording-studio-attachable--image-fallback">
+          <div class="absolute inset-0 flex items-stretch justify-stretch" data-recording-studio-attachable--image-fallback-target="skeleton">
+            <%= render FlatPack::Skeleton::Component.new(variant: :rectangle, shimmer: true, width: "100%", height: "100%", class: "h-full w-full rounded-none") %>
+          </div>
+          <%= image_tag preview_path, alt: attachment.name, class: "h-full w-full object-cover opacity-0 transition-opacity duration-200", data: { recording_studio_attachable__image_fallback_target: "image", action: "load->recording-studio-attachable--image-fallback#showImage error->recording-studio-attachable--image-fallback#showFallback" } %>
+          <div class="absolute inset-0 hidden items-center justify-center bg-(--surface-background-color)" data-recording-studio-attachable--image-fallback-target="fallback">
+            <div class="flex flex-col items-center justify-center gap-3 px-4 text-center">
+              <div class="flex h-16 w-16 items-center justify-center rounded-full bg-(--surface-background-color) text-(--surface-content-color) shadow-sm ring-1 ring-(--surface-border-color)">
+                <svg viewBox="0 0 24 24" aria-hidden="true" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 9v4" />
+                  <path d="M12 17h.01" />
+                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+                </svg>
+              </div>
+              <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)">IMAGE</span>
+              <span class="text-sm text-(--surface-muted-content-color)">Preview unavailable</span>
+            </div>
+          </div>
+        </div>
+      <% else %>
+        <div class="flex aspect-square items-center justify-center bg-(--surface-background-color)">
+          <div class="flex flex-col items-center justify-center gap-3 px-4 text-center">
+            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-(--surface-background-color) text-(--surface-content-color) shadow-sm ring-1 ring-(--surface-border-color)">
+              <svg viewBox="0 0 24 24" aria-hidden="true" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14.25 3.75H7.5A2.25 2.25 0 0 0 5.25 6v12A2.25 2.25 0 0 0 7.5 20.25h9A2.25 2.25 0 0 0 18.75 18V8.25l-4.5-4.5Z" />
+                <path d="M14.25 3.75V8.25h4.5" />
+                <path d="M9 12.75h6" />
+                <path d="M9 16.5h6" />
+              </svg>
+            </div>
+            <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)"><%= file_extension %></span>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <%= form_with url: attachable_attachment_path(attachment_recording, redirect_params),
+                  method: :patch,
+                  class: "space-y-3",
+                  data: {
+                    controller: "recording-studio-attachable--attachment-revision-upload",
+                    action: "submit->recording-studio-attachable--attachment-revision-upload#handleSubmit",
+                    recording_studio_attachable__attachment_revision_upload_direct_upload_url_value: form_controller_values[:direct_upload_url],
+                    recording_studio_attachable__attachment_revision_upload_max_file_size_value: form_controller_values[:max_file_size],
+                    recording_studio_attachable__attachment_revision_upload_image_processing_enabled_value: form_controller_values[:image_processing_enabled],
+                    recording_studio_attachable__attachment_revision_upload_image_processing_max_width_value: form_controller_values[:image_processing_max_width],
+                    recording_studio_attachable__attachment_revision_upload_image_processing_max_height_value: form_controller_values[:image_processing_max_height],
+                    recording_studio_attachable__attachment_revision_upload_image_processing_quality_value: form_controller_values[:image_processing_quality],
+                    recording_studio_attachable__attachment_revision_upload_auto_submit_value: form_controller_values[:auto_submit]
+                  } do %>
+      <%= hidden_field_tag "attachment[signed_blob_id]", "", data: { recording_studio_attachable__attachment_revision_upload_target: "signedBlobInput" } %>
+      <input type="file"
+             class="hidden"
+             accept="<%= accept_attribute %>"
+             data-recording-studio-attachable--attachment-revision-upload-target="fileInput"
+             data-action="change->recording-studio-attachable--attachment-revision-upload#fileSelected">
+      <div class="flex flex-wrap items-center gap-3">
+        <%= render FlatPack::Button::Component.new(
+          text: replace_button_text,
+          style: :secondary,
+          size: :md,
+          type: "button",
+          icon: "arrow-path",
+          data: { action: "recording-studio-attachable--attachment-revision-upload#browse" }
+        ) %>
+        <p class="hidden text-sm text-(--surface-muted-content-color)" data-recording-studio-attachable--attachment-revision-upload-target="status"></p>
+      </div>
+    <% end %>
+  <% else %>
+    <%= render FlatPack::EmptyState::Component.new(
+      title: empty_state_title,
+      description: empty_state_description,
+      icon: "photo"
+    ) do |empty_state| %>
+      <% empty_state.actions do %>
+        <%= form_with url: attachable_attachment_imports_path(recording, redirect_params),
+                      method: :post,
+                      class: "inline-flex",
+                      data: {
+                        controller: "recording-studio-attachable--attachment-revision-upload",
+                        action: "submit->recording-studio-attachable--attachment-revision-upload#handleSubmit",
+                        recording_studio_attachable__attachment_revision_upload_direct_upload_url_value: form_controller_values[:direct_upload_url],
+                        recording_studio_attachable__attachment_revision_upload_max_file_size_value: form_controller_values[:max_file_size],
+                        recording_studio_attachable__attachment_revision_upload_image_processing_enabled_value: form_controller_values[:image_processing_enabled],
+                        recording_studio_attachable__attachment_revision_upload_image_processing_max_width_value: form_controller_values[:image_processing_max_width],
+                        recording_studio_attachable__attachment_revision_upload_image_processing_max_height_value: form_controller_values[:image_processing_max_height],
+                        recording_studio_attachable__attachment_revision_upload_image_processing_quality_value: form_controller_values[:image_processing_quality],
+                        recording_studio_attachable__attachment_revision_upload_auto_submit_value: form_controller_values[:auto_submit],
+                        recording_studio_attachable__attachment_revision_upload_signed_blob_field_name_value: "attachment_import[attachments][][signed_blob_id]"
+                      } do %>
+          <%= hidden_field_tag "attachment_import[attachments][][signed_blob_id]", "", data: { recording_studio_attachable__attachment_revision_upload_target: "signedBlobInput" } %>
+          <input type="file"
+                 class="hidden"
+                 accept="<%= accept_attribute %>"
+                 data-recording-studio-attachable--attachment-revision-upload-target="fileInput"
+                 data-action="change->recording-studio-attachable--attachment-revision-upload#fileSelected">
+          <%= render FlatPack::Button::Component.new(
+            text: add_button_text,
+            style: :primary,
+            size: :md,
+            type: "button",
+            icon: "upload",
+            data: { action: "recording-studio-attachable--attachment-revision-upload#browse" }
+          ) %>
+          <p class="hidden text-sm text-(--surface-muted-content-color)" data-recording-studio-attachable--attachment-revision-upload-target="status"></p>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

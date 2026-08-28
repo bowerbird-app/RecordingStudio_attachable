@@ -13,6 +13,8 @@ unless user.persisted? && user.valid_password?(admin_password)
   user.password_confirmation = admin_password
 end
 
+user.name = "Avery" if user.name.blank?
+
 user.save! if user.changed?
 
 # Create the workspace recordable
@@ -52,6 +54,12 @@ RecordingStudio::Recording.unscoped.find_or_create_by!(
   recordable: page
 )
 
+RecordingStudio::Recording.unscoped.find_or_create_by!(
+  root_recording_id: root_recording.id,
+  parent_recording_id: root_recording.id,
+  recordable: user
+)
+
 chat_thread_recording = RecordingStudio::Recording.unscoped.find_or_create_by!(
   root_recording_id: root_recording.id,
   parent_recording_id: root_recording.id,
@@ -84,4 +92,5 @@ end
 puts "Seeded: #{admin_email} / #{admin_password}"
 puts "Seeded: Workspace '#{workspace.name}' with root recording ##{root_recording.id}"
 puts "Seeded: Page '#{page.title}' beneath the workspace root recording"
+puts "Seeded: User '#{user.name}' beneath the workspace root recording"
 puts "Seeded: Chat thread '#{chat_thread.title}' with #{chat_messages.count} recorded messages"

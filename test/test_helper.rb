@@ -9,6 +9,8 @@ require "rails"
 require "active_storage/engine"
 require "recording_studio_attachable"
 
+Mime::Type.register "text/vnd.turbo-stream.html", :turbo_stream unless Mime::Type.lookup_by_extension(:turbo_stream)
+
 module Minitest
   module Assertions
     def assert_not(value, message = nil)

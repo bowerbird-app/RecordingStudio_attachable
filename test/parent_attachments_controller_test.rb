@@ -59,7 +59,7 @@ module RecordingStudioAttachable
       end
 
       assert_response :success
-      assert_equal "att-1|/users/parent-1|Replace photo|Add photo", @response.body
+      assert_equal "att-1|/users/parent-1|Change|Add", @response.body
       relation.verify
     end
 

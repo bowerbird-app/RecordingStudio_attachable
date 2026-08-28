@@ -179,7 +179,7 @@ class DummyDocsTest < Minitest::Test
     assert_includes controller_source,
                     "Use it when a host-app screen needs the bundled image picker inside a modal instead of sending editors to the full library page."
     assert_includes controller_source,
-                    "Embed a compact single-image parent slot with a Flatpack avatar and icon-only camera button for file-only replace/add."
+                    "Embed a compact single-image parent slot with a Flatpack avatar and Add/Change text buttons for file-only replace/add."
     assert_includes controller_source,
                     "Use render_parent_attachment(recording, return_to:, shape:, size:) on profile or logo parent show screens with max_file_count: 1."
     assert_includes controller_source,

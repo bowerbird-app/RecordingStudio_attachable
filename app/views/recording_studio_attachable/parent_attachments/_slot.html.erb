@@ -1,6 +1,6 @@
 <% attachment = attachment_recording&.recordable %>
 <% preview_path = attachment_recording.present? ? authorized_attachment_preview_path(attachment_recording, :square_med) : nil %>
-<% camera_button_label = attachment_recording.present? ? replace_button_text : add_button_text %>
+<% pick_button_text = attachment_recording.present? ? replace_button_text : add_button_text %>
 <% form_url = attachment_recording.present? ? attachable_attachment_path(attachment_recording, **redirect_params) : attachable_attachment_imports_path(recording, **redirect_params) %>
 <% form_method = attachment_recording.present? ? :patch : :post %>
 <% accept_attribute = parent_attachment_accept_attribute(allowed_content_types) %>
@@ -53,12 +53,10 @@
            data-recording-studio-attachable--attachment-revision-upload-target="fileInput"
            data-action="change->recording-studio-attachable--attachment-revision-upload#fileSelected">
     <%= render FlatPack::Button::Component.new(
-      icon: "camera",
-      icon_only: true,
+      text: pick_button_text,
       style: :secondary,
       size: :md,
       type: "button",
-      aria: { label: camera_button_label },
       data: { action: "recording-studio-attachable--attachment-revision-upload#browse" }
     ) %>
     <p class="hidden text-sm text-(--surface-muted-content-color)" data-recording-studio-attachable--attachment-revision-upload-target="status"></p>

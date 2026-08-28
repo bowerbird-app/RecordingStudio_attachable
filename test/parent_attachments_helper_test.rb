@@ -44,8 +44,8 @@ module RecordingStudioAttachable
         assert_nil locals[:attachment_recording]
         assert_equal :circle, locals[:avatar_shape]
         assert_equal :xl, locals[:avatar_size]
-        assert_equal "Replace photo", locals[:replace_button_text]
-        assert_equal "Add photo", locals[:add_button_text]
+        assert_equal "Change", locals[:replace_button_text]
+        assert_equal "Add", locals[:add_button_text]
       end
     end
 

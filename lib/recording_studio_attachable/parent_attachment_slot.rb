@@ -80,11 +80,11 @@ module RecordingStudioAttachable
     end
 
     def replace_button_text(recording)
-      copy_for(recording, image: "Replace photo", file: "Replace file", default: "Replace")
+      copy_for(recording, image: "Change", file: "Change", default: "Change")
     end
 
     def add_button_text(recording)
-      copy_for(recording, image: "Add photo", file: "Add file", default: "Add file")
+      copy_for(recording, image: "Add", file: "Add", default: "Add")
     end
 
     def empty_state_title(recording)

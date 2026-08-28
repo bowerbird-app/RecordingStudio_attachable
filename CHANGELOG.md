@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Turbo Stream refresh of the parent attachment frame after file replace or first import when `redirect_mode=return_to`
 
 ### Changed
-- Parent attachment slot uses Flatpack `Avatar::Component` with an icon-only camera button instead of full-page empty state and text replace/add buttons
+- Parent attachment slot uses Flatpack `Avatar::Component` with Add/Change text buttons instead of full-page empty state or metadata forms on `attachments#show`
 - `render_parent_attachment` accepts optional `shape:` and `size:` keyword arguments (defaults: `:circle`, `:xl`)
 - `attachment_revision_upload_controller.js` now supports browse-triggered hidden file inputs, auto-submit, and import field names for parent-slot uploads
 - File replacement through `PATCH /attachments/:id` redirects back to `return_to` when `redirect_mode=return_to` is present

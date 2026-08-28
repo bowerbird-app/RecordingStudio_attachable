@@ -477,10 +477,17 @@ class DocsController < ApplicationController
         icon: :plus
       },
       {
+        title: "Attachment file button",
+        path: "recording_studio_attachable/attachment_file_buttons/_button.html.erb",
+        description: "Embed a Flatpack Add/Change file button for single-file parents. Host owns Turbo frames and Avatar.",
+        example: "Use render_attachment_file_button(recording, return_to:) and attachment_preview_url(recording) on parents with max_file_count: 1.",
+        icon: :user
+      },
+      {
         title: "Attachment details",
         path: "recording_studio_attachable/attachments/show.html.erb",
-        description: "Show a single attachment with preview context, download/trash actions, and metadata editing.",
-        example: "Use it when editors need to rename an attachment, update the description, or download the current file.",
+        description: "Show a single attachment with preview context, download/trash actions, and metadata editing for gallery/library cases.",
+        example: "Use it when the attachment itself is the record and editors need to rename it or update the description.",
         icon: :eye
       },
       {

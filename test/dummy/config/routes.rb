@@ -25,6 +25,7 @@ Rails.application.routes.draw do
   get "upload_providers/demo", to: "upload_providers#show", as: :demo_upload_provider
   post "upload_providers/demo", to: "upload_providers#create"
   resources :pages, only: %i[show edit update]
+  get "attachment_chromes", to: "attachment_chromes#show", as: :attachment_chromes
 
   root "home#index"
 end

@@ -2,6 +2,8 @@
 
 module RecordingStudioAttachable
   class AttachmentsController < ApplicationController
+    include AttachmentFileButtonResponses
+
     def show
       @attachment_recording = find_attachment_recording
       authorize_attachment_owner_action!(:view, @attachment_recording)
@@ -40,18 +42,17 @@ module RecordingStudioAttachable
                end
 
       redirect_params = attachment_navigation_params
+      file_replacement = attachment_params[:signed_blob_id].present?
+      parent_return_to = AttachmentFileButton.return_to_from(redirect_params)
 
       if result.success?
-        success_path = redirect_params.present? ? attachment_path(result.value, redirect_params) : attachment_path(result.value)
-        redirect_to success_path, notice: I18n.t("recording_studio_attachable.attachments.updated", default: "Saved")
+        redirect_to success_path_for(result.value, file_replacement, parent_return_to, redirect_params),
+                    status: :see_other,
+                    notice: success_notice_for(file_replacement, parent_return_to)
       else
-        failure_path =
-          if redirect_params.present?
-            attachment_path(@attachment_recording, redirect_params)
-          else
-            attachment_path(@attachment_recording)
-          end
-        redirect_to failure_path, alert: result.error
+        redirect_to failure_path_for(@attachment_recording, file_replacement, parent_return_to, redirect_params),
+                    status: :see_other,
+                    alert: result.error
       end
     end
 

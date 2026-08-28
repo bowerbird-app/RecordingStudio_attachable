@@ -37,6 +37,9 @@ class DummyRecordingStudioIntegrationTest < ActiveSupport::TestCase
     assert_not RecordingStudio.root_allowed?("ChatMessage")
     assert_equal ["ChatThread"], RecordingStudio.declared_allowed_parent_types_for("ChatMessage")
 
+    assert_not RecordingStudio.root_allowed?("User")
+    assert_equal ["Workspace"], RecordingStudio.declared_allowed_parent_types_for("User")
+
     assert_not RecordingStudio.root_allowed?("RecordingStudioAttachable::Attachment")
     assert_equal [], RecordingStudio.declared_allowed_parent_types_for("RecordingStudioAttachable::Attachment")
   end
@@ -64,8 +67,10 @@ class DummyRecordingStudioIntegrationTest < ActiveSupport::TestCase
         :enabled_attachment_kinds
       )
     )
+    assert_equal 1, RecordingStudio.capability_options(:attachable, for: "Page")[:max_file_count]
     assert_equal ["image/*"], RecordingStudio.capability_options(:attachable, for: "Page")[:allowed_content_types]
     assert_equal %i[image], RecordingStudio.capability_options(:attachable, for: "Page")[:enabled_attachment_kinds]
+    refute RecordingStudio.capability_enabled?(:attachable, for: "User")
     refute RecordingStudio.capability_enabled?(:attachable, for: "ChatThread")
     refute RecordingStudio.capability_enabled?(:attachable, for: "ChatMessage")
   end
@@ -99,13 +104,27 @@ class DummyRecordingStudioIntegrationTest < ActiveSupport::TestCase
     RecordingStudio.configuration.recordable_types = %w[Workspace Page ChatThread RecordingStudioAttachable::Attachment]
     load File.expand_path("dummy/app/models/chat_thread.rb", __dir__)
     RecordingStudio.configuration.recordable_types = recordable_types
+    load_user_recordable!
     load File.expand_path("dummy/app/models/chat_message.rb", __dir__)
+  end
+
+  def load_user_recordable!
+    return if defined?(User) && User.respond_to?(:recording_studio_recordable_options)
+
+    Object.send(:remove_const, :User) if Object.const_defined?(:User)
+
+    ApplicationRecord.class_eval do
+      def self.devise(*); end unless respond_to?(:devise)
+    end
+
+    load File.expand_path("dummy/app/models/user.rb", __dir__)
   end
 
   def recordable_types
     %w[
       Workspace
       Page
+      User
       ChatThread
       ChatMessage
       RecordingStudioAttachable::Attachment

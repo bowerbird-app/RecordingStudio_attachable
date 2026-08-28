@@ -20,31 +20,31 @@ class DummyDocsTest < Minitest::Test
   def test_dummy_sidebar_links_to_docs_pages
     sidebar_source = File.read(File.expand_path("dummy/app/views/layouts/flat_pack/_sidebar.html.erb", __dir__))
 
-    assert_includes sidebar_source, 'label: "Setup"'
+    assert_includes sidebar_source, 'text: "Setup"'
     assert_includes sidebar_source, "setup_docs_path"
-    assert_includes sidebar_source, 'label: "Config"'
+    assert_includes sidebar_source, 'text: "Config"'
     assert_includes sidebar_source, "configuration_docs_path"
-    assert_includes sidebar_source, 'label: "Methods"'
+    assert_includes sidebar_source, 'text: "Methods"'
     assert_includes sidebar_source, "methods_docs_path"
-    assert_includes sidebar_source, 'label: "Plugins"'
+    assert_includes sidebar_source, 'text: "Plugins"'
     assert_includes sidebar_source, "plugins_docs_path"
-    assert_includes sidebar_source, 'label: "Picker"'
+    assert_includes sidebar_source, 'text: "Picker"'
     assert_includes sidebar_source, "picker_docs_path"
-    assert_includes sidebar_source, 'label: "Resizing"'
+    assert_includes sidebar_source, 'text: "Resizing"'
     assert_includes sidebar_source, "resizing_docs_path"
-    assert_includes sidebar_source, 'label: "Gem views"'
+    assert_includes sidebar_source, 'text: "Gem views"'
     assert_includes sidebar_source, "gem_views_docs_path"
-    assert_includes sidebar_source, 'label: "Recordables"'
+    assert_includes sidebar_source, 'text: "Recordables"'
     assert_includes sidebar_source, "recordables_docs_path"
-    assert_includes sidebar_source, 'label: "Query"'
+    assert_includes sidebar_source, 'text: "Query"'
     assert_includes sidebar_source, "query_docs_path"
-    assert_match(/label: "Config"[\s\S]*icon: :settings/, sidebar_source)
-    assert_match(/label: "Plugins"[\s\S]*icon: :box/, sidebar_source)
-    assert_match(/label: "Picker"[\s\S]*icon: :image/, sidebar_source)
-    assert_match(/label: "Resizing"[\s\S]*icon: :image/, sidebar_source)
-    assert_match(/label: "Gem views"[\s\S]*icon: :file/, sidebar_source)
-    assert_match(/label: "Recordables"[\s\S]*icon: :folder/, sidebar_source)
-    assert_match(/label: "Query"[\s\S]*icon: :file/, sidebar_source)
+    assert_match(/text: "Config"[\s\S]*icon: :settings/, sidebar_source)
+    assert_match(/text: "Plugins"[\s\S]*icon: :box/, sidebar_source)
+    assert_match(/text: "Picker"[\s\S]*icon: :image/, sidebar_source)
+    assert_match(/text: "Resizing"[\s\S]*icon: :image/, sidebar_source)
+    assert_match(/text: "Gem views"[\s\S]*icon: :file/, sidebar_source)
+    assert_match(/text: "Recordables"[\s\S]*icon: :folder/, sidebar_source)
+    assert_match(/text: "Query"[\s\S]*icon: :file/, sidebar_source)
   end
 
   def test_dummy_config_page_mentions_layout_override
@@ -179,9 +179,13 @@ class DummyDocsTest < Minitest::Test
     assert_includes controller_source,
                     "Use it when a host-app screen needs the bundled image picker inside a modal instead of sending editors to the full library page."
     assert_includes controller_source,
-                    "Show a single attachment with preview context, download/trash actions, and metadata editing."
+                    "Embed a Flatpack Add/Change file button for single-file parents. Host owns Turbo frames and Avatar."
     assert_includes controller_source,
-                    "Use it when editors need to rename an attachment, update the description, or download the current file."
+                    "Use render_attachment_file_button(recording, return_to:) and attachment_preview_url(recording) on parents with max_file_count: 1."
+    assert_includes controller_source,
+                    "Show a single attachment with preview context, download/trash actions, and metadata editing for gallery/library cases."
+    assert_includes controller_source,
+                    "Use it when the attachment itself is the record and editors need to rename it or update the description."
     assert_includes icon_sprite_source, 'symbol id="icon-grid"'
     assert_includes icon_sprite_source, 'symbol id="icon-plus"'
     assert_includes icon_sprite_source, 'symbol id="icon-eye"'

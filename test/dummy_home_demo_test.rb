@@ -663,7 +663,7 @@ class DummyHomeDemoTest < Minitest::Test
     tree_view = File.read(File.expand_path("dummy/app/views/recording_trees/index.html.erb", __dir__))
 
     assert_not_includes sidebar_partial, 'href: "/recording_studio"'
-    assert_includes sidebar_partial, 'label: "Recording tree"'
+    assert_includes sidebar_partial, 'text: "Recording tree"'
     assert_includes sidebar_partial, "href: recording_tree_path"
     assert_includes routes, 'get "recording_tree", to: "recording_trees#index", as: :recording_tree'
     assert_includes tree_controller, "RecordingStudio::Recording.unscoped.includes(:recordable).order(:created_at).to_a"

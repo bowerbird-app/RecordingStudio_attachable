@@ -42,10 +42,23 @@ module RecordingStudioAttachable
         locals = parent_attachment_slot_locals(recording:, return_to: "/users/1")
 
         assert_nil locals[:attachment_recording]
+        assert_equal :circle, locals[:avatar_shape]
+        assert_equal :xl, locals[:avatar_size]
         assert_equal "Replace photo", locals[:replace_button_text]
         assert_equal "Add photo", locals[:add_button_text]
-        assert_equal "No photo yet", locals[:empty_state_title]
       end
+    end
+
+    def test_render_parent_attachment_passes_shape_and_size_to_frame_locals
+      recording = FakeRecording.new(id: "parent-1", recordable_type: "User")
+
+      assert_equal :circle, ParentAttachmentSlot::DEFAULT_SHAPE
+      assert_equal :xl, ParentAttachmentSlot::DEFAULT_SIZE
+
+      locals = parent_attachment_slot_locals(recording:, return_to: "/users/1", shape: :square, size: :lg)
+
+      assert_equal :square, locals[:avatar_shape]
+      assert_equal :lg, locals[:avatar_size]
     end
   end
 end

@@ -2,6 +2,9 @@
 
 module RecordingStudioAttachable
   module ParentAttachmentSlot
+    DEFAULT_SHAPE = :circle
+    DEFAULT_SIZE = :xl
+
     module_function
 
     def frame_dom_id(recording)
@@ -21,12 +24,14 @@ module RecordingStudioAttachable
       redirect_params[:return_to]
     end
 
-    def locals(recording:, return_to:)
+    def locals(recording:, return_to:, shape: ParentAttachmentSlot::DEFAULT_SHAPE, size: ParentAttachmentSlot::DEFAULT_SIZE)
       configuration_locals(recording).merge(
         recording: recording,
         attachment_recording: attachment_recording_for(recording),
         return_to: return_to,
-        redirect_params: redirect_params(return_to:)
+        redirect_params: redirect_params(return_to:),
+        avatar_shape: shape,
+        avatar_size: size
       ).merge(copy_locals(recording))
     end
 

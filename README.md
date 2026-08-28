@@ -491,6 +491,8 @@ For profile photos, logos, and similar single-image parents, render the parent a
 
 ```erb
 <%= render_parent_attachment(@recording, return_to: user_path(@user)) %>
+<%# Optional avatar presentation for logos or profile photos %>
+<%= render_parent_attachment(@recording, return_to: user_path(@user), shape: :square, size: :lg) %>
 ```
 
 Replace never navigates to the attachment details screen. Keep `attachments#show` for gallery/library cases where the attachment itself is the record.

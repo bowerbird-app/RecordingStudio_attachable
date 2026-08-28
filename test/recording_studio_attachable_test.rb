@@ -500,14 +500,20 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes slot_source, "recording-studio-attachable--attachment-revision-upload#browse"
     assert_includes slot_source, 'type: "button"'
     assert_includes slot_source, "FlatPack::Button::Component.new("
-    assert_includes slot_source, "FlatPack::EmptyState::Component.new("
+    assert_includes slot_source, "FlatPack::Avatar::Component.new("
+    assert_includes slot_source, 'icon: "camera"'
+    assert_includes slot_source, "icon_only: true"
     assert_includes slot_source, 'class="hidden"'
-    assert_includes slot_source, "method: :patch"
+    assert_includes slot_source, "attachable_attachment_path(attachment_recording"
+    assert_includes slot_source, "form_method = attachment_recording.present? ? :patch : :post"
     assert_includes slot_source, "attachable_attachment_imports_path"
+    assert_not_includes slot_source, "FlatPack::EmptyState::Component.new("
     assert_not_includes slot_source, "FlatPack::FileInput::Component"
     assert_not_includes slot_source, "href: attachment_path("
     assert_not_includes slot_source, "FlatPack::TextInput::Component"
     assert_not_includes slot_source, 'text: "Save"'
+    assert_not_includes slot_source, "Replace photo"
+    assert_not_includes slot_source, "Add photo"
   end
 
   def test_attachment_revision_upload_controller_supports_browse_and_auto_submit

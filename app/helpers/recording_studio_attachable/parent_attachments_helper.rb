@@ -8,13 +8,13 @@ module RecordingStudioAttachable
       ParentAttachmentSlot.frame_dom_id(recording)
     end
 
-    def render_parent_attachment(recording, return_to:)
+    def render_parent_attachment(recording, return_to:, shape: ParentAttachmentSlot::DEFAULT_SHAPE, size: ParentAttachmentSlot::DEFAULT_SIZE)
       render partial: "recording_studio_attachable/parent_attachments/frame",
-             locals: { recording: recording, return_to: return_to }
+             locals: { recording: recording, return_to: return_to, shape: shape, size: size }
     end
 
-    def parent_attachment_slot_locals(recording:, return_to:)
-      ParentAttachmentSlot.locals(recording:, return_to:)
+    def parent_attachment_slot_locals(recording:, return_to:, shape: ParentAttachmentSlot::DEFAULT_SHAPE, size: ParentAttachmentSlot::DEFAULT_SIZE)
+      ParentAttachmentSlot.locals(recording:, return_to:, shape:, size:)
     end
 
     def parent_attachment_redirect_params(return_to:)

@@ -479,8 +479,8 @@ class DocsController < ApplicationController
       {
         title: "Parent attachment slot",
         path: "recording_studio_attachable/parent_attachments/_slot.html.erb",
-        description: "Embed a single-image parent slot with preview, empty state, and file-only replace/add controls.",
-        example: "Use it on profile or logo parent show screens with max_file_count: 1 instead of sending replace flows to attachments#show.",
+        description: "Embed a compact single-image parent slot with a Flatpack avatar and icon-only camera button for file-only replace/add.",
+        example: "Use render_parent_attachment(recording, return_to:, shape:, size:) on profile or logo parent show screens with max_file_count: 1.",
         icon: :user
       },
       {

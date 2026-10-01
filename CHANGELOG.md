@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- README: host Active Storage notes for AWS S3 and Cloudflare R2 (S3-compatible `storage.yml`, CORS); no Attachable-specific storage backend.
+
 ### Changed
 - FlatPack `Button` call sites (including link-strategy `UploadProvider#button_options`) use `href:` instead of the obsolete `url:` kwarg from FlatPack 0.1.135. UploadProvider’s domain `url:` constructor stays unchanged.
 

@@ -193,7 +193,7 @@ module RecordingStudioAttachable
           text: "Mounted provider",
           style: :secondary,
           size: :md,
-          url: "/mounted_provider/recordings/rec-1/imports",
+          href: "/mounted_provider/recordings/rec-1/imports",
           icon: "cloud"
         },
         provider.button_options(view_context: view_context, recording: recording)

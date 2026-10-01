@@ -22,31 +22,36 @@ module RecordingStudioAttachable
       def perform
         capability_options = capability_options_for(parent_recording)
         validate_attachment_count!(capability_options)
+        resolved = resolve_uploads(capability_options)
+        root_recording = root_recording_for(parent_recording)
+        incoming = RecordingStudioAttachable::StorageLimit::IncomingBytes.for(root_recording, resolved.map(&:last))
 
         batch_id = SecureRandom.uuid
         created = []
         failures = nil
 
         begin
-          transaction_wrapper do
-            Array(attachments).each do |payload|
-              result = RecordAttachmentUpload.call(
-                parent_recording: parent_recording,
-                signed_blob_id: payload.fetch(:signed_blob_id),
-                name: payload[:name],
-                description: payload[:description],
-                actor: actor,
-                impersonator: impersonator,
-                batch_id: batch_id,
-                metadata: payload_metadata(payload)
-              )
+          RecordingStudioAttachable::StorageLimit.with_storage_capacity!(root_recording, incoming) do
+            transaction_wrapper do
+              resolved.each do |payload,|
+                result = RecordAttachmentUpload.call(
+                  parent_recording: parent_recording,
+                  signed_blob_id: payload.fetch(:signed_blob_id),
+                  name: payload[:name],
+                  description: payload[:description],
+                  actor: actor,
+                  impersonator: impersonator,
+                  batch_id: batch_id,
+                  metadata: payload_metadata(payload)
+                )
 
-              if result.failure?
-                failures = [payload.merge(error: result.error)]
-                raise BatchFailure, result.error
+                if result.failure?
+                  failures = [payload.merge(error: result.error)]
+                  raise BatchFailure, result.error
+                end
+
+                created << result.value
               end
-
-              created << result.value
             end
           end
         rescue BatchFailure
@@ -54,6 +59,12 @@ module RecordingStudioAttachable
         end
 
         success(created)
+      end
+
+      def resolve_uploads(capability_options)
+        Array(attachments).map do |payload|
+          [payload, signed_blob!(payload.fetch(:signed_blob_id), capability_options: capability_options)]
+        end
       end
 
       def validate_attachment_count!(capability_options)

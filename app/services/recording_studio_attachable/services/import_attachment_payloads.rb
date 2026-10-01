@@ -24,18 +24,20 @@ module RecordingStudioAttachable
         created = []
         failures = nil
 
-        begin
-          transaction_wrapper do
-            import_io_payloads!(created)
-            finalize_blob_payloads!(created)
-            import_remote_payloads!(created)
+        RecordingStudioAttachable::StorageLimit.tracking_discards do
+          begin
+            transaction_wrapper do
+              import_io_payloads!(created)
+              finalize_blob_payloads!(created)
+              import_remote_payloads!(created)
+            end
+          rescue BatchFailure => e
+            purge_created_attachments(created)
+            return failure(e.message, errors: failures || [])
           end
-        rescue BatchFailure => e
-          purge_created_attachments(created)
-          return failure(e.message, errors: failures || [])
-        end
 
-        success(created)
+          success(created)
+        end
       rescue BatchFailure => e
         purge_created_attachments(created)
         failure(e.message, errors: failures || [])
@@ -118,15 +120,13 @@ module RecordingStudioAttachable
       end
 
       def purge_created_attachments(created)
-        Array(created).each do |recording|
+        blobs = Array(created).filter_map do |recording|
           attachment = recording&.recordable
           next unless attachment.respond_to?(:file)
 
-          blob = attachment.file&.blob
-          blob.purge if blob.respond_to?(:purge)
-        rescue StandardError
-          next
+          attachment.file&.blob
         end
+        RecordingStudioAttachable::StorageLimit.discard_unattached!(blobs)
       end
     end
   end

@@ -164,7 +164,7 @@ export default class extends Controller {
         readyEntries.forEach((entry) => {
           this.clearRemoteStageTimer(entry.id)
           entry.status = "failed"
-          entry.error = errorsByBlobId.get(entry.signedBlobId) || error?.error || "Finalization failed"
+          entry.error = errorsByBlobId.get(entry.signedBlobId) || error?.error || error?.message || "Finalization failed"
           this.renderEntry(entry)
         })
       })

@@ -21,14 +21,16 @@ class RecordAttachmentUploadsTest < Minitest::Test
       signed_blob_ids << kwargs[:signed_blob_id]
       signed_blob_ids.one? ? success_result : failure_result
     }) do
-      result = RecordingStudioAttachable::Services::RecordAttachmentUploads.call(
-        parent_recording: parent,
-        actor: Object.new,
-        attachments: [
-          { signed_blob_id: "blob-1", name: "one" },
-          { signed_blob_id: "blob-2", name: "two" }
-        ]
-      )
+      result = with_resolved_blobs do
+        RecordingStudioAttachable::Services::RecordAttachmentUploads.call(
+          parent_recording: parent,
+          actor: Object.new,
+          attachments: [
+            { signed_blob_id: "blob-1", name: "one" },
+            { signed_blob_id: "blob-2", name: "two" }
+          ]
+        )
+      end
 
       assert result.failure?
       assert_equal "One or more attachments failed to finalize", result.error
@@ -64,18 +66,20 @@ class RecordAttachmentUploadsTest < Minitest::Test
       captured = kwargs
       success_result
     }) do
-      result = RecordingStudioAttachable::Services::RecordAttachmentUploads.call(
-        parent_recording: parent,
-        actor: Object.new,
-        default_source: "google_drive",
-        attachments: [
-          {
-            signed_blob_id: "blob-1",
-            name: "drive file",
-            metadata: { external_id: "file-1" }
-          }
-        ]
-      )
+      result = with_resolved_blobs do
+        RecordingStudioAttachable::Services::RecordAttachmentUploads.call(
+          parent_recording: parent,
+          actor: Object.new,
+          default_source: "google_drive",
+          attachments: [
+            {
+              signed_blob_id: "blob-1",
+              name: "drive file",
+              metadata: { external_id: "file-1" }
+            }
+          ]
+        )
+      end
 
       assert result.success?
     end
@@ -84,6 +88,12 @@ class RecordAttachmentUploadsTest < Minitest::Test
   end
 
   private
+
+  def with_resolved_blobs(&)
+    ActiveStorage::Blob.stub(:find_signed!, lambda { |signed_id|
+      Struct.new(:id, :content_type, :byte_size).new(signed_id, "image/png", 32)
+    }, &)
+  end
 
   def stub_recording_studio!
     studio = defined?(RecordingStudio) ? RecordingStudio : Object.const_set(:RecordingStudio, Module.new)

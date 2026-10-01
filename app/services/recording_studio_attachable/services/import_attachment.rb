@@ -52,15 +52,13 @@ module RecordingStudioAttachable
       end
 
       def create_blob!
-        attributes = {
+        create_imported_blob!(
           io: io,
           filename: filename,
           content_type: content_type,
-          identify: identify
-        }
-        attributes[:service_name] = service_name if service_name.present?
-
-        ActiveStorage::Blob.create_and_upload!(**attributes)
+          identify: identify,
+          service_name: service_name
+        )
       end
 
       def resolved_name
@@ -74,9 +72,7 @@ module RecordingStudioAttachable
       end
 
       def purge_blob(blob)
-        return if blob.blank?
-
-        blob.purge if blob.respond_to?(:purge)
+        RecordingStudioAttachable::StorageLimit.discard_unattached!([blob])
       end
     end
   end

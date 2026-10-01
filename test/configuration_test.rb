@@ -28,6 +28,7 @@ class ConfigurationTest < Minitest::Test
   def test_defaults_match_attachable_expectations
     assert_equal ["image/*", "application/pdf"], @configuration.allowed_content_types
     assert_equal 20, @configuration.max_file_count
+    assert_nil @configuration.storage_limit
     assert_not @configuration.image_processing_enabled
     assert_equal 2560, @configuration.image_processing_max_width
     assert_equal 2560, @configuration.image_processing_max_height
@@ -259,6 +260,21 @@ class ConfigurationTest < Minitest::Test
     assert_equal({ view: :view, upload: :edit }, roles)
   end
 
+  def test_storage_limit_blank_values_are_stored_as_nil
+    @configuration.storage_limit = :storage_bytes
+    assert_equal :storage_bytes, @configuration.storage_limit
+
+    @configuration.storage_limit = "  "
+    assert_nil @configuration.storage_limit
+
+    @configuration.merge!(storage_limit: "")
+    assert_nil @configuration.storage_limit
+
+    @configuration.merge!(storage_limit: "archive_bytes")
+    assert_equal "archive_bytes", @configuration[:storage_limit]
+    assert_equal "archive_bytes", @configuration.to_h[:storage_limit]
+  end
+
   def test_to_h_reflects_current_values
     @configuration.layout = :application
     @configuration.enabled_attachment_kinds = %i[file]
@@ -268,6 +284,7 @@ class ConfigurationTest < Minitest::Test
         allowed_content_types: ["image/*", "application/pdf"],
         max_file_size: 25.megabytes,
         max_file_count: 20,
+        storage_limit: nil,
         image_processing_enabled: false,
         image_processing_max_width: 2560,
         image_processing_max_height: 2560,

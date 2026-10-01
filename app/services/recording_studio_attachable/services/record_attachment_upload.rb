@@ -25,25 +25,30 @@ module RecordingStudioAttachable
         capability_options = capability_options_for(parent_recording)
         authorize!(action: :upload, actor: resolved_actor, recording: parent_recording, capability_options: capability_options)
 
-        attachment = attachment_from_signed_blob!(
-          signed_blob_id: signed_blob_id,
-          name: name,
-          description: description,
-          capability_options: capability_options
-        )
+        blob = signed_blob!(signed_blob_id, capability_options: capability_options)
         root_recording = root_recording_for(parent_recording)
-        event = RecordingStudio.record!(
-          action: "attachment_uploaded",
-          recordable: attachment,
-          root_recording: root_recording,
-          parent_recording: parent_recording,
-          actor: resolved_actor,
-          impersonator: impersonator,
-          metadata: metadata_for(
-            attachment: attachment,
-            extra: metadata.merge(parent_recording_id: parent_recording.id, root_recording_id: root_recording.id, batch_id: batch_id)
+        incoming = RecordingStudioAttachable::StorageLimit::IncomingBytes.for(root_recording, [blob])
+        event = RecordingStudioAttachable::StorageLimit.with_storage_capacity!(root_recording, incoming) do
+          attachment = build_attachment!(
+            blob: blob,
+            name: name,
+            description: description,
+            capability_options: capability_options,
+            root_recording: root_recording
           )
-        )
+          RecordingStudio.record!(
+            action: "attachment_uploaded",
+            recordable: attachment,
+            root_recording: root_recording,
+            parent_recording: parent_recording,
+            actor: resolved_actor,
+            impersonator: impersonator,
+            metadata: metadata_for(
+              attachment: attachment,
+              extra: metadata.merge(parent_recording_id: parent_recording.id, root_recording_id: root_recording.id, batch_id: batch_id)
+            )
+          )
+        end
 
         success(event.recording)
       end

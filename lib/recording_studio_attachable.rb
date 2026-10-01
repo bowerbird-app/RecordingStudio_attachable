@@ -3,10 +3,16 @@
 module RecordingStudioAttachable
   class Error < StandardError; end
   class DependencyUnavailableError < Error; end
+  class StorageLimitUnknown < StandardError; end
+  class StorageLimitError < StandardError; end
 
   class << self
     def configuration
       @configuration ||= Configuration.new
+    end
+
+    def storage_bytes_for(root_recording)
+      StorageLimit.bytes_for(root_recording)
     end
 
     def register_upload_provider(key = nil, **options)
@@ -28,6 +34,7 @@ require "recording_studio_attachable/attachment_file_button"
 require "recording_studio_attachable/attachment_file_button_responses"
 require "recording_studio_attachable/upload_provider"
 require "recording_studio_attachable/authorization"
+require "recording_studio_attachable/storage_limit"
 require "recording_studio_attachable/services/base_service"
 require "recording_studio_attachable/google_drive/oauth_client"
 require "recording_studio_attachable/google_drive/client"

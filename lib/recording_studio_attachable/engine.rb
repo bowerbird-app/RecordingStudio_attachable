@@ -23,6 +23,12 @@ module RecordingStudioAttachable
       end
     end
 
+    initializer "recording_studio_attachable.storage_limit" do |app|
+      app.config.to_prepare do
+        RecordingStudioAttachable::StorageLimit.register_usage!
+      end
+    end
+
     initializer "recording_studio_attachable.action_view_helpers" do
       ActiveSupport.on_load(:action_view) do
         include RecordingStudioAttachable::ApplicationHelper

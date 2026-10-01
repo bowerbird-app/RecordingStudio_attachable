@@ -36,6 +36,8 @@ module RecordingStudioAttachable
       end
 
       def root_recording_for(recording)
+        return recording unless recording.respond_to?(:root_recording)
+
         recording.root_recording || recording
       end
 
@@ -73,14 +75,25 @@ module RecordingStudioAttachable
         }.compact
       end
 
-      def attachment_from_signed_blob!(signed_blob_id:, name:, description:, capability_options: {})
+      def signed_blob!(signed_blob_id, capability_options:)
         blob = ActiveStorage::Blob.find_signed!(signed_blob_id)
         validate_blob!(blob, capability_options: capability_options)
+        blob
+      end
+
+      def create_imported_blob!(io:, filename:, content_type:, identify: true, service_name: nil)
+        ActiveStorage::Blob.create_and_upload!(**{
+          io: io, filename: filename, content_type: content_type, identify: identify, service_name: service_name
+        }.compact)
+      end
+
+      def build_attachment!(blob:, name:, description:, capability_options:, root_recording:)
         RecordingStudioAttachable::Attachment.build_from_blob(
           blob: blob,
           name: name,
           description: description,
-          validation_options: capability_validation_options(capability_options)
+          validation_options: capability_validation_options(capability_options),
+          root_recording: root_recording
         )
       end
 

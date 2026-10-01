@@ -120,7 +120,7 @@ module RecordingStudioAttachable
                   :authorize_with,
                   :google_drive
 
-    attr_reader :image_variants, :upload_providers
+    attr_reader :image_variants, :upload_providers, :storage_limit
 
     def initialize
       assign_defaults
@@ -207,11 +207,17 @@ module RecordingStudioAttachable
       @image_variants = normalize_image_variants(variants)
     end
 
+    def storage_limit=(value)
+      normalized = value.is_a?(String) ? value.strip : value
+      @storage_limit = normalized.presence
+    end
+
     def to_h
       {
         allowed_content_types: allowed_content_types,
         max_file_size: max_file_size,
         max_file_count: max_file_count,
+        storage_limit: storage_limit,
         image_processing_enabled: image_processing_enabled,
         image_processing_max_width: image_processing_max_width,
         image_processing_max_height: image_processing_max_height,
@@ -232,6 +238,7 @@ module RecordingStudioAttachable
       @allowed_content_types = ["image/*", "application/pdf"]
       @max_file_size = 25.megabytes
       @max_file_count = 20
+      @storage_limit = nil
       @image_processing_enabled = false
       @image_processing_max_width = 2560
       @image_processing_max_height = 2560

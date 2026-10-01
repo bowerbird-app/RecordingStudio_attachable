@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "fileutils"
 require "securerandom"
+require "tmpdir"
 require_relative "../app/services/recording_studio_attachable/services/application_service"
 require_relative "../app/services/recording_studio_attachable/services/record_attachment_upload"
 require_relative "../app/services/recording_studio_attachable/services/record_attachment_uploads"
@@ -19,12 +21,25 @@ end
 
 unless defined?(ActiveStorage::Blob)
   module ActiveStorage
-    class Blob
+    class Blob < ActiveRecord::Base
+      self.table_name = "active_storage_blobs"
+
       def self.find_signed!(*); end
 
       def self.create_and_upload!(**); end
+
+      def purge
+        destroy
+      end
+    end
+
+    class Attachment < ActiveRecord::Base
+      self.table_name = "active_storage_attachments"
+      belongs_to :blob, class_name: "ActiveStorage::Blob"
     end
   end
+
+  ActiveStorage::Blob.has_many :attachments, class_name: "ActiveStorage::Attachment", foreign_key: :blob_id
 end
 
 unless ApplicationRecord.respond_to?(:has_one_attached)
@@ -76,6 +91,15 @@ class StorageLimitTest < Minitest::Test
         end
       end.new(name)
     end
+  end
+
+  class EventRow < ActiveRecord::Base
+    self.table_name = "recording_studio_events"
+  end
+
+  class RecordingRow < ActiveRecord::Base
+    self.table_name = "recording_studio_recordings"
+    has_many :events, class_name: "StorageLimitTest::EventRow", foreign_key: :recording_id, dependent: :delete_all
   end
 
   class PlanHandle
@@ -257,6 +281,83 @@ class StorageLimitTest < Minitest::Test
     assert_equal 50, RecordingStudioAttachable.storage_bytes_for(root)
   end
 
+  def test_trash_and_restore_keep_bytes_and_recording_destroy_frees_them
+    byte_size = 104_857_600
+    root_id = insert_recording(recordable_type: "Workspace")
+    blob_id = insert_blob(byte_size: byte_size)
+    attachment_id = insert_attachment(byte_size: byte_size, root_recording_id: root_id)
+    link_id = insert_link(attachment_id, blob_id)
+    recording_id = insert_recording(
+      recordable_type: "RecordingStudioAttachable::Attachment",
+      recordable_id: attachment_id,
+      root_recording_id: root_id,
+      parent_recording_id: root_id
+    )
+    root = root_for(root_id)
+
+    assert_equal byte_size, RecordingStudioAttachable.storage_bytes_for(root)
+
+    recording = attachment_recording_model.find(recording_id)
+    recording.update!(trashed_at: Time.current)
+    assert_equal byte_size, RecordingStudioAttachable.storage_bytes_for(root)
+
+    recording.update!(trashed_at: nil)
+    assert_equal byte_size, RecordingStudioAttachable.storage_bytes_for(root)
+
+    with_test_storage_service { recording.destroy! }
+    @created_ids[:recordings].delete(recording_id)
+    @created_ids[:links].delete(link_id)
+    @created_ids[:blobs].delete(blob_id)
+
+    assert_equal 0, RecordingStudioAttachable.storage_bytes_for(root)
+    assert_nil connection.select_value(
+      "SELECT id FROM active_storage_attachments WHERE id = #{connection.quote(link_id)}"
+    )
+    assert_nil connection.select_value(
+      "SELECT id FROM active_storage_blobs WHERE id = #{connection.quote(blob_id)}"
+    )
+  end
+
+  def test_recording_destroy_releases_replaced_snapshots_and_keeps_a_shared_blob
+    root_id = insert_recording(recordable_type: "Workspace")
+    other_root_id = insert_recording(recordable_type: "Workspace")
+    old_blob = insert_blob(byte_size: 10)
+    shared_blob = insert_blob(byte_size: 40)
+    original = insert_attachment(byte_size: 10, root_recording_id: root_id)
+    replacement = insert_attachment(byte_size: 40, root_recording_id: root_id)
+    other = insert_attachment(byte_size: 40, root_recording_id: other_root_id)
+    old_link = insert_link(original, old_blob)
+    shared_link = insert_link(replacement, shared_blob)
+    other_link = insert_link(other, shared_blob)
+    recording_id = insert_recording(
+      recordable_type: "RecordingStudioAttachable::Attachment",
+      recordable_id: replacement,
+      root_recording_id: root_id,
+      parent_recording_id: root_id
+    )
+    event_id = insert_event(recording_id: recording_id, recordable_id: replacement, previous_recordable_id: original)
+    root = root_for(root_id)
+    other_root = root_for(other_root_id)
+
+    assert_equal 50, RecordingStudioAttachable.storage_bytes_for(root)
+    assert_equal 40, RecordingStudioAttachable.storage_bytes_for(other_root)
+
+    recording = attachment_recording_model.find(recording_id)
+    with_test_storage_service { recording.destroy! }
+    @created_ids[:recordings].delete(recording_id)
+    @created_ids[:events].delete(event_id)
+    @created_ids[:links].delete(old_link)
+    @created_ids[:links].delete(shared_link)
+    @created_ids[:blobs].delete(old_blob)
+
+    assert_equal 0, RecordingStudioAttachable.storage_bytes_for(root)
+    assert_equal 40, RecordingStudioAttachable.storage_bytes_for(other_root)
+    assert_nil connection.select_value("SELECT id FROM active_storage_blobs WHERE id = #{connection.quote(old_blob)}")
+    refute_nil connection.select_value("SELECT id FROM active_storage_blobs WHERE id = #{connection.quote(shared_blob)}")
+    assert_nil connection.select_value("SELECT id FROM active_storage_attachments WHERE id = #{connection.quote(shared_link)}")
+    refute_nil connection.select_value("SELECT id FROM active_storage_attachments WHERE id = #{connection.quote(other_link)}")
+  end
+
   def test_backfill_stamps_live_recordings_and_event_snapshots_and_leaves_orphans
     root_id = insert_recording(recordable_type: "Workspace")
     live = insert_attachment(byte_size: 8, root_recording_id: nil)
@@ -414,11 +515,13 @@ class StorageLimitTest < Minitest::Test
     blob = BlobDouble.new(id: SecureRandom.uuid, byte_size: 20)
     @configuration.storage_limit = :missing_limit
 
-    missing = assert_raises(RecordingStudioAttachable::StorageLimitUnknown) { upload(parent, blob) }
+    missing = capture_attachable_error { upload(parent, blob) }
+    assert_instance_of RecordingStudioAttachable::StorageLimitUnknown, missing
     assert_includes missing.message, "missing_limit"
 
     @configuration.storage_limit = :counted_items
-    counted = assert_raises(RecordingStudioAttachable::StorageLimitUnknown) { upload(parent, blob) }
+    counted = capture_attachable_error { upload(parent, blob) }
+    assert_instance_of RecordingStudioAttachable::StorageLimitUnknown, counted
     assert_includes counted.message, "counted_items"
     assert_includes counted.message, "quantity"
   end
@@ -429,7 +532,9 @@ class StorageLimitTest < Minitest::Test
     parent = parent_recording
     blob = BlobDouble.new(id: nil, byte_size: 20)
 
-    assert_raises(RecordingStudioAttachable::StorageLimitError) { upload(parent, blob) }
+    error = capture_attachable_error { upload(parent, blob) }
+    assert_instance_of RecordingStudioAttachable::StorageLimitError, error
+    assert_includes error.message, "unsaved blob"
   end
 
   def test_nested_claim_rejects_a_blob_outside_the_reservation
@@ -536,6 +641,32 @@ class StorageLimitTest < Minitest::Test
   end
 
   private
+
+  def attachment_recording_model
+    RecordingStudioAttachable::StorageLimit.install_release_hook!(RecordingRow)
+    RecordingRow
+  end
+
+  def capture_attachable_error
+    yield
+    flunk "expected RecordingStudioAttachable::Error"
+  rescue RecordingStudioAttachable::Error => e
+    e
+  end
+
+  def with_test_storage_service
+    return yield unless ActiveStorage::Blob.respond_to?(:services=)
+
+    previous = ActiveStorage::Blob.services
+    directory = Dir.mktmpdir("attachable-storage")
+    ActiveStorage::Blob.services = previous.merge(
+      "test" => ActiveStorage::Service::DiskService.new(root: directory)
+    )
+    yield
+  ensure
+    ActiveStorage::Blob.services = previous if previous
+    FileUtils.remove_entry(directory) if directory
+  end
 
   def with_recording_transaction
     has_recording = defined?(RecordingStudio::Recording)
@@ -785,16 +916,17 @@ class StorageLimitTest < Minitest::Test
     SQL
   end
 
-  def insert_recording(recordable_type:, recordable_id: nil, root_recording_id: nil)
+  def insert_recording(recordable_type:, recordable_id: nil, root_recording_id: nil, parent_recording_id: nil)
     recordable_id ||= connection.select_value("SELECT gen_random_uuid()")
     id = connection.select_value(<<~SQL)
       INSERT INTO recording_studio_recordings
-        (id, recordable_type, recordable_id, root_recording_id, created_at, updated_at)
+        (id, recordable_type, recordable_id, root_recording_id, parent_recording_id, created_at, updated_at)
       VALUES (
         gen_random_uuid(),
         #{connection.quote(recordable_type)},
         #{connection.quote(recordable_id)},
         #{root_recording_id.nil? ? 'NULL' : connection.quote(root_recording_id)},
+        #{parent_recording_id.nil? ? 'NULL' : connection.quote(parent_recording_id)},
         NOW(),
         NOW()
       )

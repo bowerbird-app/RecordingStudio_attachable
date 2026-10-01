@@ -180,9 +180,9 @@ end
 
 The product stores the cap in Stripe metadata as `limit_<name>`. For the example above that key is `limit_storage_bytes`. Attachable registers the usage provider. The provider calls `RecordingStudioAttachable.storage_bytes_for(root)` and returns that integer. The total does not reset each billing period.
 
-`storage_bytes_for` sums distinct original file blobs on attachment rows stamped with that root. The same blob counts once under one root. It counts again, in full, under every other root that still has it. Variant files are not included. Rows whose recording and events were already gone before the backfill stay uncounted.
+`storage_bytes_for` sums distinct original file blobs on attachment rows stamped with that root. The same blob counts once under one root. It counts again, in full, under every other root that still has it. Variant files are not included. Rows whose recording and events were already gone before the backfill stay uncounted. The total is an ActiveRecord query on the host connection.
 
-Capacity comes back when those file attachment rows are gone. Trash, restore, remove, and destroying the recording do not detach the blob, so they do not free capacity. This gem does not delete those rows.
+Trash and restore leave the file attached, so the total stays the same. Permanent deletion is `Recording#destroy!`. `RemoveAttachment` uses that when the recording has no Trashable hook. Trashable purge uses that after the recording is already trashed. Destroy detaches the file rows for the current attachment and earlier snapshots on that recording, then purges a blob that no other attachment still references. The total drops when those file rows are gone.
 
 When browser-side image preprocessing is enabled, the gem's built-in direct-upload surfaces resize oversized JPEG, PNG, and WebP files before `DirectUpload` sends them to Active Storage. That includes the main upload page, the bundled attachment-image picker, and attachment file replacements on the revision screen. This is a best-effort optimization layer, not a security boundary: server-side content-type and byte-size validation still runs on the final uploaded blob. GIF, SVG, HEIC/HEIF, and other unsupported image types are uploaded unchanged.
 

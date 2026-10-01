@@ -50,6 +50,8 @@ module RecordingStudioAttachable
         yield(result) if block_given?
         result
       rescue *HANDLED_EXCEPTIONS => e
+        raise if storage_limit_exception?(e)
+
         failure(e)
       end
 
@@ -57,6 +59,10 @@ module RecordingStudioAttachable
 
       def perform
         raise NotImplementedError, "#{self.class}#perform must be implemented"
+      end
+
+      def storage_limit_exception?(error)
+        error.is_a?(StorageLimitUnknown) || error.is_a?(StorageLimitError)
       end
 
       def success(value = nil)

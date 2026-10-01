@@ -26,6 +26,7 @@ module RecordingStudioAttachable
     initializer "recording_studio_attachable.storage_limit" do |app|
       app.config.to_prepare do
         RecordingStudioAttachable::StorageLimit.register_usage!
+        RecordingStudioAttachable::StorageLimit.install_release_hook!
       end
     end
 

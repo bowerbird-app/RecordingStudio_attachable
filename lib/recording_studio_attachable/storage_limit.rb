@@ -5,29 +5,7 @@ module RecordingStudioAttachable
     RESERVATIONS = :recording_studio_attachable_storage_reservations
     DISCARDS = :recording_studio_attachable_storage_discards
     DISCARD_DEPTH = :recording_studio_attachable_storage_discard_depth
-    BYTES_SQL = <<~SQL.squish.freeze
-      SELECT COALESCE(SUM(distinct_blobs.byte_size), 0)
-      FROM (
-        SELECT DISTINCT blobs.id, blobs.byte_size
-        FROM %<table>s attachments
-        INNER JOIN active_storage_attachments files
-          ON files.record_type = 'RecordingStudioAttachable::Attachment'
-         AND files.name = 'file'
-         AND files.record_id::text = attachments.id::text
-        INNER JOIN active_storage_blobs blobs
-          ON blobs.id = files.blob_id
-        WHERE attachments.root_recording_id = %<root>s
-      ) distinct_blobs
-    SQL
-    RETAINED_SQL = <<~SQL.squish.freeze
-      SELECT DISTINCT files.blob_id::text
-      FROM %<table>s attachments
-      INNER JOIN active_storage_attachments files
-        ON files.record_type = 'RecordingStudioAttachable::Attachment'
-       AND files.name = 'file'
-       AND files.record_id::text = attachments.id::text
-      WHERE attachments.root_recording_id = %<root>s
-    SQL
+    ATTACHMENT_TYPE = "RecordingStudioAttachable::Attachment"
 
     class IncomingBytes
       def self.for(root, blobs)
@@ -113,14 +91,40 @@ module RecordingStudioAttachable
         root_key = IncomingBytes.root_key(root)
         return 0 if root_key.blank?
 
-        connection.select_value(bytes_sql(root_key)).to_i
+        file_blob_scope(root_key).sum(:byte_size).to_i
       end
 
       def retained_blob_ids(root)
         root_key = IncomingBytes.root_key(root)
         return [] if root_key.blank?
 
-        connection.select_values(retained_sql(root_key))
+        file_links(root_key).distinct.pluck(:blob_id)
+      end
+
+      def install_release_hook!(klass = nil)
+        target = klass || recording_class
+        return unless target.respond_to?(:include)
+        return if target.include?(StorageRelease)
+
+        target.include StorageRelease
+      end
+
+      def detach_recording!(recording)
+        return unless attachment_recording?(recording)
+
+        recording.recording_studio_attachable_detached_blob_ids = detach_file_links!(attachment_ids_for(recording))
+      end
+
+      def purge_detached_blobs!(recording)
+        ids = recording.recording_studio_attachable_detached_blob_ids
+        return if ids.blank?
+        return unless defined?(ActiveStorage::Blob) && ActiveStorage::Blob.respond_to?(:where)
+
+        ActiveStorage::Blob.where(id: ids).find_each do |blob|
+          next if blob_attached?(blob)
+
+          blob.purge
+        end
       end
 
       def with_storage_capacity!(root_recording, incoming_bytes, &block)
@@ -323,20 +327,74 @@ module RecordingStudioAttachable
         defined?(ActiveSupport::IsolatedExecutionState) ? ActiveSupport::IsolatedExecutionState : Thread.current
       end
 
-      def connection
-        RecordingStudioAttachable::Attachment.connection
+      def recording_class
+        return unless defined?(RecordingStudio)
+
+        klass = RecordingStudio.const_get(:Recording)
+        klass if klass.is_a?(Class) && klass < ActiveRecord::Base
+      rescue NameError
+        nil
       end
 
-      def bytes_sql(root_key)
-        format(BYTES_SQL, table: attachment_table, root: connection.quote(root_key))
+      def attachment_recording?(recording)
+        recording.respond_to?(:recordable_type) && recording.recordable_type == ATTACHMENT_TYPE
       end
 
-      def retained_sql(root_key)
-        format(RETAINED_SQL, table: attachment_table, root: connection.quote(root_key))
+      def attachment_ids_for(recording)
+        ids = []
+        ids << recording.recordable_id if recording.respond_to?(:recordable_id) && recording.recordable_id.present?
+        ids.concat(event_attachment_ids(recording))
+        ids.map(&:to_s).uniq
       end
 
-      def attachment_table
-        RecordingStudioAttachable::Attachment.quoted_table_name
+      def event_attachment_ids(recording)
+        return [] unless recording.respond_to?(:events)
+
+        event_rows(recording).flat_map { |row| attachment_ids_from_event_row(row) }
+      end
+
+      def event_rows(recording)
+        scope = recording.association(:events).scope
+        scope = scope.unscope(:order) if scope.respond_to?(:unscope)
+        scope.pluck(:recordable_id, :recordable_type, :previous_recordable_id, :previous_recordable_type)
+      end
+
+      def attachment_ids_from_event_row(row)
+        recordable_id, recordable_type, previous_id, previous_type = row
+        ids = []
+        ids << recordable_id if attachment_reference?(recordable_type, recordable_id)
+        ids << previous_id if attachment_reference?(previous_type, previous_id)
+        ids
+      end
+
+      def attachment_reference?(type, id)
+        type == ATTACHMENT_TYPE && id.present?
+      end
+
+      def detach_file_links!(attachment_ids)
+        return [] if attachment_ids.blank?
+        return [] unless defined?(ActiveStorage::Attachment) && ActiveStorage::Attachment.respond_to?(:where)
+
+        links = ActiveStorage::Attachment.where(
+          record_type: ATTACHMENT_TYPE,
+          name: "file",
+          record_id: attachment_ids
+        )
+        blob_ids = links.distinct.pluck(:blob_id)
+        links.delete_all
+        blob_ids
+      end
+
+      def file_links(root_key)
+        ActiveStorage::Attachment.where(
+          record_type: ATTACHMENT_TYPE,
+          name: "file",
+          record_id: RecordingStudioAttachable::Attachment.where(root_recording_id: root_key).select(:id)
+        )
+      end
+
+      def file_blob_scope(root_key)
+        ActiveStorage::Blob.where(id: file_links(root_key).select(:blob_id))
       end
     end
   end

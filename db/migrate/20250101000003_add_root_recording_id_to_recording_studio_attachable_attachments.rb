@@ -2,20 +2,6 @@
 
 class AddRootRecordingIdToRecordingStudioAttachableAttachments < ActiveRecord::Migration[8.1]
   INDEX_NAME = "index_rs_attachable_attachments_on_root_recording_id"
-  BACKFILL_SQL = <<~SQL.squish.freeze
-    UPDATE recording_studio_attachable_attachments AS attachments
-    SET root_recording_id = sources.root_recording_id
-    FROM (
-      SELECT DISTINCT ON (attachment_id) attachment_id, root_recording_id
-      FROM (
-        %<recording_sources>s
-        %<event_sources>s
-      ) candidates
-      ORDER BY attachment_id, source_rank
-    ) sources
-    WHERE attachments.id = sources.attachment_id
-      AND attachments.root_recording_id IS NULL
-  SQL
   EVENT_RECORDABLE_SOURCE = <<~SQL.squish.freeze
     SELECT events.recordable_id AS attachment_id,
            recordings.root_recording_id,
@@ -73,10 +59,41 @@ class AddRootRecordingIdToRecordingStudioAttachableAttachments < ActiveRecord::M
   def backfill_root_recording_ids
     return unless backfill_ready?
 
-    execute format(BACKFILL_SQL, recording_sources: recording_sources, event_sources: event_sources)
+    chosen_root_ids.each { |attachment_id, root_id| stamp_root_recording_id(attachment_id, root_id) }
   end
 
   private
+
+  def chosen_root_ids
+    picks = {}
+    connection.select_all(candidates_sql).each { |row| keep_better_candidate(picks, row) }
+    picks.filter_map do |attachment_id, pick|
+      root_id = pick[:root_recording_id]
+      [attachment_id, root_id] if root_id.present?
+    end
+  end
+
+  def keep_better_candidate(picks, row)
+    attachment_id = row["attachment_id"]
+    rank = row["source_rank"].to_i
+    current = picks[attachment_id]
+    return if current && current.fetch(:rank) <= rank
+
+    picks[attachment_id] = { rank: rank, root_recording_id: row["root_recording_id"] }
+  end
+
+  def stamp_root_recording_id(attachment_id, root_id)
+    execute(<<~SQL.squish)
+      UPDATE recording_studio_attachable_attachments
+      SET root_recording_id = #{connection.quote(root_id)}
+      WHERE id = #{connection.quote(attachment_id)}
+        AND root_recording_id IS NULL
+    SQL
+  end
+
+  def candidates_sql
+    "SELECT attachment_id, root_recording_id, source_rank FROM (#{recording_sources} #{event_sources}) candidates"
+  end
 
   def recording_sources
     RECORDING_SOURCE

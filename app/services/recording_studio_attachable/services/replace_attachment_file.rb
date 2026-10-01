@@ -26,31 +26,36 @@ module RecordingStudioAttachable
         authorize!(action: :revise, actor: resolved_actor, recording: owner_recording, capability_options: capability_options)
 
         current_attachment = attachment_recording.recordable
-        replacement = attachment_from_signed_blob!(
-          signed_blob_id: signed_blob_id,
-          name: name.presence || current_attachment.name,
-          description: description.nil? ? current_attachment.description : description,
-          capability_options: capability_options
-        )
+        blob = signed_blob!(signed_blob_id, capability_options: capability_options)
         root_recording = root_recording_for(attachment_recording)
-        event = RecordingStudio.record!(
-          action: "attachment_file_replaced",
-          recordable: replacement,
-          recording: attachment_recording,
-          root_recording: root_recording,
-          actor: resolved_actor,
-          impersonator: impersonator,
-          metadata: metadata_for(
-            attachment: replacement,
-            extra: metadata.merge(
-              attachment_recording_id: attachment_recording.id,
-              parent_recording_id: attachment_recording.parent_recording_id,
-              root_recording_id: root_recording.id,
-              previous_attachment_recordable_id: current_attachment.id,
-              source: "file_replacement"
+        incoming = RecordingStudioAttachable::StorageLimit::IncomingBytes.for(root_recording, [blob])
+        event = RecordingStudioAttachable::StorageLimit.with_storage_capacity!(root_recording, incoming) do
+          replacement = build_attachment!(
+            blob: blob,
+            name: name.presence || current_attachment.name,
+            description: description.nil? ? current_attachment.description : description,
+            capability_options: capability_options,
+            root_recording: root_recording
+          )
+          RecordingStudio.record!(
+            action: "attachment_file_replaced",
+            recordable: replacement,
+            recording: attachment_recording,
+            root_recording: root_recording,
+            actor: resolved_actor,
+            impersonator: impersonator,
+            metadata: metadata_for(
+              attachment: replacement,
+              extra: metadata.merge(
+                attachment_recording_id: attachment_recording.id,
+                parent_recording_id: attachment_recording.parent_recording_id,
+                root_recording_id: root_recording.id,
+                previous_attachment_recordable_id: current_attachment.id,
+                source: "file_replacement"
+              )
             )
           )
-        )
+        end
 
         success(event.recording)
       end

@@ -13,6 +13,7 @@ gem "sprockets-rails"
 group :development, :test do
   gem "debug"
   gem "minitest-mock"
+  gem "pg", "~> 1.1"
   gem "simplecov", require: false
 end
 

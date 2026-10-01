@@ -7,7 +7,7 @@ require_relative "../../app/services/recording_studio_attachable/services/import
 
 class ImportAttachmentsTest < Minitest::Test
   FakeRecording = Struct.new(:id, :recordable_type, :root_recording, keyword_init: true)
-  FakeBlob = Struct.new(:purged, keyword_init: true) do
+  FakeBlob = Struct.new(:signed_id, :content_type, :byte_size, :id, :purged, keyword_init: true) do
     def purge
       self.purged = true
     end
@@ -33,32 +33,44 @@ class ImportAttachmentsTest < Minitest::Test
       { io: StringIO.new("<svg>1</svg>"), filename: "one.svg", content_type: "image/svg+xml", metadata: { provider: "demo_cloud" } },
       { io: StringIO.new("<svg>2</svg>"), filename: "two.svg", content_type: "image/svg+xml", source: "dropbox" }
     ]
-    captured_calls = []
+    captured_uploads = []
+    captured_creates = []
+    blobs = [
+      FakeBlob.new(signed_id: "signed-one", content_type: "image/svg+xml", byte_size: 12, id: "blob-one", purged: false),
+      FakeBlob.new(signed_id: "signed-two", content_type: "image/svg+xml", byte_size: 18, id: "blob-two", purged: false)
+    ]
 
-    RecordingStudioAttachable::Services::ImportAttachment.stub(:call, lambda { |**kwargs|
-      captured_calls << kwargs
-      RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: kwargs[:filename])
+    ActiveStorage::Blob.stub(:create_and_upload!, lambda { |**kwargs|
+      captured_creates << kwargs
+      blobs[captured_creates.length - 1]
     }) do
-      SecureRandom.stub(:uuid, "batch-1") do
-        result = RecordingStudioAttachable::Services::ImportAttachments.call(
-          parent_recording: parent,
-          attachments: attachments,
-          actor: :actor,
-          source: "demo_cloud"
-        )
+      RecordingStudioAttachable::Services::RecordAttachmentUpload.stub(:call, lambda { |**kwargs|
+        captured_uploads << kwargs
+        RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: kwargs[:name])
+      }) do
+        SecureRandom.stub(:uuid, "batch-1") do
+          result = RecordingStudioAttachable::Services::ImportAttachments.call(
+            parent_recording: parent,
+            attachments: attachments,
+            actor: :actor,
+            source: "demo_cloud"
+          )
 
-        assert result.success?
-        assert_equal %w[one.svg two.svg], result.value
+          assert result.success?
+          assert_equal %w[one two], result.value
+        end
       end
     end
 
-    assert_equal 2, captured_calls.length
-    assert_equal({ provider: "demo_cloud", batch_id: "batch-1" }, captured_calls.first[:metadata])
-    assert_equal "demo_cloud", captured_calls.first[:source]
-    assert_equal({ batch_id: "batch-1" }, captured_calls.last[:metadata])
-    assert_equal "dropbox", captured_calls.last[:source]
-    assert_equal true, captured_calls.first[:identify]
-    assert_equal true, captured_calls.last[:identify]
+    assert_equal 2, captured_uploads.length
+    assert_equal({ provider: "demo_cloud", source: "demo_cloud", batch_id: "batch-1" }, captured_uploads.first[:metadata])
+    assert_equal "signed-one", captured_uploads.first[:signed_blob_id]
+    assert_equal({ source: "dropbox", batch_id: "batch-1" }, captured_uploads.last[:metadata])
+    assert_equal "dropbox", captured_uploads.last[:metadata][:source]
+    assert_equal true, captured_creates.first[:identify]
+    assert_equal true, captured_creates.last[:identify]
+    assert_equal "one.svg", captured_creates.first[:filename]
+    assert_equal "two.svg", captured_creates.last[:filename]
   end
 
   def test_import_attachments_rejects_batches_larger_than_the_configured_limit
@@ -78,47 +90,59 @@ class ImportAttachmentsTest < Minitest::Test
 
   def test_import_attachments_purges_previously_created_blobs_when_a_later_item_fails
     parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: FakeRecording.new(id: "root-1"))
-    first_blob = FakeBlob.new(purged: false)
+    first_blob = FakeBlob.new(signed_id: "signed-one", content_type: "image/svg+xml", byte_size: 12, id: "blob-one", purged: false)
+    second_blob = FakeBlob.new(signed_id: "signed-two", content_type: "image/svg+xml", byte_size: 18, id: "blob-two", purged: false)
     first_created = FakeCreatedRecording.new(recordable: FakeAttachment.new(file: FakeFile.new(blob: first_blob)))
     success_result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: first_created)
     failure_result = RecordingStudioAttachable::Services::BaseService::Result.new(success: false, error: "bad file")
-    calls = 0
+    created = []
 
-    RecordingStudioAttachable::Services::ImportAttachment.stub(:call, lambda { |**|
-      calls += 1
-      calls == 1 ? success_result : failure_result
+    ActiveStorage::Blob.stub(:create_and_upload!, lambda { |**|
+      blob = created.empty? ? first_blob : second_blob
+      created << blob
+      blob
     }) do
-      result = RecordingStudioAttachable::Services::ImportAttachments.call(
-        parent_recording: parent,
-        attachments: [
-          { io: StringIO.new("1"), filename: "one.svg", content_type: "image/svg+xml" },
-          { io: StringIO.new("2"), filename: "two.svg", content_type: "image/svg+xml" }
-        ]
-      )
+      RecordingStudioAttachable::Services::RecordAttachmentUpload.stub(:call, lambda { |**kwargs|
+        kwargs[:signed_blob_id] == "signed-one" ? success_result : failure_result
+      }) do
+        result = RecordingStudioAttachable::Services::ImportAttachments.call(
+          parent_recording: parent,
+          attachments: [
+            { io: StringIO.new("1"), filename: "one.svg", content_type: "image/svg+xml" },
+            { io: StringIO.new("2"), filename: "two.svg", content_type: "image/svg+xml" }
+          ]
+        )
 
-      assert result.failure?
-      assert_equal 'Failed to import "two.svg": bad file', result.error
-      assert_equal [{ filename: "two.svg", content_type: "image/svg+xml", error: "bad file" }], result.errors
+        assert result.failure?
+        assert_equal 'Failed to import "two.svg": bad file', result.error
+        assert_equal [{ filename: "two.svg", content_type: "image/svg+xml", error: "bad file" }], result.errors
+      end
     end
 
     assert first_blob.purged
+    assert second_blob.purged
   end
 
   def test_import_attachments_uses_underlying_error_when_attachment_label_is_missing
     parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: FakeRecording.new(id: "root-1"))
     failure_result = RecordingStudioAttachable::Services::BaseService::Result.new(success: false, error: "bad file")
+    blob = FakeBlob.new(signed_id: "signed-blank", content_type: "image/svg+xml", byte_size: 4, id: "blob-blank", purged: false)
 
-    RecordingStudioAttachable::Services::ImportAttachment.stub(:call, failure_result) do
-      result = RecordingStudioAttachable::Services::ImportAttachments.call(
-        parent_recording: parent,
-        attachments: [
-          { io: StringIO.new("1"), filename: "", content_type: "image/svg+xml" }
-        ]
-      )
+    ActiveStorage::Blob.stub(:create_and_upload!, blob) do
+      RecordingStudioAttachable::Services::RecordAttachmentUpload.stub(:call, failure_result) do
+        result = RecordingStudioAttachable::Services::ImportAttachments.call(
+          parent_recording: parent,
+          attachments: [
+            { io: StringIO.new("1"), filename: "", content_type: "image/svg+xml" }
+          ]
+        )
 
-      assert result.failure?
-      assert_equal "bad file", result.error
+        assert result.failure?
+        assert_equal "bad file", result.error
+      end
     end
+
+    assert blob.purged
   end
 
   private

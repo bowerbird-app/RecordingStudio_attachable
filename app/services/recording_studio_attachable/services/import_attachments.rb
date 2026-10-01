@@ -5,7 +5,14 @@ require "securerandom"
 module RecordingStudioAttachable
   module Services
     class ImportAttachments < ApplicationService
-      class BatchFailure < StandardError; end
+      class BatchFailure < StandardError
+        attr_reader :details
+
+        def initialize(message = nil, details: nil)
+          @details = details
+          super(message)
+        end
+      end
 
       def initialize(parent_recording:, attachments:, actor: nil, impersonator: nil, source: "provider_import")
         @parent_recording = parent_recording
@@ -13,6 +20,8 @@ module RecordingStudioAttachable
         @actor = actor
         @impersonator = impersonator
         @source = source
+        @staged_blobs = []
+        @created = []
       end
 
       private
@@ -22,50 +31,74 @@ module RecordingStudioAttachable
       def perform
         capability_options = capability_options_for(parent_recording)
         validate_attachment_count!(capability_options)
+        success(import_staged(stage_attachments(capability_options)))
+      rescue ArgumentError => e
+        RecordingStudioAttachable::StorageLimit.discard_unattached!(@staged_blobs)
+        failure(e.message)
+      rescue BatchFailure => e
+        RecordingStudioAttachable::StorageLimit.discard_unattached!(@staged_blobs)
+        purge_created_attachments(@created)
+        failure(e.message, errors: e.details)
+      end
 
+      def import_staged(staged)
+        @staged_blobs = staged.map { |entry| entry[:blob] }
         batch_id = SecureRandom.uuid
-        created = []
-        failures = nil
-
-        begin
-          transaction_wrapper do
-            Array(attachments).each do |attachment|
-              result = ImportAttachment.call(
-                parent_recording: parent_recording,
-                actor: actor,
-                impersonator: impersonator,
-                io: attachment.fetch(:io),
-                filename: attachment.fetch(:filename),
-                content_type: attachment.fetch(:content_type),
-                name: attachment[:name],
-                description: attachment[:description],
-                identify: attachment.fetch(:identify, true),
-                metadata: attachment.fetch(:metadata, {}).merge(batch_id: batch_id),
-                source: attachment[:source] || source,
-                service_name: attachment[:service_name]
-              )
-
-              if result.failure?
-                failures = [attachment.except(:io).merge(error: result.error)]
-                raise BatchFailure, batch_failure_message(attachment, result.error)
-              end
-
-              created << result.value
-            end
-          end
-        rescue BatchFailure => e
-          purge_created_attachments(created)
-          return failure(e.message, errors: failures)
+        root_recording = root_recording_for(parent_recording)
+        incoming = RecordingStudioAttachable::StorageLimit::IncomingBytes.for(root_recording, @staged_blobs)
+        RecordingStudioAttachable::StorageLimit.with_storage_capacity!(root_recording, incoming) do
+          transaction_wrapper { record_entries(staged, batch_id) }
         end
+        @created
+      end
 
-        success(created)
+      def record_entries(staged, batch_id)
+        staged.each do |entry|
+          result = RecordAttachmentUpload.call(
+            parent_recording: parent_recording, signed_blob_id: entry[:blob].signed_id, actor: actor,
+            impersonator: impersonator, name: entry[:name], description: entry[:description],
+            batch_id: batch_id, metadata: entry[:metadata].merge(batch_id: batch_id)
+          )
+          failure = [entry[:payload].except(:io).merge(error: result.error)]
+          raise BatchFailure.new(batch_failure_message(entry[:payload], result.error), details: failure) if result.failure?
+
+          @created << result.value
+        end
+      end
+
+      def stage_attachments(capability_options)
+        Array(attachments).each_with_object([]) do |attachment, staged|
+          staged << stage_attachment(attachment, capability_options, staged)
+        end
+      end
+
+      def stage_attachment(attachment, capability_options, staged)
+        blob = create_imported_blob!(
+          io: attachment.fetch(:io),
+          filename: attachment.fetch(:filename),
+          content_type: attachment.fetch(:content_type),
+          identify: attachment.fetch(:identify, true),
+          service_name: attachment[:service_name]
+        )
+        validate_blob!(blob, capability_options: capability_options)
+        {
+          blob: blob, payload: attachment, name: resolved_import_name(attachment),
+          description: attachment[:description],
+          metadata: attachment.fetch(:metadata, {}).merge(source: attachment[:source] || source)
+        }
+      rescue ArgumentError => e
+        @staged_blobs = staged.map { |entry| entry[:blob] } + [blob]
+        details = [attachment.except(:io).merge(error: e.message)]
+        raise BatchFailure.new(batch_failure_message(attachment, e.message), details: details)
+      end
+
+      def resolved_import_name(attachment)
+        attachment[:name].presence || File.basename(attachment.fetch(:filename).to_s, File.extname(attachment.fetch(:filename).to_s))
       end
 
       def batch_failure_message(attachment, error)
         label = attachment[:name].presence || attachment[:filename].presence
-        return error if label.blank?
-
-        %(Failed to import "#{label}": #{error})
+        label.blank? ? error : %(Failed to import "#{label}": #{error})
       end
 
       def validate_attachment_count!(capability_options)
@@ -77,18 +110,13 @@ module RecordingStudioAttachable
       end
 
       def purge_created_attachments(created)
-        Array(created).each do |recording|
+        blobs = Array(created).filter_map do |recording|
           attachment = recording&.recordable
           next unless attachment.respond_to?(:file)
 
-          file = attachment.file
-          blob = file&.blob
-          next unless blob.respond_to?(:purge)
-
-          blob.purge
-        rescue StandardError
-          next
+          attachment.file&.blob
         end
+        RecordingStudioAttachable::StorageLimit.discard_unattached!(blobs)
       end
     end
   end

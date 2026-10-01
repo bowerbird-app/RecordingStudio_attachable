@@ -25,22 +25,33 @@ module RecordingStudioAttachable
     scope :files, -> { where(attachment_kind: "file") }
 
     class << self
-      def build_from_blob(blob:, name: nil, description: nil, validation_options: {})
+      def build_from_blob(blob:, name: nil, description: nil, validation_options: {}, root_recording: nil)
+        attachment = new(**blob_attributes(blob, name, description))
+        attachment.validation_options = validation_options
+        assign_root_recording(attachment, root_recording)
+        attachment.file.attach(blob)
+        attachment
+      end
+
+      private
+
+      def blob_attributes(blob, name, description)
         content_type = blob.content_type.to_s
-        new(
+        {
           name: name.presence || default_name_for(blob),
           description: description,
           attachment_kind: RecordingStudioAttachable.configuration.attachment_kind_for(content_type),
           original_filename: blob.filename.to_s,
           content_type: content_type,
           byte_size: blob.byte_size
-        ).tap do |attachment|
-          attachment.validation_options = validation_options
-          attachment.file.attach(blob)
-        end
+        }
       end
 
-      private
+      def assign_root_recording(attachment, root_recording)
+        return unless root_recording.respond_to?(:id) && root_recording.id.present?
+
+        attachment.root_recording_id = root_recording.id
+      end
 
       def default_name_for(blob)
         blob.filename.base.to_s.presence || blob.filename.to_s

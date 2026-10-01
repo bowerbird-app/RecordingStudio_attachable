@@ -24,13 +24,14 @@ module RecordingStudioAttachable
         authorize!(action: :revise, actor: resolved_actor, recording: owner_recording, capability_options: capability_options)
 
         attachment = attachment_recording.recordable
+        root_recording = root_recording_for(attachment_recording)
         revised = RecordingStudioAttachable::Attachment.build_from_blob(
           blob: attachment.file.blob,
           name: name.presence || attachment.name,
           description: description.nil? ? attachment.description : description,
-          validation_options: capability_validation_options(capability_options)
+          validation_options: capability_validation_options(capability_options),
+          root_recording: root_recording
         )
-        root_recording = root_recording_for(attachment_recording)
         event = RecordingStudio.record!(
           action: "attachment_metadata_revised",
           recordable: revised,

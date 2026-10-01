@@ -3,6 +3,8 @@
 RecordingStudioAttachable.configure do |config|
   config.allowed_content_types = ["image/*", "application/pdf"]
   config.max_file_size = 25.megabytes
+  # Optional. Requires RecordingStudio_stripe in the host app.
+  # config.storage_limit = :storage_bytes
   # Maximum number of files accepted in a single upload or import request.
   config.max_file_count = 20
   config.enabled_attachment_kinds = %i[image file]

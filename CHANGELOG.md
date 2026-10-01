@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-01
+
+Optional storage cap for one root recording. Uploads stay unchanged until a host sets `config.storage_limit`.
+
+### Added
+- `config.storage_limit` names a Stripe quantity limit for retained bytes on one root. A blank value does not check capacity. This gem does not depend on `recording_studio_stripe`.
+- `RecordingStudioAttachable.storage_bytes_for(root)` sums distinct original file blobs stamped with that root. Variant files are not included.
+- Migration adds `root_recording_id` on attachment rows and backfills it from live recordings and events.
+
+### Changed
+- Trash and restore leave retained files in place, so usage stays the same. `Recording#destroy!` detaches those file rows and purges a blob that no other attachment still references.
+- `StorageLimitUnknown` and `StorageLimitError` inherit `RecordingStudioAttachable::Error`. Services re-raise them.
+
+### Upgrade Notes
+- Run `rails generate recording_studio_attachable:migrations` and `rails db:migrate` so attachment rows gain `root_recording_id`.
+- Leave `config.storage_limit` unset to keep the previous upload path.
+- Set `config.storage_limit` to the host's Stripe quantity limit name when a root should refuse a write that does not fit. The product stores the cap as `limit_<name>`.
+
 ## [0.5.1] - 2026-09-02
 
 Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and still fetches the pack.
@@ -110,7 +128,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.3.0...v0.4.0

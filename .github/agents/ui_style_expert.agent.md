@@ -188,7 +188,7 @@ Options:
 - `text`
 - `style`
 - `size`
-- `url`
+- `href`
 - `method`
 - `target`
 - `icon`

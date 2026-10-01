@@ -50,7 +50,7 @@
             style: :primary,
             size: :md,
             icon: "upload",
-            url: recording_attachment_upload_path(@recording, navigation_params),
+            href: recording_attachment_upload_path(@recording, navigation_params),
             data: { turbo_frame: "_top" }
           ) %>
         <% end %>

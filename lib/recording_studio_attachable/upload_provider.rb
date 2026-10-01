@@ -100,7 +100,7 @@ module RecordingStudioAttachable
           provider_modal_id: modal_id(recording: recording)
         )
       else
-        options[:url] = resolved_url(view_context:, recording:, query_params: query_params)
+        options[:href] = resolved_url(view_context:, recording:, query_params: query_params)
         options[:target] = resolve(@target, view_context:, recording:)
       end
 

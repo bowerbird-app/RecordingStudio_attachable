@@ -106,7 +106,7 @@ class ConfigurationTest < Minitest::Test
     view_context = ViewContextWithRoutes.new(route_helpers)
     recording = Struct.new(:id).new("rec-1")
 
-    assert_equal "/imports/rec-1", provider.button_options(view_context: view_context, recording: recording)[:url]
+    assert_equal "/imports/rec-1", provider.button_options(view_context: view_context, recording: recording)[:href]
   end
 
   def test_upload_provider_callables_can_use_mounted_engine_routes_via_route_helpers
@@ -123,7 +123,7 @@ class ConfigurationTest < Minitest::Test
     recording = Struct.new(:id).new("rec-1")
 
     assert_equal "/mounted_provider/recordings/rec-1/imports",
-                 provider.button_options(view_context: view_context, recording: recording)[:url]
+                 provider.button_options(view_context: view_context, recording: recording)[:href]
   end
 
   def test_merge_normalizes_auth_roles

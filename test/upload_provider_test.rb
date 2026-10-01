@@ -32,7 +32,7 @@ class UploadProviderTest < Minitest::Test
     options = provider.button_options(view_context: FakeViewContext.new("/root"), recording: FakeRecording.new("rec-1"))
 
     assert_equal "Google Drive", options[:text]
-    assert_equal "/root/imports/rec-1", options[:url]
+    assert_equal "/root/imports/rec-1", options[:href]
     assert_equal "_blank", options[:target]
     assert_equal :secondary, options[:style]
   end
@@ -194,7 +194,7 @@ class UploadProviderTest < Minitest::Test
 
     assert provider.render?(view_context: view_context, recording: FakeRecording.new("rec-1"))
     assert_equal "/upload_providers/demo?recording_id=rec-1|/mounted_provider/recordings/rec-1/imports",
-                 provider.button_options(view_context: view_context, recording: FakeRecording.new("rec-1"))[:url]
+                 provider.button_options(view_context: view_context, recording: FakeRecording.new("rec-1"))[:href]
   end
 
   def test_modal_provider_uses_label_for_modal_title_by_default
@@ -263,8 +263,8 @@ class UploadProviderTest < Minitest::Test
     assert two_arg_provider.render?(view_context: view_context, recording: recording)
     assert_equal "/root/legacy/rec-1",
                  two_arg_provider.button_options(view_context: view_context, recording: recording)[:data][:provider_bootstrap_url]
-    assert_equal "/legacy/rec-1", one_arg_provider.button_options(view_context: view_context, recording: recording)[:url]
-    assert_equal "/legacy/static", zero_arg_provider.button_options(view_context: view_context, recording: recording)[:url]
+    assert_equal "/legacy/rec-1", one_arg_provider.button_options(view_context: view_context, recording: recording)[:href]
+    assert_equal "/legacy/static", zero_arg_provider.button_options(view_context: view_context, recording: recording)[:href]
   end
 
   def test_route_helpers_proxy_uses_main_app_and_raises_for_unknown_methods
@@ -322,8 +322,8 @@ class UploadProviderTest < Minitest::Test
       query_params: { redirect_mode: "return_to", return_to: "/pages/page-1" }
     )
 
-    assert_includes options[:url], "redirect_mode=return_to"
-    assert_includes options[:url], "return_to=%2Fpages%2Fpage-1"
+    assert_includes options[:href], "redirect_mode=return_to"
+    assert_includes options[:href], "return_to=%2Fpages%2Fpage-1"
   end
 
   def test_modal_button_options_allow_blank_urls_without_rendering_frame_url

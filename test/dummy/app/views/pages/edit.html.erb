@@ -13,7 +13,7 @@
   ) %>
 
   <div class="flex flex-wrap gap-3">
-    <%= render FlatPack::Button::Component.new(text: "View", style: :secondary, size: :md, url: page_path(@page)) %>
+    <%= render FlatPack::Button::Component.new(text: "View", style: :secondary, size: :md, href: page_path(@page)) %>
   </div>
 
   <%= form_with model: @page, class: "space-y-4" do %>

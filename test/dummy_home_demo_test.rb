@@ -212,7 +212,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes view, "anchor_url: request.referer.presence || root_path"
     assert_includes view, 'title: "Edit inline"'
     assert_includes view, 'subtitle: "Update page copy and formatted content for the inline recording demo."'
-    assert_includes view, "url: page_path(@page)"
+    assert_includes view, "href: page_path(@page)"
     assert_includes view, 'text: "View"'
     assert_includes view, "FlatPack::TextInput::Component.new("
     assert_includes view, 'name: "page[title]"'
@@ -515,7 +515,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes list_partial, 'FlatPack::Tooltip::Component.new(text: "Download")'
     assert_includes list_partial, 'icon: "arrow-down-tray"'
     assert_includes list_partial, "icon_only: true"
-    assert_includes list_partial, "url: download_attachment_path(attachment_recording)"
+    assert_includes list_partial, "href: download_attachment_path(attachment_recording)"
     assert_includes list_partial, 'FlatPack::Tooltip::Component.new(text: "Trash")'
     assert_includes list_partial, "destroy_attachment_path(attachment_recording)"
     assert_includes list_partial, 'icon: "trash", icon_only: true'

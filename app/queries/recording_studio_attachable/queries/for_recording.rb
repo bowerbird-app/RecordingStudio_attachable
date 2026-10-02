@@ -64,6 +64,10 @@ module RecordingStudioAttachable
           .includes(recordable: [{ file_attachment: :blob }])
       end
 
+      def unpaged
+        base_relation.includes(recordable: [{ file_attachment: :blob }])
+      end
+
       def total_pages
         return 1 if total_count.zero?
 

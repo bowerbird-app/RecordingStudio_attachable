@@ -73,6 +73,16 @@ class RecordingMethodsTest < Minitest::Test
     assert_equal :user, captured_kwargs[:actor]
   end
 
+  def test_images_and_files_do_not_accept_an_unpaged_argument
+    images = RecordingStudio::Capabilities::Attachable::RecordingMethods.instance_method(:images).parameters
+    files = RecordingStudio::Capabilities::Attachable::RecordingMethods.instance_method(:files).parameters
+    attachments = RecordingStudio::Capabilities::Attachable::RecordingMethods.instance_method(:attachments).parameters
+
+    refute_includes images.map(&:last), :unpaged
+    refute_includes files.map(&:last), :unpaged
+    refute_includes attachments.map(&:last), :unpaged
+  end
+
   def test_images_and_files_delegate_to_attachments_with_expected_filters
     recording = FakeRecording.new
     calls = []

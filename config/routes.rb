@@ -10,6 +10,7 @@ RecordingStudioAttachable::Engine.routes.draw do
     post "attachments", to: "attachment_uploads#create"
     post "attachments/imports", to: "attachment_imports#create", as: :attachment_imports
     post "attachments/bulk_remove", to: "attachment_lifecycle#bulk_destroy", as: :bulk_remove_attachments
+    patch "attachment_collection", to: "attachment_collections#update", as: :attachment_collection
   end
 
   get "attachments/:id", to: "attachments#show", as: :attachment

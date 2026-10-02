@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_01_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_01_140100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -96,9 +96,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_120000) do
   end
 
   create_table "recording_studio_attachable_attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.text "alt_text"
     t.string "attachment_kind", null: false
     t.bigint "byte_size", null: false
+    t.text "caption"
     t.string "content_type", null: false
+    t.text "credit"
     t.text "description"
     t.string "name", null: false
     t.string "original_filename", null: false

@@ -86,15 +86,12 @@
               data: { recording_studio_attachable__collection_order_target: "order" }
             ) %>
           <% end %>
-        </div>
-
-        <%= render FlatPack::Tooltip::Component.new(text: "Trash") do %>
           <%= form_with url: attachable_destroy_attachment_path(row.recording, **RecordingStudioAttachable::AttachmentFileButton.redirect_params(return_to: return_to)),
                         method: :delete,
                         class: "inline-flex" do %>
-            <%= render FlatPack::Button::Component.new(icon: "trash", icon_only: true, style: :ghost, size: :md, type: "submit", aria: { label: "Trash" }) %>
+            <%= render FlatPack::Button::Component.new(text: "Trash", icon: "trash", style: :danger, size: :md, type: "submit") %>
           <% end %>
-        <% end %>
+        </div>
       </li>
     <% end %>
   </ol>

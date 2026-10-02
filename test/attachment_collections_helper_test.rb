@@ -38,7 +38,10 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     refute_includes html, "signed_blob"
     assert_includes html, ">Save<"
     assert_includes html, 'value="delete"'
-    assert_includes html, 'aria-label="Trash"'
+    assert_includes html, ">Trash<"
+    assert_includes html, 'data-flat-pack--icon-name-value="trash"'
+    assert_includes html, "button-danger-background-color"
+    assert_operator html.index('name="attachment_collection[rows][][credit]"'), :<, html.index('value="delete"')
     assert_includes html, 'type="submit"'
     assert_includes html, 'type="button"'
     assert_includes html, "redirect_mode=return_to"

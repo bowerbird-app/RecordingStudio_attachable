@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Mount `attachment_collection_editor` where a host edits many images. Pass `:name` to edit the existing name, or `:description` for the existing description.
 - `sortable: true` needs Orderable on that parent (`recording_studio_orderable_reorder!`). This gem does not depend on `recording_studio_orderable`. Without that method, the helper raises.
 - Trash from the editor returns to `return_to` when the link sends `redirect_mode=return_to`. Other trash links stay on the library.
-- Trash icons submit their own delete form. A FlatPack button nested in `button_to` does not submit, because the visible control is `type="button"`.
+- Trash in the editor sits under the fields. It is a danger button labeled Trash, with a trash icon. The attachment page and the library list still use an icon button. Each trash control submits its own delete form.
 - Detail save and file replace keep the new columns. A name-only save does not clear them. Existing `attachment[name]` / `attachment[description]` forms stay valid.
 
 ## [0.6.1] - 2026-10-01

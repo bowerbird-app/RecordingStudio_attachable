@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.7.0] - 2026-10-01
+## [0.7.0] - 2026-10-02
 
 ### Added
 - `attachment_collection_editor` edits the direct images, files, or attachments on a parent in one save. Caption, credit, and alt text are nullable text columns on the attachment snapshot. `:name` edits the existing name. There is no title column. Clicking a preview opens the original file in a modal.
@@ -161,7 +161,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.5.0...v0.5.1

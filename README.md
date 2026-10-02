@@ -537,6 +537,25 @@ Optional `target:` sets `data-turbo-frame` on the form (host frame id, or `"_top
 
 Replace never navigates to the attachment details screen. Keep `attachments#show` for gallery/library cases where the attachment itself is the record.
 
+### Edit many images
+
+`attachment_collection_editor` lists every direct image, file, or attachment on a parent and saves the rows that changed. Caption, credit, and alt text belong to the attachment snapshot, so two uses of the same file can differ. Nothing is written onto the blob. `:name` edits the existing name. There is no title column.
+
+```ruby
+attachment_collection_editor(
+  @section,
+  association: :images,
+  fields: [:caption, :credit, :alt_text],
+  sortable: true
+)
+```
+
+`sortable: true` reuses Orderable on that parent (`recording_studio_orderable_reorder!`) and splices this association into the parent's existing child order. This gem does not depend on `recording_studio_orderable`. Without that method, the helper raises. Omit `sortable` to keep newest-first and skip reorder.
+
+Click a preview to open the original file in a modal. Trash sits under the fields as a red button.
+
+`preview:` chooses the row image only. The default `:square` uses the `square_med` crop. `preview: :natural` uses the `med` variant and keeps the file's proportions, capped at about 208px wide. The modal still opens the original file. `preview:` is not in the signed save token. An unknown value raises.
+
 FlatPack is the default UI system for the engine and the dummy app (pinned to `v0.1.135` in the dummy app; gem requires `>= 0.1.135`).
 
 ## Development

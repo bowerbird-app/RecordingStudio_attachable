@@ -28,7 +28,7 @@ module RecordingStudioAttachable
         impersonator: current_attachable_impersonator
       )
 
-      redirect_to fallback_listing_path(attachment_recording),
+      redirect_to destroy_destination(attachment_recording),
                   result.success? ? { notice: t("recording_studio_attachable.attachment_lifecycle.removed",
                                                 default: "Attachment removed.") } : { alert: result.error }
     end
@@ -49,6 +49,11 @@ module RecordingStudioAttachable
     end
 
     private
+
+    def destroy_destination(attachment_recording)
+      AttachmentFileButton.return_to_from(attachment_redirect_params).presence ||
+        fallback_listing_path(attachment_recording)
+    end
 
     def fallback_listing_path(recording)
       parent = attachable_owner_recording(recording)

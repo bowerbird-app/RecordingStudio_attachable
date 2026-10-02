@@ -4,7 +4,7 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.6.1", RecordingStudioAttachable::VERSION
+    assert_equal "0.7.0", RecordingStudioAttachable::VERSION
   end
 
   def test_recording_studio_dependency_is_4_2_or_newer
@@ -364,6 +364,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes list_partial_source, "destroy_attachment_path(attachment_recording)"
     assert_includes list_partial_source, 'icon: "trash", icon_only: true'
     assert_includes list_partial_source, 'aria: { label: "Trash attachment" }'
+    assert_includes list_partial_source, 'type: "submit"'
     assert_not_includes list_partial_source, "<table class="
     assert_not_includes list_partial_source, 'text: "View"'
     assert_not_includes list_partial_source, "<%= attachment.original_filename %>"
@@ -431,6 +432,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, "Preview unavailable"
     assert_includes view_source, 'text: "Trash"'
     assert_includes view_source, "destroy_attachment_path(@attachment_recording)"
+    assert_includes view_source, 'type: "submit"'
     assert_includes view_source, 'text: "Save"'
     assert_not_includes view_source, 'text: "Save revision"'
     assert_not_includes view_source, 'file_field_tag "attachment[signed_blob_id]"'

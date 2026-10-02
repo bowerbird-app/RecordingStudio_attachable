@@ -85,6 +85,7 @@ Metrics/ParameterLists:
   Exclude:
     - 'app/services/**/*'
     - 'app/controllers/recording_studio_attachable/application_controller.rb'
+    - 'app/helpers/recording_studio_attachable/attachment_collections_helper.rb'
     - 'lib/recording_studio_attachable/google_drive/services/import_selected_files.rb'
     - 'lib/recording_studio_attachable/upload_provider.rb'
 

@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-02
+
+### Added
+- `attachment_collection_editor` edits the direct images, files, or attachments on a parent in one save. Caption, credit, and alt text are nullable text columns on the attachment snapshot. `:name` edits the existing name. There is no title column. Clicking a preview opens the original file in a modal.
+- `preview:` chooses the row image. The default `:square` uses the `square_med` crop. `:natural` uses the `med` variant and keeps the file's proportions. The modal still opens the original file. `preview:` is not part of the signed save token. An unknown value raises.
+
+```erb
+<%= attachment_collection_editor(
+      recording,
+      association: :images,
+      fields: [:caption, :credit, :alt_text],
+      sortable: true,
+      return_to: page_path(page)
+    ) %>
+```
+
+### Upgrade Notes
+- Run `rails generate recording_studio_attachable:migrations` and migrate. Attachment rows gain nullable `caption`, `credit`, and `alt_text`. No backfill. Do not look for a title column.
+- Mount `attachment_collection_editor` where a host edits many images. Pass `:name` to edit the existing name, or `:description` for the existing description.
+- `sortable: true` needs Orderable on that parent (`recording_studio_orderable_reorder!`). This gem does not depend on `recording_studio_orderable`. Without that method, the helper raises.
+- Trash from the editor returns to `return_to` when the link sends `redirect_mode=return_to`. Other trash links stay on the library.
+- Trash in the editor sits under the fields. It is a danger button labeled Trash, with a trash icon. The attachment page and the library list still use an icon button. Each trash control submits its own delete form.
+- Pass `preview: :natural` when a row should show the file's proportions. Omit `preview` to keep the square crop. No migration.
+- Detail save and file replace keep the new columns. A name-only save does not clear them. Existing `attachment[name]` / `attachment[description]` forms stay valid.
+
 ## [0.6.1] - 2026-10-01
 
 ### Added
@@ -136,7 +161,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.5.0...v0.5.1

@@ -23,6 +23,9 @@ class AttachmentCollectionsHelperTest < Minitest::Test
                     html.scan('src="/attachments/image-2/preview/square_med"').size
     assert_includes html, 'src="/attachments/image-1/preview/square_med"'
     assert_includes html, 'src="/attachments/image-2/preview/square_med"'
+    assert_includes html, "aspect-square"
+    assert_includes html, 'class="h-full w-full object-cover"'
+    refute_includes html, "max-h-72"
     assert_includes html, 'alt="Pier"'
     assert_includes html, 'data-modal-id="attachment-image-image-1"'
     assert_includes html, 'src="/attachments/image-1/file"'
@@ -62,6 +65,24 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, 'value="1"'
   end
 
+  def test_natural_preview_keeps_proportions_and_still_opens_the_original_file
+    @row_preview = :natural
+    html = render_editor(
+      [child("image-1", name: "Pier", caption: "Light")],
+      fields: [:caption],
+      sortable: false,
+      return_to: "/attachment_editor"
+    )
+
+    assert_includes html, 'src="/attachments/image-1/preview/med"'
+    refute_includes html, "square_med"
+    refute_includes html, "aspect-square"
+    assert_includes html, "max-h-72"
+    assert_includes html, "object-contain"
+    assert_includes html, 'src="/attachments/image-1/file"'
+    assert_includes html, 'role="dialog"'
+  end
+
   def test_empty_editor_has_no_save_button
     html = render_editor([], fields: [:caption], sortable: false, return_to: "/attachment_editor")
 
@@ -80,6 +101,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
         association: :images,
         fields: fields,
         sortable: sortable,
+        preview: @row_preview || :square,
         url: "/save",
         return_to: return_to
       )

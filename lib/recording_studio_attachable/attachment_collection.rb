@@ -4,7 +4,6 @@ require "active_support/message_verifier"
 
 module RecordingStudioAttachable
   class AttachmentCollection
-    PREVIEW_VARIANT = :square_med
     STALE_FORM = "This form is out of date. Reload the page and try again."
     GONE = "One of these is gone. Reload the page and try again."
     SORTABLE_MISSING = "sortable: true needs the parent to respond to recording_studio_orderable_reorder!. This parent does not."
@@ -32,8 +31,8 @@ module RecordingStudioAttachable
     private_constant :Field, :Revision
 
     class << self
-      def for(recording:, association:, fields:, sortable:, return_to: nil)
-        build(recording:, association:, fields:, sortable:, return_to:).tap(&:prepare!)
+      def for(recording:, association:, fields:, sortable:, **options)
+        build(recording:, association:, fields:, sortable:, **options).tap(&:prepare!)
       end
 
       def permit(params)
@@ -67,13 +66,14 @@ module RecordingStudioAttachable
       end
     end
 
-    attr_reader :recording, :association, :fields, :return_to, :signed_editor
+    attr_reader :recording, :association, :fields, :return_to, :signed_editor, :preview
 
     def initialize(recording:, association:, fields:, sortable:, **options)
       @recording = recording
       @association = association
       @fields = fields
       @sortable = sortable
+      @preview = AttachmentCollectionPreview.choose(options.fetch(:preview, :square))
       @return_to = options[:return_to]
       @submitted_rows = AttachmentCollectionParams.row_list(options[:submitted_rows])
       @signed_editor = signed_token
@@ -82,6 +82,10 @@ module RecordingStudioAttachable
     def sortable?
       @sortable
     end
+
+    def preview_variant = AttachmentCollectionPreview.variant(preview)
+
+    def square_preview? = preview == :square
 
     def form_id
       "attachment-collection-#{recording.id}"
@@ -165,6 +169,26 @@ module RecordingStudioAttachable
 
   class AttachmentCollection
     include AttachmentCollectionSheet
+  end
+
+  class AttachmentCollectionPreview
+    VARIANTS = { square: :square_med, natural: :med }.freeze
+    UNKNOWN = "Unknown preview: %s. Use :square or :natural."
+
+    class << self
+      def choose(preview)
+        raise ArgumentError, format(UNKNOWN, preview.inspect) if preview.blank?
+
+        key = preview.to_sym
+        raise ArgumentError, format(UNKNOWN, preview.inspect) unless VARIANTS.key?(key)
+
+        key
+      end
+
+      def variant(preview)
+        VARIANTS.fetch(preview)
+      end
+    end
   end
 
   class AttachmentCollectionParams
@@ -438,6 +462,7 @@ module RecordingStudioAttachable
     end
   end
 
-  private_constant :AttachmentCollectionSheet, :AttachmentCollectionParams, :AttachmentCollectionToken,
+  private_constant :AttachmentCollectionSheet, :AttachmentCollectionPreview, :AttachmentCollectionParams,
+                   :AttachmentCollectionToken,
                    :AttachmentCollectionMembership, :AttachmentCollectionChanges, :AttachmentCollectionOrder
 end

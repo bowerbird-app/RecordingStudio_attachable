@@ -102,6 +102,51 @@ class AttachmentCollectionTest < Minitest::Test
     assert_equal "fields must be present", empty_error.message
   end
 
+  def test_preview_defaults_to_square_and_natural_uses_med
+    parent = Parent.new("parent-1")
+    square = with_membership([]) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent, association: :images, fields: [:caption], sortable: false
+      )
+    end
+    natural = with_membership([]) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent, association: :images, fields: [:caption], sortable: false, preview: "natural"
+      )
+    end
+    reloaded = with_membership([]) do
+      RecordingStudioAttachable::AttachmentCollection.from_params(
+        recording: parent,
+        params: { signed_editor: natural.signed_editor, rows: [] }
+      )
+    end
+
+    assert_equal :square, square.preview
+    assert_equal :square_med, square.preview_variant
+    assert_predicate square, :square_preview?
+    assert_equal :natural, natural.preview
+    assert_equal :med, natural.preview_variant
+    refute_predicate natural, :square_preview?
+    assert_equal :square, reloaded.preview
+  end
+
+  def test_unknown_preview_raises
+    parent = Parent.new("parent-1")
+    crop = assert_raises(ArgumentError) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent, association: :images, fields: [:caption], sortable: false, preview: :crop
+      )
+    end
+    blank = assert_raises(ArgumentError) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent, association: :images, fields: [:caption], sortable: false, preview: nil
+      )
+    end
+
+    assert_equal "Unknown preview: :crop. Use :square or :natural.", crop.message
+    assert_equal "Unknown preview: nil. Use :square or :natural.", blank.message
+  end
+
   def test_sortable_without_reorder_raises_and_does_not_sort_by_created_at
     parent = Parent.new("parent-1")
     error = assert_raises(ArgumentError) do

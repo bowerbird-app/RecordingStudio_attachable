@@ -11,7 +11,7 @@
   <ol class="flex flex-col gap-4" <% if collection.sortable? %>data-controller="recording-studio-attachable--collection-order"<% end %>>
     <% collection.rows.each do |row| %>
       <% attachment = row.recording.recordable %>
-      <% preview_path = authorized_attachment_preview_path(row.recording, RecordingStudioAttachable::AttachmentCollection::PREVIEW_VARIANT) %>
+      <% preview_path = authorized_attachment_preview_path(row.recording, collection.preview_variant) %>
       <% file_extension = File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || "FILE" %>
       <li class="flex flex-col gap-4 border-b border-(--surface-border-color) pb-4 sm:flex-row sm:items-start" <% if collection.sortable? %>data-recording-studio-attachable--collection-order-target="row"<% end %>>
         <% if collection.sortable? %>
@@ -30,11 +30,13 @@
           <% if preview_path.present? %>
             <% file_path = authorized_attachment_file_path(row.recording) %>
             <% modal_id = "attachment-image-#{row.recording.id}" %>
+            <% frame_class = collection.square_preview? ? "relative aspect-square" : "relative flex min-h-32 items-center justify-center" %>
+            <% image_class = collection.square_preview? ? "h-full w-full object-cover" : "max-h-72 w-full object-contain" %>
             <button type="button" class="block w-full cursor-pointer overflow-hidden rounded-lg" data-modal-id="<%= modal_id %>" aria-label="View <%= attachment.name %>">
-              <div class="relative aspect-square" data-controller="recording-studio-attachable--image-fallback">
+              <div class="<%= frame_class %>" data-controller="recording-studio-attachable--image-fallback">
                 <%= image_tag preview_path,
                               alt: attachment.name,
-                              class: "h-full w-full object-cover",
+                              class: image_class,
                               data: {
                                 recording_studio_attachable__image_fallback_target: "image",
                                 action: "error->recording-studio-attachable--image-fallback#showFallback"

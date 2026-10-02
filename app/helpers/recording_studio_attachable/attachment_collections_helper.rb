@@ -5,8 +5,8 @@ require "recording_studio_attachable/attachment_file_button"
 
 module RecordingStudioAttachable
   module AttachmentCollectionsHelper
-    def attachment_collection_editor(recording, association:, fields:, sortable: false, url: nil, return_to: nil)
-      collection = AttachmentCollection.for(recording:, association:, fields:, sortable:, return_to:)
+    def attachment_collection_editor(recording, association:, fields:, sortable: false, preview: :square, url: nil, return_to: nil)
+      collection = AttachmentCollection.for(recording:, association:, fields:, sortable:, preview:, return_to:)
       render partial: "recording_studio_attachable/attachment_collections/editor",
              locals: editor_locals(collection, recording, url, return_to)
     end

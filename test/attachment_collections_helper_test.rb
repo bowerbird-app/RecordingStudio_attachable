@@ -43,7 +43,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, 'value="delete"'
     assert_includes html, ">Trash<"
     assert_includes html, 'data-flat-pack--icon-name-value="trash"'
-    assert_includes html, "button-danger-background-color"
+    assert_includes html, 'data-fp-style="danger"'
     assert_operator html.index('name="attachment_collection[rows][][credit]"'), :<, html.index('value="delete"')
     assert_includes html, 'type="submit"'
     assert_includes html, 'type="button"'
@@ -137,6 +137,8 @@ class AttachmentCollectionsHelperTest < Minitest::Test
       app/components/flat_pack/base_component.rb
       app/components/flat_pack/shared/icon_component.rb
       app/components/flat_pack/button/component.rb
+      app/components/flat_pack/form_field/control_styles.rb
+      app/components/flat_pack/form_field/component.rb
       app/components/flat_pack/text_input/component.rb
       app/components/flat_pack/tooltip/component.rb
       app/components/flat_pack/modal/component.rb

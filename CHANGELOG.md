@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-01
+
+### Added
+- `attachment_collection_editor` edits the direct images, files, or attachments on a parent in one save. Caption, credit, and alt text are nullable text columns on the attachment snapshot. `:name` edits the existing name. There is no title column.
+
+```erb
+<%= attachment_collection_editor(
+      recording,
+      association: :images,
+      fields: [:caption, :credit, :alt_text],
+      sortable: true,
+      return_to: page_path(page)
+    ) %>
+```
+
+### Upgrade Notes
+- Run `rails generate recording_studio_attachable:migrations` and migrate. Attachment rows gain nullable `caption`, `credit`, and `alt_text`. No backfill. Do not look for a title column.
+- Mount `attachment_collection_editor` where a host edits many images. Pass `:name` to edit the existing name, or `:description` for the existing description.
+- `sortable: true` needs Orderable on that parent (`recording_studio_orderable_reorder!`). This gem does not depend on `recording_studio_orderable`. Without that method, the helper raises.
+- Trash from the editor returns to `return_to` when the link sends `redirect_mode=return_to`. Other trash links stay on the library.
+- Trash icons submit their own delete form. A FlatPack button nested in `button_to` does not submit, because the visible control is `type="button"`.
+- Detail save and file replace keep the new columns. A name-only save does not clear them. Existing `attachment[name]` / `attachment[description]` forms stay valid.
+
 ## [0.6.1] - 2026-10-01
 
 ### Added

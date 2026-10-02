@@ -18,6 +18,7 @@
           <div class="flex flex-wrap gap-3">
             <%= render FlatPack::Button::Component.new(text: "Add", style: :primary, size: :md, href: @root_attachment_upload_path) %>
             <%= render FlatPack::Button::Component.new(text: "Library", style: :secondary, size: :md, href: @root_attachment_listing_path) %>
+            <%= render FlatPack::Button::Component.new(text: "Edit images", style: :secondary, size: :md, href: @attachment_editor_path) %>
           </div>
         <% else %>
           <p class="text-sm text-(--surface-muted-content-color)">Seed the workspace recording to enable the demo links.</p>

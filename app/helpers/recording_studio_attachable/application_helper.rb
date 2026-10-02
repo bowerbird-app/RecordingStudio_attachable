@@ -3,6 +3,7 @@
 module RecordingStudioAttachable
   module ApplicationHelper
     include AttachmentFileButtonsHelper
+    include AttachmentCollectionsHelper
 
     def authorized_attachment_preview_path(recording, variant_name)
       attachment = recording&.recordable

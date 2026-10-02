@@ -13,7 +13,7 @@ class DummyAttachmentEditorTest < Minitest::Test
     gemfile = File.read(File.expand_path("../Gemfile", __dir__))
 
     assert_includes routes, 'get "attachment_editor", to: "attachment_editors#show", as: :attachment_editor'
-    assert_includes controller, "include UsesDefaultLayout"
+    refute_includes controller, "UsesDefaultLayout"
     assert_includes controller, "RecordingStudio.root_recording_for(Workspace.first!)"
     assert_includes controller, "@return_to = attachment_editor_path"
     assert_includes view, 'title: "Edit images"'

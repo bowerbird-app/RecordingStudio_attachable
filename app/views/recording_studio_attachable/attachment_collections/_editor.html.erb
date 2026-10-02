@@ -12,7 +12,6 @@
     <% collection.rows.each do |row| %>
       <% attachment = row.recording.recordable %>
       <% preview_path = authorized_attachment_preview_path(row.recording, RecordingStudioAttachable::AttachmentCollection::PREVIEW_VARIANT) %>
-      <% file_path = authorized_attachment_file_path(row.recording) %>
       <% file_extension = File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || "FILE" %>
       <li class="flex flex-col gap-4 border-b border-(--surface-border-color) pb-4 sm:flex-row sm:items-start" <% if collection.sortable? %>data-recording-studio-attachable--collection-order-target="row"<% end %>>
         <% if collection.sortable? %>
@@ -29,7 +28,9 @@
 
         <div class="w-full sm:w-52 sm:max-w-52">
           <% if preview_path.present? %>
-            <%= link_to file_path, class: "block overflow-hidden rounded-lg" do %>
+            <% file_path = authorized_attachment_file_path(row.recording) %>
+            <% modal_id = "attachment-image-#{row.recording.id}" %>
+            <button type="button" class="block w-full cursor-pointer overflow-hidden rounded-lg" data-modal-id="<%= modal_id %>" aria-label="View <%= attachment.name %>">
               <div class="relative aspect-square" data-controller="recording-studio-attachable--image-fallback">
                 <%= image_tag preview_path,
                               alt: attachment.name,
@@ -42,15 +43,16 @@
                   <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)">IMAGE</span>
                 </div>
               </div>
+            </button>
+            <%= render FlatPack::Modal::Component.new(id: modal_id, title: attachment.name, size: :xl) do |modal| %>
+              <% modal.body do %>
+                <%= image_tag file_path, alt: attachment.name, class: "mx-auto max-h-[70vh] w-full object-contain" %>
+              <% end %>
             <% end %>
           <% else %>
             <div class="flex aspect-square w-full items-center justify-center rounded-lg bg-(--surface-background-color) text-(--surface-content-color) shadow-sm ring-1 ring-(--surface-border-color)">
               <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)"><%= file_extension %></span>
             </div>
-          <% end %>
-
-          <%= render FlatPack::Tooltip::Component.new(text: "Open") do %>
-            <%= render FlatPack::Button::Component.new(text: "Open", style: :ghost, size: :md, href: file_path) %>
           <% end %>
         </div>
 

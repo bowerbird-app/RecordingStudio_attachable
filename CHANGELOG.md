@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.7.0] - 2026-10-01
 
 ### Added
-- `attachment_collection_editor` edits the direct images, files, or attachments on a parent in one save. Caption, credit, and alt text are nullable text columns on the attachment snapshot. `:name` edits the existing name. There is no title column.
+- `attachment_collection_editor` edits the direct images, files, or attachments on a parent in one save. Caption, credit, and alt text are nullable text columns on the attachment snapshot. `:name` edits the existing name. There is no title column. Clicking a preview opens the original file in a modal.
 
 ```erb
 <%= attachment_collection_editor(

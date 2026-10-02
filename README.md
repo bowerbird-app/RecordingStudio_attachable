@@ -552,6 +552,8 @@ attachment_collection_editor(
 
 `sortable: true` reuses Orderable on that parent (`recording_studio_orderable_reorder!`) and splices this association into the parent's existing child order. This gem does not depend on `recording_studio_orderable`. Without that method, the helper raises. Omit `sortable` to keep newest-first and skip reorder.
 
+Click a preview to open the original file in a modal. The row thumbnail stays the square preview.
+
 FlatPack is the default UI system for the engine and the dummy app (pinned to `v0.1.135` in the dummy app; gem requires `>= 0.1.135`).
 
 ## Development

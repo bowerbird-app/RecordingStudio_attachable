@@ -24,7 +24,11 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, 'src="/attachments/image-1/preview/square_med"'
     assert_includes html, 'src="/attachments/image-2/preview/square_med"'
     assert_includes html, 'alt="Pier"'
-    assert_includes html, 'href="/attachments/image-1/file"'
+    assert_includes html, 'data-modal-id="attachment-image-image-1"'
+    assert_includes html, 'src="/attachments/image-1/file"'
+    assert_includes html, 'role="dialog"'
+    refute_includes html, ">Open<"
+    refute_includes html, 'href="/attachments/image-1/file"'
     assert_includes html, ">Caption<"
     assert_includes html, ">Credit<"
     assert_includes html, 'name="attachment_collection[rows][][caption]"'
@@ -33,11 +37,10 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     refute_includes html, "Change"
     refute_includes html, "signed_blob"
     assert_includes html, ">Save<"
-    assert_includes html, ">Open<"
     assert_includes html, 'value="delete"'
     assert_includes html, 'aria-label="Trash"'
     assert_includes html, 'type="submit"'
-    refute_includes html, 'type="button"'
+    assert_includes html, 'type="button"'
     assert_includes html, "redirect_mode=return_to"
     assert_includes html, "return_to=%2Fattachment_editor"
     assert_operator html.index("</form>"), :<, html.index('value="delete"')
@@ -111,6 +114,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
       app/components/flat_pack/button/component.rb
       app/components/flat_pack/text_input/component.rb
       app/components/flat_pack/tooltip/component.rb
+      app/components/flat_pack/modal/component.rb
     ].each { |path| require File.join(root, path) }
   end
 

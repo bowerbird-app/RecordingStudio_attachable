@@ -141,6 +141,45 @@ class ForRecordingTest < Minitest::Test
     assert_not query.next_page?
   end
 
+  def test_unpaged_includes_the_file_blob_without_limit_or_order
+    relation = RelationDouble.new(count_value: 30)
+    recording = RecordingDouble.new(id: "parent-1", relation: relation)
+
+    result = RecordingStudioAttachable::Queries::ForRecording.new(
+      recording: recording,
+      scope: :direct,
+      kind: :images,
+      include_trashed: false
+    ).unpaged
+
+    assert_same relation, result
+    assert_equal(
+      {
+        include_children: true,
+        type: RecordingStudioAttachable::Attachment.name,
+        parent_id: "parent-1",
+        recordable_filters: { attachment_kind: "image" }
+      },
+      recording.last_kwargs
+    )
+    assert_includes relation.where_calls, { trashed_at: nil }
+    assert_equal({ recordable: [{ file_attachment: :blob }] }, relation.includes_value)
+    assert_nil relation.limit_value
+    assert_nil relation.offset_value
+    assert_empty relation.order_calls
+  end
+
+  def test_call_still_pages_when_unpaged_is_available
+    relation = RelationDouble.new(count_value: 30)
+    recording = RecordingDouble.new(id: "parent-1", relation: relation)
+
+    RecordingStudioAttachable::Queries::ForRecording.new(recording: recording).call
+
+    assert_equal [{ created_at: :desc, id: :desc }], relation.order_calls
+    assert_equal 24, relation.limit_value
+    assert_equal 0, relation.offset_value
+  end
+
   def test_normalize_scope_falls_back_to_default_for_unknown_values
     assert_equal :direct, RecordingStudioAttachable::Queries::ForRecording.normalize_scope(:bogus)
   end

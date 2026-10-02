@@ -87,13 +87,11 @@ module RecordingStudioAttachable
         }.compact)
       end
 
-      def build_attachment!(blob:, name:, description:, capability_options:, root_recording:)
+      def build_attachment!(blob:, name:, description:, capability_options:, root_recording:, **presentation)
         RecordingStudioAttachable::Attachment.build_from_blob(
-          blob: blob,
-          name: name,
-          description: description,
-          validation_options: capability_validation_options(capability_options),
-          root_recording: root_recording
+          blob:, name:, description:, root_recording:,
+          caption: presentation[:caption], credit: presentation[:credit], alt_text: presentation[:alt_text],
+          validation_options: capability_validation_options(capability_options)
         )
       end
 

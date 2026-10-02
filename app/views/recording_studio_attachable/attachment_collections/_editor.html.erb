@@ -1,0 +1,102 @@
+<% if collection.rows.empty? %>
+  <p class="text-sm text-(--surface-muted-content-color)"><%= collection.empty_message %></p>
+<% else %>
+  <%= form_with url: url, method: :patch, id: collection.form_id do %>
+    <%= hidden_field_tag "attachment_collection[signed_editor]", collection.signed_editor %>
+    <% RecordingStudioAttachable::AttachmentFileButton.redirect_params(return_to: return_to).each do |key, value| %>
+      <%= hidden_field_tag key, value %>
+    <% end %>
+  <% end %>
+
+  <ol class="flex flex-col gap-4" <% if collection.sortable? %>data-controller="recording-studio-attachable--collection-order"<% end %>>
+    <% collection.rows.each do |row| %>
+      <% attachment = row.recording.recordable %>
+      <% preview_path = authorized_attachment_preview_path(row.recording, collection.preview_variant) %>
+      <% file_extension = File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || "FILE" %>
+      <li class="flex flex-col gap-4 border-b border-(--surface-border-color) pb-4 sm:flex-row sm:items-start" <% if collection.sortable? %>data-recording-studio-attachable--collection-order-target="row"<% end %>>
+        <% if collection.sortable? %>
+          <%= render FlatPack::Button::Component.new(
+            text: "Drag",
+            style: :ghost,
+            size: :md,
+            type: "button",
+            data: {
+              action: "pointerdown->recording-studio-attachable--collection-order#grab pointermove->recording-studio-attachable--collection-order#move pointerup->recording-studio-attachable--collection-order#release pointercancel->recording-studio-attachable--collection-order#release"
+            }
+          ) %>
+        <% end %>
+
+        <div class="w-full sm:w-52 sm:max-w-52">
+          <% if preview_path.present? %>
+            <% file_path = authorized_attachment_file_path(row.recording) %>
+            <% modal_id = "attachment-image-#{row.recording.id}" %>
+            <% frame_class = collection.square_preview? ? "relative aspect-square" : "relative flex min-h-32 items-center justify-center" %>
+            <% image_class = collection.square_preview? ? "h-full w-full object-cover" : "max-h-72 w-full object-contain" %>
+            <button type="button" class="block w-full cursor-pointer overflow-hidden rounded-lg" data-modal-id="<%= modal_id %>" aria-label="View <%= attachment.name %>">
+              <div class="<%= frame_class %>" data-controller="recording-studio-attachable--image-fallback">
+                <%= image_tag preview_path,
+                              alt: attachment.name,
+                              class: image_class,
+                              data: {
+                                recording_studio_attachable__image_fallback_target: "image",
+                                action: "error->recording-studio-attachable--image-fallback#showFallback"
+                              } %>
+                <div class="absolute inset-0 hidden items-center justify-center bg-(--surface-background-color)" data-recording-studio-attachable--image-fallback-target="fallback">
+                  <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)">IMAGE</span>
+                </div>
+              </div>
+            </button>
+            <%= render FlatPack::Modal::Component.new(id: modal_id, title: attachment.name, size: :xl) do |modal| %>
+              <% modal.body do %>
+                <%= image_tag file_path, alt: attachment.name, class: "mx-auto max-h-[70vh] w-full object-contain" %>
+              <% end %>
+            <% end %>
+          <% else %>
+            <div class="flex aspect-square w-full items-center justify-center rounded-lg bg-(--surface-background-color) text-(--surface-content-color) shadow-sm ring-1 ring-(--surface-border-color)">
+              <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)"><%= file_extension %></span>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="flex min-w-0 flex-1 flex-col gap-4">
+          <%= hidden_field_tag collection.input_name(:recording_id), row.recording.id, form: collection.form_id %>
+          <% collection.fields.each do |field| %>
+            <% if field.control == :area %>
+              <div>
+                <label class="mb-2 block text-sm font-medium"><%= field.label %></label>
+                <%= text_area_tag collection.input_name(field.key),
+                                  row.values[field.key],
+                                  form: collection.form_id,
+                                  class: "min-h-24 w-full rounded-lg border border-[var(--surface-border-color)] bg-transparent px-3 py-2" %>
+              </div>
+            <% else %>
+              <%= render FlatPack::TextInput::Component.new(
+                name: collection.input_name(field.key),
+                label: field.label,
+                value: row.values[field.key],
+                required: field.key == :name,
+                form: collection.form_id
+              ) %>
+            <% end %>
+          <% end %>
+          <% if collection.sortable? %>
+            <%= render FlatPack::TextInput::Component.new(
+              name: collection.input_name(:order),
+              label: "Order",
+              value: row.order,
+              form: collection.form_id,
+              data: { recording_studio_attachable__collection_order_target: "order" }
+            ) %>
+          <% end %>
+          <%= form_with url: attachable_destroy_attachment_path(row.recording, **RecordingStudioAttachable::AttachmentFileButton.redirect_params(return_to: return_to)),
+                        method: :delete,
+                        class: "inline-flex" do %>
+            <%= render FlatPack::Button::Component.new(text: "Trash", icon: "trash", style: :danger, size: :md, type: "submit") %>
+          <% end %>
+        </div>
+      </li>
+    <% end %>
+  </ol>
+
+  <%= render FlatPack::Button::Component.new(text: "Save", style: :primary, size: :md, type: "submit", form: collection.form_id) %>
+<% end %>

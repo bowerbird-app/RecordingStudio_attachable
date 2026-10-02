@@ -970,10 +970,13 @@ class StorageLimitTest < Minitest::Test
     billing = billing_for(@handle)
     root.define_singleton_method(:billing) { billing }
     parent = Struct.new(:id, :recordable_type, :root_recording).new(SecureRandom.uuid, "Workspace", root)
-    recordable = Struct.new(:id, :name, :description, :file).new(
+    recordable = Struct.new(:id, :name, :description, :caption, :credit, :alt_text, :file).new(
       attachment_id,
       "Old",
       "Desc",
+      nil,
+      nil,
+      nil,
       Struct.new(:blob).new(blob)
     )
     Struct.new(:id, :recordable_type, :parent_recording, :parent_recording_id, :recordable, :root_recording).new(

@@ -3,18 +3,23 @@
 module RecordingStudioAttachable
   module Services
     class ReviseAttachmentMetadata < ApplicationService
-      def initialize(attachment_recording:, actor: nil, impersonator: nil, name: nil, description: nil, metadata: {})
+      def initialize(attachment_recording:, actor: nil, impersonator: nil, name: nil, description: nil,
+                     caption: nil, credit: nil, alt_text: nil, metadata: {})
         @attachment_recording = attachment_recording
         @actor = actor
         @impersonator = impersonator
         @name = name
         @description = description
+        @caption = caption
+        @credit = credit
+        @alt_text = alt_text
         @metadata = metadata
       end
 
       private
 
-      attr_reader :attachment_recording, :actor, :impersonator, :name, :description, :metadata
+      attr_reader :attachment_recording, :actor, :impersonator, :name, :description, :caption, :credit, :alt_text,
+                  :metadata
 
       def perform
         require_recording_studio!
@@ -28,7 +33,10 @@ module RecordingStudioAttachable
         revised = RecordingStudioAttachable::Attachment.build_from_blob(
           blob: attachment.file.blob,
           name: name.presence || attachment.name,
-          description: description.nil? ? attachment.description : description,
+          description: written_text(description, attachment.description),
+          caption: written_text(caption, attachment.caption),
+          credit: written_text(credit, attachment.credit),
+          alt_text: written_text(alt_text, attachment.alt_text),
           validation_options: capability_validation_options(capability_options),
           root_recording: root_recording
         )
@@ -52,6 +60,13 @@ module RecordingStudioAttachable
         )
 
         success(event.recording)
+      end
+
+      def written_text(incoming, previous)
+        return previous if incoming.nil?
+        return nil if incoming == ""
+
+        incoming
       end
     end
   end

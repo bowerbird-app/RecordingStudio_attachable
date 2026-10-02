@@ -24,6 +24,9 @@ class AttachmentRevisionServicesTest < Minitest::Test
     :id,
     :name,
     :description,
+    :caption,
+    :credit,
+    :alt_text,
     :attachment_kind,
     :original_filename,
     :content_type,
@@ -327,7 +330,125 @@ class AttachmentRevisionServicesTest < Minitest::Test
     assert_equal "Restore requires RecordingStudio Trashable", result.error
   end
 
+  def test_revise_nil_caption_keeps_the_previous_caption
+    captured = revise_caption(caption: nil, previous: "Pier light")
+
+    assert_equal "Pier light", captured[:caption]
+    assert_equal "Pier light", captured[:credit]
+    assert_equal "Keep alt", captured[:alt_text]
+  end
+
+  def test_revise_blank_caption_clears_caption_credit_and_alt_text
+    captured = revise_caption(caption: "", credit: "", alt_text: "", previous: "Pier light")
+
+    assert_nil captured[:caption]
+    assert_nil captured[:credit]
+    assert_nil captured[:alt_text]
+  end
+
+  def test_name_only_revise_does_not_clear_caption
+    captured = revise_caption(name: "Renamed", previous: "Pier light")
+
+    assert_equal "Renamed", captured[:name]
+    assert_equal "Pier light", captured[:caption]
+    assert_equal "Pier light", captured[:credit]
+    assert_equal "Keep alt", captured[:alt_text]
+  end
+
+  def test_replace_attachment_file_copies_caption_onto_the_new_snapshot
+    parent = RecordingDouble.new(id: "parent-1", recordable_type: "Workspace")
+    root = RecordingDouble.new(id: "root-1", recordable_type: "Workspace")
+    current_attachment = AttachmentDouble.new(
+      id: "attachment-old",
+      name: "Old name",
+      description: "Old description",
+      caption: "Pier light",
+      credit: "Ada",
+      alt_text: "Keep alt",
+      attachment_kind: "image",
+      original_filename: "old.png",
+      content_type: "image/png",
+      byte_size: 1024,
+      file: nil
+    )
+    attachment_recording = AttachmentRecordingDouble.new(
+      id: "recording-1",
+      parent_recording: parent,
+      recordable: current_attachment,
+      root_recording: root
+    )
+    blob = BlobDouble.new("image/png", 2048, FilenameDouble.new("new.png"))
+    captured_build_kwargs = nil
+
+    ActiveStorage::Blob.stub(:find_signed!, blob) do
+      RecordingStudioAttachable::Attachment.stub(:build_from_blob, lambda { |**kwargs|
+        captured_build_kwargs = kwargs
+        current_attachment
+      }) do
+        RecordingStudioAttachable::Authorization.stub(:authorize!, true) do
+          RecordingStudio.stub(:record!, FakeEvent.new(Struct.new(:id).new("recording-1"))) do
+            RecordingStudioAttachable::Services::ReplaceAttachmentFile.call(
+              attachment_recording: attachment_recording,
+              signed_blob_id: "signed-blob",
+              name: "Old name"
+            )
+          end
+        end
+      end
+    end
+
+    assert_equal "Pier light", captured_build_kwargs[:caption]
+    assert_equal "Ada", captured_build_kwargs[:credit]
+    assert_equal "Keep alt", captured_build_kwargs[:alt_text]
+    assert_equal blob, captured_build_kwargs[:blob]
+  end
+
   private
+
+  def revise_caption(previous:, caption: nil, credit: nil, alt_text: nil, name: nil)
+    parent = RecordingDouble.new(id: "parent-1", recordable_type: "Workspace")
+    root = RecordingDouble.new(id: "root-1", recordable_type: "Workspace")
+    blob = BlobDouble.new("image/png", 1024, FilenameDouble.new("existing.png"))
+    current_attachment = AttachmentDouble.new(
+      id: "attachment-old",
+      name: "Old name",
+      description: "Old description",
+      caption: previous,
+      credit: previous,
+      alt_text: "Keep alt",
+      attachment_kind: "image",
+      original_filename: "existing.png",
+      content_type: "image/png",
+      byte_size: 1024,
+      file: FileDouble.new(blob)
+    )
+    attachment_recording = AttachmentRecordingDouble.new(
+      id: "recording-caption",
+      parent_recording: parent,
+      recordable: current_attachment,
+      root_recording: root
+    )
+    captured = nil
+
+    RecordingStudioAttachable::Attachment.stub(:build_from_blob, lambda { |**kwargs|
+      captured = kwargs
+      current_attachment
+    }) do
+      RecordingStudioAttachable::Authorization.stub(:authorize!, true) do
+        RecordingStudio.stub(:record!, FakeEvent.new(Struct.new(:id).new("recording-caption"))) do
+          RecordingStudioAttachable::Services::ReviseAttachmentMetadata.call(
+            attachment_recording: attachment_recording,
+            name: name,
+            caption: caption,
+            credit: credit,
+            alt_text: alt_text
+          )
+        end
+      end
+    end
+
+    captured
+  end
 
   def with_authorized_access(&)
     RecordingStudioAttachable::Authorization.stub(:authorize!, true, &)

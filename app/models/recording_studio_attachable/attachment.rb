@@ -25,21 +25,24 @@ module RecordingStudioAttachable
     scope :files, -> { where(attachment_kind: "file") }
 
     class << self
-      def build_from_blob(blob:, name: nil, description: nil, validation_options: {}, root_recording: nil)
-        attachment = new(**blob_attributes(blob, name, description))
-        attachment.validation_options = validation_options
-        assign_root_recording(attachment, root_recording)
+      def build_from_blob(blob:, name: nil, description: nil, **presentation)
+        attachment = new(**blob_attributes(blob, name, description, presentation))
+        attachment.validation_options = presentation.fetch(:validation_options, {})
+        assign_root_recording(attachment, presentation[:root_recording])
         attachment.file.attach(blob)
         attachment
       end
 
       private
 
-      def blob_attributes(blob, name, description)
+      def blob_attributes(blob, name, description, presentation)
         content_type = blob.content_type.to_s
         {
           name: name.presence || default_name_for(blob),
           description: description,
+          caption: presentation[:caption],
+          credit: presentation[:credit],
+          alt_text: presentation[:alt_text],
           attachment_kind: RecordingStudioAttachable.configuration.attachment_kind_for(content_type),
           original_filename: blob.filename.to_s,
           content_type: content_type,

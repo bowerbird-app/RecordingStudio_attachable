@@ -566,7 +566,7 @@ The dummy app in `test/dummy` mounts both Recording Studio and this engine so yo
 
 - the dummy app is a validation shell, not a production template
 - CI installs the dummy app bundle and runs dummy-app migrations before the root checks
-- the dummy app pins RecordingStudio `v4.2.0` and Recording Studio Accessible `v0.6.0`
+- the dummy app pins RecordingStudio `v4.2.2` and Recording Studio Accessible `v0.6.0`
 - make sure engine, Active Storage, and Recording Studio tables are migrated in the dummy app before validating upload flows locally
 - set `DUMMY_ACTIVE_STORAGE_SERVICE=amazon` plus `DUMMY_AWS_ACCESS_KEY_ID`, `DUMMY_AWS_SECRET_ACCESS_KEY`, `DUMMY_AWS_REGION`, and `DUMMY_AWS_BUCKET` to exercise S3-backed uploads in the dummy app; `DUMMY_AWS_BUCKET` may be either the plain bucket name or a bucket ARN
 - **Object storage (host Active Storage, not Attachable config):** this gem does not hard-code AWS S3 or Cloudflare R2. File blobs, direct uploads, and previews use whatever service the **host app** selects via `config.active_storage.service` and `config/storage.yml`. Attachable has no separate storage backend setting.

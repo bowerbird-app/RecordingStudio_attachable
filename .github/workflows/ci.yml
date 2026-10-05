@@ -62,3 +62,9 @@ jobs:
         run: bundle exec rake app:test
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/recording_studio_attachable_test
+
+      - name: Run dummy app tests
+        run: bundle exec rails test
+        working-directory: test/dummy
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/recording_studio_attachable_test

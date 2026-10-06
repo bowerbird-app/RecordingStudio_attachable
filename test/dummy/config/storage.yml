@@ -13,6 +13,12 @@ amazon:
   region: <%= ENV.fetch("DUMMY_AWS_REGION", "us-east-1") %>
   bucket: <%= ENV["DUMMY_AWS_BUCKET"].to_s.sub(/\Aarn:[^:]+:s3:::+/, "") %>
   # R2 and other S3-compatible backends: add endpoint, force_path_style, etc. in the host app storage.yml (see README Dummy app notes).
+<% if ENV["DUMMY_AWS_ENDPOINT"].present? %>
+  endpoint: <%= ENV["DUMMY_AWS_ENDPOINT"] %>
+<% end %>
+  force_path_style: true
+  request_checksum_calculation: when_required
+  response_checksum_validation: when_required
 
 # Remember not to checkin your GCS keyfile to a repository
 # google:

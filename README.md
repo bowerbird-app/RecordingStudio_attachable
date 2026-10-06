@@ -562,16 +562,19 @@ FlatPack is the default UI system for the engine and the dummy app (pinned to `v
 
 The dummy app in `test/dummy` mounts both Recording Studio and this engine so you can validate upload/listing flows inside a realistic shell.
 
+Dummy credentials (`test/dummy/config/credentials.yml.enc`) are encrypted with the shared RecordingStudio_* development master key. Set `RAILS_MASTER_KEY` or put that key in `test/dummy/config/master.key` (gitignored). Keep the encrypted file; do not generate a per-repo dummy key.
+
 ### Dummy app notes
 
 - the dummy app is a validation shell, not a production template
 - CI installs the dummy app bundle and runs dummy-app migrations before the root checks
-- the dummy app pins RecordingStudio `v4.2.0` and Recording Studio Accessible `v0.6.0`
+- the dummy app pins RecordingStudio `v4.2.2` and Recording Studio Accessible `v0.6.0`
 - make sure engine, Active Storage, and Recording Studio tables are migrated in the dummy app before validating upload flows locally
 - set `DUMMY_ACTIVE_STORAGE_SERVICE=amazon` plus `DUMMY_AWS_ACCESS_KEY_ID`, `DUMMY_AWS_SECRET_ACCESS_KEY`, `DUMMY_AWS_REGION`, and `DUMMY_AWS_BUCKET` to exercise S3-backed uploads in the dummy app; `DUMMY_AWS_BUCKET` may be either the plain bucket name or a bucket ARN
+- optional `DUMMY_AWS_ENDPOINT` for Cloudflare R2 (or another S3-compatible API URL). When it is unset, the dummy `amazon` service keeps talking to AWS S3. When it is set, the dummy also uses `force_path_style: true` and checksum calculation/validation `when_required` (R2-safe).
 - **Object storage (host Active Storage, not Attachable config):** this gem does not hard-code AWS S3 or Cloudflare R2. File blobs, direct uploads, and previews use whatever service the **host app** selects via `config.active_storage.service` and `config/storage.yml`. Attachable has no separate storage backend setting.
 - **AWS S3:** configure Active Storage’s `S3` service in the host `storage.yml` (same shape as the dummy `amazon` entry). The dummy env vars above map to that block only.
-- **Cloudflare R2 (S3-compatible):** use the same Active Storage `service: S3` entry with R2 API credentials and bucket name. Hosts typically also set `endpoint` to the account R2 S3 API URL (for example `https://<account_id>.r2.cloudflarestorage.com`), `region: auto`, and often `force_path_style: true`. Allow the app origin in the bucket **CORS** policy (`PUT`, `GET`, and headers direct upload and previews need) so browser uploads and image variants work. The dummy `amazon` service reads `DUMMY_AWS_*` only; it does not set R2 `endpoint` / `force_path_style`—configure those in the host app when you point production or a custom env at R2.
+- **Cloudflare R2 (S3-compatible):** use the same Active Storage `service: S3` entry with R2 API credentials and bucket name. Hosts typically also set `endpoint` to the account R2 S3 API URL (for example `https://<account_id>.r2.cloudflarestorage.com`), `region: auto`, and often `force_path_style: true`. Allow the app origin in the bucket **CORS** policy (`PUT`, `GET`, and headers direct upload and previews need) so browser uploads and image variants work. The dummy `amazon` service reads `DUMMY_AWS_*`, including optional `DUMMY_AWS_ENDPOINT`; when that endpoint is set it also uses `force_path_style` and checksums `when_required`. Host apps still configure `endpoint` / `force_path_style` in their own `storage.yml` when they point production or a custom env at R2.
 
   ```yaml
   # Host app config/storage.yml (example — not shipped by this gem)
@@ -597,6 +600,9 @@ bundle exec rake db:migrate RAILS_ENV=test
 cd ../..
 bundle exec rubocop
 bundle exec rake test
+
+cd test/dummy
+bundle exec rails test
 ```
 
 ### Standard root validation
@@ -612,6 +618,7 @@ bundle exec rake test
 Cloud Agent Builds run `.cursor/install.sh`, then `.cursor/fetch-skills.sh`.
 The install hook provisions a cold image. On a warm snapshot it skips apt,
 ruby-build, db:prepare, and tailwind when Ruby, bundle, and Postgres are
-already usable. Fetch-skills always runs last. `.cursor/start.sh` starts
+already usable. If `RAILS_MASTER_KEY` is set, it writes gitignored
+`test/dummy/config/master.key`. Fetch-skills always runs last. `.cursor/start.sh` starts
 PostgreSQL on each boot. Rebuild with Draft off to load a new pack. See
 [Cursor skills in Cloud Agents](docs/cursor-skills.md).

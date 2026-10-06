@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Dummy `amazon` Active Storage service can point at Cloudflare R2 via optional `DUMMY_AWS_ENDPOINT`, with `force_path_style: true` and checksums `when_required`. Unset endpoint still uses AWS S3.
+
 ## [0.7.0] - 2026-10-02
 
 ### Added

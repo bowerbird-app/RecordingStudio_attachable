@@ -651,6 +651,11 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes storage, 'ENV["DUMMY_AWS_SECRET_ACCESS_KEY"]'
     assert_includes storage, 'ENV.fetch("DUMMY_AWS_REGION", "us-east-1")'
     assert_includes storage, 'ENV["DUMMY_AWS_BUCKET"].to_s.sub(/\Aarn:[^:]+:s3:::+/, "")'
+    assert_includes storage, 'if ENV["DUMMY_AWS_ENDPOINT"].present?'
+    assert_includes storage, 'endpoint: <%= ENV["DUMMY_AWS_ENDPOINT"] %>'
+    assert_includes storage, "force_path_style: true"
+    assert_includes storage, "request_checksum_calculation: when_required"
+    assert_includes storage, "response_checksum_validation: when_required"
     assert_includes development, 'ENV.fetch("DUMMY_ACTIVE_STORAGE_SERVICE", "local").to_sym'
     assert_includes production, 'ENV.fetch("DUMMY_ACTIVE_STORAGE_SERVICE", "local").to_sym'
   end

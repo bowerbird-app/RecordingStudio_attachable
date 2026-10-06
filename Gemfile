@@ -5,7 +5,7 @@ source "https://rubygems.org"
 # Specify your gem's dependencies in gem_template.gemspec
 gemspec
 
-gem "flat_pack", github: "bowerbird-app/flatpack", tag: "v0.1.135"
+gem "flat_pack", github: "bowerbird-app/flatpack", tag: "v0.1.198"
 gem "puma"
 gem "recording_studio", github: "bowerbird-app/RecordingStudio", tag: "v4.2.2"
 gem "sprockets-rails"

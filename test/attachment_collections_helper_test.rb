@@ -153,6 +153,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, 'data-controller="flat-pack--carousel"'
     assert_operator html.index("flat-pack--carousel"), :<, html.index('value="image-1"')
     assert_equal 2, html.scan("bg-[var(--card-background-color)]").size
+    assert_includes html, "aspect-square w-full overflow-hidden rounded-lg"
     assert_includes html, "aspect-ratio: 1/1"
     assert_includes html, 'data-flat-pack--carousel-side-preview-value="false"'
     assert_includes html, 'aria-label="Previous slide"'

@@ -95,9 +95,9 @@
                   <% if preview_path.present? %>
                     <% modal_id = "attachment-image-#{row.recording.id}" %>
                     <% frame_class = if collection.square_preview?
-                         "relative aspect-square overflow-hidden#{ " group-data-[display=carousel]:aspect-[2/1] group-data-[display=carousel]:max-h-[32rem]" if carousel }"
+                         "relative aspect-square w-full overflow-hidden rounded-lg#{ " group-data-[display=carousel]:aspect-[2/1] group-data-[display=carousel]:max-h-[32rem]" if carousel }"
                        else
-                         "relative flex min-h-32 items-center justify-center#{ " group-data-[display=carousel]:max-h-[32rem]" if carousel }"
+                         "relative flex min-h-32 w-full items-center justify-center overflow-hidden rounded-lg#{ " group-data-[display=carousel]:max-h-[32rem]" if carousel }"
                        end %>
                     <% image_class = collection.square_preview? ? "h-full w-full object-cover" : "max-h-72 w-full object-contain" %>
                     <button type="button" class="block w-full cursor-pointer overflow-hidden rounded-lg" data-modal-id="<%= modal_id %>" aria-label="View <%= attachment.name %>">

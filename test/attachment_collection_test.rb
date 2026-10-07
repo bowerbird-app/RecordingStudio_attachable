@@ -160,9 +160,33 @@ class AttachmentCollectionTest < Minitest::Test
     assert_equal :carousel, slides.default_display
     assert_equal "Slides", RecordingStudioAttachable::AttachmentCollectionDisplay.label(:carousel)
     assert_equal "List", RecordingStudioAttachable::AttachmentCollectionDisplay.label(:list)
+    assert_equal false, listed.side_preview
     assert_equal listed.signed_editor, slides.signed_editor
     assert_equal [:list], reloaded.displays
     assert_equal :list, reloaded.default_display
+  end
+
+  def test_side_preview_defaults_off_and_stays_out_of_the_signed_token
+    parent = Parent.new("parent-1")
+    plain = with_membership([]) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent, association: :images, fields: [:caption], sortable: false
+      )
+    end
+    peek = with_membership([]) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent,
+        association: :images,
+        fields: [:caption],
+        sortable: false,
+        displays: [:carousel],
+        side_preview: "true"
+      )
+    end
+
+    assert_equal false, plain.side_preview
+    assert_equal true, peek.side_preview
+    assert_equal plain.signed_editor, peek.signed_editor
   end
 
   def test_unknown_display_and_a_default_outside_the_set_raise

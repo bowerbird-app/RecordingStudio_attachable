@@ -562,6 +562,8 @@ The switch does not reload the page. There is one set of fields either way. Hidd
 
 Click a preview to open the original file in a modal. Trash sits under the fields as a red button. Slides uses the Flatpack carousel: its previous and next controls move between images, and its expand control opens the original. One image hides those controls. The fields for the other images stay in the form.
 
+`side_preview: true` peeks the next image on the right of the current slide. Omit it, or pass `false`, to keep each slide full width. It is not in the signed save token.
+
 `preview:` chooses the row image only. The default `:square` uses the `square_med` crop. `preview: :natural` uses the `med` variant and keeps the file's proportions, capped at about 208px wide on the list and wider on a slide. The modal still opens the original file. `preview:` is not in the signed save token. An unknown value raises.
 
 FlatPack is the default UI system for the engine and the dummy app (pinned to `v0.1.135` in the dummy app; gem requires `>= 0.1.135`).

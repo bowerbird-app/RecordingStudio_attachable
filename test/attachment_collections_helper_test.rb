@@ -147,6 +147,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, 'data-display="carousel"'
     assert_includes html, 'data-controller="flat-pack--carousel"'
     assert_includes html, "aspect-ratio: 1/1"
+    assert_includes html, 'data-flat-pack--carousel-side-preview-value="false"'
     assert_includes html, 'aria-label="Previous slide"'
     assert_includes html, 'data-lightbox-src="/attachments/image-1/file"'
     refute_includes html, 'target="carousel" hidden'
@@ -169,6 +170,20 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     refute_includes html, "Previous slide"
     refute_includes html, "Next slide"
     refute_includes html, "Go to slide"
+  end
+
+  def test_side_preview_peeks_the_next_slide
+    @displays = [:carousel]
+    @side_preview = true
+    html = render_editor(
+      [child("image-1", name: "Pier", caption: "Light"), child("image-2", name: "Dock", caption: "Dawn")],
+      fields: [:caption],
+      sortable: false,
+      return_to: "/attachment_editor"
+    )
+
+    assert_includes html, 'data-flat-pack--carousel-side-preview-value="true"'
+    assert_equal 2, html.scan('name="attachment_collection[rows][][caption]"').size
   end
 
   def test_natural_slides_use_a_wider_frame
@@ -219,6 +234,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
         preview: @row_preview || :square,
         displays: @displays || [:list],
         default_display: @default_display,
+        side_preview: @side_preview || false,
         url: "/save",
         return_to: return_to
       )

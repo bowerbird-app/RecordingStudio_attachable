@@ -13,11 +13,12 @@ module RecordingStudioAttachable
       preview: :square,
       displays: [:list],
       default_display: nil,
+      side_preview: false,
       url: nil,
       return_to: nil
     )
       collection = AttachmentCollection.for(
-        recording:, association:, fields:, sortable:, preview:, displays:, default_display:, return_to:
+        recording:, association:, fields:, sortable:, preview:, displays:, default_display:, side_preview:, return_to:
       )
       render partial: "recording_studio_attachable/attachment_collections/editor",
              locals: editor_locals(collection, recording, url, return_to)

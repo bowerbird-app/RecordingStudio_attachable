@@ -23,6 +23,7 @@ class DummyAttachmentEditorTest < Minitest::Test
     assert_includes view, "sortable: false"
     assert_includes view, "displays: [:list, :carousel]"
     assert_includes view, "default_display: :list"
+    assert_includes view, "side_preview: true"
     assert_includes view, "return_to: @return_to"
     assert_includes home, 'text: "Edit images"'
     assert_includes home_controller, "@attachment_editor_path = attachment_editor_path"

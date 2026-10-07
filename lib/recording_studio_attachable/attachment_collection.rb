@@ -66,17 +66,14 @@ module RecordingStudioAttachable
       end
     end
 
-    attr_reader :recording, :association, :fields, :return_to, :signed_editor, :preview, :displays, :default_display
+    attr_reader :recording, :association, :fields, :return_to, :signed_editor, :preview, :displays, :default_display, :side_preview
 
     def initialize(recording:, association:, fields:, sortable:, **options)
       @recording = recording
       @association = association
       @fields = fields
       @sortable = sortable
-      @preview = AttachmentCollectionPreview.choose(options.fetch(:preview, :square))
-      @displays = AttachmentCollectionDisplay.choose(options.fetch(:displays, [:list]))
-      @default_display = AttachmentCollectionDisplay.choose_default(options[:default_display], @displays)
-      @return_to = options[:return_to]
+      assign_display_options(options)
       @submitted_rows = AttachmentCollectionParams.row_list(options[:submitted_rows])
       @signed_editor = signed_token
     end
@@ -151,6 +148,14 @@ module RecordingStudioAttachable
 
     def membership
       @membership ||= AttachmentCollectionMembership.new(recording:, association:, sortable: sortable?)
+    end
+
+    def assign_display_options(options)
+      @preview = AttachmentCollectionPreview.choose(options.fetch(:preview, :square))
+      @displays = AttachmentCollectionDisplay.choose(options.fetch(:displays, [:list]))
+      @default_display = AttachmentCollectionDisplay.choose_default(options[:default_display], @displays)
+      @return_to = options[:return_to]
+      @side_preview = ActiveModel::Type::Boolean.new.cast(options.fetch(:side_preview, false)) == true
     end
 
     def ensure_sortable_parent!

@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["carousel", "row", "card", "pill", "listOnly"]
+  static targets = ["carousel", "row", "card", "pill", "listOnly", "slideMedia", "preview", "previewHome"]
 
   static values = {
     display: String,
@@ -60,6 +60,7 @@ export default class extends Controller {
 
   placeCards(slides) {
     const slideNodes = this.slideNodes()
+    this.separateSlides(slideNodes, slides)
 
     this.cardTargets.forEach((card, index) => {
       if (slides) {
@@ -79,6 +80,35 @@ export default class extends Controller {
         const row = this.rowTargets[index]
         if (row && card.parentElement !== row) row.appendChild(card)
       }
+    })
+
+    this.placePreviews(slides)
+  }
+
+  separateSlides(slideNodes, slides) {
+    slideNodes.forEach((slide, index) => {
+      const showGap = slides && index < slideNodes.length - 1
+      slide.style.boxSizing = "border-box"
+      slide.style.paddingRight = showGap ? "1rem" : ""
+    })
+  }
+
+  placePreviews(slides) {
+    if (!this.hasSlideMediaTarget) return
+
+    const mediaNodes = this.slideMediaTargets
+    const previews = this.previewTargets
+    const homes = this.previewHomeTargets
+
+    previews.forEach((preview, index) => {
+      const media = mediaNodes[index]
+      const home = homes[index]
+      if (!media || !home) return
+
+      const destination = slides ? media : home
+      if (preview.parentElement !== destination) destination.appendChild(preview)
+      media.hidden = !slides
+      home.hidden = slides
     })
   }
 

@@ -285,8 +285,12 @@ class RecordingStudioAttachableTest < Minitest::Test
     controller_path = File.expand_path("../app/javascript/controllers/recording_studio_attachable/collection_display_controller.js", __dir__)
     controller_source = File.read(controller_path)
 
-    assert_includes controller_source, 'static targets = ["carousel", "row", "card", "pill", "listOnly"]'
+    assert_includes controller_source, 'static targets = ["carousel", "row", "card", "pill", "listOnly", "slideMedia", "preview", "previewHome"]'
     assert_includes controller_source, "if (card.parentElement !== slide) slide.appendChild(card)"
+    assert_includes controller_source, 'slide.style.paddingRight = showGap ? "1rem" : ""'
+    assert_includes controller_source, "if (preview.parentElement !== destination) destination.appendChild(preview)"
+    assert_includes controller_source, "media.hidden = !slides"
+    assert_includes controller_source, "home.hidden = slides"
     assert_includes controller_source, "if (row && card.parentElement !== row) row.appendChild(card)"
     assert_includes controller_source, "viewport.style.height = `${height}px`"
     assert_includes controller_source, 'if (this.displayValue !== "carousel") return'

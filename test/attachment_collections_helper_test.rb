@@ -53,6 +53,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_operator html.index("</form>"), :<, html.index('value="delete"')
     refute_includes html, "recording-studio-attachable--collection-order"
     refute_includes html, "recording-studio-attachable--collection-display"
+    refute_includes html, "slideMedia"
     refute_includes html, "flat-pack--carousel"
     refute_includes html, ">Order<"
     refute_includes html, ">Slides<"
@@ -132,6 +133,9 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     refute_match(/target="row"[^>]*hidden/, html)
     assert_equal 1, html.scan('src="/attachments/image-1/preview/square_med"').size
     assert_includes html, 'src="/attachments/image-1/file"'
+    media_tag = html[/<div[^>]*target="slideMedia"[^>]*>/]
+    assert_match(/(?<![\w-])hidden(?:=|\s|>)/, media_tag)
+    assert_operator html.index('target="previewHome"'), :<, html.index("/preview/square_med")
   end
 
   def test_slides_open_on_the_first_image_with_the_other_rows_still_in_the_form
@@ -162,6 +166,16 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     refute_includes html, ">List<"
     refute_includes html, 'href="#list"'
     assert_equal 2, html.scan('name="attachment_collection[rows][][caption]"').size
+    assert_includes html, "group-data-[display=carousel]:min-h-[26rem]"
+    assert_includes html, "group-data-[display=carousel]:rounded-none"
+    assert_includes html, "group-data-[display=carousel]:w-full"
+    assert_includes html, "group-data-[display=carousel]:sm:items-stretch"
+    media_tag = html[/<div[^>]*target="slideMedia"[^>]*>/]
+    refute_match(/(?<![\w-])hidden(?:=|\s|>)/, media_tag)
+    assert_operator html.index('target="slideMedia"'), :<, html.index("/preview/square_med")
+    assert_operator html.index("/preview/square_med"), :<, html.index('target="previewHome"')
+    assert_includes html, 'target="previewHome" hidden'
+    assert_equal 1, html.scan('data-modal-id="attachment-image-image-1"').size
   end
 
   def test_one_slide_hides_the_pager

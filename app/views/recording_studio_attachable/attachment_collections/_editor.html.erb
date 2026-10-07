@@ -66,6 +66,16 @@
               <% if open_slides %>hidden<% end %>
             <% end %>
             <% if collection.sortable? %>data-recording-studio-attachable--collection-order-target="row"<% end %>>
+          <% row_preview = proc do
+               render "recording_studio_attachable/attachment_collections/row_preview",
+                 collection: collection,
+                 row: row,
+                 attachment: attachment,
+                 preview_path: preview_path,
+                 file_path: file_path,
+                 file_extension: file_extension,
+                 carousel: carousel
+             end %>
           <%= render FlatPack::Card::Component.new(
                 style: :default,
                 class: "w-full",
@@ -75,8 +85,17 @@
                   lightbox_alt: attachment.name.to_s.presence
                 }.compact : {}
               ) do |card| %>
+            <% if carousel %>
+              <% media_options = { padding: :none, data: { recording_studio_attachable__collection_display_target: "slideMedia" } } %>
+              <% media_options[:hidden] = true unless open_slides %>
+              <% card.media(**media_options) do %>
+                <% if open_slides %>
+                  <%= row_preview.call %>
+                <% end %>
+              <% end %>
+            <% end %>
             <% card.body do %>
-              <div class="flex flex-col gap-4 sm:flex-row sm:items-start<%= " group-data-[display=carousel]:sm:flex-col" if carousel %>">
+              <div class="flex flex-col gap-4 sm:flex-row sm:items-start<%= " group-data-[display=carousel]:sm:flex-col group-data-[display=carousel]:sm:items-stretch" if carousel %>">
                 <% if collection.sortable? %>
                   <div <% if carousel %>data-recording-studio-attachable--collection-display-target="listOnly" <% if open_slides %>hidden<% end %><% end %>>
                     <%= render FlatPack::Button::Component.new(
@@ -91,42 +110,13 @@
                   </div>
                 <% end %>
 
-                <div class="w-full sm:w-52 sm:max-w-52<%= " group-data-[display=carousel]:sm:w-full group-data-[display=carousel]:sm:max-w-none" if carousel %>">
-                  <% if preview_path.present? %>
-                    <% modal_id = "attachment-image-#{row.recording.id}" %>
-                    <% frame_class = if collection.square_preview?
-                         "relative aspect-square w-full overflow-hidden rounded-lg#{ " group-data-[display=carousel]:aspect-[2/1] group-data-[display=carousel]:max-h-[32rem]" if carousel }"
-                       else
-                         "relative flex min-h-32 w-full items-center justify-center overflow-hidden rounded-lg#{ " group-data-[display=carousel]:max-h-[32rem]" if carousel }"
-                       end %>
-                    <% image_class = collection.square_preview? ? "h-full w-full object-cover" : "max-h-72 w-full object-contain" %>
-                    <button type="button" class="block w-full cursor-pointer overflow-hidden rounded-lg" data-modal-id="<%= modal_id %>" aria-label="View <%= attachment.name %>">
-                      <div class="<%= frame_class %>" data-controller="recording-studio-attachable--image-fallback">
-                        <%= image_tag preview_path,
-                                      alt: attachment.name,
-                                      class: image_class,
-                                      data: {
-                                        recording_studio_attachable__image_fallback_target: "image",
-                                        action: "error->recording-studio-attachable--image-fallback#showFallback"
-                                      } %>
-                        <div class="absolute inset-0 hidden items-center justify-center bg-(--surface-background-color)" data-recording-studio-attachable--image-fallback-target="fallback">
-                          <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)">IMAGE</span>
-                        </div>
-                      </div>
-                    </button>
-                    <%= render FlatPack::Modal::Component.new(id: modal_id, title: attachment.name, size: :xl) do |modal| %>
-                      <% modal.body do %>
-                        <%= image_tag file_path, alt: attachment.name, class: "mx-auto max-h-[70vh] w-full object-contain" %>
-                      <% end %>
-                    <% end %>
-                  <% else %>
-                    <div class="flex aspect-square w-full items-center justify-center rounded-lg bg-(--surface-background-color) text-(--surface-content-color) shadow-sm ring-1 ring-(--surface-border-color)">
-                      <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)"><%= file_extension %></span>
-                    </div>
+                <div class="w-full sm:w-52 sm:max-w-52" <% if carousel %>data-recording-studio-attachable--collection-display-target="previewHome" <% if open_slides %>hidden<% end %><% end %>>
+                  <% unless carousel && open_slides %>
+                    <%= row_preview.call %>
                   <% end %>
                 </div>
 
-                <div class="flex min-w-0 flex-1 flex-col gap-4">
+                <div class="flex min-w-0 flex-1 flex-col gap-4<%= " group-data-[display=carousel]:w-full" if carousel %>">
                   <%= hidden_field_tag collection.input_name(:recording_id), row.recording.id, form: collection.form_id %>
                   <% collection.fields.each do |field| %>
                     <% if field.control == :area %>

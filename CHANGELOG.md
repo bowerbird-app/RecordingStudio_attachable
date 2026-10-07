@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.8.0] - 2026-10-07
 
 ### Added
-- `attachment_collection_editor` can offer a list, slides, or both. Slides moves one card at a time in a Flatpack carousel. The card holds the image and its fields, so both slide together. List and Slides share one set of fields, so Save still writes every row.
+- `attachment_collection_editor` can offer a list, slides, or both. Slides moves one card at a time in a Flatpack carousel. The card holds the image and its fields, so both slide together. A gap separates the cards. The picture sits flush with the card edges and stays tall enough for the previous and next controls. The fields span the card. List and Slides share one set of fields, so Save still writes every row.
 
 ```erb
 <%= attachment_collection_editor(
@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pass `displays: [:list, :carousel]` when the host should offer both. `default_display` picks the one that opens and must be in that list. Leave it out and the first entry opens.
 - Pass `displays: [:carousel]` for slides only.
 - The display is not part of the signed save token. Refreshing returns to `default_display`.
-- On Slides, the Flatpack carousel moves between cards. The picture and its fields travel together. Expand opens the original. The drag handle and Order field stay in the form and stay hidden. Reorder from List.
+- On Slides, the Flatpack carousel moves between cards. The picture and its fields travel together. The picture is flush with the card, the fields span the card, and a gap separates one card from the next. Expand opens the original. The drag handle and Order field stay in the form and stay hidden. Reorder from List.
 - Pass `side_preview: true` to peek the next card. Omit it to keep each card full width. It is not in the signed save token.
 
 ## [0.7.3] - 2026-10-06

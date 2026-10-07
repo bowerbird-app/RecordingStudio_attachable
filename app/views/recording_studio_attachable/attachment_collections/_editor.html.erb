@@ -3,7 +3,7 @@
 <% else %>
   <% carousel = collection.displays.include?(:carousel) %>
   <% open_slides = collection.default_display == :carousel %>
-  <div class="<%= "group flex w-full flex-col gap-4" if carousel %>"
+  <div class="<%= "flex w-full flex-col gap-4" if carousel %>"
        <% if carousel %>
          data-controller="recording-studio-attachable--collection-display"
          data-display="<%= collection.default_display %>"
@@ -36,31 +36,29 @@
       <% end %>
     <% end %>
 
-    <% if carousel && collection.rows.many? %>
-      <div class="flex items-center justify-between gap-3" data-recording-studio-attachable--collection-display-target="pager" <% unless open_slides %>hidden<% end %>>
-        <%= render FlatPack::Button::Component.new(
-          text: "Previous",
-          icon: "arrow-left",
-          style: :secondary,
-          size: :md,
-          type: "button",
-          disabled: open_slides,
-          data: {
-            recording_studio_attachable__collection_display_target: "previous",
-            action: "click->recording-studio-attachable--collection-display#previous"
-          }
-        ) %>
-        <p class="text-sm text-(--surface-muted-content-color)" data-recording-studio-attachable--collection-display-target="counter">1 of <%= collection.rows.size %></p>
-        <%= render FlatPack::Button::Component.new(
-          text: "Next",
-          icon: "arrow-right",
-          style: :secondary,
-          size: :md,
-          type: "button",
-          data: {
-            recording_studio_attachable__collection_display_target: "next",
-            action: "click->recording-studio-attachable--collection-display#next"
-          }
+    <% if carousel %>
+      <% slides = collection.rows.map { |row|
+           attachment = row.recording.recordable
+           file_path = authorized_attachment_file_path(row.recording)
+           if file_path.present?
+             { type: :image, src: file_path, alt: attachment.name.to_s, lightbox: true }
+           else
+             extension = File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || "FILE"
+             { type: :html, html: tag.div(tag.span(extension), class: "flex h-full items-center justify-center"), lightbox: false }
+           end
+         } %>
+      <div data-recording-studio-attachable--collection-display-target="carousel" <% unless open_slides %>hidden<% end %>>
+        <%= render FlatPack::Carousel::Component.new(
+          slides: slides,
+          initial_index: 0,
+          loop: false,
+          autoplay: false,
+          show_captions: false,
+          show_thumbs: false,
+          show_controls: collection.rows.many?,
+          show_indicators: collection.rows.many?,
+          aspect_ratio: collection.square_preview? ? "1/1" : "4/3",
+          aria_label: "Images"
         ) %>
       </div>
     <% end %>
@@ -70,17 +68,7 @@
         <% attachment = row.recording.recordable %>
         <% preview_path = authorized_attachment_preview_path(row.recording, collection.preview_variant) %>
         <% file_extension = File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || "FILE" %>
-        <% row_class = if carousel
-             "flex flex-col gap-4 border-b border-(--surface-border-color) pb-4 group-data-[display=list]:sm:flex-row group-data-[display=list]:sm:items-start"
-           else
-             "flex flex-col gap-4 border-b border-(--surface-border-color) pb-4 sm:flex-row sm:items-start"
-           end %>
-        <% preview_class = if carousel
-             "w-full group-data-[display=list]:sm:w-52 group-data-[display=list]:sm:max-w-52 group-data-[display=carousel]:mx-auto group-data-[display=carousel]:max-w-xl"
-           else
-             "w-full sm:w-52 sm:max-w-52"
-           end %>
-        <li class="<%= row_class %>"
+        <li class="flex flex-col gap-4 border-b border-(--surface-border-color) pb-4 sm:flex-row sm:items-start"
             <% if carousel %>
               data-recording-studio-attachable--collection-display-target="row"
               <% if open_slides && index.positive? %>hidden<% end %>
@@ -100,18 +88,12 @@
             </div>
           <% end %>
 
-          <div class="<%= preview_class %>">
+          <div class="w-full sm:w-52 sm:max-w-52" <% if carousel %>data-recording-studio-attachable--collection-display-target="listOnly" <% if open_slides %>hidden<% end %><% end %>>
             <% if preview_path.present? %>
               <% file_path = authorized_attachment_file_path(row.recording) %>
               <% modal_id = "attachment-image-#{row.recording.id}" %>
               <% frame_class = collection.square_preview? ? "relative aspect-square" : "relative flex min-h-32 items-center justify-center" %>
-              <% image_class = if collection.square_preview?
-                   "h-full w-full object-cover"
-                 elsif carousel
-                   "max-h-72 w-full object-contain group-data-[display=carousel]:max-h-[32rem]"
-                 else
-                   "max-h-72 w-full object-contain"
-                 end %>
+              <% image_class = collection.square_preview? ? "h-full w-full object-cover" : "max-h-72 w-full object-contain" %>
               <button type="button" class="block w-full cursor-pointer overflow-hidden rounded-lg" data-modal-id="<%= modal_id %>" aria-label="View <%= attachment.name %>">
                 <div class="<%= frame_class %>" data-controller="recording-studio-attachable--image-fallback">
                   <%= image_tag preview_path,

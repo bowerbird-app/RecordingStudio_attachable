@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["row", "pager", "counter", "previous", "next", "pill", "listOnly"]
+  static targets = ["carousel", "row", "pill", "listOnly"]
 
   static values = {
     display: String,
@@ -11,7 +11,19 @@ export default class extends Controller {
 
   connect() {
     this.index = 0
+    this.onCarouselChange = (event) => {
+      const index = event.detail?.index
+      if (!Number.isInteger(index)) return
+
+      this.index = index
+      if (this.displayValue === "carousel") this.showRow(index)
+    }
+    this.element.addEventListener("carousel:change", this.onCarouselChange)
     this.apply()
+  }
+
+  disconnect() {
+    this.element.removeEventListener("carousel:change", this.onCarouselChange)
   }
 
   select(event) {
@@ -23,48 +35,39 @@ export default class extends Controller {
     this.apply()
   }
 
-  previous(event) {
-    event.preventDefault()
-    this.move(-1)
-  }
-
-  next(event) {
-    event.preventDefault()
-    this.move(1)
-  }
-
-  move(step) {
-    const nextIndex = this.index + step
-    if (nextIndex < 0 || nextIndex >= this.rowTargets.length) return
-
-    this.index = nextIndex
-    this.apply()
-  }
-
   apply() {
     const slides = this.displayValue === "carousel"
     this.element.dataset.display = this.displayValue
 
-    this.rowTargets.forEach((row, index) => {
-      row.hidden = slides && index !== this.index
-    })
+    if (this.hasCarouselTarget) this.carouselTarget.hidden = !slides
 
     this.listOnlyTargets.forEach((element) => {
       element.hidden = slides
     })
 
-    if (this.hasPagerTarget) {
-      this.pagerTarget.hidden = !slides
+    if (slides) {
+      this.showRow(this.index)
+      this.refreshCarousel()
+    } else {
+      this.rowTargets.forEach((row) => {
+        row.hidden = false
+      })
     }
-
-    if (this.hasCounterTarget) {
-      this.counterTarget.textContent = `${this.index + 1} of ${this.rowTargets.length}`
-    }
-
-    if (this.hasPreviousTarget) this.previousTarget.disabled = this.index === 0
-    if (this.hasNextTarget) this.nextTarget.disabled = this.index >= this.rowTargets.length - 1
 
     this.markPills()
+  }
+
+  showRow(index) {
+    this.rowTargets.forEach((row, rowIndex) => {
+      row.hidden = rowIndex !== index
+    })
+  }
+
+  refreshCarousel() {
+    const carousel = this.carouselTarget.querySelector("[data-controller~='flat-pack--carousel']")
+    if (!carousel?.flatPackCarousel) return
+
+    window.requestAnimationFrame(() => carousel.flatPackCarousel.refresh())
   }
 
   markPills() {

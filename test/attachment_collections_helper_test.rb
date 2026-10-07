@@ -52,9 +52,10 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_operator html.index("</form>"), :<, html.index('value="delete"')
     refute_includes html, "recording-studio-attachable--collection-order"
     refute_includes html, "recording-studio-attachable--collection-display"
+    refute_includes html, "flat-pack--carousel"
     refute_includes html, ">Order<"
     refute_includes html, ">Slides<"
-    refute_includes html, ">Previous<"
+    refute_includes html, "Previous slide"
   end
 
   def test_sortable_editor_posts_order_numbers_and_omits_them_when_sorting_is_off
@@ -118,14 +119,15 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, 'data-turbo="false"'
     assert_includes html, "collection-display#select"
     assert_includes html, 'aria-current="page"'
-    assert_includes html, 'data-recording-studio-attachable--collection-display-target="pager" hidden'
-    assert_includes html, ">Previous<"
-    assert_includes html, ">Next<"
-    assert_includes html, "1 of 2"
+    assert_includes html, 'data-controller="flat-pack--carousel"'
+    assert_includes html, 'data-recording-studio-attachable--collection-display-target="carousel" hidden'
+    assert_includes html, 'aria-label="Previous slide"'
+    assert_includes html, 'aria-label="Next slide"'
     assert_equal 2, html.scan('data-recording-studio-attachable--collection-display-target="row"').size
     refute_match(/target="row"[^>]*hidden/, html)
-    assert_includes html, "group-data-[display=list]:sm:flex-row"
-    assert_includes html, "group-data-[display=carousel]:max-w-xl"
+    assert_equal 1, html.scan('src="/attachments/image-1/preview/square_med"').size
+    assert_includes html, 'src="/attachments/image-1/file"'
+    refute_includes html, "group-data-[display=carousel]"
   end
 
   def test_slides_open_on_the_first_image_with_the_other_rows_still_in_the_form
@@ -143,8 +145,11 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     refute_includes rows.first, "hidden"
     assert_includes rows.last, "hidden"
     assert_includes html, 'data-display="carousel"'
-    assert_includes html, "1 of 2"
-    assert_includes html, 'disabled="disabled"'
+    assert_includes html, 'data-controller="flat-pack--carousel"'
+    assert_includes html, "aspect-ratio: 1/1"
+    assert_includes html, 'aria-label="Previous slide"'
+    assert_includes html, 'data-lightbox-src="/attachments/image-1/file"'
+    refute_includes html, 'target="carousel" hidden'
     refute_includes html, ">List<"
     refute_includes html, 'href="#list"'
     assert_equal 2, html.scan('name="attachment_collection[rows][][caption]"').size
@@ -160,9 +165,24 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     )
 
     assert_includes html, 'data-display="carousel"'
-    refute_includes html, ">Previous<"
-    refute_includes html, ">Next<"
-    refute_includes html, "1 of 1"
+    assert_includes html, 'data-controller="flat-pack--carousel"'
+    refute_includes html, "Previous slide"
+    refute_includes html, "Next slide"
+    refute_includes html, "Go to slide"
+  end
+
+  def test_natural_slides_use_a_wider_frame
+    @displays = [:carousel]
+    @row_preview = :natural
+    html = render_editor(
+      [child("image-1", name: "Pier", caption: "Light")],
+      fields: [:caption],
+      sortable: false,
+      return_to: "/attachment_editor"
+    )
+
+    assert_includes html, "aspect-ratio: 4/3"
+    refute_includes html, "aspect-ratio: 1/1"
   end
 
   def test_sortable_slides_keep_order_inputs_and_hide_the_reorder_controls
@@ -241,6 +261,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
       app/components/flat_pack/text_input/component.rb
       app/components/flat_pack/tooltip/component.rb
       app/components/flat_pack/modal/component.rb
+      app/components/flat_pack/carousel/component.rb
     ].each { |path| require File.join(root, path) }
   end
 

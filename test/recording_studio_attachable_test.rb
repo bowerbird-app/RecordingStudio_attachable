@@ -285,7 +285,11 @@ class RecordingStudioAttachableTest < Minitest::Test
     controller_path = File.expand_path("../app/javascript/controllers/recording_studio_attachable/collection_display_controller.js", __dir__)
     controller_source = File.read(controller_path)
 
-    assert_includes controller_source, 'static targets = ["carousel", "row", "pill", "listOnly"]'
+    assert_includes controller_source, 'static targets = ["carousel", "carouselHome", "row", "pill", "listOnly", "slideMedia"]'
+    assert_includes controller_source, "slot.appendChild(this.carouselTarget)"
+    assert_includes controller_source, "this.carouselHomeTarget.appendChild(this.carouselTarget)"
+    assert_includes controller_source, "flatPackCarousel.to(this.index)"
+    assert_includes controller_source, "if (!Number.isInteger(index) || this.syncing || this.displayValue !== \"carousel\") return"
     assert_includes controller_source, "carousel:change"
     assert_includes controller_source, "flatPackCarousel"
     assert_includes controller_source, "event.preventDefault()"

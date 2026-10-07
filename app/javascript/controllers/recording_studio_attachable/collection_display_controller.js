@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["carousel", "row", "pill", "listOnly"]
+  static targets = ["carousel", "carouselHome", "row", "pill", "listOnly", "slideMedia"]
 
   static values = {
     display: String,
@@ -13,10 +13,12 @@ export default class extends Controller {
     this.index = 0
     this.onCarouselChange = (event) => {
       const index = event.detail?.index
-      if (!Number.isInteger(index)) return
+      if (!Number.isInteger(index) || this.syncing || this.displayValue !== "carousel") return
 
       this.index = index
-      if (this.displayValue === "carousel") this.showRow(index)
+      this.showRow(index)
+      if (this.placeCarousel()) this.syncCarouselIndex()
+      else this.refreshCarousel()
     }
     this.element.addEventListener("carousel:change", this.onCarouselChange)
     this.apply()
@@ -39,22 +41,58 @@ export default class extends Controller {
     const slides = this.displayValue === "carousel"
     this.element.dataset.display = this.displayValue
 
-    if (this.hasCarouselTarget) this.carouselTarget.hidden = !slides
-
     this.listOnlyTargets.forEach((element) => {
       element.hidden = slides
     })
 
     if (slides) {
       this.showRow(this.index)
-      this.refreshCarousel()
     } else {
       this.rowTargets.forEach((row) => {
         row.hidden = false
       })
     }
 
+    const moved = this.placeCarousel()
+    if (slides && moved) this.syncCarouselIndex()
+    else if (slides) this.refreshCarousel()
     this.markPills()
+  }
+
+  placeCarousel() {
+    if (!this.hasCarouselTarget) return false
+
+    const slides = this.displayValue === "carousel"
+    this.carouselTarget.hidden = !slides
+    let moved = false
+
+    if (slides) {
+      const slot = this.slideMediaTargets[this.index]
+      if (slot && this.carouselTarget.parentElement !== slot) {
+        slot.appendChild(this.carouselTarget)
+        moved = true
+      }
+    } else if (this.hasCarouselHomeTarget && this.carouselTarget.parentElement !== this.carouselHomeTarget) {
+      this.carouselHomeTarget.appendChild(this.carouselTarget)
+      moved = true
+    }
+
+    this.slideMediaTargets.forEach((slot, index) => {
+      slot.hidden = !slides || index !== this.index
+    })
+
+    return moved
+  }
+
+  syncCarouselIndex() {
+    window.requestAnimationFrame(() => {
+      const carousel = this.carouselTarget?.querySelector("[data-controller~='flat-pack--carousel']")
+      if (!carousel?.flatPackCarousel) return
+
+      this.syncing = true
+      carousel.flatPackCarousel.to(this.index)
+      this.syncing = false
+    })
   }
 
   showRow(index) {

@@ -554,6 +554,8 @@ attachment_collection_editor(
 
 Leave `displays` out and the helper renders the list only, with no switch. That is the same screen as before. `displays` is the set, in switch order. `:list` is the rows side by side with their fields. `:carousel` is one image at a time, with the fields under the picture. The switch labels are List and Slides.
 
+Each image and its fields sit in a card. On Slides, that picture's carousel sits in the same card, so the current image and its form stay together. Moving to the next slide opens the next card.
+
 `default_display` must be one of `displays`. Leave it out and the first entry opens. `displays: [:carousel]` is slides only, with no switch. An unknown display raises. A default that is not in the set raises.
 
 The switch does not reload the page. There is one set of fields either way. Hidden slides stay in the form, so Save still writes every row. Refreshing returns to `default_display`. The choice is not in the signed save token.

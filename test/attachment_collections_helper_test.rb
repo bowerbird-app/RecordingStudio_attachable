@@ -26,6 +26,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, "aspect-square"
     assert_includes html, 'class="h-full w-full object-cover"'
     refute_includes html, "max-h-72"
+    assert_equal 2, html.scan("bg-[var(--card-background-color)]").size
     assert_includes html, 'alt="Pier"'
     assert_includes html, 'data-modal-id="attachment-image-image-1"'
     assert_includes html, 'src="/attachments/image-1/file"'
@@ -120,6 +121,8 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, "collection-display#select"
     assert_includes html, 'aria-current="page"'
     assert_includes html, 'data-controller="flat-pack--carousel"'
+    assert_equal 2, html.scan('collection-display-target="slideMedia"').size
+    assert_equal 2, html.scan("bg-[var(--card-background-color)]").size
     assert_includes html, 'data-recording-studio-attachable--collection-display-target="carousel" hidden'
     assert_includes html, 'aria-label="Previous slide"'
     assert_includes html, 'aria-label="Next slide"'
@@ -146,6 +149,8 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes rows.last, "hidden"
     assert_includes html, 'data-display="carousel"'
     assert_includes html, 'data-controller="flat-pack--carousel"'
+    assert_operator html.index("flat-pack--carousel"), :<, html.index('value="image-1"')
+    assert_equal 2, html.scan("bg-[var(--card-background-color)]").size
     assert_includes html, "aspect-ratio: 1/1"
     assert_includes html, 'data-flat-pack--carousel-side-preview-value="false"'
     assert_includes html, 'aria-label="Previous slide"'
@@ -280,6 +285,11 @@ class AttachmentCollectionsHelperTest < Minitest::Test
       app/components/flat_pack/tooltip/component.rb
       app/components/flat_pack/modal/component.rb
       app/components/flat_pack/carousel/component.rb
+      app/components/flat_pack/card/media/component.rb
+      app/components/flat_pack/card/header/component.rb
+      app/components/flat_pack/card/body/component.rb
+      app/components/flat_pack/card/footer/component.rb
+      app/components/flat_pack/card/component.rb
     ].each { |path| require File.join(root, path) }
   end
 

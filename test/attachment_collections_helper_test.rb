@@ -146,7 +146,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
 
     rows = html.scan(/<li[^>]*>/)
     assert_equal 2, rows.size
-    assert rows.all? { |row| row.include?("hidden") }
+    assert(rows.all? { |row| row.include?("hidden") })
     assert_equal 2, html.scan('data-flat-pack--carousel-target="slide"').size
     assert_equal 2, html.scan('collection-display-target="card"').size
     assert_includes html, 'data-display="carousel"'

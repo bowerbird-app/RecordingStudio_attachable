@@ -4,7 +4,7 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.7.3", RecordingStudioAttachable::VERSION
+    assert_equal "0.8.0", RecordingStudioAttachable::VERSION
   end
 
   def test_recording_studio_dependency_is_4_2_or_newer
@@ -259,6 +259,19 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes controller_source, "this.element.requestSubmit()"
     assert_includes controller_source, "window.setTimeout(() => {"
     assert_includes controller_source, "window.clearTimeout(this.timeoutId)"
+  end
+
+  def test_collection_display_controller_switches_layout_without_leaving_the_page
+    controller_path = File.expand_path("../app/javascript/controllers/recording_studio_attachable/collection_display_controller.js", __dir__)
+    controller_source = File.read(controller_path)
+
+    assert_includes controller_source, 'static targets = ["row", "pager", "counter", "previous", "next", "pill", "listOnly"]'
+    assert_includes controller_source, "event.preventDefault()"
+    assert_includes controller_source, 'display !== "list" && display !== "carousel"'
+    assert_includes controller_source, "row.hidden = slides && index !== this.index"
+    assert_includes controller_source, "element.hidden = slides"
+    refute_includes controller_source, "location"
+    refute_includes controller_source, "requestSubmit"
   end
 
   def test_view_mode_controller_syncs_pills_and_hidden_field_from_url_state

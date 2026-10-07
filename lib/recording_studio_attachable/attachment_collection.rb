@@ -66,7 +66,7 @@ module RecordingStudioAttachable
       end
     end
 
-    attr_reader :recording, :association, :fields, :return_to, :signed_editor, :preview
+    attr_reader :recording, :association, :fields, :return_to, :signed_editor, :preview, :displays, :default_display
 
     def initialize(recording:, association:, fields:, sortable:, **options)
       @recording = recording
@@ -74,14 +74,14 @@ module RecordingStudioAttachable
       @fields = fields
       @sortable = sortable
       @preview = AttachmentCollectionPreview.choose(options.fetch(:preview, :square))
+      @displays = AttachmentCollectionDisplay.choose(options.fetch(:displays, [:list]))
+      @default_display = AttachmentCollectionDisplay.choose_default(options[:default_display], @displays)
       @return_to = options[:return_to]
       @submitted_rows = AttachmentCollectionParams.row_list(options[:submitted_rows])
       @signed_editor = signed_token
     end
 
-    def sortable?
-      @sortable
-    end
+    def sortable? = @sortable
 
     def preview_variant = AttachmentCollectionPreview.variant(preview)
 
@@ -169,6 +169,46 @@ module RecordingStudioAttachable
 
   class AttachmentCollection
     include AttachmentCollectionSheet
+  end
+
+  class AttachmentCollectionDisplay
+    LABELS = { list: "List", carousel: "Slides" }.freeze
+    UNKNOWN = "Unknown display: %s. Use :list or :carousel."
+    MISSING = "displays must be present"
+    DEFAULT_OUTSIDE = "default_display %s is not in displays."
+
+    class << self
+      def choose(displays)
+        list = Array(displays).filter_map(&:presence)
+        raise ArgumentError, MISSING if list.empty?
+
+        list.map { |item| known!(item) }.uniq
+      end
+
+      def choose_default(default_display, displays)
+        return displays.first if default_display.nil?
+
+        key = known!(default_display)
+        return key if displays.include?(key)
+
+        raise ArgumentError, format(DEFAULT_OUTSIDE, key.inspect)
+      end
+
+      def label(display)
+        LABELS.fetch(display)
+      end
+
+      private
+
+      def known!(display)
+        raise ArgumentError, format(UNKNOWN, display.inspect) if display.blank?
+
+        key = display.to_sym
+        raise ArgumentError, format(UNKNOWN, display.inspect) unless LABELS.key?(key)
+
+        key
+      end
+    end
   end
 
   class AttachmentCollectionPreview

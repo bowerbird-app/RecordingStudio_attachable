@@ -6,6 +6,8 @@
         association: :images,
         fields: [:caption, :credit, :alt_text],
         sortable: false,
+        displays: [:list, :carousel],
+        default_display: :list,
         return_to: @return_to
       ) %>
 </div>

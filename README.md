@@ -539,22 +539,30 @@ Replace never navigates to the attachment details screen. Keep `attachments#show
 
 ### Edit many images
 
-`attachment_collection_editor` lists every direct image, file, or attachment on a parent and saves the rows that changed. Caption, credit, and alt text belong to the attachment snapshot, so two uses of the same file can differ. Nothing is written onto the blob. `:name` edits the existing name. There is no title column.
+`attachment_collection_editor` edits the direct images, files, or attachments on a parent and saves the rows that changed. Caption, credit, and alt text belong to the attachment snapshot, so two uses of the same file can differ. Nothing is written onto the blob. `:name` edits the existing name. There is no title column.
 
 ```ruby
 attachment_collection_editor(
   @section,
   association: :images,
   fields: [:caption, :credit, :alt_text],
+  displays: [:list, :carousel],
+  default_display: :list,
   sortable: true
 )
 ```
 
-`sortable: true` reuses Orderable on that parent (`recording_studio_orderable_reorder!`) and splices this association into the parent's existing child order. This gem does not depend on `recording_studio_orderable`. Without that method, the helper raises. Omit `sortable` to keep newest-first and skip reorder.
+Leave `displays` out and the helper renders the list only, with no switch. That is the same screen as before. `displays` is the set, in switch order. `:list` is the rows side by side with their fields. `:carousel` is one image at a time, with the fields under the picture. The switch labels are List and Slides.
 
-Click a preview to open the original file in a modal. Trash sits under the fields as a red button.
+`default_display` must be one of `displays`. Leave it out and the first entry opens. `displays: [:carousel]` is slides only, with no switch. An unknown display raises. A default that is not in the set raises.
 
-`preview:` chooses the row image only. The default `:square` uses the `square_med` crop. `preview: :natural` uses the `med` variant and keeps the file's proportions, capped at about 208px wide. The modal still opens the original file. `preview:` is not in the signed save token. An unknown value raises.
+The switch does not reload the page. There is one set of fields either way. Hidden slides stay in the form, so Save still writes every row. Refreshing returns to `default_display`. The choice is not in the signed save token.
+
+`sortable: true` reuses Orderable on that parent (`recording_studio_orderable_reorder!`) and splices this association into the parent's existing child order. This gem does not depend on `recording_studio_orderable`. Without that method, the helper raises. Omit `sortable` to keep newest-first and skip reorder. The drag handle and Order field show on List. On Slides they stay in the form and stay hidden. Reorder from List, then save from either display.
+
+Click a preview to open the original file in a modal. Trash sits under the fields as a red button. On Slides, Previous and Next move between images. One image hides that pager.
+
+`preview:` chooses the row image only. The default `:square` uses the `square_med` crop. `preview: :natural` uses the `med` variant and keeps the file's proportions, capped at about 208px wide on the list and wider on a slide. The modal still opens the original file. `preview:` is not in the signed save token. An unknown value raises.
 
 FlatPack is the default UI system for the engine and the dummy app (pinned to `v0.1.135` in the dummy app; gem requires `>= 0.1.135`).
 

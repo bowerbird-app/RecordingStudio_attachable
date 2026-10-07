@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-07
+
+### Added
+- `attachment_collection_editor` can offer a list, slides, or both. Slides shows one image at a time with the fields under it. List and Slides share one set of fields, so Save still writes every row.
+
+```erb
+<%= attachment_collection_editor(
+      recording,
+      association: :images,
+      fields: [:caption, :credit, :alt_text],
+      displays: [:list, :carousel],
+      default_display: :list
+    ) %>
+```
+
+### Upgrade Notes
+- Omit `displays` to keep the list, with no switch. No migration.
+- Pass `displays: [:list, :carousel]` when the host should offer both. `default_display` picks the one that opens and must be in that list. Leave it out and the first entry opens.
+- Pass `displays: [:carousel]` for slides only.
+- The display is not part of the signed save token. Refreshing returns to `default_display`.
+- On Slides, the drag handle and Order field stay in the form and stay hidden. Reorder from List.
+
 ## [0.7.3] - 2026-10-06
 
 ### Added
@@ -166,7 +188,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.7.3...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.7.3...v0.8.0
 [0.7.3]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.7.2...v0.7.3
 [0.7.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.6.0...v0.6.1

@@ -51,7 +51,10 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, "return_to=%2Fattachment_editor"
     assert_operator html.index("</form>"), :<, html.index('value="delete"')
     refute_includes html, "recording-studio-attachable--collection-order"
+    refute_includes html, "recording-studio-attachable--collection-display"
     refute_includes html, ">Order<"
+    refute_includes html, ">Slides<"
+    refute_includes html, ">Previous<"
   end
 
   def test_sortable_editor_posts_order_numbers_and_omits_them_when_sorting_is_off
@@ -84,10 +87,102 @@ class AttachmentCollectionsHelperTest < Minitest::Test
   end
 
   def test_empty_editor_has_no_save_button
+    @displays = %i[list carousel]
     html = render_editor([], fields: [:caption], sortable: false, return_to: "/attachment_editor")
 
     assert_includes html, "No images yet."
     refute_includes html, ">Save<"
+    refute_includes html, ">Slides<"
+  end
+
+  def test_both_displays_keep_one_set_of_fields_and_open_on_the_list
+    left = child("image-1", name: "Pier", caption: "Light")
+    right = child("image-2", name: "Dock", caption: "Dawn")
+    @displays = %i[list carousel]
+    @default_display = :list
+    html = render_editor(
+      [left, right],
+      fields: [:caption],
+      sortable: false,
+      return_to: "/attachment_editor"
+    )
+
+    assert_equal 1, html.scan('value="image-1"').size
+    assert_equal 1, html.scan('value="image-2"').size
+    assert_includes html, 'data-controller="recording-studio-attachable--collection-display"'
+    assert_includes html, 'data-display="list"'
+    assert_includes html, 'href="#list"'
+    assert_includes html, 'href="#carousel"'
+    assert_includes html, ">List<"
+    assert_includes html, ">Slides<"
+    assert_includes html, 'data-turbo="false"'
+    assert_includes html, "collection-display#select"
+    assert_includes html, 'aria-current="page"'
+    assert_includes html, 'data-recording-studio-attachable--collection-display-target="pager" hidden'
+    assert_includes html, ">Previous<"
+    assert_includes html, ">Next<"
+    assert_includes html, "1 of 2"
+    assert_equal 2, html.scan('data-recording-studio-attachable--collection-display-target="row"').size
+    refute_match(/target="row"[^>]*hidden/, html)
+    assert_includes html, "group-data-[display=list]:sm:flex-row"
+    assert_includes html, "group-data-[display=carousel]:max-w-xl"
+  end
+
+  def test_slides_open_on_the_first_image_with_the_other_rows_still_in_the_form
+    @displays = [:carousel]
+    @default_display = :carousel
+    html = render_editor(
+      [child("image-1", name: "Pier", caption: "Light"), child("image-2", name: "Dock", caption: "Dawn")],
+      fields: [:caption],
+      sortable: false,
+      return_to: "/attachment_editor"
+    )
+
+    rows = html.scan(/<li[^>]*>/)
+    assert_equal 2, rows.size
+    refute_includes rows.first, "hidden"
+    assert_includes rows.last, "hidden"
+    assert_includes html, 'data-display="carousel"'
+    assert_includes html, "1 of 2"
+    assert_includes html, 'disabled="disabled"'
+    refute_includes html, ">List<"
+    refute_includes html, 'href="#list"'
+    assert_equal 2, html.scan('name="attachment_collection[rows][][caption]"').size
+  end
+
+  def test_one_slide_hides_the_pager
+    @displays = [:carousel]
+    html = render_editor(
+      [child("image-1", name: "Pier", caption: "Light")],
+      fields: [:caption],
+      sortable: false,
+      return_to: "/attachment_editor"
+    )
+
+    assert_includes html, 'data-display="carousel"'
+    refute_includes html, ">Previous<"
+    refute_includes html, ">Next<"
+    refute_includes html, "1 of 1"
+  end
+
+  def test_sortable_slides_keep_order_inputs_and_hide_the_reorder_controls
+    image = child("image-1", name: "Pier", caption: "Light")
+    parent = orderable_parent([image])
+    @displays = %i[list carousel]
+    @default_display = :carousel
+    html = render_editor(
+      [image],
+      parent: parent,
+      fields: [:caption],
+      sortable: true,
+      return_to: "/attachment_editor"
+    )
+
+    assert_includes html, 'name="attachment_collection[rows][][order]"'
+    assert_includes html, 'value="1"'
+    assert_includes html, 'data-recording-studio-attachable--collection-display-target="listOnly" hidden'
+    assert_includes html, ">Drag<"
+    assert_includes html, ">Order<"
   end
 
   private
@@ -102,6 +197,8 @@ class AttachmentCollectionsHelperTest < Minitest::Test
         fields: fields,
         sortable: sortable,
         preview: @row_preview || :square,
+        displays: @displays || [:list],
+        default_display: @default_display,
         url: "/save",
         return_to: return_to
       )
@@ -137,6 +234,8 @@ class AttachmentCollectionsHelperTest < Minitest::Test
       app/components/flat_pack/base_component.rb
       app/components/flat_pack/shared/icon_component.rb
       app/components/flat_pack/button/component.rb
+      app/components/flat_pack/shared/pad_text_sizes.rb
+      app/components/flat_pack/button/pill/component.rb
       app/components/flat_pack/form_field/control_styles.rb
       app/components/flat_pack/form_field/component.rb
       app/components/flat_pack/text_input/component.rb

@@ -130,6 +130,69 @@ class AttachmentCollectionTest < Minitest::Test
     assert_equal :square, reloaded.preview
   end
 
+  def test_displays_default_to_the_list_and_stay_out_of_the_signed_token
+    parent = Parent.new("parent-1")
+    listed = with_membership([]) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent, association: :images, fields: [:caption], sortable: false
+      )
+    end
+    slides = with_membership([]) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent,
+        association: :images,
+        fields: [:caption],
+        sortable: false,
+        displays: %w[carousel list],
+        default_display: "carousel"
+      )
+    end
+    reloaded = with_membership([]) do
+      RecordingStudioAttachable::AttachmentCollection.from_params(
+        recording: parent,
+        params: { signed_editor: slides.signed_editor, rows: [] }
+      )
+    end
+
+    assert_equal [:list], listed.displays
+    assert_equal :list, listed.default_display
+    assert_equal %i[carousel list], slides.displays
+    assert_equal :carousel, slides.default_display
+    assert_equal "Slides", RecordingStudioAttachable::AttachmentCollectionDisplay.label(:carousel)
+    assert_equal "List", RecordingStudioAttachable::AttachmentCollectionDisplay.label(:list)
+    assert_equal listed.signed_editor, slides.signed_editor
+    assert_equal [:list], reloaded.displays
+    assert_equal :list, reloaded.default_display
+  end
+
+  def test_unknown_display_and_a_default_outside_the_set_raise
+    parent = Parent.new("parent-1")
+    unknown = assert_raises(ArgumentError) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent, association: :images, fields: [:caption], sortable: false, displays: [:grid]
+      )
+    end
+    missing = assert_raises(ArgumentError) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent, association: :images, fields: [:caption], sortable: false, displays: []
+      )
+    end
+    outside = assert_raises(ArgumentError) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent,
+        association: :images,
+        fields: [:caption],
+        sortable: false,
+        displays: [:list],
+        default_display: :carousel
+      )
+    end
+
+    assert_equal "Unknown display: :grid. Use :list or :carousel.", unknown.message
+    assert_equal "displays must be present", missing.message
+    assert_equal "default_display :carousel is not in displays.", outside.message
+  end
+
   def test_unknown_preview_raises
     parent = Parent.new("parent-1")
     crop = assert_raises(ArgumentError) do

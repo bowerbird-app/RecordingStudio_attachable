@@ -566,7 +566,7 @@ Click a preview to open the original file in a modal. Trash sits under the field
 
 `preview:` chooses the row image only. The default `:square` uses the `square_med` crop. `preview: :natural` uses the `med` variant and keeps the file's proportions, capped at about 208px wide on the list and wider on a slide. The modal still opens the original file. `preview:` is not in the signed save token. An unknown value raises.
 
-FlatPack is the default UI system for the engine and the dummy app (pinned to `v0.1.135` in the dummy app; gem requires `>= 0.1.135`).
+FlatPack is the default UI system for the engine and the dummy app (pinned to `v0.1.201` in the root Gemfile and the dummy app; gem requires `>= 0.1.201`).
 
 ## Development
 

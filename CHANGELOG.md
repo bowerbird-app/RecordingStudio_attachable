@@ -22,7 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     ) %>
 ```
 
+### Changed
+- Requires Flatpack `>= 0.1.201`. The root Gemfile and the dummy app pin tag `v0.1.201`.
+
 ### Upgrade Notes
+- Update Flatpack to `0.1.201` or newer. Pill calls that leave out `style:` stay on the pill tokens. A CSS string in Tabs `style:` raises.
 - Omit `displays` to keep the list, with no switch. No migration.
 - Pass `displays: [:list, :carousel]` when the host should offer both. `default_display` picks the one that opens and must be in that list. Leave it out and the first entry opens.
 - Pass `displays: [:carousel]` for slides only.

@@ -267,8 +267,10 @@ class AttachmentCollectionsHelperTest < Minitest::Test
   def load_flat_pack_components!
     root = Gem.loaded_specs.fetch("flat_pack").full_gem_path
     %w[
+      lib/flat_pack/button/style_registry.rb
       app/components/flat_pack/base_component.rb
       app/components/flat_pack/shared/icon_component.rb
+      app/components/flat_pack/button/pill_style.rb
       app/components/flat_pack/button/component.rb
       app/components/flat_pack/shared/pad_text_sizes.rb
       app/components/flat_pack/button/pill/component.rb

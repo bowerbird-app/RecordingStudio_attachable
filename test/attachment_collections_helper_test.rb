@@ -121,8 +121,10 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, "collection-display#select"
     assert_includes html, 'aria-current="page"'
     assert_includes html, 'data-controller="flat-pack--carousel"'
-    assert_equal 2, html.scan('collection-display-target="slideMedia"').size
+    assert_equal 2, html.scan('data-flat-pack--carousel-target="slide"').size
+    assert_equal 2, html.scan('collection-display-target="card"').size
     assert_equal 2, html.scan("bg-[var(--card-background-color)]").size
+    assert_includes html, "group-data-[display=carousel]:sm:flex-col"
     assert_includes html, 'data-recording-studio-attachable--collection-display-target="carousel" hidden'
     assert_includes html, 'aria-label="Previous slide"'
     assert_includes html, 'aria-label="Next slide"'
@@ -130,7 +132,6 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     refute_match(/target="row"[^>]*hidden/, html)
     assert_equal 1, html.scan('src="/attachments/image-1/preview/square_med"').size
     assert_includes html, 'src="/attachments/image-1/file"'
-    refute_includes html, "group-data-[display=carousel]"
   end
 
   def test_slides_open_on_the_first_image_with_the_other_rows_still_in_the_form
@@ -145,8 +146,9 @@ class AttachmentCollectionsHelperTest < Minitest::Test
 
     rows = html.scan(/<li[^>]*>/)
     assert_equal 2, rows.size
-    refute_includes rows.first, "hidden"
-    assert_includes rows.last, "hidden"
+    assert rows.all? { |row| row.include?("hidden") }
+    assert_equal 2, html.scan('data-flat-pack--carousel-target="slide"').size
+    assert_equal 2, html.scan('collection-display-target="card"').size
     assert_includes html, 'data-display="carousel"'
     assert_includes html, 'data-controller="flat-pack--carousel"'
     assert_operator html.index("flat-pack--carousel"), :<, html.index('value="image-1"')

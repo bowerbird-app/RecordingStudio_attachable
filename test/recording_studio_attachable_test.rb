@@ -285,16 +285,16 @@ class RecordingStudioAttachableTest < Minitest::Test
     controller_path = File.expand_path("../app/javascript/controllers/recording_studio_attachable/collection_display_controller.js", __dir__)
     controller_source = File.read(controller_path)
 
-    assert_includes controller_source, 'static targets = ["carousel", "carouselHome", "row", "pill", "listOnly", "slideMedia"]'
-    assert_includes controller_source, "slot.appendChild(this.carouselTarget)"
-    assert_includes controller_source, "this.carouselHomeTarget.appendChild(this.carouselTarget)"
-    assert_includes controller_source, "flatPackCarousel.to(this.index)"
-    assert_includes controller_source, "if (!Number.isInteger(index) || this.syncing || this.displayValue !== \"carousel\") return"
+    assert_includes controller_source, 'static targets = ["carousel", "row", "card", "pill", "listOnly"]'
+    assert_includes controller_source, "if (card.parentElement !== slide) slide.appendChild(card)"
+    assert_includes controller_source, "if (row && card.parentElement !== row) row.appendChild(card)"
+    assert_includes controller_source, "viewport.style.height = `${height}px`"
+    assert_includes controller_source, 'if (this.displayValue !== "carousel") return'
     assert_includes controller_source, "carousel:change"
     assert_includes controller_source, "flatPackCarousel"
     assert_includes controller_source, "event.preventDefault()"
     assert_includes controller_source, 'display !== "list" && display !== "carousel"'
-    assert_includes controller_source, "row.hidden = rowIndex !== index"
+    assert_includes controller_source, "row.hidden = slides"
     assert_includes controller_source, "this.carouselTarget.hidden = !slides"
     assert_includes controller_source, "element.hidden = slides"
     refute_includes controller_source, "location"

@@ -552,9 +552,9 @@ attachment_collection_editor(
 )
 ```
 
-Leave `displays` out and the helper renders the list only, with no switch. That is the same screen as before. `displays` is the set, in switch order. `:list` is the rows side by side with their fields. `:carousel` is one image at a time, with the fields under the picture. The switch labels are List and Slides.
+Leave `displays` out and the helper renders the list only, with no switch. That is the same screen as before. `displays` is the set, in switch order. `:list` is the rows side by side with their fields. `:carousel` slides one card at a time. The switch labels are List and Slides.
 
-Each image and its fields sit in a card. On Slides, that picture's carousel sits in the same card, so the current image and its form stay together. Moving to the next slide opens the next card.
+Each image and its fields sit in a card. On Slides, that card is the slide, so the picture and the fields move together in the Flatpack carousel. The next card peeks in when `side_preview` is on.
 
 `default_display` must be one of `displays`. Leave it out and the first entry opens. `displays: [:carousel]` is slides only, with no switch. An unknown display raises. A default that is not in the set raises.
 
@@ -562,11 +562,11 @@ The switch does not reload the page. There is one set of fields either way. Hidd
 
 `sortable: true` reuses Orderable on that parent (`recording_studio_orderable_reorder!`) and splices this association into the parent's existing child order. This gem does not depend on `recording_studio_orderable`. Without that method, the helper raises. Omit `sortable` to keep newest-first and skip reorder. The drag handle and Order field show on List. On Slides they stay in the form and stay hidden. Reorder from List, then save from either display.
 
-Click a preview to open the original file in a modal. Trash sits under the fields as a red button. Slides uses the Flatpack carousel: its previous and next controls move between images, and its expand control opens the original. One image hides those controls. The fields for the other images stay in the form.
+Click a preview to open the original file in a modal. Trash sits under the fields as a red button. Slides uses the Flatpack carousel: its previous and next controls move between cards, and its expand control opens the original. One image hides those controls. Every card stays in the form, including the ones off to the side.
 
-`side_preview: true` peeks the next image on the right of the current slide. Omit it, or pass `false`, to keep each slide full width. It is not in the signed save token.
+`side_preview: true` peeks the next card on the right of the current slide. Omit it, or pass `false`, to keep each card full width. It is not in the signed save token.
 
-`preview:` chooses the row image only. The default `:square` uses the `square_med` crop. `preview: :natural` uses the `med` variant and keeps the file's proportions, capped at about 208px wide on the list and wider on a slide. The modal still opens the original file. `preview:` is not in the signed save token. An unknown value raises.
+`preview:` chooses the picture in the card. The default `:square` uses the `square_med` crop. `preview: :natural` uses the `med` variant and keeps the file's proportions. On the list the picture stays about 208px wide. On Slides it spans the card, capped in height, with the fields under it. The modal still opens the original file. `preview:` is not in the signed save token. An unknown value raises.
 
 FlatPack is the default UI system for the engine and the dummy app (pinned to `v0.1.201` in the root Gemfile and the dummy app; gem requires `>= 0.1.201`).
 

@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["carousel", "carouselHome", "row", "pill", "listOnly", "slideMedia"]
+  static targets = ["carousel", "row", "card", "pill", "listOnly"]
 
   static values = {
     display: String,
@@ -10,15 +10,10 @@ export default class extends Controller {
   }
 
   connect() {
-    this.index = 0
-    this.onCarouselChange = (event) => {
-      const index = event.detail?.index
-      if (!Number.isInteger(index) || this.syncing || this.displayValue !== "carousel") return
+    this.onCarouselChange = () => {
+      if (this.displayValue !== "carousel") return
 
-      this.index = index
-      this.showRow(index)
-      if (this.placeCarousel()) this.syncCarouselIndex()
-      else this.refreshCarousel()
+      this.fitCarousel()
     }
     this.element.addEventListener("carousel:change", this.onCarouselChange)
     this.apply()
@@ -45,67 +40,87 @@ export default class extends Controller {
       element.hidden = slides
     })
 
+    this.placeCards(slides)
+
+    if (this.hasCarouselTarget) this.carouselTarget.hidden = !slides
+
+    this.rowTargets.forEach((row) => {
+      row.hidden = slides
+    })
+
     if (slides) {
-      this.showRow(this.index)
-    } else {
-      this.rowTargets.forEach((row) => {
-        row.hidden = false
+      window.requestAnimationFrame(() => {
+        this.refreshCarousel()
+        window.requestAnimationFrame(() => this.fitCarousel())
       })
     }
 
-    const moved = this.placeCarousel()
-    if (slides && moved) this.syncCarouselIndex()
-    else if (slides) this.refreshCarousel()
     this.markPills()
   }
 
-  placeCarousel() {
-    if (!this.hasCarouselTarget) return false
+  placeCards(slides) {
+    const slideNodes = this.slideNodes()
 
-    const slides = this.displayValue === "carousel"
-    this.carouselTarget.hidden = !slides
-    let moved = false
+    this.cardTargets.forEach((card, index) => {
+      if (slides) {
+        const slide = slideNodes[index]
+        if (!slide) return
 
-    if (slides) {
-      const slot = this.slideMediaTargets[this.index]
-      if (slot && this.carouselTarget.parentElement !== slot) {
-        slot.appendChild(this.carouselTarget)
-        moved = true
+        slide.querySelector(".slide-placeholder")?.parentElement?.remove()
+        if (card.parentElement !== slide) slide.appendChild(card)
+
+        const filePath = card.dataset.lightboxSrc
+        if (filePath) {
+          slide.dataset.lightboxEnabled = "true"
+          slide.dataset.lightboxSrc = filePath
+          slide.dataset.lightboxAlt = card.dataset.lightboxAlt || ""
+        }
+      } else {
+        const row = this.rowTargets[index]
+        if (row && card.parentElement !== row) row.appendChild(card)
       }
-    } else if (this.hasCarouselHomeTarget && this.carouselTarget.parentElement !== this.carouselHomeTarget) {
-      this.carouselHomeTarget.appendChild(this.carouselTarget)
-      moved = true
-    }
-
-    this.slideMediaTargets.forEach((slot, index) => {
-      slot.hidden = !slides || index !== this.index
-    })
-
-    return moved
-  }
-
-  syncCarouselIndex() {
-    window.requestAnimationFrame(() => {
-      const carousel = this.carouselTarget?.querySelector("[data-controller~='flat-pack--carousel']")
-      if (!carousel?.flatPackCarousel) return
-
-      this.syncing = true
-      carousel.flatPackCarousel.to(this.index)
-      this.syncing = false
     })
   }
 
-  showRow(index) {
-    this.rowTargets.forEach((row, rowIndex) => {
-      row.hidden = rowIndex !== index
+  slideNodes() {
+    if (!this.hasCarouselTarget) return []
+
+    return [...this.carouselTarget.querySelectorAll("[data-flat-pack--carousel-target='slide']")]
+  }
+
+  fitCarousel() {
+    const viewport = this.carouselTarget?.querySelector("[data-flat-pack--carousel-target='viewport']")
+    const slideNodes = this.slideNodes()
+    if (!viewport || slideNodes.length === 0) return
+
+    viewport.style.aspectRatio = "auto"
+    viewport.style.height = "auto"
+    slideNodes.forEach((slide) => {
+      slide.style.height = "auto"
+    })
+    this.cardTargets.forEach((card) => {
+      card.style.height = "auto"
+    })
+
+    const visible = slideNodes.filter((slide) => slide.getAttribute("aria-hidden") !== "true")
+    const measured = (visible.length > 0 ? visible : slideNodes.slice(0, 1)).map((slide) => {
+      const card = slide.querySelector("[data-recording-studio-attachable--collection-display-target='card']")
+      return card?.offsetHeight || 0
+    })
+    const height = Math.max(0, ...measured)
+    if (!height) return
+
+    viewport.style.height = `${height}px`
+    slideNodes.forEach((slide) => {
+      slide.style.height = `${height}px`
     })
   }
 
   refreshCarousel() {
-    const carousel = this.carouselTarget.querySelector("[data-controller~='flat-pack--carousel']")
+    const carousel = this.carouselTarget?.querySelector("[data-controller~='flat-pack--carousel']")
     if (!carousel?.flatPackCarousel) return
 
-    window.requestAnimationFrame(() => carousel.flatPackCarousel.refresh())
+    carousel.flatPackCarousel.refresh()
   }
 
   markPills() {

@@ -66,7 +66,8 @@ module RecordingStudioAttachable
       end
     end
 
-    attr_reader :recording, :association, :fields, :return_to, :signed_editor, :preview, :displays, :default_display, :side_preview
+    attr_reader :recording, :association, :fields, :return_to, :signed_editor, :preview,
+                :displays, :default_display, :side_preview, :items_per_view
 
     def initialize(recording:, association:, fields:, sortable:, **options)
       @recording = recording
@@ -156,6 +157,7 @@ module RecordingStudioAttachable
       @default_display = AttachmentCollectionDisplay.choose_default(options[:default_display], @displays)
       @return_to = options[:return_to]
       @side_preview = ActiveModel::Type::Boolean.new.cast(options.fetch(:side_preview, false)) == true
+      @items_per_view = AttachmentCollectionItemsPerView.choose(options.fetch(:items_per_view, 1))
     end
 
     def ensure_sortable_parent!
@@ -232,6 +234,55 @@ module RecordingStudioAttachable
 
       def variant(preview)
         VARIANTS.fetch(preview)
+      end
+    end
+  end
+
+  class AttachmentCollectionItemsPerView
+    KEYS = %i[mobile tablet desktop].freeze
+    INVALID = "items_per_view must be a positive whole number, or mobile, tablet, and desktop counts."
+    UNKNOWN_KEY = "Unknown items_per_view key: %s. Use mobile, tablet, or desktop."
+
+    Counts = Data.define(*KEYS)
+
+    class << self
+      def choose(value)
+        Counts.new(**counts_for(value))
+      end
+
+      private
+
+      def counts_for(value)
+        return from_hash(value) if value.is_a?(Hash)
+
+        number = whole_number(value)
+        raise ArgumentError, INVALID unless number
+
+        KEYS.index_with(number)
+      end
+
+      def from_hash(value)
+        normalized = value.transform_keys(&:to_sym)
+        unknown = normalized.keys - KEYS
+        raise ArgumentError, format(UNKNOWN_KEY, unknown.map(&:inspect).join(", ")) if unknown.any?
+
+        KEYS.index_with { |key| count_at(normalized, key) }
+      end
+
+      def count_at(normalized, key)
+        return 1 unless normalized.key?(key)
+
+        number = whole_number(normalized.fetch(key))
+        raise ArgumentError, INVALID unless number
+
+        number
+      end
+
+      def whole_number(value)
+        return value if value.is_a?(Integer) && value.positive?
+        return Integer(value, 10) if value.is_a?(String) && value.match?(/\A[1-9]\d*\z/)
+
+        nil
       end
     end
   end

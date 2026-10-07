@@ -160,6 +160,9 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, "aspect-square w-full overflow-hidden rounded-lg"
     assert_includes html, "aspect-ratio: 1/1"
     assert_includes html, 'data-flat-pack--carousel-side-preview-value="false"'
+    assert_includes html, 'data-flat-pack--carousel-items-per-view-mobile-value="1"'
+    assert_includes html, 'data-flat-pack--carousel-items-per-view-tablet-value="1"'
+    assert_includes html, 'data-flat-pack--carousel-items-per-view-desktop-value="1"'
     assert_includes html, 'aria-label="Previous slide"'
     assert_includes html, 'data-lightbox-src="/attachments/image-1/file"'
     refute_includes html, 'target="carousel" hidden'
@@ -192,6 +195,21 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     refute_includes html, "Previous slide"
     refute_includes html, "Next slide"
     refute_includes html, "Go to slide"
+  end
+
+  def test_items_per_view_sets_how_many_cards_the_carousel_shows
+    @displays = [:carousel]
+    @items_per_view = { mobile: 1, tablet: 2, desktop: 3 }
+    html = render_editor(
+      [child("image-1", name: "Pier", caption: "Light"), child("image-2", name: "Dock", caption: "Dawn")],
+      fields: [:caption],
+      sortable: false,
+      return_to: "/attachment_editor"
+    )
+
+    assert_includes html, 'data-flat-pack--carousel-items-per-view-mobile-value="1"'
+    assert_includes html, 'data-flat-pack--carousel-items-per-view-tablet-value="2"'
+    assert_includes html, 'data-flat-pack--carousel-items-per-view-desktop-value="3"'
   end
 
   def test_side_preview_peeks_the_next_slide
@@ -257,6 +275,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
         displays: @displays || [:list],
         default_display: @default_display,
         side_preview: @side_preview || false,
+        items_per_view: @items_per_view || 1,
         url: "/save",
         return_to: return_to
       )

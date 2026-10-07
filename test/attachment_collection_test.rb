@@ -189,6 +189,30 @@ class AttachmentCollectionTest < Minitest::Test
     assert_equal plain.signed_editor, peek.signed_editor
   end
 
+  def test_items_per_view_defaults_to_one_card_and_stays_out_of_the_signed_token
+    parent = Parent.new("parent-1")
+    plain = collection_for(parent)
+    wide = collection_for(parent, items_per_view: { mobile: 1, tablet: "2", desktop: 3 })
+    same = collection_for(parent, items_per_view: 2)
+
+    assert_equal 1, plain.items_per_view.desktop
+    assert_equal 1, wide.items_per_view.mobile
+    assert_equal 2, wide.items_per_view.tablet
+    assert_equal 3, wide.items_per_view.desktop
+    assert_equal 2, same.items_per_view.mobile
+    assert_equal plain.signed_editor, wide.signed_editor
+    assert_equal plain.signed_editor, same.signed_editor
+  end
+
+  def test_items_per_view_rejects_zero_and_unknown_widths
+    parent = Parent.new("parent-1")
+    zero = assert_raises(ArgumentError) { collection_for(parent, items_per_view: 0) }
+    unknown = assert_raises(ArgumentError) { collection_for(parent, items_per_view: { phone: 2 }) }
+
+    assert_equal "items_per_view must be a positive whole number, or mobile, tablet, and desktop counts.", zero.message
+    assert_equal "Unknown items_per_view key: :phone. Use mobile, tablet, or desktop.", unknown.message
+  end
+
   def test_unknown_display_and_a_default_outside_the_set_raise
     parent = Parent.new("parent-1")
     unknown = assert_raises(ArgumentError) do
@@ -478,6 +502,18 @@ class AttachmentCollectionTest < Minitest::Test
         fields: [:caption],
         sortable: false
       ).empty_message
+    end
+  end
+
+  def collection_for(parent, **options)
+    with_membership([]) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent,
+        association: :images,
+        fields: [:caption],
+        sortable: false,
+        **options
+      )
     end
   end
 

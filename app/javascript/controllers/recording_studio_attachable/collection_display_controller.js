@@ -140,7 +140,8 @@ export default class extends Controller {
     const height = Math.max(0, ...measured)
     if (!height) return
 
-    viewport.style.height = `${height}px`
+    const indicatorRoom = 48
+    viewport.style.height = `${height + indicatorRoom}px`
     slideNodes.forEach((slide) => {
       slide.style.height = `${height}px`
     })

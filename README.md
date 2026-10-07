@@ -552,7 +552,7 @@ attachment_collection_editor(
 )
 ```
 
-Leave `displays` out and the helper renders the list only, with no switch. That is the same screen as before. `displays` is the set, in switch order. `:list` is the rows side by side with their fields. `:carousel` slides one card at a time. The switch labels are List and Slides.
+Leave `displays` out and the helper renders the list only, with no switch. That is the same screen as before. `displays` is the set, in switch order. `:list` is the rows side by side with their fields. `:carousel` slides the cards in the Flatpack carousel. The switch labels are List and Slides.
 
 Each image and its fields sit in a card. On Slides, that card is the slide, so the picture and the fields move together in the Flatpack carousel. A gap separates one card from the next. The picture sits flush with the card edges, and the fields span the card beneath it. The next card peeks in when `side_preview` is on.
 
@@ -565,6 +565,8 @@ The switch does not reload the page. There is one set of fields either way. Hidd
 Click a preview to open the original file in a modal. Trash sits under the fields as a red button. Slides uses the Flatpack carousel: its previous and next controls move between cards, and its expand control opens the original. One image hides those controls. Every card stays in the form, including the ones off to the side.
 
 `side_preview: true` peeks the next card on the right of the current slide. Omit it, or pass `false`, to keep each card full width. It is not in the signed save token.
+
+`items_per_view` chooses how many cards are on screen. Omit it and one card shows at every width. Pass a whole number to use that count on mobile, tablet, and desktop. Pass `mobile:`, `tablet:`, and `desktop:` when the count should change with the width. Tablet starts at 768px and desktop at 1024px. A missing width stays at one. Zero, a fraction, and an unknown width raise. It is not in the signed save token.
 
 `preview:` chooses the picture in the card. The default `:square` uses the `square_med` crop. `preview: :natural` uses the `med` variant and keeps the file's proportions. On the list the picture stays about 208px wide beside the fields. On Slides the picture bleeds to the card edges. It stays tall enough for the previous and next controls, and it is capped in height. The fields span the width under it. The modal still opens the original file. `preview:` is not in the signed save token. An unknown value raises.
 

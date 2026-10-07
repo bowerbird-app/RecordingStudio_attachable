@@ -292,7 +292,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes controller_source, "media.hidden = !slides"
     assert_includes controller_source, "home.hidden = slides"
     assert_includes controller_source, "if (row && card.parentElement !== row) row.appendChild(card)"
-    assert_includes controller_source, "viewport.style.height = `${height}px`"
+    assert_includes controller_source, "viewport.style.height = `${height + indicatorRoom}px`"
     assert_includes controller_source, 'if (this.displayValue !== "carousel") return'
     assert_includes controller_source, "carousel:change"
     assert_includes controller_source, "flatPackCarousel"

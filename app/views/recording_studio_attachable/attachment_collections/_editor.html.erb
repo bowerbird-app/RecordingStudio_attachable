@@ -49,6 +49,9 @@
           show_controls: collection.rows.many?,
           show_indicators: collection.rows.many?,
           side_preview: collection.side_preview,
+          items_per_view_mobile: collection.items_per_view.mobile,
+          items_per_view_tablet: collection.items_per_view.tablet,
+          items_per_view_desktop: collection.items_per_view.desktop,
           aspect_ratio: collection.square_preview? ? "1/1" : "4/3",
           aria_label: "Images"
         ) %>

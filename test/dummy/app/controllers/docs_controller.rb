@@ -13,6 +13,17 @@ class DocsController < ApplicationController
 
   def resizing; end
 
+  def url_modes
+    configuration = RecordingStudioAttachable.configuration
+    @direct_url_host = configuration.direct_url_host
+    @url_mode = configuration.url_mode
+    @preprocessed_variants = configuration.preprocessed_variants
+    @preprocessed_variants_explicit = configuration.preprocessed_variants_explicit?
+    @host_added_variants = configuration.host_added_image_variant_names
+    @attachment_recording = first_press_kit_attachment_recording
+    @url_mode_rows = build_url_mode_rows(@attachment_recording)
+  end
+
   def gem_views; end
 
   def query; end
@@ -28,6 +39,69 @@ class DocsController < ApplicationController
   end
 
   private
+
+  def first_press_kit_attachment_recording
+    RecordingStudio::Recording.unscoped
+      .where(recordable_type: "RecordingStudioAttachable::Attachment")
+      .includes(:recordable)
+      .order(:created_at)
+      .find { |recording| recording.recordable&.original_filename.to_s.start_with?("kiln-canister") }
+  end
+
+  def build_url_mode_rows(attachment_recording)
+    return [] if attachment_recording.blank?
+
+    attachment = attachment_recording.recordable
+    return [] unless attachment&.file&.attached?
+
+    # Process the default preprocessed set (small/med/large + host-added names
+    # such as :poster). Leave :xlarge unprocessed on purpose — it is a gem
+    # default outside that set, so the Rails-path fallback still shows.
+    RecordingStudioAttachable.configuration.preprocessed_variants.each do |variant_name|
+      attachment.variant_named(variant_name).processed
+    end
+
+    original_key = attachment.file.blob.key
+    engine = recording_studio_attachable
+    rows = [
+      {
+        label: "original",
+        original_key: original_key,
+        variant_key: original_key,
+        url: attachment.original_url(
+          mode: :direct,
+          rails_url: engine.attachment_file_path(attachment_recording)
+        ),
+        note: "Direct original uses the source blob key"
+      }
+    ]
+
+    demo_variant_names = (
+      RecordingStudioAttachable.configuration.preprocessed_variants + %i[xlarge]
+    ).uniq
+
+    demo_variant_names.each do |variant_name|
+      rails_url = engine.attachment_preview_file_path(attachment_recording, variant_name: variant_name)
+      processed = attachment.variant_processed?(variant_name)
+      variant_image = processed ? attachment.variant_named(variant_name).image : nil
+      variant_key = variant_image.respond_to?(:key) ? variant_image.key : nil
+      url = attachment.url_for_variant(variant_name, mode: :direct, rails_url: rails_url)
+
+      rows << {
+        label: variant_name.to_s,
+        original_key: original_key,
+        variant_key: variant_key,
+        url: url,
+        note: if processed
+                "Direct URL uses the variant blob key (not the original)"
+              else
+                "Unprocessed: falls back to the authorized Rails preview path"
+              end
+      }
+    end
+
+    rows
+  end
 
   def configured_recordable_types
     return [] unless defined?(RecordingStudio) && RecordingStudio.respond_to?(:configuration)
@@ -164,6 +238,17 @@ class DocsController < ApplicationController
         #   large: { resize_to_limit: [1600, 1600] },
         #   xlarge: { resize_to_limit: [2400, 2400] }
         # }
+
+        # Delivery URL mode. :rails (default) keeps authorized engine paths.
+        # :direct builds public https://<direct_url_host>/<blob key> links.
+        # Separate from default_listing_scope: :direct (listing children).
+        # config.url_mode = :rails
+        # config.direct_url_host = "images.featuredin.press"
+        #
+        # After commit, preprocess small/med/large plus any host-added custom
+        # image_variants names. Set preprocessed_variants to override exactly.
+        # config.image_variants = { poster: { resize_to_limit: [1280, 720] } }
+        # config.preprocessed_variants = %i[small med large poster]
 
         # Use the gem's blank layout, or point at a host app layout like "application".
         config.layout = :blank
@@ -444,13 +529,35 @@ class DocsController < ApplicationController
           xlarge: { resize_to_limit: [2400, 2400] }
         }
 
-        # Variants are generated on demand the first time a given size is requested.
-        # After that, Active Storage stores the processed file in the same service
-        # as the original blob, such as S3, and reuses it on later requests.
+        # Host-added custom names (for example :poster) join the default
+        # preprocessed set automatically. Other gem defaults such as :xlarge
+        # stay on-demand unless you list them in preprocessed_variants.
+        config.image_variants = {
+          poster: { resize_to_limit: [1280, 720] }
+        }
+        # Optional exact override:
+        # config.preprocessed_variants = %i[small med large poster]
+      end
+    RUBY
 
-        # Each size gets its own signed variant URL, so swapping "small" for
-        # "large" is not a matter of guessing a simple filename pattern.
-        # Treat those signed URLs as delivery identifiers, not as your auth layer.
+    @url_mode_config_example = <<~RUBY
+      RecordingStudioAttachable.configure do |config|
+        # :rails (default) keeps authorized engine paths for file and preview.
+        # :direct builds public https://<direct_url_host>/<blob key> links for a
+        # custom domain in front of the same object store (for example R2).
+        config.url_mode = :direct
+        config.direct_url_host = "images.featuredin.press"
+        config.image_variants = {
+          poster: { resize_to_limit: [1280, 720] }
+        }
+
+        # Per-call override when a host needs one-off direct or rails URLs:
+        # attachment.url_for_variant(:med, mode: :direct, rails_url: preview_path)
+        # attachment.original_url(mode: :rails, rails_url: file_path)
+        #
+        # Direct mode never returns a URL for an unprocessed variant. It falls
+        # back to the authorized Rails preview path and enqueues preprocessing,
+        # so the size stays correct until the variant blob key exists.
       end
     RUBY
 

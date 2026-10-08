@@ -1,0 +1,72 @@
+<div class="mx-auto flex w-full max-w-4xl flex-col gap-8">
+  <%= render FlatPack::PageTitle::Component.new(
+    title: "URL modes",
+    subtitle: "Rails mode keeps authorized engine paths. Direct mode builds public custom-domain links from blob keys for a dummy host.",
+    variant: :h1
+  ) %>
+
+  <section class="space-y-3">
+    <%= render FlatPack::SectionTitle::Component.new(
+      title: "Dummy config",
+      subtitle: "Studio UI stays on rails. :poster is a host-added custom variant. preprocessed_variants is left unset so the default includes small/med/large plus :poster.",
+      anchor_link: true
+    ) %>
+
+    <%= render FlatPack::CodeBlock::Component.new(
+      title: "config/initializers/recording_studio_attachable.rb",
+      code: <<~RUBY,
+        config.url_mode = #{@url_mode.inspect}
+        config.direct_url_host = #{@direct_url_host.inspect}
+        config.image_variants = {
+          poster: { resize_to_limit: [1280, 720] }
+        }
+        # preprocessed_variants left unset → #{@preprocessed_variants.inspect}
+        # host-added names: #{@host_added_variants.inspect}
+        # explicit override?: #{@preprocessed_variants_explicit.inspect}
+      RUBY
+      language: :ruby
+    ) %>
+  </section>
+
+  <section class="space-y-3">
+    <%= render FlatPack::SectionTitle::Component.new(
+      title: "Live direct URLs",
+      subtitle: @attachment_recording.present? ?
+        "From #{@attachment_recording.recordable.name} (#{@attachment_recording.recordable.original_filename}). Default preprocessed sizes (#{@preprocessed_variants.map(&:inspect).join(", ")}) are processed; xlarge stays unprocessed for the Rails-path fallback." :
+        "Seed the press kit images, then reload this page.",
+      anchor_link: true
+    ) %>
+
+    <% if @url_mode_rows.present? %>
+      <div class="overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--surface-border-color)]">
+        <table class="min-w-full text-left text-sm">
+          <thead class="bg-[var(--surface-muted-background-color)] text-[var(--surface-muted-content-color)]">
+            <tr>
+              <th class="px-4 py-3 font-medium">Size</th>
+              <th class="px-4 py-3 font-medium">Variant key</th>
+              <th class="px-4 py-3 font-medium">URL (mode: :direct)</th>
+              <th class="px-4 py-3 font-medium">Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @url_mode_rows.each do |row| %>
+              <tr class="border-t border-[var(--surface-border-color)] align-top">
+                <td class="px-4 py-3 font-medium text-[var(--surface-content-color)]"><%= row[:label] %></td>
+                <td class="px-4 py-3 font-mono text-xs break-all text-[var(--surface-content-color)]">
+                  <%= row[:variant_key].presence || "—" %>
+                  <% if row[:variant_key].present? && row[:label] != "original" && row[:variant_key] != row[:original_key] %>
+                    <div class="mt-1 text-[var(--surface-muted-content-color)]">≠ original <%= row[:original_key] %></div>
+                  <% end %>
+                </td>
+                <td class="px-4 py-3 font-mono text-xs break-all text-[var(--surface-content-color)]"><%= row[:url] %></td>
+                <td class="px-4 py-3 text-[var(--surface-muted-content-color)]"><%= row[:note] %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="text-[var(--surface-muted-content-color)]">No press kit attachment is available yet. Run <code>bin/rails db:seed</code>.</p>
+    <% end %>
+  </section>
+</div>

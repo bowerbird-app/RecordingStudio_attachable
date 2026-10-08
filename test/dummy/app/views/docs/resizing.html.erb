@@ -1,7 +1,7 @@
 <div class="mx-auto flex w-full max-w-4xl flex-col gap-8">
   <%= render FlatPack::PageTitle::Component.new(
     title: "Resizing",
-    subtitle: "Configure browser-side image resizing before direct upload for the dummy app and the engine's built-in upload flows.",
+    subtitle: "Configure browser-side image resizing, named delivery variants, upload-time preprocessing, and Rails versus direct URL modes.",
     variant: :h1
   ) %>
 
@@ -22,13 +22,27 @@
   <section class="space-y-3">
     <%= render FlatPack::SectionTitle::Component.new(
       title: "Size variants",
-      subtitle: "Named delivery variants are generated on demand and reused through signed Active Storage URLs.",
+      subtitle: "Named delivery variants are stored in Active Storage. Preprocess common sizes after upload, or let Rails mode process them on the first preview request.",
       anchor_link: true
     ) %>
 
     <%= render FlatPack::CodeBlock::Component.new(
       title: "config/initializers/recording_studio_attachable.rb",
       code: @variant_config_example,
+      language: :ruby
+    ) %>
+  </section>
+
+  <section class="space-y-3">
+    <%= render FlatPack::SectionTitle::Component.new(
+      title: "URL modes",
+      subtitle: "Rails mode keeps authorized engine paths. Direct mode builds public custom-domain links from blob keys. Studio UI stays on Rails paths unless the host sets url_mode to direct.",
+      anchor_link: true
+    ) %>
+
+    <%= render FlatPack::CodeBlock::Component.new(
+      title: "config/initializers/recording_studio_attachable.rb",
+      code: @url_mode_config_example,
       language: :ruby
     ) %>
   </section>

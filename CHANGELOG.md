@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-08
+
+### Added
+- `config.url_mode` (`:rails` default, or `:direct`) chooses how attachment delivery URLs are built. Studio UI helpers keep the authorized Rails path unless the host sets `:direct`.
+- `config.direct_url_host` for public custom-domain links (for example `images.featuredin.press`). Direct URLs are `https://<direct_url_host>/<blob key>` with no expiry and no presigning.
+- `Attachment#original_url(mode:, rails_url:)` and `Attachment#url_for_variant(variant_name, mode:, rails_url:)` with a per-call `mode:` override.
+- `config.preprocessed_variants` and `PreprocessVariantsJob`, enqueued after an attachment commit, so common sizes exist before direct delivery asks for them.
+- Host-added custom names in `config.image_variants` (for example `:poster`) are kept alongside the gem defaults. The default preprocessed set is `%i[small med large]` plus those host-added names, resolved at read time. Assigning `preprocessed_variants` is an exact override.
+
+### Changed
+- Direct mode for a resize always uses the processed variant's own Active Storage blob key (the `variant_record` image key), never the original blob key.
+- When direct mode would return a URL for an unprocessed variant, the gem falls back to the authorized Rails preview path and enqueues preprocessing. That keeps correct dimensions (unlike falling back to the original's direct URL) and still lets the next request use a public variant key once processing finishes.
+- `config.image_variants=` accepts host-added custom variant names. Previously unknown keys were ignored.
+
+### Upgrade Notes
+- Default `url_mode` is `:rails`. Existing hosts keep today's authorized engine paths with no config change.
+- To serve public R2/custom-domain links, set both `config.url_mode = :direct` and `config.direct_url_host = "images.example.com"`. Calling `:direct` without a host raises `RecordingStudioAttachable::ConfigurationError`.
+- Ensure Active Storage `track_variants` stays enabled (Rails 8.1 defaults do). Direct variant URLs read the variant_record image blob key.
+- Default preprocessing is `small`/`med`/`large` plus any custom names you add under `image_variants`. Other gem defaults such as `square_med` or `xlarge` stay on-demand unless you list them in `preprocessed_variants`. Set `preprocessed_variants` when you want an exact list. Unknown override names are ignored. Non-image and unvariable files skip the job safely.
+- Pass `rails_url:` when calling `original_url` / `url_for_variant` in `:rails` mode, or when `:direct` may need a fallback for an unprocessed variant. Engine helpers already pass the authorized path.
+
+```ruby
+RecordingStudioAttachable.configure do |config|
+  config.url_mode = :direct
+  config.direct_url_host = "images.featuredin.press"
+  config.image_variants = { poster: { resize_to_limit: [1280, 720] } }
+  # Optional exact override:
+  # config.preprocessed_variants = %i[small med large poster]
+end
+
+attachment.url_for_variant(:med, mode: :direct, rails_url: preview_path)
+attachment.original_url(mode: :rails, rails_url: file_path)
+```
+
 ## [0.8.0] - 2026-10-07
 
 ### Added
@@ -203,7 +237,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.7.3...v0.8.0
 [0.7.3]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.7.2...v0.7.3
 [0.7.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.6.1...v0.7.0

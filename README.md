@@ -145,6 +145,19 @@ RecordingStudioAttachable.configure do |config|
   #   xlarge: { resize_to_limit: [2400, 2400] }
   # }
 
+  # Delivery URL mode. :rails (default) keeps authorized engine paths.
+  # :direct builds public https://<direct_url_host>/<blob key> links for a
+  # custom domain in front of the same object store (for example Cloudflare R2).
+  # This is separate from default_listing_scope: :direct (listing children).
+  # config.url_mode = :rails
+  # config.direct_url_host = "images.featuredin.press"
+  #
+  # After commit, preprocess small/med/large plus any host-added custom
+  # image_variants names (for example :poster). Set preprocessed_variants to
+  # override that list exactly.
+  # config.image_variants = { poster: { resize_to_limit: [1280, 720] } }
+  # config.preprocessed_variants = %i[small med large poster]
+
   config.layout = :blank
   config.auth_roles = {
     view: :view,
@@ -187,6 +200,26 @@ Trash and restore leave the file attached, so the total stays the same. Permanen
 When browser-side image preprocessing is enabled, the gem's built-in direct-upload surfaces resize oversized JPEG, PNG, and WebP files before `DirectUpload` sends them to Active Storage. That includes the main upload page, the bundled attachment-image picker, and attachment file replacements on the revision screen. This is a best-effort optimization layer, not a security boundary: server-side content-type and byte-size validation still runs on the final uploaded blob. GIF, SVG, HEIC/HEIF, and other unsupported image types are uploaded unchanged.
 
 For delivery, the engine uses a stable set of named image variants: `square_small`, `square_med`, `square_large`, `small`, `med`, `large`, and `xlarge`. Host apps can override the transformation sizes through `config.image_variants` while keeping those public names stable across engine views and integrations.
+
+After an image attachment is committed, `PreprocessVariantsJob` processes `config.preprocessed_variants` so those sizes exist before a browser asks for them. The default is `small`, `med`, and `large`, plus every host-added custom name in `config.image_variants` (for example `:poster`). Other gem defaults such as `square_med` or `xlarge` are not auto-included. Assigning `preprocessed_variants` replaces that default with an exact list. The job is idempotent and skips non-image or unvariable files.
+
+### URL modes
+
+`config.url_mode` chooses how delivery URLs are built:
+
+| Mode | Behaviour |
+| --- | --- |
+| `:rails` (default) | Authorized engine paths (`attachments/:id/file`, `attachments/:id/preview/:variant_name`). Unchanged from earlier releases. |
+| `:direct` | Public `https://<direct_url_host>/<blob key>` links. No expiry, no presigning. Requires `config.direct_url_host`. |
+
+Per-call override on the attachment:
+
+```ruby
+attachment.original_url(mode: :direct, rails_url: file_path)
+attachment.url_for_variant(:med, mode: :direct, rails_url: preview_path)
+```
+
+`rails_url:` is required in `:rails` mode. In `:direct` mode it is the fallback when a named variant is not processed yet: the gem returns that authorized Rails preview path and enqueues preprocessing, rather than pointing at the original's direct URL (which would be the wrong size). For a processed resize, direct mode always uses the variant_record's image blob key, never the original blob key. Studio UI helpers keep Rails paths unless the host sets `config.url_mode = :direct`.
 
 ### Attachment image picker
 
@@ -468,7 +501,9 @@ The query accepts `scope:`, `kind:`, `recordable_type:`, and `include_trashed:`.
 
 ## Delivery
 
-Attachment previews, editor insert URLs, and downloads are served through engine-owned endpoints so each request stays behind the gem's authorization checks. Host apps should link to the engine paths returned by the gem instead of generating raw Active Storage blob URLs for attachment delivery.
+Attachment previews, editor insert URLs, and downloads default to engine-owned endpoints so each request stays behind the gem's authorization checks. With `config.url_mode = :rails` (the default), host apps should link to the engine paths returned by the gem instead of generating raw Active Storage blob URLs.
+
+With `config.url_mode = :direct` and `config.direct_url_host` set, helpers and `Attachment#original_url` / `#url_for_variant` return public custom-domain URLs for blob keys. Downloads and other engine actions that stream bytes still use the authorized Rails endpoints.
 
 ### Layouts
 

@@ -52,6 +52,12 @@
       ) %>
 
       <%= render FlatPack::Sidebar::Item::Component.new(
+        text: "URL modes",
+        href: url_modes_docs_path,
+        icon: :link
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
         text: "Gem views",
         href: gem_views_docs_path,
         icon: :file

@@ -157,6 +157,9 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes seeds, "import_attachment("
     assert_includes seeds, "revise_attachment_metadata("
     assert_includes seeds, "window.jpg"
+    assert_includes seeds, "Missing seed image fixture"
+    assert_includes seeds, "blob.service.exist?(blob.key)"
+    assert_includes seeds, "but blob is missing from storage"
     %w[kiln-canister-hero.jpg kiln-canister-table.jpg kiln-canister-detail.jpg kiln-canister-open.jpg].each do |file|
       assert File.exist?(File.expand_path("dummy/db/seed_images/#{file}", __dir__)), "missing press kit image #{file}"
     end
@@ -622,6 +625,10 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes initializer_template, "config.image_variants = {"
     assert_includes initializer_template, "square_small: { resize_to_fill: [128, 128] }"
     assert_includes initializer_template, "xlarge: { resize_to_limit: [2400, 2400] }"
+    assert_includes initializer_template, "config.url_mode = :rails"
+    assert_includes initializer_template, "config.direct_url_host"
+    assert_includes initializer_template, "config.preprocessed_variants = %i[small med large poster]"
+    assert_includes initializer_template, "After commit, preprocess small/med/large plus any host-added custom"
     assert_includes initializer_template, 'label: "Google Drive"'
     assert_includes initializer_template, "remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|"
     assert_includes initializer_template, "config.google_drive.enabled = true"
@@ -636,6 +643,8 @@ class DummyHomeDemoTest < Minitest::Test
     workspace_model = File.read(File.expand_path("dummy/app/models/workspace.rb", __dir__))
 
     assert_includes initializer, "config.max_file_size = 25.megabytes"
+    assert_includes initializer, "poster: { resize_to_limit: [1280, 720] }"
+    assert_not_includes initializer, "config.preprocessed_variants ="
     assert_includes initializer, ":demo_cloud"
     assert_includes initializer, 'label: "Demo cloud import"'
     assert_includes page_model, "max_file_size: 25.megabytes"

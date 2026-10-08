@@ -61,6 +61,107 @@ module RecordingStudioAttachable
       assert_equal "Pier light", captured[:params].dig(:attachment_collection, :rows, 0, :caption)
     end
 
+    def test_slide_save_answers_json_and_does_not_redirect
+      parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace")
+      result = Services::BaseService::Result.new(success: true, value: parent)
+
+      with_routing do |set|
+        set.draw do
+          patch "/recordings/:recording_id/attachment_collection",
+                to: "recording_studio_attachable/attachment_collections#update"
+        end
+
+        @routes = set
+
+        RecordingStudio::Recording.stub(:find, parent) do
+          @controller.stub(:authorize_attachment_action!, true) do
+            Services::ReviseAttachmentCollection.stub(:call, ->(**) { result }) do
+              @controller.stub(:protect_against_forgery?, false) do
+                @request.headers["Accept"] = "application/json"
+                patch :update, params: {
+                  recording_id: parent.id,
+                  stay: "slide",
+                  redirect_mode: "return_to",
+                  return_to: "/attachment_editor",
+                  attachment_collection: { signed_editor: "token", rows: [{ recording_id: "image-1", caption: "Pier light" }] }
+                }, xhr: true
+              end
+            end
+          end
+        end
+      end
+
+      assert_response :ok
+      assert_equal({ "saved" => true }, JSON.parse(@response.body))
+      assert_nil flash[:notice]
+    end
+
+    def test_slide_save_without_the_ajax_header_still_redirects
+      parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace")
+      result = Services::BaseService::Result.new(success: true, value: parent)
+
+      with_routing do |set|
+        set.draw do
+          patch "/recordings/:recording_id/attachment_collection",
+                to: "recording_studio_attachable/attachment_collections#update"
+        end
+
+        @routes = set
+
+        RecordingStudio::Recording.stub(:find, parent) do
+          @controller.stub(:authorize_attachment_action!, true) do
+            Services::ReviseAttachmentCollection.stub(:call, ->(**) { result }) do
+              @controller.stub(:protect_against_forgery?, false) do
+                @request.headers["Accept"] = "application/json"
+                patch :update, params: {
+                  recording_id: parent.id,
+                  stay: "slide",
+                  redirect_mode: "return_to",
+                  return_to: "/attachment_editor",
+                  attachment_collection: { signed_editor: "token", rows: [] }
+                }
+              end
+            end
+          end
+        end
+      end
+
+      assert_redirected_to "/attachment_editor"
+      assert_equal 303, @response.status
+    end
+
+    def test_slide_save_returns_the_error_without_redirecting
+      parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace")
+      result = Services::BaseService::Result.new(success: false, error: "Caption is too long")
+
+      with_routing do |set|
+        set.draw do
+          patch "/recordings/:recording_id/attachment_collection",
+                to: "recording_studio_attachable/attachment_collections#update"
+        end
+
+        @routes = set
+
+        RecordingStudio::Recording.stub(:find, parent) do
+          @controller.stub(:authorize_attachment_action!, true) do
+            Services::ReviseAttachmentCollection.stub(:call, ->(**) { result }) do
+              @controller.stub(:protect_against_forgery?, false) do
+                @request.headers["Accept"] = "application/json"
+                patch :update, params: {
+                  recording_id: parent.id,
+                  stay: "slide",
+                  attachment_collection: { signed_editor: "token", rows: [] }
+                }, xhr: true
+              end
+            end
+          end
+        end
+      end
+
+      assert_response :unprocessable_entity
+      assert_equal({ "saved" => false, "error" => "Caption is too long" }, JSON.parse(@response.body))
+    end
+
     def test_update_without_return_to_goes_to_the_attachment_index
       parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace")
       result = Services::BaseService::Result.new(success: true, value: parent)

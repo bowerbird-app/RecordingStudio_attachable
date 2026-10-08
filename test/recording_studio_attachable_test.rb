@@ -300,6 +300,12 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes controller_source, 'if (tag !== "INPUT" && tag !== "TEXTAREA" && tag !== "SELECT") return'
     assert_includes controller_source, "event.preventDefault()"
     assert_includes controller_source, 'display !== "list" && display !== "carousel"'
+    assert_includes controller_source, 'body.append("stay", "slide")'
+    assert_includes controller_source, 'Accept: "application/json"'
+    assert_includes controller_source, '"X-Requested-With": "XMLHttpRequest"'
+    assert_includes controller_source, "changes.captureBaseline()"
+    assert_includes controller_source, "listForm.userEdited === false"
+    assert_includes controller_source, 'this.showStatus(form, "Saved", false)'
     refute_includes controller_source, "row.hidden = slides"
     assert_includes controller_source, "this.carouselTarget.hidden = !slides"
     refute_includes controller_source, "element.hidden = slides"

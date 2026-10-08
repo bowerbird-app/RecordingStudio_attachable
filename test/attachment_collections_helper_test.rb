@@ -175,6 +175,11 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     refute_includes list_form, "slideForm"
     refute_match(/\bhidden(?:=|\s|>)/, list_form[/<form\b[^>]*>/])
     assert_includes slide_form, ">Save<"
+    assert_includes slide_form, "collection-display#saveSlide"
+    assert_includes slide_form, 'data-turbo="false"'
+    assert_includes slide_form, "data-save-status"
+    assert_includes slide_form, 'role="status"'
+    refute_includes list_form, "saveSlide"
     assert_includes slide_form, 'aria-label="Trash"'
     assert_includes slide_form, 'form="attachment-collection-parent-1-slide-image-2"'
     refute_includes slide_form, ">Trash<"

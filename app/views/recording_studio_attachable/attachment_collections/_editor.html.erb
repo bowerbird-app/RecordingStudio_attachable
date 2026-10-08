@@ -80,6 +80,8 @@
                           class: "w-full",
                           data: {
                             controller: "flat-pack--unsaved-changes",
+                            turbo: false,
+                            action: "submit->recording-studio-attachable--collection-display#saveSlide",
                             recording_studio_attachable__collection_display_target: "slideForm"
                           } do %>
               <%= hidden_field_tag "attachment_collection[signed_editor]", collection.signed_editor %>
@@ -118,7 +120,7 @@
                           form_id: slide_form_id,
                           show_order: false %>
                     <div class="flex items-center justify-between gap-4">
-                      <div class="inline-flex">
+                      <div class="inline-flex items-center gap-3">
                         <%= render FlatPack::Button::Component.new(
                               text: "Save",
                               style: :default,
@@ -127,6 +129,7 @@
                               form: slide_form_id,
                               data: { flat_pack__unsaved_changes_target: "submit" }
                             ) %>
+                        <p class="text-sm text-(--surface-muted-content-color)" data-save-status role="status" hidden></p>
                       </div>
                       <%= render FlatPack::Button::Component.new(
                             text: "Trash",

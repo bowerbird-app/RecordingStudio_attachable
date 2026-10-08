@@ -160,6 +160,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, 'data-recording-studio-attachable--collection-display-target="carousel" hidden'
     assert_includes html, 'aria-label="Previous slide"'
     assert_includes html, 'aria-label="Next slide"'
+    refute_includes html, "Go to slide"
     assert_equal 2, html.scan('data-recording-studio-attachable--collection-display-target="row"').size
     refute_match(/target="row"[^>]*hidden/, html)
     assert_equal 2, html.scan('src="/attachments/image-1/preview/square_med"').size
@@ -208,6 +209,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, 'data-flat-pack--carousel-items-per-view-tablet-value="1"'
     assert_includes html, 'data-flat-pack--carousel-items-per-view-desktop-value="1"'
     assert_includes html, 'aria-label="Previous slide"'
+    refute_includes html, "Go to slide"
     assert_includes html, 'data-lightbox-src="/attachments/image-1/file"'
     refute_includes html, 'target="carousel" hidden'
     refute_includes html, ">List<"

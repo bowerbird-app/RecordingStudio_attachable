@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Save on the image editor starts as the default button and is only as wide as its label. It turns primary when a caption, credit, alt text, name, or order differs from the saved values, and returns to default when those fields match again.
 - Dummy and blank layouts load `flat_pack/application` so Flatpack button colours paint.
 - On Slides, typing in a field stays in that field. Arrow keys and the space bar do not move the carousel.
-- On Slides, an image thumb sits under the carousel for each card and uses that card's preview. The carousel tray has no border and no background.
+- On Slides, an image thumb sits under the carousel for each card and uses that card's preview. The carousel tray has no border and no background. The dot indicators stay off.
 - The dummy Edit images screen seeds a four-shot Kiln canister press kit. Colour-block stand-ins are removed when seeds run.
 
 ### Upgrade Notes

@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Save on the image editor starts as the default button and is only as wide as its label. It turns primary when a caption, credit, alt text, name, or order differs from the saved values, and returns to default when those fields match again.
 - Dummy and blank layouts load `flat_pack/application` so Flatpack button colours paint.
 - On Slides, typing in a field stays in that field. Arrow keys and the space bar do not move the carousel.
+- The carousel tray behind the cards is transparent.
 
 ### Upgrade Notes
 - Update Flatpack to `0.1.202` or newer. Pill calls that leave out `style:` stay on the pill tokens. A CSS string in Tabs `style:` raises. Importmap apps that already eager-load Flatpack controllers pick up `flat-pack--unsaved-changes` with that gem.

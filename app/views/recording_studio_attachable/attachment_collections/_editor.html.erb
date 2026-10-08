@@ -60,7 +60,8 @@
           items_per_view_tablet: collection.items_per_view.tablet,
           items_per_view_desktop: collection.items_per_view.desktop,
           aspect_ratio: collection.square_preview? ? "1/1" : "4/3",
-          aria_label: "Images"
+          aria_label: "Images",
+          style: "--carousel-viewport-background-color: transparent;"
         ) %>
       </div>
     <% end %>

@@ -186,6 +186,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_equal 2, html.scan('collection-display-target="card"').size
     assert_includes html, 'data-display="carousel"'
     assert_includes html, 'data-controller="flat-pack--carousel"'
+    assert_includes html, "--carousel-viewport-background-color: transparent;"
     assert_operator html.index("flat-pack--carousel"), :<, html.index('value="image-1"')
     assert_equal 2, html.scan("bg-[var(--card-background-color)]").size
     assert_includes html, "aspect-square w-full overflow-hidden rounded-lg"

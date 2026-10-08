@@ -192,12 +192,8 @@ class AttachmentCollectionsHelperTest < Minitest::Test
 
   def test_slide_cards_show_file_facts_above_the_fields_and_the_list_does_not
     @displays = %i[list carousel]
-    hero = child(
-      "image-1",
-      name: "Pier",
-      caption: "Light",
-      file: sized_file("width" => "1280", "height" => 720)
-    )
+    hero = child("image-1", name: "Pier", caption: "Light")
+    hero.recordable.file = sized_file("width" => "1280", "height" => 720)
     html = render_editor(
       [hero, child("image-2", name: "Dock", caption: "Dawn")],
       fields: [:caption],
@@ -451,7 +447,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     parent
   end
 
-  def child(id, name:, caption: nil, credit: nil, content_type: "image/png", byte_size: 204_800, file: nil)
+  def child(id, name:, caption: nil, credit: nil)
     Child.new(
       id: id,
       created_at: Time.utc(2026, 1, 1),
@@ -462,9 +458,8 @@ class AttachmentCollectionsHelperTest < Minitest::Test
         credit: credit,
         alt_text: "Hidden alt",
         original_filename: "#{id}.png",
-        content_type: content_type,
-        byte_size: byte_size,
-        file: file
+        content_type: "image/png",
+        byte_size: 204_800
       )
     )
   end

@@ -3,6 +3,8 @@
 require "test_helper"
 
 class AttachmentFileFactsTest < Minitest::Test
+  Snapshot = Struct.new(:original_filename, :content_type, :byte_size, :file, keyword_init: true)
+
   def test_labels_use_the_known_type_pixel_size_and_file_size
     facts = facts_for(
       original_filename: "kiln-canister-hero.jpg",
@@ -73,8 +75,6 @@ class AttachmentFileFactsTest < Minitest::Test
   end
 
   private
-
-  Snapshot = Struct.new(:original_filename, :content_type, :byte_size, :file, keyword_init: true)
 
   def facts_for(**attributes)
     RecordingStudioAttachable::AttachmentFileFacts.new(Snapshot.new(**attributes))

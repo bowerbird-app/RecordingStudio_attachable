@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-07
+
+### Added
+- `attachment_collection_editor` can offer a list, slides, or both. Slides uses a Flatpack carousel. `items_per_view` chooses how many cards show at once. The picture sits flush with the card edges and stays tall enough for the previous and next controls. The fields span the card. Image thumbs sit under the carousel. The tray has no border and no fill. The list keeps one Save for every row. Each slide has its own fields and its own Save, and that save writes that image.
+
+```erb
+<%= attachment_collection_editor(
+      recording,
+      association: :images,
+      fields: [:caption, :credit, :alt_text],
+      displays: [:list, :carousel],
+      default_display: :list
+    ) %>
+```
+
+### Changed
+- Requires Flatpack `>= 0.1.205`. The root Gemfile and the dummy app pin tag `v0.1.205`.
+- Save on the image editor starts as the default button and is only as wide as its label. It turns primary when a caption, credit, alt text, name, or order differs from the saved values, and returns to default when those fields match again.
+- Dummy and blank layouts load `flat_pack/application` so Flatpack button colours paint.
+- On Slides, typing in a field stays in that field. Arrow keys and the space bar do not move the carousel.
+- On Slides, an image thumb sits under the carousel for each card and uses that card's preview. The carousel tray has no border and no background. The dot indicators stay off.
+- On Slides, each card shows the file name, type, pixel size, and file size above the fields when those are known. The list does not.
+- Saving a slide stays on that slide. The page does not reload, and the list does not open. The list copy of that image picks up the saved text. A list save still reloads.
+- The dummy Edit images screen seeds a four-shot Kiln canister press kit. Colour-block stand-ins are removed when seeds run.
+
+### Upgrade Notes
+- Update Flatpack to `0.1.205` or newer. Pill calls that leave out `style:` stay on the pill tokens. A CSS string in Tabs `style:` raises. Importmap apps that already eager-load Flatpack controllers pick up `flat-pack--unsaved-changes` with that gem.
+- On Slides, the carousel tray no longer draws a border or a fill, and image thumbs appear under the cards.
+- Save on `attachment_collection_editor` is no longer primary on arrival. Flatpack switches it to primary after a field changes.
+- Omit `displays` to keep the list, with no switch. No migration.
+- Pass `displays: [:list, :carousel]` when the host should offer both. `default_display` picks the one that opens and must be in that list. Leave it out and the first entry opens.
+- Pass `displays: [:carousel]` for slides only.
+- The display is not part of the signed save token. Refreshing returns to `default_display`.
+- On Slides, the Flatpack carousel moves between cards. Each slide has its own copy of the fields and its own Save. Saving a slide does not reload the page and does not open the list. The list keeps one Save for every row, and that save still reloads. The picture moves between the list thumbnail and the slide. A slide save leaves order out, so it does not reorder. Reorder from List, then use the list Save. On a slide, Trash is the icon at the right of the fields. The file name, type, pixel size, and file size sit above the fields when they are known. The picture is flush with the card, the fields span the card, and a gap separates one card from the next. Image thumbs under the tray jump to a card. The tray has no border and no fill. Expand opens the original.
+- Pass `side_preview: true` to peek the next card. Omit it to keep each card full width. It is not in the signed save token.
+- Pass `items_per_view:` to choose how many cards show. A whole number applies at every width. A hash can set `mobile:`, `tablet:`, and `desktop:` separately. Omit it to keep one card. It is not in the signed save token.
+
 ## [0.7.3] - 2026-10-06
 
 ### Added
@@ -166,7 +203,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.7.3...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.7.3...v0.8.0
 [0.7.3]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.7.2...v0.7.3
 [0.7.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.6.0...v0.6.1

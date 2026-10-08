@@ -4,7 +4,7 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.7.3", RecordingStudioAttachable::VERSION
+    assert_equal "0.8.0", RecordingStudioAttachable::VERSION
   end
 
   def test_recording_studio_dependency_is_4_2_or_newer
@@ -14,6 +14,26 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert spec.version >= Gem::Version.new("4.2.0"),
            "expected recording_studio >= 4.2.0, got #{spec.version}"
     assert_includes gemspec, 'spec.add_dependency "recording_studio", "~> 4.2"'
+  end
+
+  def test_flat_pack_dependency_is_0_1_205_or_newer
+    spec = Gem.loaded_specs.fetch("flat_pack")
+    gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
+    root_gemfile = File.read(File.expand_path("../Gemfile", __dir__))
+    dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
+    root_lock = File.read(File.expand_path("../Gemfile.lock", __dir__))
+    dummy_lock = File.read(File.expand_path("dummy/Gemfile.lock", __dir__))
+    pin = 'gem "flat_pack", github: "bowerbird-app/flatpack", tag: "v0.1.205"'
+
+    assert spec.version >= Gem::Version.new("0.1.205"),
+           "expected flat_pack >= 0.1.205, got #{spec.version}"
+    assert_includes gemspec, 'spec.add_dependency "flat_pack", ">= 0.1.205"'
+    assert_includes root_gemfile, pin
+    assert_includes dummy_gemfile, pin
+    assert_includes root_lock, "flat_pack (0.1.205)"
+    assert_includes root_lock, "tag: v0.1.205"
+    assert_includes dummy_lock, "flat_pack (0.1.205)"
+    assert_includes dummy_lock, "tag: v0.1.205"
   end
 
   def test_engine_exists
@@ -259,6 +279,48 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes controller_source, "this.element.requestSubmit()"
     assert_includes controller_source, "window.setTimeout(() => {"
     assert_includes controller_source, "window.clearTimeout(this.timeoutId)"
+  end
+
+  def test_collection_display_controller_switches_layout_without_leaving_the_page
+    controller_path = File.expand_path("../app/javascript/controllers/recording_studio_attachable/collection_display_controller.js", __dir__)
+    controller_source = File.read(controller_path)
+
+    assert_includes controller_source, 'static targets = ["carousel", "list", "pill", "slideForm", "card", "slideMedia", "preview", "previewHome"]'
+    assert_includes controller_source, "if (form.parentElement !== slide) slide.appendChild(form)"
+    assert_includes controller_source, 'slide.style.paddingRight = showGap ? "1rem" : ""'
+    assert_includes controller_source, "if (preview.parentElement !== destination) destination.appendChild(preview)"
+    assert_includes controller_source, "media.hidden = home ? !slides : false"
+    assert_includes controller_source, "home.hidden = slides"
+    assert_includes controller_source, "if (this.hasListTarget) this.listTarget.hidden = slides"
+    assert_includes controller_source, "viewport.style.height = `${height + indicatorRoom}px`"
+    assert_includes controller_source, 'if (this.displayValue !== "carousel") return'
+    assert_includes controller_source, "carousel:change"
+    assert_includes controller_source, "flatPackCarousel"
+    assert_includes controller_source, "event.stopPropagation()"
+    assert_includes controller_source, 'if (tag !== "INPUT" && tag !== "TEXTAREA" && tag !== "SELECT") return'
+    assert_includes controller_source, "event.preventDefault()"
+    assert_includes controller_source, 'display !== "list" && display !== "carousel"'
+    assert_includes controller_source, 'body.append("stay", "slide")'
+    assert_includes controller_source, 'Accept: "application/json"'
+    assert_includes controller_source, '"X-Requested-With": "XMLHttpRequest"'
+    assert_includes controller_source, "changes.captureBaseline()"
+    assert_includes controller_source, "listForm.userEdited === false"
+    assert_includes controller_source, 'this.showStatus(form, "Saved", false)'
+    refute_includes controller_source, "row.hidden = slides"
+    assert_includes controller_source, "this.carouselTarget.hidden = !slides"
+    refute_includes controller_source, "element.hidden = slides"
+    refute_includes controller_source, "location"
+    refute_includes controller_source, "requestSubmit"
+  end
+
+  def test_collection_order_controller_tells_the_form_when_order_changes
+    controller_path = File.expand_path(
+      "../app/javascript/controllers/recording_studio_attachable/collection_order_controller.js", __dir__
+    )
+    controller_source = File.read(controller_path)
+
+    assert_includes controller_source, "if (input.value === next) return"
+    assert_includes controller_source, 'input.dispatchEvent(new Event("input", { bubbles: true }))'
   end
 
   def test_view_mode_controller_syncs_pills_and_hidden_field_from_url_state

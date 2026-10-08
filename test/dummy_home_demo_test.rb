@@ -17,8 +17,10 @@ class DummyHomeDemoTest < Minitest::Test
                     application_layout.index('stylesheet_link_tag "flat_pack/variables"')
     assert_operator sidebar_layout.index('stylesheet_link_tag "tailwind.css"'), :<,
                     sidebar_layout.index('stylesheet_link_tag "flat_pack/variables"')
+    assert_includes application_layout, 'stylesheet_link_tag "flat_pack/application"'
     assert_includes application_layout, 'stylesheet_link_tag "flat_pack/rich_text"'
     assert_includes application_layout, 'stylesheet_link_tag "flat_pack/content_editor"'
+    assert_includes sidebar_layout, 'stylesheet_link_tag "flat_pack/application"'
     assert_includes sidebar_layout, 'stylesheet_link_tag "flat_pack/rich_text"'
     assert_includes sidebar_layout, 'stylesheet_link_tag "flat_pack/content_editor"'
   end
@@ -148,6 +150,16 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes seeds, "recordable: page"
     assert_includes seeds, "recordable: chat_thread"
     assert_includes seeds, "recordable: chat_message"
+    assert_includes seeds, "kiln-canister-hero.jpg"
+    assert_includes seeds, "kiln-canister-table.jpg"
+    assert_includes seeds, "kiln-canister-detail.jpg"
+    assert_includes seeds, "kiln-canister-open.jpg"
+    assert_includes seeds, "import_attachment("
+    assert_includes seeds, "revise_attachment_metadata("
+    assert_includes seeds, "window.jpg"
+    %w[kiln-canister-hero.jpg kiln-canister-table.jpg kiln-canister-detail.jpg kiln-canister-open.jpg].each do |file|
+      assert File.exist?(File.expand_path("dummy/db/seed_images/#{file}", __dir__)), "missing press kit image #{file}"
+    end
     assert_includes schema, 'create_table "chat_message_attachments"'
     assert_includes schema, 't.string "status", default: "draft", null: false'
     assert_includes schema, 't.boolean "seeded", default: false, null: false'
@@ -559,6 +571,7 @@ class DummyHomeDemoTest < Minitest::Test
     [application_layout, sidebar_layout, blank_layout].each do |layout|
       assert_includes layout, 'stylesheet_link_tag "application.css"'
       assert_includes layout, 'stylesheet_link_tag "flat_pack/variables"'
+      assert_includes layout, 'stylesheet_link_tag "flat_pack/application"'
       assert_includes layout, 'stylesheet_link_tag "flat_pack/rich_text"'
       assert_includes layout, 'stylesheet_link_tag "flat_pack/content_editor"'
       assert_includes layout, 'stylesheet_link_tag "tailwind.css"'

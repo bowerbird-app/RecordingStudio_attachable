@@ -66,22 +66,20 @@ module RecordingStudioAttachable
       end
     end
 
-    attr_reader :recording, :association, :fields, :return_to, :signed_editor, :preview
+    attr_reader :recording, :association, :fields, :return_to, :signed_editor, :preview,
+                :displays, :default_display, :side_preview, :items_per_view
 
     def initialize(recording:, association:, fields:, sortable:, **options)
       @recording = recording
       @association = association
       @fields = fields
       @sortable = sortable
-      @preview = AttachmentCollectionPreview.choose(options.fetch(:preview, :square))
-      @return_to = options[:return_to]
+      assign_display_options(options)
       @submitted_rows = AttachmentCollectionParams.row_list(options[:submitted_rows])
       @signed_editor = signed_token
     end
 
-    def sortable?
-      @sortable
-    end
+    def sortable? = @sortable
 
     def preview_variant = AttachmentCollectionPreview.variant(preview)
 
@@ -109,6 +107,7 @@ module RecordingStudioAttachable
 
     def reorder_ids
       return unless sortable?
+      return unless @submitted_rows.any? { |row| row.key?(:order) }
 
       AttachmentCollectionOrder.new(
         child_ids: membership.child_ids,
@@ -153,6 +152,15 @@ module RecordingStudioAttachable
       @membership ||= AttachmentCollectionMembership.new(recording:, association:, sortable: sortable?)
     end
 
+    def assign_display_options(options)
+      @preview = AttachmentCollectionPreview.choose(options.fetch(:preview, :square))
+      @displays = AttachmentCollectionDisplay.choose(options.fetch(:displays, [:list]))
+      @default_display = AttachmentCollectionDisplay.choose_default(options[:default_display], @displays)
+      @return_to = options[:return_to]
+      @side_preview = ActiveModel::Type::Boolean.new.cast(options.fetch(:side_preview, false)) == true
+      @items_per_view = AttachmentCollectionItemsPerView.choose(options.fetch(:items_per_view, 1))
+    end
+
     def ensure_sortable_parent!
       return if recording.respond_to?(:recording_studio_orderable_reorder!)
 
@@ -171,6 +179,46 @@ module RecordingStudioAttachable
     include AttachmentCollectionSheet
   end
 
+  class AttachmentCollectionDisplay
+    LABELS = { list: "List", carousel: "Slides" }.freeze
+    UNKNOWN = "Unknown display: %s. Use :list or :carousel."
+    MISSING = "displays must be present"
+    DEFAULT_OUTSIDE = "default_display %s is not in displays."
+
+    class << self
+      def choose(displays)
+        list = Array(displays).filter_map(&:presence)
+        raise ArgumentError, MISSING if list.empty?
+
+        list.map { |item| known!(item) }.uniq
+      end
+
+      def choose_default(default_display, displays)
+        return displays.first if default_display.nil?
+
+        key = known!(default_display)
+        return key if displays.include?(key)
+
+        raise ArgumentError, format(DEFAULT_OUTSIDE, key.inspect)
+      end
+
+      def label(display)
+        LABELS.fetch(display)
+      end
+
+      private
+
+      def known!(display)
+        raise ArgumentError, format(UNKNOWN, display.inspect) if display.blank?
+
+        key = display.to_sym
+        raise ArgumentError, format(UNKNOWN, display.inspect) unless LABELS.key?(key)
+
+        key
+      end
+    end
+  end
+
   class AttachmentCollectionPreview
     VARIANTS = { square: :square_med, natural: :med }.freeze
     UNKNOWN = "Unknown preview: %s. Use :square or :natural."
@@ -187,6 +235,55 @@ module RecordingStudioAttachable
 
       def variant(preview)
         VARIANTS.fetch(preview)
+      end
+    end
+  end
+
+  class AttachmentCollectionItemsPerView
+    KEYS = %i[mobile tablet desktop].freeze
+    INVALID = "items_per_view must be a positive whole number, or mobile, tablet, and desktop counts."
+    UNKNOWN_KEY = "Unknown items_per_view key: %s. Use mobile, tablet, or desktop."
+
+    Counts = Data.define(*KEYS)
+
+    class << self
+      def choose(value)
+        Counts.new(**counts_for(value))
+      end
+
+      private
+
+      def counts_for(value)
+        return from_hash(value) if value.is_a?(Hash)
+
+        number = whole_number(value)
+        raise ArgumentError, INVALID unless number
+
+        KEYS.index_with(number)
+      end
+
+      def from_hash(value)
+        normalized = value.transform_keys(&:to_sym)
+        unknown = normalized.keys - KEYS
+        raise ArgumentError, format(UNKNOWN_KEY, unknown.map(&:inspect).join(", ")) if unknown.any?
+
+        KEYS.index_with { |key| count_at(normalized, key) }
+      end
+
+      def count_at(normalized, key)
+        return 1 unless normalized.key?(key)
+
+        number = whole_number(normalized.fetch(key))
+        raise ArgumentError, INVALID unless number
+
+        number
+      end
+
+      def whole_number(value)
+        return value if value.is_a?(Integer) && value.positive?
+        return Integer(value, 10) if value.is_a?(String) && value.match?(/\A[1-9]\d*\z/)
+
+        nil
       end
     end
   end

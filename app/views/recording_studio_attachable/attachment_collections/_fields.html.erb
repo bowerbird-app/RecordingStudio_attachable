@@ -1,0 +1,29 @@
+<%= hidden_field_tag collection.input_name(:recording_id), row.recording.id, form: form_id %>
+<% collection.fields.each do |field| %>
+  <% if field.control == :area %>
+    <div>
+      <label class="mb-2 block text-sm font-medium"><%= field.label %></label>
+      <%= text_area_tag collection.input_name(field.key),
+                        row.values[field.key],
+                        form: form_id,
+                        class: "min-h-24 w-full rounded-lg border border-[var(--surface-border-color)] bg-transparent px-3 py-2" %>
+    </div>
+  <% else %>
+    <%= render FlatPack::TextInput::Component.new(
+      name: collection.input_name(field.key),
+      label: field.label,
+      value: row.values[field.key],
+      required: field.key == :name,
+      form: form_id
+    ) %>
+  <% end %>
+<% end %>
+<% if show_order %>
+  <%= render FlatPack::TextInput::Component.new(
+    name: collection.input_name(:order),
+    label: "Order",
+    value: row.order,
+    form: form_id,
+    data: { recording_studio_attachable__collection_order_target: "order" }
+  ) %>
+<% end %>

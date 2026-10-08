@@ -130,6 +130,117 @@ class AttachmentCollectionTest < Minitest::Test
     assert_equal :square, reloaded.preview
   end
 
+  def test_displays_default_to_the_list_and_stay_out_of_the_signed_token
+    parent = Parent.new("parent-1")
+    listed = with_membership([]) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent, association: :images, fields: [:caption], sortable: false
+      )
+    end
+    slides = with_membership([]) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent,
+        association: :images,
+        fields: [:caption],
+        sortable: false,
+        displays: %w[carousel list],
+        default_display: "carousel"
+      )
+    end
+    reloaded = with_membership([]) do
+      RecordingStudioAttachable::AttachmentCollection.from_params(
+        recording: parent,
+        params: { signed_editor: slides.signed_editor, rows: [] }
+      )
+    end
+
+    assert_equal [:list], listed.displays
+    assert_equal :list, listed.default_display
+    assert_equal %i[carousel list], slides.displays
+    assert_equal :carousel, slides.default_display
+    assert_equal "Slides", RecordingStudioAttachable::AttachmentCollectionDisplay.label(:carousel)
+    assert_equal "List", RecordingStudioAttachable::AttachmentCollectionDisplay.label(:list)
+    assert_equal false, listed.side_preview
+    assert_equal listed.signed_editor, slides.signed_editor
+    assert_equal [:list], reloaded.displays
+    assert_equal :list, reloaded.default_display
+  end
+
+  def test_side_preview_defaults_off_and_stays_out_of_the_signed_token
+    parent = Parent.new("parent-1")
+    plain = with_membership([]) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent, association: :images, fields: [:caption], sortable: false
+      )
+    end
+    peek = with_membership([]) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent,
+        association: :images,
+        fields: [:caption],
+        sortable: false,
+        displays: [:carousel],
+        side_preview: "true"
+      )
+    end
+
+    assert_equal false, plain.side_preview
+    assert_equal true, peek.side_preview
+    assert_equal plain.signed_editor, peek.signed_editor
+  end
+
+  def test_items_per_view_defaults_to_one_card_and_stays_out_of_the_signed_token
+    parent = Parent.new("parent-1")
+    plain = collection_for(parent)
+    wide = collection_for(parent, items_per_view: { mobile: 1, tablet: "2", desktop: 3 })
+    same = collection_for(parent, items_per_view: 2)
+
+    assert_equal 1, plain.items_per_view.desktop
+    assert_equal 1, wide.items_per_view.mobile
+    assert_equal 2, wide.items_per_view.tablet
+    assert_equal 3, wide.items_per_view.desktop
+    assert_equal 2, same.items_per_view.mobile
+    assert_equal plain.signed_editor, wide.signed_editor
+    assert_equal plain.signed_editor, same.signed_editor
+  end
+
+  def test_items_per_view_rejects_zero_and_unknown_widths
+    parent = Parent.new("parent-1")
+    zero = assert_raises(ArgumentError) { collection_for(parent, items_per_view: 0) }
+    unknown = assert_raises(ArgumentError) { collection_for(parent, items_per_view: { phone: 2 }) }
+
+    assert_equal "items_per_view must be a positive whole number, or mobile, tablet, and desktop counts.", zero.message
+    assert_equal "Unknown items_per_view key: :phone. Use mobile, tablet, or desktop.", unknown.message
+  end
+
+  def test_unknown_display_and_a_default_outside_the_set_raise
+    parent = Parent.new("parent-1")
+    unknown = assert_raises(ArgumentError) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent, association: :images, fields: [:caption], sortable: false, displays: [:grid]
+      )
+    end
+    missing = assert_raises(ArgumentError) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent, association: :images, fields: [:caption], sortable: false, displays: []
+      )
+    end
+    outside = assert_raises(ArgumentError) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent,
+        association: :images,
+        fields: [:caption],
+        sortable: false,
+        displays: [:list],
+        default_display: :carousel
+      )
+    end
+
+    assert_equal "Unknown display: :grid. Use :list or :carousel.", unknown.message
+    assert_equal "displays must be present", missing.message
+    assert_equal "default_display :carousel is not in displays.", outside.message
+  end
+
   def test_unknown_preview_raises
     parent = Parent.new("parent-1")
     crop = assert_raises(ArgumentError) do
@@ -321,6 +432,56 @@ class AttachmentCollectionTest < Minitest::Test
     assert_empty saved.revisions
   end
 
+  def test_one_row_without_order_revises_that_image_and_skips_reorder
+    image_1 = child("image-1", caption: "One")
+    image_2 = child("image-2", caption: "Two")
+    parent = orderable_parent([image_1, image_2])
+    collection = with_membership([image_1, image_2]) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent, association: :images, fields: [:caption], sortable: true
+      )
+    end
+
+    saved = with_membership([image_1, image_2]) do
+      RecordingStudioAttachable::AttachmentCollection.from_params(
+        recording: parent,
+        params: {
+          signed_editor: collection.signed_editor,
+          rows: [{ recording_id: "image-1", caption: "Pier light" }]
+        }
+      )
+    end
+
+    assert_nil saved.reorder_ids
+    assert_equal [{ caption: "Pier light" }], saved.revisions.map(&:changes)
+    assert_equal "image-1", saved.revisions.first.recording.id
+  end
+
+  def test_partial_order_still_raises
+    image_1 = child("image-1", caption: "One")
+    image_2 = child("image-2", caption: "Two")
+    parent = orderable_parent([image_1, image_2])
+    collection = with_membership([image_1, image_2]) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent, association: :images, fields: [:caption], sortable: true
+      )
+    end
+
+    saved = with_membership([image_1, image_2]) do
+      RecordingStudioAttachable::AttachmentCollection.from_params(
+        recording: parent,
+        params: {
+          signed_editor: collection.signed_editor,
+          rows: [{ recording_id: "image-1", order: "1", caption: "Pier light" }]
+        }
+      )
+    end
+
+    error = assert_raises(ArgumentError) { saved.reorder_ids }
+
+    assert_equal "One of these is gone. Reload the page and try again.", error.message
+  end
+
   def test_reorder_ids_are_nil_when_the_splice_matches_the_current_children
     file_a = child("file-a")
     image_1 = child("image-1")
@@ -391,6 +552,18 @@ class AttachmentCollectionTest < Minitest::Test
         fields: [:caption],
         sortable: false
       ).empty_message
+    end
+  end
+
+  def collection_for(parent, **options)
+    with_membership([]) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent,
+        association: :images,
+        fields: [:caption],
+        sortable: false,
+        **options
+      )
     end
   end
 

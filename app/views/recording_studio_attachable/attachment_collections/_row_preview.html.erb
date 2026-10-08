@@ -1,0 +1,34 @@
+<div class="w-full" <% if carousel %>data-recording-studio-attachable--collection-display-target="preview"<% end %>>
+  <% if preview_path.present? %>
+    <% modal_id = "attachment-image-#{row.recording.id}" %>
+    <% frame_class = if collection.square_preview?
+         "relative aspect-square w-full overflow-hidden rounded-lg#{ " group-data-[display=carousel]:aspect-[2/1] group-data-[display=carousel]:min-h-[26rem] group-data-[display=carousel]:max-h-[32rem] group-data-[display=carousel]:rounded-none" if carousel }"
+       else
+         "relative flex min-h-32 w-full items-center justify-center overflow-hidden rounded-lg#{ " group-data-[display=carousel]:min-h-[26rem] group-data-[display=carousel]:max-h-[32rem] group-data-[display=carousel]:rounded-none" if carousel }"
+       end %>
+    <% image_class = collection.square_preview? ? "h-full w-full object-cover" : "max-h-72 w-full object-contain" %>
+    <button type="button" class="block w-full cursor-pointer overflow-hidden rounded-lg<%= " group-data-[display=carousel]:rounded-none" if carousel %>" data-modal-id="<%= modal_id %>" aria-label="View <%= attachment.name %>">
+      <div class="<%= frame_class %>" data-controller="recording-studio-attachable--image-fallback">
+        <%= image_tag preview_path,
+                      alt: attachment.name,
+                      class: image_class,
+                      data: {
+                        recording_studio_attachable__image_fallback_target: "image",
+                        action: "error->recording-studio-attachable--image-fallback#showFallback"
+                      } %>
+        <div class="absolute inset-0 hidden items-center justify-center bg-(--surface-background-color)" data-recording-studio-attachable--image-fallback-target="fallback">
+          <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)">IMAGE</span>
+        </div>
+      </div>
+    </button>
+    <%= render FlatPack::Modal::Component.new(id: modal_id, title: attachment.name, size: :xl) do |modal| %>
+      <% modal.body do %>
+        <%= image_tag file_path, alt: attachment.name, class: "mx-auto max-h-[70vh] w-full object-contain" %>
+      <% end %>
+    <% end %>
+  <% else %>
+    <div class="flex aspect-square w-full items-center justify-center rounded-lg bg-(--surface-background-color) text-(--surface-content-color) shadow-sm ring-1 ring-(--surface-border-color)<%= " group-data-[display=carousel]:aspect-[2/1] group-data-[display=carousel]:min-h-[26rem] group-data-[display=carousel]:max-h-[32rem] group-data-[display=carousel]:rounded-none" if carousel %>">
+      <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)"><%= file_extension %></span>
+    </div>
+  <% end %>
+</div>

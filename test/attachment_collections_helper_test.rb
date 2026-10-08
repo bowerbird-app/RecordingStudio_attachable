@@ -110,7 +110,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
 
     assert_includes save_button, 'data-fp-style="default"'
     assert_includes save_button, 'form="attachment-collection-parent-1"'
-    assert_match(%r{<div class="inline-flex">\s*<button[^>]*unsaved-changes-target="submit"}, inner)
+    assert_match(/<div class="inline-flex">\s*<button[^>]*unsaved-changes-target="submit"/, inner)
     assert_includes inner, ">Save<"
     assert_includes html, 'hidden="hidden"'
     assert_includes html, 'id="attachment-collection-parent-1-trash-image-1"'

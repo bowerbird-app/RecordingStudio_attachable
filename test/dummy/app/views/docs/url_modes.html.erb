@@ -8,7 +8,7 @@
   <section class="space-y-3">
     <%= render FlatPack::SectionTitle::Component.new(
       title: "Dummy config",
-      subtitle: "Studio UI stays on rails. direct_url_host is set so per-call mode: :direct demos can build public URLs.",
+      subtitle: "Studio UI stays on rails. :poster is a host-added custom variant. preprocessed_variants is left unset so the default includes small/med/large plus :poster.",
       anchor_link: true
     ) %>
 
@@ -17,7 +17,12 @@
       code: <<~RUBY,
         config.url_mode = #{@url_mode.inspect}
         config.direct_url_host = #{@direct_url_host.inspect}
-        config.preprocessed_variants = %i[small med large]
+        config.image_variants = {
+          poster: { resize_to_limit: [1280, 720] }
+        }
+        # preprocessed_variants left unset → #{@preprocessed_variants.inspect}
+        # host-added names: #{@host_added_variants.inspect}
+        # explicit override?: #{@preprocessed_variants_explicit.inspect}
       RUBY
       language: :ruby
     ) %>
@@ -27,7 +32,7 @@
     <%= render FlatPack::SectionTitle::Component.new(
       title: "Live direct URLs",
       subtitle: @attachment_recording.present? ?
-        "From #{@attachment_recording.recordable.name} (#{@attachment_recording.recordable.original_filename}). small/med/large are processed; xlarge is left unprocessed on purpose." :
+        "From #{@attachment_recording.recordable.name} (#{@attachment_recording.recordable.original_filename}). Default preprocessed sizes (#{@preprocessed_variants.map(&:inspect).join(", ")}) are processed; xlarge stays unprocessed for the Rails-path fallback." :
         "Seed the press kit images, then reload this page.",
       anchor_link: true
     ) %>

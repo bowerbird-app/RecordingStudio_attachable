@@ -144,7 +144,9 @@ class DummyDocsTest < Minitest::Test
     assert_includes controller_source, "config.image_processing_max_height = 2560"
     assert_includes controller_source, "config.image_processing_quality = 0.82"
     assert_includes controller_source, "config.image_variants = {"
-    assert_includes controller_source, "config.preprocessed_variants = %i[small med large]"
+    assert_includes controller_source, "poster: { resize_to_limit: [1280, 720] }"
+    assert_includes controller_source, "# config.preprocessed_variants = %i[small med large poster]"
+    assert_includes controller_source, "Host-added custom names (for example :poster) join the default"
     assert_includes controller_source, "config.url_mode = :direct"
     assert_includes controller_source, 'config.direct_url_host = "images.featuredin.press"'
     assert_includes controller_source, "attachment.url_for_variant(:med, mode: :direct, rails_url: preview_path)"
@@ -158,13 +160,18 @@ class DummyDocsTest < Minitest::Test
     assert_includes url_modes_source, 'title: "URL modes"'
     assert_includes url_modes_source, 'title: "Live direct URLs"'
     assert_includes url_modes_source, "mode: :direct"
+    assert_includes url_modes_source, "poster: { resize_to_limit: [1280, 720] }"
+    assert_includes url_modes_source, "preprocessed_variants is left unset so the default includes small/med/large plus :poster"
     assert_includes controller_source, "def url_modes"
     assert_includes controller_source, "attachment.url_for_variant(variant_name, mode: :direct, rails_url: rails_url)"
     assert_includes controller_source, "attachment.original_url("
-    assert_includes controller_source, "%i[small med large].each do |variant_name|"
+    assert_includes controller_source, "RecordingStudioAttachable.configuration.preprocessed_variants.each do |variant_name|"
     assert_includes controller_source, "attachment.variant_named(variant_name).processed"
+    assert_includes controller_source, "%i[xlarge]"
     assert_includes initializer, 'config.direct_url_host = "images.example.test"'
     assert_includes initializer, "config.url_mode = :rails"
+    assert_includes initializer, "poster: { resize_to_limit: [1280, 720] }"
+    assert_not_includes initializer, "config.preprocessed_variants ="
   end
 
   def test_dummy_setup_page_covers_active_storage_and_install_flow

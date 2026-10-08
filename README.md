@@ -151,7 +151,12 @@ RecordingStudioAttachable.configure do |config|
   # This is separate from default_listing_scope: :direct (listing children).
   # config.url_mode = :rails
   # config.direct_url_host = "images.featuredin.press"
-  # config.preprocessed_variants = %i[small med large]
+  #
+  # After commit, preprocess small/med/large plus any host-added custom
+  # image_variants names (for example :poster). Set preprocessed_variants to
+  # override that list exactly.
+  # config.image_variants = { poster: { resize_to_limit: [1280, 720] } }
+  # config.preprocessed_variants = %i[small med large poster]
 
   config.layout = :blank
   config.auth_roles = {
@@ -196,7 +201,7 @@ When browser-side image preprocessing is enabled, the gem's built-in direct-uplo
 
 For delivery, the engine uses a stable set of named image variants: `square_small`, `square_med`, `square_large`, `small`, `med`, `large`, and `xlarge`. Host apps can override the transformation sizes through `config.image_variants` while keeping those public names stable across engine views and integrations.
 
-After an image attachment is committed, `PreprocessVariantsJob` processes `config.preprocessed_variants` (default `small`, `med`, `large`) so those sizes exist before a browser asks for them. The job is idempotent and skips non-image or unvariable files.
+After an image attachment is committed, `PreprocessVariantsJob` processes `config.preprocessed_variants` so those sizes exist before a browser asks for them. The default is `small`, `med`, and `large`, plus every host-added custom name in `config.image_variants` (for example `:poster`). Other gem defaults such as `square_med` or `xlarge` are not auto-included. Assigning `preprocessed_variants` replaces that default with an exact list. The job is idempotent and skips non-image or unvariable files.
 
 ### URL modes
 

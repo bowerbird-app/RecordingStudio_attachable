@@ -627,7 +627,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes initializer_template, "xlarge: { resize_to_limit: [2400, 2400] }"
     assert_includes initializer_template, "config.url_mode = :rails"
     assert_includes initializer_template, "config.direct_url_host"
-    assert_includes initializer_template, "config.preprocessed_variants = %i[small med large]"
+    assert_includes initializer_template, "config.preprocessed_variants = %i[small med large poster]"
+    assert_includes initializer_template, "After commit, preprocess small/med/large plus any host-added custom"
     assert_includes initializer_template, 'label: "Google Drive"'
     assert_includes initializer_template, "remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|"
     assert_includes initializer_template, "config.google_drive.enabled = true"
@@ -642,6 +643,8 @@ class DummyHomeDemoTest < Minitest::Test
     workspace_model = File.read(File.expand_path("dummy/app/models/workspace.rb", __dir__))
 
     assert_includes initializer, "config.max_file_size = 25.megabytes"
+    assert_includes initializer, "poster: { resize_to_limit: [1280, 720] }"
+    assert_not_includes initializer, "config.preprocessed_variants ="
     assert_includes initializer, ":demo_cloud"
     assert_includes initializer, 'label: "Demo cloud import"'
     assert_includes page_model, "max_file_size: 25.megabytes"

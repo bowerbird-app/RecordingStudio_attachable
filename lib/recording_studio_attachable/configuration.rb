@@ -124,7 +124,7 @@ module RecordingStudioAttachable
                   :google_drive,
                   :direct_url_host
 
-    attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode, :preprocessed_variants
+    attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode
 
     def initialize
       assign_defaults
@@ -221,8 +221,34 @@ module RecordingStudioAttachable
       normalize_url_mode(mode)
     end
 
+    # Effective list of variants processed after upload.
+    #
+    # Default (when the host has not set +preprocessed_variants+):
+    # +DEFAULT_PREPROCESSED_VARIANTS+ (+small+, +med+, +large+) plus every
+    # host-added custom name present in the current +image_variants+ map.
+    # Other gem defaults (for example +square_med+, +xlarge+) are not
+    # auto-included. The list is resolved at read time so a custom name added
+    # later still joins the default.
+    #
+    # Explicit override: if the host assigns +preprocessed_variants+, that list
+    # is used exactly (unknown names dropped).
+    def preprocessed_variants
+      return @preprocessed_variants if @preprocessed_variants_explicit
+
+      default_preprocessed_variants
+    end
+
     def preprocessed_variants=(variants)
+      @preprocessed_variants_explicit = true
       @preprocessed_variants = normalize_preprocessed_variants(variants)
+    end
+
+    def preprocessed_variants_explicit?
+      @preprocessed_variants_explicit
+    end
+
+    def host_added_image_variant_names
+      image_variants.keys.reject { |name| DEFAULT_IMAGE_VARIANTS.key?(name) }
     end
 
     def storage_limit=(value)
@@ -267,7 +293,8 @@ module RecordingStudioAttachable
       @image_variants = default_image_variants
       @url_mode = :rails
       @direct_url_host = nil
-      @preprocessed_variants = DEFAULT_PREPROCESSED_VARIANTS.dup
+      @preprocessed_variants_explicit = false
+      @preprocessed_variants = nil
       @enabled_attachment_kinds = %i[image file]
       @default_listing_scope = :direct
       @default_kind_filter = :all
@@ -326,10 +353,14 @@ module RecordingStudioAttachable
 
       variants.each do |name, transformations|
         key = name.to_sym
-        next unless normalized.key?(key)
         next unless transformations.respond_to?(:to_h)
 
-        normalized[key] = normalized.fetch(key).merge(transformations.to_h.deep_symbolize_keys)
+        transforms = transformations.to_h.deep_symbolize_keys
+        normalized[key] = if normalized.key?(key)
+                            normalized.fetch(key).merge(transforms)
+                          else
+                            transforms
+                          end
       end
 
       normalized
@@ -347,6 +378,10 @@ module RecordingStudioAttachable
         key = name.to_sym
         key if image_variants.key?(key)
       end.uniq
+    end
+
+    def default_preprocessed_variants
+      (DEFAULT_PREPROCESSED_VARIANTS + host_added_image_variant_names).uniq
     end
   end
 end

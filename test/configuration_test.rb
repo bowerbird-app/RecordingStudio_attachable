@@ -48,6 +48,7 @@ class ConfigurationTest < Minitest::Test
     assert_equal :rails, @configuration.url_mode
     assert_nil @configuration.direct_url_host
     assert_equal %i[small med large], @configuration.preprocessed_variants
+    assert_not @configuration.preprocessed_variants_explicit?
     assert_equal :direct, @configuration.default_listing_scope
     assert_equal :all, @configuration.default_kind_filter
     assert_equal :blank, @configuration.layout
@@ -78,6 +79,36 @@ class ConfigurationTest < Minitest::Test
     @configuration.preprocessed_variants = %i[small mystery med xlarge]
 
     assert_equal %i[small med xlarge], @configuration.preprocessed_variants
+    assert @configuration.preprocessed_variants_explicit?
+  end
+
+  def test_default_preprocessed_variants_include_host_added_custom_names
+    @configuration.image_variants = {
+      poster: { resize_to_limit: [1280, 720] },
+      large: { resize_to_limit: [1800, 1800] }
+    }
+
+    assert_equal %i[small med large poster], @configuration.preprocessed_variants
+    assert_includes @configuration.host_added_image_variant_names, :poster
+    assert_not_includes @configuration.preprocessed_variants, :square_med
+    assert_not_includes @configuration.preprocessed_variants, :xlarge
+  end
+
+  def test_default_preprocessed_variants_resolve_custom_names_added_later
+    assert_equal %i[small med large], @configuration.preprocessed_variants
+
+    @configuration.image_variants = { poster: { resize_to_limit: [1280, 720] } }
+
+    assert_equal %i[small med large poster], @configuration.preprocessed_variants
+  end
+
+  def test_explicit_preprocessed_variants_override_wins_over_host_added_defaults
+    @configuration.image_variants = { poster: { resize_to_limit: [1280, 720] } }
+    @configuration.preprocessed_variants = %i[small poster]
+
+    assert_equal %i[small poster], @configuration.preprocessed_variants
+    assert_not_includes @configuration.preprocessed_variants, :med
+    assert_not_includes @configuration.preprocessed_variants, :large
   end
 
   def test_resolve_url_mode_uses_config_default_or_override
@@ -174,7 +205,7 @@ class ConfigurationTest < Minitest::Test
       image_variants: {
         large: { resize_to_limit: [1800, 1800] },
         square_small: { resize_to_fill: [96, 96] },
-        unknown: { resize_to_limit: [1, 1] }
+        poster: { resize_to_limit: [1280, 720] }
       },
       default_listing_scope: :subtree,
       unknown_setting: true
@@ -188,7 +219,8 @@ class ConfigurationTest < Minitest::Test
     assert_equal 0.75, @configuration.image_processing_quality
     assert_equal({ resize_to_limit: [1800, 1800] }, @configuration.image_variant(:large))
     assert_equal({ resize_to_fill: [96, 96] }, @configuration.image_variant(:square_small))
-    assert_nil @configuration.image_variant(:unknown)
+    assert_equal({ resize_to_limit: [1280, 720] }, @configuration.image_variant(:poster))
+    assert_equal %i[small med large poster], @configuration.preprocessed_variants
     assert_equal :subtree, @configuration.default_listing_scope
   end
 

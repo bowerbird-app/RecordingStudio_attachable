@@ -20,21 +20,15 @@ require_relative "../app/jobs/recording_studio_attachable/preprocess_variants_jo
 module RecordingStudioAttachable
   class AttachmentUrlTest < Minitest::Test
     def setup
+      @previous_configuration = RecordingStudioAttachable.configuration
+      RecordingStudioAttachable.instance_variable_set(:@configuration, Configuration.new)
       @configuration = RecordingStudioAttachable.configuration
-      @previous = {
-        url_mode: @configuration.url_mode,
-        direct_url_host: @configuration.direct_url_host,
-        preprocessed_variants: @configuration.preprocessed_variants
-      }
       @configuration.url_mode = :rails
       @configuration.direct_url_host = nil
-      @configuration.preprocessed_variants = %i[small med large]
     end
 
     def teardown
-      @configuration.url_mode = @previous[:url_mode]
-      @configuration.direct_url_host = @previous[:direct_url_host]
-      @configuration.preprocessed_variants = @previous[:preprocessed_variants]
+      RecordingStudioAttachable.instance_variable_set(:@configuration, @previous_configuration)
     end
 
     def test_url_for_variant_defaults_to_rails_mode
@@ -151,6 +145,35 @@ module RecordingStudioAttachable
       end
 
       assert_match(/rails_url is required/, error.message)
+    end
+
+    def test_direct_mode_poster_uses_its_own_variant_key_when_processed
+      @configuration.direct_url_host = "images.featuredin.press"
+      @configuration.image_variants = { poster: { resize_to_limit: [1280, 720] } }
+      attachment = build_variable_image_attachment(original_key: "original-key", variant_key: "poster-key")
+
+      url = attachment.url_for_variant(:poster, mode: :direct, rails_url: "/attachments/1/preview/poster")
+
+      assert_equal "https://images.featuredin.press/poster-key", url
+      assert_no_match(/original-key/, url)
+      assert_includes @configuration.preprocessed_variants, :poster
+    end
+
+    def test_enqueue_after_commit_covers_host_added_poster_via_default_list
+      @configuration.image_variants = { poster: { resize_to_limit: [1280, 720] } }
+      attachment = build_variable_image_attachment(original_key: "original-key", variant_key: nil)
+      attachment.define_singleton_method(:id) { "att-poster" }
+      enqueued = nil
+
+      assert_includes @configuration.preprocessed_variants, :poster
+
+      PreprocessVariantsJob.stub(:perform_later, lambda { |id|
+        enqueued = id
+      }) do
+        attachment.enqueue_variant_preprocessing
+      end
+
+      assert_equal "att-poster", enqueued
     end
 
     def test_after_commit_hook_enqueues_preprocessing_for_variable_images

@@ -14,8 +14,12 @@ class DocsController < ApplicationController
   def resizing; end
 
   def url_modes
-    @direct_url_host = RecordingStudioAttachable.configuration.direct_url_host
-    @url_mode = RecordingStudioAttachable.configuration.url_mode
+    configuration = RecordingStudioAttachable.configuration
+    @direct_url_host = configuration.direct_url_host
+    @url_mode = configuration.url_mode
+    @preprocessed_variants = configuration.preprocessed_variants
+    @preprocessed_variants_explicit = configuration.preprocessed_variants_explicit?
+    @host_added_variants = configuration.host_added_image_variant_names
     @attachment_recording = first_press_kit_attachment_recording
     @url_mode_rows = build_url_mode_rows(@attachment_recording)
   end
@@ -50,9 +54,10 @@ class DocsController < ApplicationController
     attachment = attachment_recording.recordable
     return [] unless attachment&.file&.attached?
 
-    # Process common sizes so direct URLs can use variant_record blob keys.
-    # Leave :xlarge unprocessed to show the Rails-path fallback.
-    %i[small med large].each do |variant_name|
+    # Process the default preprocessed set (small/med/large + host-added names
+    # such as :poster). Leave :xlarge unprocessed on purpose — it is a gem
+    # default outside that set, so the Rails-path fallback still shows.
+    RecordingStudioAttachable.configuration.preprocessed_variants.each do |variant_name|
       attachment.variant_named(variant_name).processed
     end
 
@@ -71,7 +76,11 @@ class DocsController < ApplicationController
       }
     ]
 
-    %i[small med large xlarge].each do |variant_name|
+    demo_variant_names = (
+      RecordingStudioAttachable.configuration.preprocessed_variants + %i[xlarge]
+    ).uniq
+
+    demo_variant_names.each do |variant_name|
       rails_url = engine.attachment_preview_file_path(attachment_recording, variant_name: variant_name)
       processed = attachment.variant_processed?(variant_name)
       variant_image = processed ? attachment.variant_named(variant_name).image : nil
@@ -235,7 +244,11 @@ class DocsController < ApplicationController
         # Separate from default_listing_scope: :direct (listing children).
         # config.url_mode = :rails
         # config.direct_url_host = "images.featuredin.press"
-        # config.preprocessed_variants = %i[small med large]
+        #
+        # After commit, preprocess small/med/large plus any host-added custom
+        # image_variants names. Set preprocessed_variants to override exactly.
+        # config.image_variants = { poster: { resize_to_limit: [1280, 720] } }
+        # config.preprocessed_variants = %i[small med large poster]
 
         # Use the gem's blank layout, or point at a host app layout like "application".
         config.layout = :blank
@@ -516,10 +529,14 @@ class DocsController < ApplicationController
           xlarge: { resize_to_limit: [2400, 2400] }
         }
 
-        # After commit, preprocess these sizes so direct delivery can use the
-        # variant_record blob key. Unknown names are ignored. Rails mode still
-        # processes on demand the first time a preview is requested.
-        config.preprocessed_variants = %i[small med large]
+        # Host-added custom names (for example :poster) join the default
+        # preprocessed set automatically. Other gem defaults such as :xlarge
+        # stay on-demand unless you list them in preprocessed_variants.
+        config.image_variants = {
+          poster: { resize_to_limit: [1280, 720] }
+        }
+        # Optional exact override:
+        # config.preprocessed_variants = %i[small med large poster]
       end
     RUBY
 
@@ -530,6 +547,9 @@ class DocsController < ApplicationController
         # custom domain in front of the same object store (for example R2).
         config.url_mode = :direct
         config.direct_url_host = "images.featuredin.press"
+        config.image_variants = {
+          poster: { resize_to_limit: [1280, 720] }
+        }
 
         # Per-call override when a host needs one-off direct or rails URLs:
         # attachment.url_for_variant(:med, mode: :direct, rails_url: preview_path)

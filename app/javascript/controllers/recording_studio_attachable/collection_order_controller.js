@@ -30,7 +30,11 @@ export default class extends Controller {
 
   renumber() {
     this.orderTargets.forEach((input, index) => {
-      input.value = String(index + 1)
+      const next = String(index + 1)
+      if (input.value === next) return
+
+      input.value = next
+      input.dispatchEvent(new Event("input", { bubbles: true }))
     })
   }
 

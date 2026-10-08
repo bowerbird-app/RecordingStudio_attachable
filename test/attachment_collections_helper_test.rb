@@ -45,12 +45,17 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, ">Trash<"
     assert_includes html, 'data-flat-pack--icon-name-value="trash"'
     assert_includes html, 'data-fp-style="danger"'
-    assert_operator html.index('name="attachment_collection[rows][][credit]"'), :<, html.index('value="delete"')
+    assert_includes html, 'data-fp-style="default"'
+    refute_includes html, 'data-fp-style="primary"'
+    assert_operator html.index('name="attachment_collection[rows][][credit]"'), :<, html.index(">Trash<")
     assert_includes html, 'type="submit"'
     assert_includes html, 'type="button"'
     assert_includes html, "redirect_mode=return_to"
     assert_includes html, "return_to=%2Fattachment_editor"
-    assert_operator html.index("</form>"), :<, html.index('value="delete"')
+    save_at = html.index("flat-pack--unsaved-changes")
+    assert_operator html.index('value="delete"'), :<, save_at
+    assert_operator html.index("</form>"), :<, save_at
+    refute_includes html[save_at...html.index("</form>", save_at)], "<form"
     refute_includes html, "recording-studio-attachable--collection-order"
     refute_includes html, "recording-studio-attachable--collection-display"
     refute_includes html, "slideMedia"
@@ -87,6 +92,31 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, "object-contain"
     assert_includes html, 'src="/attachments/image-1/file"'
     assert_includes html, 'role="dialog"'
+  end
+
+  def test_save_button_stays_default_until_a_field_changes
+    html = render_editor(
+      [child("image-1", name: "Pier", caption: "Light"), child("image-2", name: "Dock", caption: "Dawn")],
+      fields: [:caption],
+      sortable: false,
+      return_to: "/attachment_editor"
+    )
+
+    save_form = html[/<form\b[^>]*flat-pack--unsaved-changes[^>]*>/]
+    assert_match(/id="attachment-collection-parent-1"(?!-)/, save_form)
+    save_at = html.index("flat-pack--unsaved-changes")
+    inner = html[save_at...html.index("</form>", save_at)]
+    save_button = inner.scan(/<button\b[^>]*>/).find { |tag| tag.include?('unsaved-changes-target="submit"') }
+
+    assert_includes save_button, 'data-fp-style="default"'
+    assert_includes save_button, 'form="attachment-collection-parent-1"'
+    assert_includes inner, ">Save<"
+    assert_includes html, 'hidden="hidden"'
+    assert_includes html, 'id="attachment-collection-parent-1-trash-image-1"'
+    assert_includes html, 'form="attachment-collection-parent-1-trash-image-1"'
+    assert_includes html, 'id="attachment-collection-parent-1-trash-image-2"'
+    refute_includes inner, "<form"
+    refute_includes inner, 'data-fp-style="primary"'
   end
 
   def test_empty_editor_has_no_save_button

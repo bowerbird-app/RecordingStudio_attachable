@@ -29,12 +29,19 @@
       ) %>
     <% end %>
 
-    <%= form_with url: url, method: :patch, id: collection.form_id do %>
+    <% collection.rows.each do |row| %>
+      <%= form_with url: attachable_destroy_attachment_path(row.recording, **RecordingStudioAttachable::AttachmentFileButton.redirect_params(return_to: return_to)),
+                    method: :delete,
+                    id: "#{collection.form_id}-trash-#{row.recording.id}",
+                    html: { hidden: true } do %>
+      <% end %>
+    <% end %>
+
+    <%= form_with url: url, method: :patch, id: collection.form_id, class: "flex w-full flex-col gap-4", data: { controller: "flat-pack--unsaved-changes" } do %>
       <%= hidden_field_tag "attachment_collection[signed_editor]", collection.signed_editor %>
       <% RecordingStudioAttachable::AttachmentFileButton.redirect_params(return_to: return_to).each do |key, value| %>
         <%= hidden_field_tag key, value %>
       <% end %>
-    <% end %>
 
     <% if carousel %>
       <% slides = collection.rows.map { { type: :html, html: tag.div(class: "slide-placeholder") } } %>
@@ -151,11 +158,16 @@
                       ) %>
                     </div>
                   <% end %>
-                  <%= form_with url: attachable_destroy_attachment_path(row.recording, **RecordingStudioAttachable::AttachmentFileButton.redirect_params(return_to: return_to)),
-                                method: :delete,
-                                class: "inline-flex" do %>
-                    <%= render FlatPack::Button::Component.new(text: "Trash", icon: "trash", style: :danger, size: :md, type: "submit") %>
-                  <% end %>
+                  <div class="inline-flex">
+                    <%= render FlatPack::Button::Component.new(
+                          text: "Trash",
+                          icon: "trash",
+                          style: :danger,
+                          size: :md,
+                          type: "submit",
+                          form: "#{collection.form_id}-trash-#{row.recording.id}"
+                        ) %>
+                  </div>
                 </div>
               </div>
             <% end %>
@@ -164,6 +176,14 @@
       <% end %>
     </ol>
 
-    <%= render FlatPack::Button::Component.new(text: "Save", style: :primary, size: :md, type: "submit", form: collection.form_id) %>
+      <%= render FlatPack::Button::Component.new(
+            text: "Save",
+            style: :default,
+            size: :md,
+            type: "submit",
+            form: collection.form_id,
+            data: { flat_pack__unsaved_changes_target: "submit" }
+          ) %>
+    <% end %>
   </div>
 <% end %>

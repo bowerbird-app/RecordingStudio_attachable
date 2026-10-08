@@ -23,10 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ```
 
 ### Changed
-- Requires Flatpack `>= 0.1.201`. The root Gemfile and the dummy app pin tag `v0.1.201`.
+- Requires Flatpack `>= 0.1.202`. The root Gemfile and the dummy app pin tag `v0.1.202`.
+- Save on the image editor starts as the default button. It turns primary when a caption, credit, alt text, name, or order differs from the saved values, and returns to default when those fields match again.
 
 ### Upgrade Notes
-- Update Flatpack to `0.1.201` or newer. Pill calls that leave out `style:` stay on the pill tokens. A CSS string in Tabs `style:` raises.
+- Update Flatpack to `0.1.202` or newer. Pill calls that leave out `style:` stay on the pill tokens. A CSS string in Tabs `style:` raises. Importmap apps that already eager-load Flatpack controllers pick up `flat-pack--unsaved-changes` with that gem.
+- Save on `attachment_collection_editor` is no longer primary on arrival. Flatpack switches it to primary after a field changes.
 - Omit `displays` to keep the list, with no switch. No migration.
 - Pass `displays: [:list, :carousel]` when the host should offer both. `default_display` picks the one that opens and must be in that list. Leave it out and the first entry opens.
 - Pass `displays: [:carousel]` for slides only.

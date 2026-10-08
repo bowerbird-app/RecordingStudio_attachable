@@ -16,24 +16,24 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes gemspec, 'spec.add_dependency "recording_studio", "~> 4.2"'
   end
 
-  def test_flat_pack_dependency_is_0_1_201_or_newer
+  def test_flat_pack_dependency_is_0_1_202_or_newer
     spec = Gem.loaded_specs.fetch("flat_pack")
     gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
     root_gemfile = File.read(File.expand_path("../Gemfile", __dir__))
     dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
     root_lock = File.read(File.expand_path("../Gemfile.lock", __dir__))
     dummy_lock = File.read(File.expand_path("dummy/Gemfile.lock", __dir__))
-    pin = 'gem "flat_pack", github: "bowerbird-app/flatpack", tag: "v0.1.201"'
+    pin = 'gem "flat_pack", github: "bowerbird-app/flatpack", tag: "v0.1.202"'
 
-    assert spec.version >= Gem::Version.new("0.1.201"),
-           "expected flat_pack >= 0.1.201, got #{spec.version}"
-    assert_includes gemspec, 'spec.add_dependency "flat_pack", ">= 0.1.201"'
+    assert spec.version >= Gem::Version.new("0.1.202"),
+           "expected flat_pack >= 0.1.202, got #{spec.version}"
+    assert_includes gemspec, 'spec.add_dependency "flat_pack", ">= 0.1.202"'
     assert_includes root_gemfile, pin
     assert_includes dummy_gemfile, pin
-    assert_includes root_lock, "flat_pack (0.1.201)"
-    assert_includes root_lock, "tag: v0.1.201"
-    assert_includes dummy_lock, "flat_pack (0.1.201)"
-    assert_includes dummy_lock, "tag: v0.1.201"
+    assert_includes root_lock, "flat_pack (0.1.202)"
+    assert_includes root_lock, "tag: v0.1.202"
+    assert_includes dummy_lock, "flat_pack (0.1.202)"
+    assert_includes dummy_lock, "tag: v0.1.202"
   end
 
   def test_engine_exists
@@ -303,6 +303,16 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes controller_source, "element.hidden = slides"
     refute_includes controller_source, "location"
     refute_includes controller_source, "requestSubmit"
+  end
+
+  def test_collection_order_controller_tells_the_form_when_order_changes
+    controller_path = File.expand_path(
+      "../app/javascript/controllers/recording_studio_attachable/collection_order_controller.js", __dir__
+    )
+    controller_source = File.read(controller_path)
+
+    assert_includes controller_source, "if (input.value === next) return"
+    assert_includes controller_source, 'input.dispatchEvent(new Event("input", { bubbles: true }))'
   end
 
   def test_view_mode_controller_syncs_pills_and_hidden_field_from_url_state

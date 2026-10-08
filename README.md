@@ -564,13 +564,15 @@ The switch does not reload the page. There is one set of fields either way. Hidd
 
 Click a preview to open the original file in a modal. Trash sits under the fields as a red button. Slides uses the Flatpack carousel: its previous and next controls move between cards, and its expand control opens the original. One image hides those controls. Every card stays in the form, including the ones off to the side.
 
+Save starts as the default button. Change a caption, credit, alt text, name, or order and it turns primary. Put the fields back and it returns to default. That switch is Flatpack's unsaved-changes behavior on the save form.
+
 `side_preview: true` peeks the next card on the right of the current slide. Omit it, or pass `false`, to keep each card full width. It is not in the signed save token.
 
 `items_per_view` chooses how many cards are on screen. Omit it and one card shows at every width. Pass a whole number to use that count on mobile, tablet, and desktop. Pass `mobile:`, `tablet:`, and `desktop:` when the count should change with the width. Tablet starts at 768px and desktop at 1024px. A missing width stays at one. Zero, a fraction, and an unknown width raise. It is not in the signed save token.
 
 `preview:` chooses the picture in the card. The default `:square` uses the `square_med` crop. `preview: :natural` uses the `med` variant and keeps the file's proportions. On the list the picture stays about 208px wide beside the fields. On Slides the picture bleeds to the card edges. It stays tall enough for the previous and next controls, and it is capped in height. The fields span the width under it. The modal still opens the original file. `preview:` is not in the signed save token. An unknown value raises.
 
-FlatPack is the default UI system for the engine and the dummy app (pinned to `v0.1.201` in the root Gemfile and the dummy app; gem requires `>= 0.1.201`).
+FlatPack is the default UI system for the engine and the dummy app (pinned to `v0.1.202` in the root Gemfile and the dummy app; gem requires `>= 0.1.202`).
 
 ## Development
 

@@ -57,6 +57,9 @@ class DummyDocsTest < Minitest::Test
     assert_includes controller_source, "config.image_processing_max_width = 2560"
     assert_includes controller_source, "config.image_variants = {"
     assert_includes controller_source, "square_small: { resize_to_fill: [128, 128] }"
+    assert_includes controller_source, "config.url_mode = :rails"
+    assert_includes controller_source, "config.direct_url_host"
+    assert_includes controller_source, "config.preprocessed_variants"
     assert_includes controller_source, 'host app layout like "application"'
     assert_includes controller_source, "Browse the attachment library and manage uploads with bulk remove actions."
   end
@@ -118,11 +121,12 @@ class DummyDocsTest < Minitest::Test
   def test_dummy_resizing_page_documents_browser_side_resizing
     resizing_source = File.read(File.expand_path("dummy/app/views/docs/resizing.html.erb", __dir__))
     controller_source = File.read(File.expand_path("dummy/app/controllers/docs_controller.rb", __dir__))
-    resizing_subtitle = "subtitle: \"Named delivery variants are generated on demand and reused through signed Active Storage URLs.\""
+    resizing_subtitle = "subtitle: \"Named delivery variants are stored in Active Storage. Preprocess common sizes after upload, or let Rails mode process them on the first preview request.\""
 
     assert_includes resizing_source, 'title: "Resizing"'
     assert_includes resizing_source, 'title: "Browser-side resizing"'
     assert_includes resizing_source, 'title: "Size variants"'
+    assert_includes resizing_source, 'title: "URL modes"'
     assert_includes resizing_source, resizing_subtitle
     assert_includes resizing_source, "FlatPack::PageTitle::Component"
     assert_includes resizing_source, "FlatPack::SectionTitle::Component"
@@ -130,13 +134,16 @@ class DummyDocsTest < Minitest::Test
     assert_includes controller_source, "def resizing"
     assert_includes controller_source, "@resizing_config_example = <<~RUBY"
     assert_includes controller_source, "@variant_config_example = <<~RUBY"
+    assert_includes controller_source, "@url_mode_config_example = <<~RUBY"
     assert_includes controller_source, "config.image_processing_enabled = true"
     assert_includes controller_source, "config.image_processing_max_width = 2560"
     assert_includes controller_source, "config.image_processing_max_height = 2560"
     assert_includes controller_source, "config.image_processing_quality = 0.82"
     assert_includes controller_source, "config.image_variants = {"
-    assert_includes controller_source, "Variants are generated on demand the first time a given size is requested."
-    assert_includes controller_source, "Each size gets its own signed variant URL"
+    assert_includes controller_source, "config.preprocessed_variants = %i[small med large]"
+    assert_includes controller_source, "config.url_mode = :direct"
+    assert_includes controller_source, 'config.direct_url_host = "images.featuredin.press"'
+    assert_includes controller_source, "attachment.url_for_variant(:med, mode: :direct, rails_url: preview_path)"
   end
 
   def test_dummy_setup_page_covers_active_storage_and_install_flow

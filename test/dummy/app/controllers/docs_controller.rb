@@ -165,6 +165,13 @@ class DocsController < ApplicationController
         #   xlarge: { resize_to_limit: [2400, 2400] }
         # }
 
+        # Delivery URL mode. :rails (default) keeps authorized engine paths.
+        # :direct builds public https://<direct_url_host>/<blob key> links.
+        # Separate from default_listing_scope: :direct (listing children).
+        # config.url_mode = :rails
+        # config.direct_url_host = "images.featuredin.press"
+        # config.preprocessed_variants = %i[small med large]
+
         # Use the gem's blank layout, or point at a host app layout like "application".
         config.layout = :blank
 
@@ -444,13 +451,28 @@ class DocsController < ApplicationController
           xlarge: { resize_to_limit: [2400, 2400] }
         }
 
-        # Variants are generated on demand the first time a given size is requested.
-        # After that, Active Storage stores the processed file in the same service
-        # as the original blob, such as S3, and reuses it on later requests.
+        # After commit, preprocess these sizes so direct delivery can use the
+        # variant_record blob key. Unknown names are ignored. Rails mode still
+        # processes on demand the first time a preview is requested.
+        config.preprocessed_variants = %i[small med large]
+      end
+    RUBY
 
-        # Each size gets its own signed variant URL, so swapping "small" for
-        # "large" is not a matter of guessing a simple filename pattern.
-        # Treat those signed URLs as delivery identifiers, not as your auth layer.
+    @url_mode_config_example = <<~RUBY
+      RecordingStudioAttachable.configure do |config|
+        # :rails (default) keeps authorized engine paths for file and preview.
+        # :direct builds public https://<direct_url_host>/<blob key> links for a
+        # custom domain in front of the same object store (for example R2).
+        config.url_mode = :direct
+        config.direct_url_host = "images.featuredin.press"
+
+        # Per-call override when a host needs one-off direct or rails URLs:
+        # attachment.url_for_variant(:med, mode: :direct, rails_url: preview_path)
+        # attachment.original_url(mode: :rails, rails_url: file_path)
+        #
+        # Direct mode never returns a URL for an unprocessed variant. It falls
+        # back to the authorized Rails preview path and enqueues preprocessing,
+        # so the size stays correct until the variant blob key exists.
       end
     RUBY
 

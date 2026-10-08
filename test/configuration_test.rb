@@ -45,6 +45,9 @@ class ConfigurationTest < Minitest::Test
       },
       @configuration.image_variants
     )
+    assert_equal :rails, @configuration.url_mode
+    assert_nil @configuration.direct_url_host
+    assert_equal %i[small med large], @configuration.preprocessed_variants
     assert_equal :direct, @configuration.default_listing_scope
     assert_equal :all, @configuration.default_kind_filter
     assert_equal :blank, @configuration.layout
@@ -55,6 +58,33 @@ class ConfigurationTest < Minitest::Test
     assert_not @configuration.google_drive.configured?
     assert_not @configuration.google_drive.picker_configured?
     assert_equal ["https://www.googleapis.com/auth/drive.readonly"], @configuration.google_drive.scopes
+  end
+
+  def test_url_mode_accepts_rails_and_direct
+    @configuration.url_mode = "direct"
+    assert_equal :direct, @configuration.url_mode
+
+    @configuration.url_mode = :rails
+    assert_equal :rails, @configuration.url_mode
+  end
+
+  def test_url_mode_rejects_unknown_values
+    error = assert_raises(ArgumentError) { @configuration.url_mode = :cdn }
+
+    assert_match(/url_mode must be :rails or :direct/, error.message)
+  end
+
+  def test_preprocessed_variants_keeps_known_variant_names_only
+    @configuration.preprocessed_variants = %i[small mystery med xlarge]
+
+    assert_equal %i[small med xlarge], @configuration.preprocessed_variants
+  end
+
+  def test_resolve_url_mode_uses_config_default_or_override
+    @configuration.url_mode = :rails
+
+    assert_equal :rails, @configuration.resolve_url_mode
+    assert_equal :direct, @configuration.resolve_url_mode(:direct)
   end
 
   def test_register_upload_provider_stores_provider_by_key
@@ -298,6 +328,9 @@ class ConfigurationTest < Minitest::Test
           large: { resize_to_limit: [1600, 1600] },
           xlarge: { resize_to_limit: [2400, 2400] }
         },
+        url_mode: :rails,
+        direct_url_host: nil,
+        preprocessed_variants: %i[small med large],
         enabled_attachment_kinds: %i[file],
         default_listing_scope: :direct,
         default_kind_filter: :all,

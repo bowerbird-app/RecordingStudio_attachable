@@ -622,6 +622,9 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes initializer_template, "config.image_variants = {"
     assert_includes initializer_template, "square_small: { resize_to_fill: [128, 128] }"
     assert_includes initializer_template, "xlarge: { resize_to_limit: [2400, 2400] }"
+    assert_includes initializer_template, "config.url_mode = :rails"
+    assert_includes initializer_template, "config.direct_url_host"
+    assert_includes initializer_template, "config.preprocessed_variants = %i[small med large]"
     assert_includes initializer_template, 'label: "Google Drive"'
     assert_includes initializer_template, "remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|"
     assert_includes initializer_template, "config.google_drive.enabled = true"

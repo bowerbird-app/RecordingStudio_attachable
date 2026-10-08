@@ -2,6 +2,7 @@
 
 module RecordingStudioAttachable
   class Error < StandardError; end
+  class ConfigurationError < Error; end
   class DependencyUnavailableError < Error; end
   class StorageLimitUnknown < Error; end
   class StorageLimitError < Error; end
@@ -30,6 +31,8 @@ require "recording_studio"
 
 require "recording_studio_attachable/version"
 require "recording_studio_attachable/configuration"
+require "recording_studio_attachable/direct_url"
+require "recording_studio_attachable/attachment_urls"
 require "recording_studio_attachable/attachment_file_button"
 require "recording_studio_attachable/attachment_file_facts"
 require "recording_studio_attachable/attachment_collection"

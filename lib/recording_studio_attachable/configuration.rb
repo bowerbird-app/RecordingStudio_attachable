@@ -104,6 +104,9 @@ module RecordingStudioAttachable
       editing: :edit
     }.freeze
 
+    URL_MODES = %i[rails direct].freeze
+    DEFAULT_PREPROCESSED_VARIANTS = %i[small med large].freeze
+
     attr_accessor :allowed_content_types,
                   :max_file_size,
                   :max_file_count,
@@ -118,9 +121,10 @@ module RecordingStudioAttachable
                   :auth_roles,
                   :classify_attachment_kind,
                   :authorize_with,
-                  :google_drive
+                  :google_drive,
+                  :direct_url_host
 
-    attr_reader :image_variants, :upload_providers, :storage_limit
+    attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode, :preprocessed_variants
 
     def initialize
       assign_defaults
@@ -207,6 +211,20 @@ module RecordingStudioAttachable
       @image_variants = normalize_image_variants(variants)
     end
 
+    def url_mode=(value)
+      @url_mode = normalize_url_mode(value)
+    end
+
+    def resolve_url_mode(mode = nil)
+      return url_mode if mode.nil?
+
+      normalize_url_mode(mode)
+    end
+
+    def preprocessed_variants=(variants)
+      @preprocessed_variants = normalize_preprocessed_variants(variants)
+    end
+
     def storage_limit=(value)
       normalized = value.is_a?(String) ? value.strip : value
       @storage_limit = normalized.presence
@@ -223,6 +241,9 @@ module RecordingStudioAttachable
         image_processing_max_height: image_processing_max_height,
         image_processing_quality: image_processing_quality,
         image_variants: image_variants,
+        url_mode: url_mode,
+        direct_url_host: direct_url_host,
+        preprocessed_variants: preprocessed_variants,
         enabled_attachment_kinds: enabled_attachment_kinds,
         default_listing_scope: default_listing_scope,
         default_kind_filter: default_kind_filter,
@@ -244,6 +265,9 @@ module RecordingStudioAttachable
       @image_processing_max_height = 2560
       @image_processing_quality = 0.82
       @image_variants = default_image_variants
+      @url_mode = :rails
+      @direct_url_host = nil
+      @preprocessed_variants = DEFAULT_PREPROCESSED_VARIANTS.dup
       @enabled_attachment_kinds = %i[image file]
       @default_listing_scope = :direct
       @default_kind_filter = :all
@@ -309,6 +333,20 @@ module RecordingStudioAttachable
       end
 
       normalized
+    end
+
+    def normalize_url_mode(value)
+      normalized = value.to_s.strip.downcase.to_sym
+      return normalized if URL_MODES.include?(normalized)
+
+      raise ArgumentError, "url_mode must be :rails or :direct (got #{value.inspect})"
+    end
+
+    def normalize_preprocessed_variants(variants)
+      Array(variants).filter_map do |name|
+        key = name.to_sym
+        key if image_variants.key?(key)
+      end.uniq
     end
   end
 end

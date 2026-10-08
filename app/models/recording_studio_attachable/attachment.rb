@@ -2,6 +2,8 @@
 
 module RecordingStudioAttachable
   class Attachment < ApplicationRecord
+    include AttachmentUrls
+
     self.table_name = "recording_studio_attachable_attachments"
 
     attr_writer :validation_options
@@ -20,6 +22,8 @@ module RecordingStudioAttachable
     validates :byte_size, numericality: { greater_than_or_equal_to: 0 }
     validate :content_type_must_be_allowed
     validate :attachment_kind_must_be_enabled
+
+    after_commit :enqueue_variant_preprocessing, on: :create
 
     scope :images, -> { where(attachment_kind: "image") }
     scope :files, -> { where(attachment_kind: "file") }

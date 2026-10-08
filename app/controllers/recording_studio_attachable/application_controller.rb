@@ -105,7 +105,11 @@ module RecordingStudioAttachable
     end
 
     def authorized_attachment_file_path(recording)
-      attachment_file_path(recording)
+      rails_url = attachment_file_path(recording)
+      attachment = recording.respond_to?(:recordable) ? recording.recordable : nil
+      return rails_url unless attachment.respond_to?(:original_url)
+
+      attachment.original_url(rails_url: rails_url)
     end
 
     def authorized_attachment_preview_path(recording, variant_name)
@@ -114,7 +118,10 @@ module RecordingStudioAttachable
       return unless attachment.respond_to?(:preview_target_named)
       return if attachment.preview_target_named(variant_name).blank?
 
-      attachment_preview_file_path(recording, variant_name: variant_name)
+      rails_url = attachment_preview_file_path(recording, variant_name: variant_name)
+      return rails_url unless attachment.respond_to?(:url_for_variant)
+
+      attachment.url_for_variant(variant_name, rails_url: rails_url)
     end
 
     def authorized_attachment_inline_variant_urls(recording)

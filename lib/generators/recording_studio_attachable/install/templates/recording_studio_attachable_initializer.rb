@@ -34,6 +34,15 @@ RecordingStudioAttachable.configure do |config|
   #   xlarge: { resize_to_limit: [2400, 2400] }
   # }
 
+  # Delivery URL mode. :rails (default) keeps authorized engine paths.
+  # :direct builds public https://<direct_url_host>/<blob key> links for a
+  # custom domain in front of the same object store (for example Cloudflare R2).
+  # Separate from default_listing_scope: :direct (which means listing children).
+  # config.url_mode = :rails
+  # config.direct_url_host = "images.featuredin.press"
+  # After commit, preprocess these named variants for faster direct delivery.
+  # config.preprocessed_variants = %i[small med large]
+
   # Use the gem's blank layout by default, or set a host app layout like "application".
   config.layout = :blank
   config.auth_roles = {

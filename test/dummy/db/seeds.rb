@@ -89,8 +89,73 @@ ensure
   RecordingStudioAccessible.configuration.access_management_authorizer = original_access_authorizer
 end
 
+press_kit = [
+  {
+    file: "kiln-canister-open.jpg",
+    name: "Kiln canister, open",
+    caption: "Lid set aside",
+    credit: "Studio North",
+    alt_text: "Smoked glass canister with the brass lid resting beside it"
+  },
+  {
+    file: "kiln-canister-detail.jpg",
+    name: "Kiln canister, detail",
+    caption: "Brass lid",
+    credit: "Studio North",
+    alt_text: "Close view of the brass lid on the smoked glass canister"
+  },
+  {
+    file: "kiln-canister-table.jpg",
+    name: "Kiln canister, table",
+    caption: "On the breakfast table",
+    credit: "Studio North",
+    alt_text: "Smoked glass canister on a linen table beside a cup and napkin"
+  },
+  {
+    file: "kiln-canister-hero.jpg",
+    name: "Kiln canister",
+    caption: "Hero, three-quarter",
+    credit: "Studio North",
+    alt_text: "Smoked glass canister with a brass lid on pale limestone"
+  }
+]
+press_kit_dir = Rails.root.join("db/seed_images")
+existing_images = root_recording.images(per_page: 100).to_a
+
+%w[window.jpg dock.jpg pier.jpg].each do |filename|
+  existing_images.each do |recording|
+    next unless recording.recordable.original_filename == filename
+
+    recording.remove_attachment(actor: user)
+  end
+end
+
+press_kit.each do |shot|
+  next if existing_images.any? { |recording| recording.recordable.original_filename == shot[:file] }
+
+  recording = File.open(press_kit_dir.join(shot[:file]), "rb") do |io|
+    root_recording.import_attachment(
+      io: io,
+      filename: shot[:file],
+      content_type: "image/jpeg",
+      name: shot[:name],
+      actor: user,
+      source: "press_kit"
+    )
+  end
+  raise "Could not import #{shot[:file]}" if recording.nil?
+
+  recording.revise_attachment_metadata(
+    actor: user,
+    caption: shot[:caption],
+    credit: shot[:credit],
+    alt_text: shot[:alt_text]
+  )
+end
+
 puts "Seeded: #{admin_email} / #{admin_password}"
 puts "Seeded: Workspace '#{workspace.name}' with root recording ##{root_recording.id}"
 puts "Seeded: Page '#{page.title}' beneath the workspace root recording"
 puts "Seeded: User '#{user.name}' beneath the workspace root recording"
 puts "Seeded: Chat thread '#{chat_thread.title}' with #{chat_messages.count} recorded messages"
+puts "Seeded: Kiln canister press kit (#{press_kit.size} images) on the workspace"

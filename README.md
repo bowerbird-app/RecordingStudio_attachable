@@ -586,6 +586,7 @@ Dummy credentials (`test/dummy/config/credentials.yml.enc`) are encrypted with t
 - CI installs the dummy app bundle and runs dummy-app migrations before the root checks
 - the dummy app pins RecordingStudio `v4.2.2` and Recording Studio Accessible `v0.6.0`
 - make sure engine, Active Storage, and Recording Studio tables are migrated in the dummy app before validating upload flows locally
+- `bin/rails db:seed` attaches a four-shot Kiln canister press kit to the workspace. Edit images uses those files. Seeds also remove the colour-block stand-ins `window.jpg`, `dock.jpg`, and `pier.jpg` when they are still on the workspace.
 - set `DUMMY_ACTIVE_STORAGE_SERVICE=amazon` plus `DUMMY_AWS_ACCESS_KEY_ID`, `DUMMY_AWS_SECRET_ACCESS_KEY`, `DUMMY_AWS_REGION`, and `DUMMY_AWS_BUCKET` to exercise S3-backed uploads in the dummy app; `DUMMY_AWS_BUCKET` may be either the plain bucket name or a bucket ARN
 - optional `DUMMY_AWS_ENDPOINT` for Cloudflare R2 (or another S3-compatible API URL). When it is unset, the dummy `amazon` service keeps talking to AWS S3. When it is set, the dummy also uses `force_path_style: true` and checksum calculation/validation `when_required` (R2-safe).
 - **Object storage (host Active Storage, not Attachable config):** this gem does not hard-code AWS S3 or Cloudflare R2. File blobs, direct uploads, and previews use whatever service the **host app** selects via `config.active_storage.service` and `config/storage.yml`. Attachable has no separate storage backend setting.

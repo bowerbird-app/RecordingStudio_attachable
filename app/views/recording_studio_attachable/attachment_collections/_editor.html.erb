@@ -44,7 +44,13 @@
       <% end %>
 
     <% if carousel %>
-      <% slides = collection.rows.map { { type: :html, html: tag.div(class: "slide-placeholder") } } %>
+      <% slides = collection.rows.map do |row|
+           {
+             type: :html,
+             html: tag.div(class: "slide-placeholder"),
+             thumb_src: authorized_attachment_preview_path(row.recording, collection.preview_variant)
+           }
+         end %>
       <div data-recording-studio-attachable--collection-display-target="carousel" <% unless open_slides %>hidden<% end %>>
         <%= render FlatPack::Carousel::Component.new(
           slides: slides,
@@ -52,7 +58,10 @@
           loop: false,
           autoplay: false,
           show_captions: false,
-          show_thumbs: false,
+          show_thumbs: true,
+          thumbs_position: :bottom,
+          show_border: false,
+          show_background: false,
           show_controls: collection.rows.many?,
           show_indicators: collection.rows.many?,
           side_preview: collection.side_preview,
@@ -60,8 +69,7 @@
           items_per_view_tablet: collection.items_per_view.tablet,
           items_per_view_desktop: collection.items_per_view.desktop,
           aspect_ratio: collection.square_preview? ? "1/1" : "4/3",
-          aria_label: "Images",
-          style: "--carousel-viewport-background-color: transparent;"
+          aria_label: "Images"
         ) %>
       </div>
     <% end %>

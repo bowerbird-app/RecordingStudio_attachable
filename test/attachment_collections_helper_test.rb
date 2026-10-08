@@ -162,11 +162,14 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, 'aria-label="Next slide"'
     assert_equal 2, html.scan('data-recording-studio-attachable--collection-display-target="row"').size
     refute_match(/target="row"[^>]*hidden/, html)
-    assert_equal 1, html.scan('src="/attachments/image-1/preview/square_med"').size
+    assert_equal 2, html.scan('src="/attachments/image-1/preview/square_med"').size
+    assert_includes html, 'src="/attachments/image-2/preview/square_med" alt="Thumbnail 1"'
+    assert_includes html, 'src="/attachments/image-1/preview/square_med" alt="Thumbnail 2"'
     assert_includes html, 'src="/attachments/image-1/file"'
     media_tag = html[/<div[^>]*target="slideMedia"[^>]*>/]
     assert_match(/(?<![\w-])hidden(?:=|\s|>)/, media_tag)
-    assert_operator html.index('target="previewHome"'), :<, html.index("/preview/square_med")
+    preview_home = html.index('target="previewHome"')
+    assert_operator preview_home, :<, html.index("/preview/square_med", preview_home)
   end
 
   def test_slides_open_on_the_first_image_with_the_other_rows_still_in_the_form
@@ -186,7 +189,16 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_equal 2, html.scan('collection-display-target="card"').size
     assert_includes html, 'data-display="carousel"'
     assert_includes html, 'data-controller="flat-pack--carousel"'
-    assert_includes html, "--carousel-viewport-background-color: transparent;"
+    viewport = html[/class="[^"]*flat-pack-carousel__viewport[^"]*"/]
+    assert_includes viewport, "border-0"
+    assert_includes viewport, "bg-transparent"
+    refute_includes viewport, "carousel-viewport-border-color"
+    refute_includes viewport, "carousel-viewport-background-color"
+    refute_includes html, "--carousel-viewport-background-color"
+    assert_operator html.index("flat-pack-carousel__viewport"), :<, html.index('data-flat-pack--carousel-target="thumb"')
+    assert_equal 2, html.scan('data-flat-pack--carousel-target="thumb"').size
+    assert_includes html, 'src="/attachments/image-2/preview/square_med" alt="Thumbnail 1"'
+    assert_includes html, 'src="/attachments/image-1/preview/square_med" alt="Thumbnail 2"'
     assert_operator html.index("flat-pack--carousel"), :<, html.index('value="image-1"')
     assert_equal 2, html.scan("bg-[var(--card-background-color)]").size
     assert_includes html, "aspect-square w-full overflow-hidden rounded-lg"
@@ -207,8 +219,10 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, "group-data-[display=carousel]:sm:items-stretch"
     media_tag = html[/<div[^>]*target="slideMedia"[^>]*>/]
     refute_match(/(?<![\w-])hidden(?:=|\s|>)/, media_tag)
-    assert_operator html.index('target="slideMedia"'), :<, html.index("/preview/square_med")
-    assert_operator html.index("/preview/square_med"), :<, html.index('target="previewHome"')
+    slide_media = html.index('target="slideMedia"')
+    preview_in_card = html.index("/preview/square_med", slide_media)
+    assert_operator slide_media, :<, preview_in_card
+    assert_operator preview_in_card, :<, html.index('target="previewHome"', slide_media)
     assert_includes html, 'target="previewHome" hidden'
     assert_equal 1, html.scan('data-modal-id="attachment-image-image-1"').size
   end
@@ -224,6 +238,8 @@ class AttachmentCollectionsHelperTest < Minitest::Test
 
     assert_includes html, 'data-display="carousel"'
     assert_includes html, 'data-controller="flat-pack--carousel"'
+    assert_equal 1, html.scan('data-flat-pack--carousel-target="thumb"').size
+    assert_includes html, 'src="/attachments/image-1/preview/square_med" alt="Thumbnail 1"'
     refute_includes html, "Previous slide"
     refute_includes html, "Next slide"
     refute_includes html, "Go to slide"
@@ -270,6 +286,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
 
     assert_includes html, "aspect-ratio: 4/3"
     refute_includes html, "aspect-ratio: 1/1"
+    assert_includes html, 'src="/attachments/image-1/preview/med" alt="Thumbnail 1"'
   end
 
   def test_sortable_slides_keep_order_inputs_and_hide_the_reorder_controls

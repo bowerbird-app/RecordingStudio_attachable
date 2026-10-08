@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.8.0] - 2026-10-07
 
 ### Added
-- `attachment_collection_editor` can offer a list, slides, or both. Slides moves the cards in a Flatpack carousel. `items_per_view` chooses how many cards show at once. The card holds the image and its fields, so both slide together. A gap separates the cards. The picture sits flush with the card edges and stays tall enough for the previous and next controls. The fields span the card. List and Slides share one set of fields, so Save still writes every row.
+- `attachment_collection_editor` can offer a list, slides, or both. Slides moves the cards in a Flatpack carousel. `items_per_view` chooses how many cards show at once. The card holds the image and its fields, so both slide together. A gap separates the cards. The picture sits flush with the card edges and stays tall enough for the previous and next controls. The fields span the card. Image thumbs sit under the carousel. The tray has no border and no fill. List and Slides share one set of fields, so Save still writes every row.
 
 ```erb
 <%= attachment_collection_editor(
@@ -23,20 +23,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ```
 
 ### Changed
-- Requires Flatpack `>= 0.1.202`. The root Gemfile and the dummy app pin tag `v0.1.202`.
+- Requires Flatpack `>= 0.1.205`. The root Gemfile and the dummy app pin tag `v0.1.205`.
 - Save on the image editor starts as the default button and is only as wide as its label. It turns primary when a caption, credit, alt text, name, or order differs from the saved values, and returns to default when those fields match again.
 - Dummy and blank layouts load `flat_pack/application` so Flatpack button colours paint.
 - On Slides, typing in a field stays in that field. Arrow keys and the space bar do not move the carousel.
-- The carousel tray behind the cards is transparent.
+- On Slides, an image thumb sits under the carousel for each card and uses that card's preview. The carousel tray has no border and no background.
 
 ### Upgrade Notes
-- Update Flatpack to `0.1.202` or newer. Pill calls that leave out `style:` stay on the pill tokens. A CSS string in Tabs `style:` raises. Importmap apps that already eager-load Flatpack controllers pick up `flat-pack--unsaved-changes` with that gem.
+- Update Flatpack to `0.1.205` or newer. Pill calls that leave out `style:` stay on the pill tokens. A CSS string in Tabs `style:` raises. Importmap apps that already eager-load Flatpack controllers pick up `flat-pack--unsaved-changes` with that gem.
+- On Slides, the carousel tray no longer draws a border or a fill, and image thumbs appear under the cards.
 - Save on `attachment_collection_editor` is no longer primary on arrival. Flatpack switches it to primary after a field changes.
 - Omit `displays` to keep the list, with no switch. No migration.
 - Pass `displays: [:list, :carousel]` when the host should offer both. `default_display` picks the one that opens and must be in that list. Leave it out and the first entry opens.
 - Pass `displays: [:carousel]` for slides only.
 - The display is not part of the signed save token. Refreshing returns to `default_display`.
-- On Slides, the Flatpack carousel moves between cards. The picture and its fields travel together. The picture is flush with the card, the fields span the card, and a gap separates one card from the next. Expand opens the original. The drag handle and Order field stay in the form and stay hidden. Reorder from List.
+- On Slides, the Flatpack carousel moves between cards. The picture and its fields travel together. The picture is flush with the card, the fields span the card, and a gap separates one card from the next. Image thumbs under the tray jump to a card. The tray has no border and no fill. Expand opens the original. The drag handle and Order field stay in the form and stay hidden. Reorder from List.
 - Pass `side_preview: true` to peek the next card. Omit it to keep each card full width. It is not in the signed save token.
 - Pass `items_per_view:` to choose how many cards show. A whole number applies at every width. A hash can set `mobile:`, `tablet:`, and `desktop:` separately. Omit it to keep one card. It is not in the signed save token.
 

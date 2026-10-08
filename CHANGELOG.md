@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dummy and blank layouts load `flat_pack/application` so Flatpack button colours paint.
 - On Slides, typing in a field stays in that field. Arrow keys and the space bar do not move the carousel.
 - On Slides, an image thumb sits under the carousel for each card and uses that card's preview. The carousel tray has no border and no background. The dot indicators stay off.
+- On Slides, each card shows the file name, type, pixel size, and file size above the fields when those are known. The list does not.
 - The dummy Edit images screen seeds a four-shot Kiln canister press kit. Colour-block stand-ins are removed when seeds run.
 
 ### Upgrade Notes
@@ -38,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pass `displays: [:list, :carousel]` when the host should offer both. `default_display` picks the one that opens and must be in that list. Leave it out and the first entry opens.
 - Pass `displays: [:carousel]` for slides only.
 - The display is not part of the signed save token. Refreshing returns to `default_display`.
-- On Slides, the Flatpack carousel moves between cards. Each slide has its own copy of the fields and its own Save. The list keeps one Save for every row. The picture moves between the list thumbnail and the slide. Text typed on a slide stays there until the page reloads after a save. A slide save leaves order out, so it does not reorder. Reorder from List, then use the list Save. On a slide, Trash is the icon at the right of the fields. The picture is flush with the card, the fields span the card, and a gap separates one card from the next. Image thumbs under the tray jump to a card. The tray has no border and no fill. Expand opens the original.
+- On Slides, the Flatpack carousel moves between cards. Each slide has its own copy of the fields and its own Save. The list keeps one Save for every row. The picture moves between the list thumbnail and the slide. Text typed on a slide stays there until the page reloads after a save. A slide save leaves order out, so it does not reorder. Reorder from List, then use the list Save. On a slide, Trash is the icon at the right of the fields. The file name, type, pixel size, and file size sit above the fields when they are known. The picture is flush with the card, the fields span the card, and a gap separates one card from the next. Image thumbs under the tray jump to a card. The tray has no border and no fill. Expand opens the original.
 - Pass `side_preview: true` to peek the next card. Omit it to keep each card full width. It is not in the signed save token.
 - Pass `items_per_view:` to choose how many cards show. A whole number applies at every width. A hash can set `mobile:`, `tablet:`, and `desktop:` separately. Omit it to keep one card. It is not in the signed save token.
 

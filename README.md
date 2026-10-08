@@ -554,7 +554,7 @@ attachment_collection_editor(
 
 Leave `displays` out and the helper renders the list only, with no switch. That is the same screen as before. `displays` is the set, in switch order. `:list` is the rows side by side with their fields. `:carousel` slides the cards in the Flatpack carousel. The switch labels are List and Slides.
 
-Each image and its fields sit in a card. On Slides, that card is the slide, so the picture and the fields move together in the Flatpack carousel. The tray around the cards has no border and no fill. Image thumbs sit under the carousel, one per card, and use the same preview. A gap separates one card from the next. The picture sits flush with the card edges, and the fields span the card beneath it. The next card peeks in when `side_preview` is on.
+Each image sits in a card. On Slides, the picture moves into that card and the fields stay with the slide. Above those fields, the card shows the file name, then the type, the pixel size, and the file size when those are known. The tray around the cards has no border and no fill. Image thumbs sit under the carousel, one per card, and use the same preview. A gap separates one card from the next. The picture sits flush with the card edges, and the fields span the card beneath it. The next card peeks in when `side_preview` is on.
 
 `default_display` must be one of `displays`. Leave it out and the first entry opens. `displays: [:carousel]` is slides only, with no switch. An unknown display raises. A default that is not in the set raises.
 

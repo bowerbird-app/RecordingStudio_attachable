@@ -1,0 +1,16 @@
+<% facts = RecordingStudioAttachable::AttachmentFileFacts.new(attachment) %>
+<% if facts.any? %>
+  <%# px-14 keeps this line clear of the round previous and next buttons. %>
+  <div class="flex min-w-0 flex-col gap-3 px-14">
+    <% if facts.filename %>
+      <p class="truncate text-xs text-(--surface-muted-content-color)"><%= facts.filename %></p>
+    <% end %>
+    <% if facts.labels.any? %>
+      <div class="flex flex-wrap gap-3">
+        <% facts.labels.each do |label| %>
+          <%= render FlatPack::Badge::Component.new(text: label, style: :default, size: :sm) %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

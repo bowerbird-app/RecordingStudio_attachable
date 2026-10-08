@@ -11,7 +11,11 @@ require_relative "../app/queries/recording_studio_attachable/queries/for_recordi
 
 class AttachmentCollectionsHelperTest < Minitest::Test
   Parent = Struct.new(:id)
-  Snapshot = Struct.new(:name, :description, :caption, :credit, :alt_text, :original_filename, keyword_init: true)
+  Snapshot = Struct.new(
+    :name, :description, :caption, :credit, :alt_text, :original_filename,
+    :content_type, :byte_size, :file,
+    keyword_init: true
+  )
   Child = Struct.new(:id, :created_at, :recordable, keyword_init: true)
 
   def test_editor_renders_one_square_med_preview_per_row_and_only_the_requested_fields
@@ -63,6 +67,9 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     refute_includes html, ">Order<"
     refute_includes html, ">Slides<"
     refute_includes html, "Previous slide"
+    refute_includes html, "image-1.png"
+    refute_includes html, ">PNG<"
+    refute_includes html, "200 KB"
   end
 
   def test_sortable_editor_posts_order_numbers_and_omits_them_when_sorting_is_off
@@ -181,6 +188,41 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_match(/(?<![\w-])hidden(?:=|\s|>)/, media_tag)
     preview_home = html.index('target="previewHome"')
     assert_operator preview_home, :<, html.index("/preview/square_med", preview_home)
+  end
+
+  def test_slide_cards_show_file_facts_above_the_fields_and_the_list_does_not
+    @displays = %i[list carousel]
+    hero = child(
+      "image-1",
+      name: "Pier",
+      caption: "Light",
+      file: sized_file("width" => "1280", "height" => 720)
+    )
+    html = render_editor(
+      [hero, child("image-2", name: "Dock", caption: "Dawn")],
+      fields: [:caption],
+      sortable: false,
+      return_to: "/attachment_editor"
+    )
+
+    list_form = form_markup(html, "attachment-collection-parent-1")
+    slide_form = form_markup(html, "attachment-collection-parent-1-slide-image-1")
+    caption = slide_form.index('name="attachment_collection[rows][][caption]"')
+
+    assert_includes slide_form, "image-1.png"
+    assert_includes slide_form, ">PNG<"
+    assert_includes slide_form, "1280 × 720"
+    assert_includes slide_form, "200 KB"
+    assert_includes slide_form, "px-2.5"
+    assert_includes slide_form, "px-14"
+    assert_operator slide_form.index("image-1.png"), :<, caption
+    assert_operator slide_form.index(">PNG<"), :<, caption
+    assert_operator slide_form.index("1280 × 720"), :<, caption
+    assert_operator slide_form.index("200 KB"), :<, caption
+    refute_includes list_form, "image-1.png"
+    refute_includes list_form, ">PNG<"
+    refute_includes list_form, "1280 × 720"
+    refute_includes list_form, "200 KB"
   end
 
   def test_slides_open_on_the_first_image_with_the_other_rows_still_in_the_form
@@ -391,6 +433,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
       app/components/flat_pack/form_field/component.rb
       app/components/flat_pack/text_input/component.rb
       app/components/flat_pack/tooltip/component.rb
+      app/components/flat_pack/badge/component.rb
       app/components/flat_pack/modal/component.rb
       app/components/flat_pack/carousel/component.rb
       app/components/flat_pack/card/media/component.rb
@@ -408,7 +451,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     parent
   end
 
-  def child(id, name:, caption: nil, credit: nil)
+  def child(id, name:, caption: nil, credit: nil, content_type: "image/png", byte_size: 204_800, file: nil)
     Child.new(
       id: id,
       created_at: Time.utc(2026, 1, 1),
@@ -418,8 +461,20 @@ class AttachmentCollectionsHelperTest < Minitest::Test
         caption: caption,
         credit: credit,
         alt_text: "Hidden alt",
-        original_filename: "#{id}.png"
+        original_filename: "#{id}.png",
+        content_type: content_type,
+        byte_size: byte_size,
+        file: file
       )
     )
+  end
+
+  def sized_file(metadata)
+    blob = Object.new
+    blob.define_singleton_method(:metadata) { metadata }
+    file = Object.new
+    file.define_singleton_method(:attached?) { true }
+    file.define_singleton_method(:blob) { blob }
+    file
   end
 end

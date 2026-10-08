@@ -111,6 +111,7 @@
                 <% end %>
                 <% card.body do %>
                   <div class="flex flex-col gap-4">
+                    <%= render "recording_studio_attachable/attachment_collections/file_facts", attachment: attachment %>
                     <%= render "recording_studio_attachable/attachment_collections/fields",
                           collection: collection,
                           row: row,

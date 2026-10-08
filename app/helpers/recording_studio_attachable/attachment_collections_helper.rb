@@ -2,6 +2,7 @@
 
 require "recording_studio_attachable/attachment_collection"
 require "recording_studio_attachable/attachment_file_button"
+require "recording_studio_attachable/attachment_file_facts"
 
 module RecordingStudioAttachable
   module AttachmentCollectionsHelper

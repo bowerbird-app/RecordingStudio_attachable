@@ -176,14 +176,16 @@
       <% end %>
     </ol>
 
-      <%= render FlatPack::Button::Component.new(
-            text: "Save",
-            style: :default,
-            size: :md,
-            type: "submit",
-            form: collection.form_id,
-            data: { flat_pack__unsaved_changes_target: "submit" }
-          ) %>
+      <div class="inline-flex">
+        <%= render FlatPack::Button::Component.new(
+              text: "Save",
+              style: :default,
+              size: :md,
+              type: "submit",
+              form: collection.form_id,
+              data: { flat_pack__unsaved_changes_target: "submit" }
+            ) %>
+      </div>
     <% end %>
   </div>
 <% end %>

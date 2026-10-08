@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Requires Flatpack `>= 0.1.202`. The root Gemfile and the dummy app pin tag `v0.1.202`.
-- Save on the image editor starts as the default button. It turns primary when a caption, credit, alt text, name, or order differs from the saved values, and returns to default when those fields match again.
+- Save on the image editor starts as the default button and is only as wide as its label. It turns primary when a caption, credit, alt text, name, or order differs from the saved values, and returns to default when those fields match again.
 - Dummy and blank layouts load `flat_pack/application` so Flatpack button colours paint.
 - On Slides, typing in a field stays in that field. Arrow keys and the space bar do not move the carousel.
 

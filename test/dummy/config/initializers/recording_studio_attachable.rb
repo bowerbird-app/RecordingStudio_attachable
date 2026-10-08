@@ -12,6 +12,10 @@ RecordingStudioAttachable.configure do |config|
   config.image_processing_max_width = 1200
   config.image_processing_max_height = 1200
   config.image_processing_quality = 0.75
+  # Dummy-only public host for direct URL demos. Studio UI stays on :rails.
+  config.url_mode = :rails
+  config.direct_url_host = "images.example.test"
+  config.preprocessed_variants = %i[small med large]
   config.google_drive.enabled = true
   config.google_drive.client_id = ENV["DUMMY_GOOGLE_OAUTH_CLIENT_ID"].presence ||
                                   ENV.fetch("DUMMY_GOOGLE_DRIVE_CLIENT_ID", "dummy-google-drive-client-id")

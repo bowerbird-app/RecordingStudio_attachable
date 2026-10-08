@@ -157,6 +157,9 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes seeds, "import_attachment("
     assert_includes seeds, "revise_attachment_metadata("
     assert_includes seeds, "window.jpg"
+    assert_includes seeds, "Missing seed image fixture"
+    assert_includes seeds, "blob.service.exist?(blob.key)"
+    assert_includes seeds, "but blob is missing from storage"
     %w[kiln-canister-hero.jpg kiln-canister-table.jpg kiln-canister-detail.jpg kiln-canister-open.jpg].each do |file|
       assert File.exist?(File.expand_path("dummy/db/seed_images/#{file}", __dir__)), "missing press kit image #{file}"
     end

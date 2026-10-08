@@ -120,6 +120,11 @@ press_kit = [
   }
 ]
 press_kit_dir = Rails.root.join("db/seed_images")
+press_kit.each do |shot|
+  path = press_kit_dir.join(shot[:file])
+  raise "Missing seed image fixture: #{path}" unless path.file?
+end
+
 existing_images = root_recording.images(per_page: 100).to_a
 
 %w[window.jpg dock.jpg pier.jpg].each do |filename|
@@ -130,8 +135,23 @@ existing_images = root_recording.images(per_page: 100).to_a
   end
 end
 
+# Re-import when the Active Storage blob is missing from the current service
+# (for example after switching between the test Disk root and local storage).
+seed_attachment_blob_available = lambda do |recording|
+  attachment = recording&.recordable
+  next false unless attachment&.file&.attached?
+
+  blob = attachment.file.blob
+  blob.service.exist?(blob.key)
+rescue StandardError
+  false
+end
+
 press_kit.each do |shot|
-  next if existing_images.any? { |recording| recording.recordable.original_filename == shot[:file] }
+  existing = existing_images.find { |recording| recording.recordable.original_filename == shot[:file] }
+  next if existing && seed_attachment_blob_available.call(existing)
+
+  existing&.remove_attachment(actor: user)
 
   recording = File.open(press_kit_dir.join(shot[:file]), "rb") do |io|
     root_recording.import_attachment(
@@ -144,6 +164,7 @@ press_kit.each do |shot|
     )
   end
   raise "Could not import #{shot[:file]}" if recording.nil?
+  raise "Imported #{shot[:file]} but blob is missing from storage" unless seed_attachment_blob_available.call(recording)
 
   recording.revise_attachment_metadata(
     actor: user,

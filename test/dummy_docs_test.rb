@@ -12,6 +12,7 @@ class DummyDocsTest < Minitest::Test
     assert_includes routes_source, 'get "plugins", to: "docs#plugins"'
     assert_includes routes_source, 'get "picker", to: "docs#picker"'
     assert_includes routes_source, 'get "resizing", to: "docs#resizing"'
+    assert_includes routes_source, 'get "url_modes", to: "docs#url_modes"'
     assert_includes routes_source, 'get "gem_views", to: "docs#gem_views"'
     assert_includes routes_source, 'get "recordables", to: "docs#recordables"'
     assert_includes routes_source, 'get "query", to: "docs#query"'
@@ -32,6 +33,8 @@ class DummyDocsTest < Minitest::Test
     assert_includes sidebar_source, "picker_docs_path"
     assert_includes sidebar_source, 'text: "Resizing"'
     assert_includes sidebar_source, "resizing_docs_path"
+    assert_includes sidebar_source, 'text: "URL modes"'
+    assert_includes sidebar_source, "url_modes_docs_path"
     assert_includes sidebar_source, 'text: "Gem views"'
     assert_includes sidebar_source, "gem_views_docs_path"
     assert_includes sidebar_source, 'text: "Recordables"'
@@ -42,6 +45,7 @@ class DummyDocsTest < Minitest::Test
     assert_match(/text: "Plugins"[\s\S]*icon: :box/, sidebar_source)
     assert_match(/text: "Picker"[\s\S]*icon: :image/, sidebar_source)
     assert_match(/text: "Resizing"[\s\S]*icon: :image/, sidebar_source)
+    assert_match(/text: "URL modes"[\s\S]*icon: :link/, sidebar_source)
     assert_match(/text: "Gem views"[\s\S]*icon: :file/, sidebar_source)
     assert_match(/text: "Recordables"[\s\S]*icon: :folder/, sidebar_source)
     assert_match(/text: "Query"[\s\S]*icon: :file/, sidebar_source)
@@ -144,6 +148,23 @@ class DummyDocsTest < Minitest::Test
     assert_includes controller_source, "config.url_mode = :direct"
     assert_includes controller_source, 'config.direct_url_host = "images.featuredin.press"'
     assert_includes controller_source, "attachment.url_for_variant(:med, mode: :direct, rails_url: preview_path)"
+  end
+
+  def test_dummy_url_modes_page_lists_live_direct_urls
+    url_modes_source = File.read(File.expand_path("dummy/app/views/docs/url_modes.html.erb", __dir__))
+    controller_source = File.read(File.expand_path("dummy/app/controllers/docs_controller.rb", __dir__))
+    initializer = File.read(File.expand_path("dummy/config/initializers/recording_studio_attachable.rb", __dir__))
+
+    assert_includes url_modes_source, 'title: "URL modes"'
+    assert_includes url_modes_source, 'title: "Live direct URLs"'
+    assert_includes url_modes_source, "mode: :direct"
+    assert_includes controller_source, "def url_modes"
+    assert_includes controller_source, "attachment.url_for_variant(variant_name, mode: :direct, rails_url: rails_url)"
+    assert_includes controller_source, "attachment.original_url("
+    assert_includes controller_source, "%i[small med large].each do |variant_name|"
+    assert_includes controller_source, "attachment.variant_named(variant_name).processed"
+    assert_includes initializer, 'config.direct_url_host = "images.example.test"'
+    assert_includes initializer, "config.url_mode = :rails"
   end
 
   def test_dummy_setup_page_covers_active_storage_and_install_flow

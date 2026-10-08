@@ -9,4 +9,5 @@ Use it to verify:
 - `/recording_studio_attachable` mounted engine routes
 - Recording Studio core default layout plus FlatPack sidebar, login, and Stimulus upload UI
 - built-in optional Google Drive addon wiring on the main dummy upload page
-- docs for `url_mode`, `direct_url_host`, and `preprocessed_variants` on the Config and Resizing pages
+- docs for `url_mode`, `direct_url_host`, and `preprocessed_variants` on the Config, Resizing, and URL modes pages
+- press kit JPGs under `db/seed_images/` re-imported when Active Storage blobs are missing from the current Disk service

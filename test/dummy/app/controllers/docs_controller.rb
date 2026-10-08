@@ -13,6 +13,13 @@ class DocsController < ApplicationController
 
   def resizing; end
 
+  def url_modes
+    @direct_url_host = RecordingStudioAttachable.configuration.direct_url_host
+    @url_mode = RecordingStudioAttachable.configuration.url_mode
+    @attachment_recording = first_press_kit_attachment_recording
+    @url_mode_rows = build_url_mode_rows(@attachment_recording)
+  end
+
   def gem_views; end
 
   def query; end
@@ -28,6 +35,64 @@ class DocsController < ApplicationController
   end
 
   private
+
+  def first_press_kit_attachment_recording
+    RecordingStudio::Recording.unscoped
+      .where(recordable_type: "RecordingStudioAttachable::Attachment")
+      .includes(:recordable)
+      .order(:created_at)
+      .find { |recording| recording.recordable&.original_filename.to_s.start_with?("kiln-canister") }
+  end
+
+  def build_url_mode_rows(attachment_recording)
+    return [] if attachment_recording.blank?
+
+    attachment = attachment_recording.recordable
+    return [] unless attachment&.file&.attached?
+
+    # Process common sizes so direct URLs can use variant_record blob keys.
+    # Leave :xlarge unprocessed to show the Rails-path fallback.
+    %i[small med large].each do |variant_name|
+      attachment.variant_named(variant_name).processed
+    end
+
+    original_key = attachment.file.blob.key
+    engine = recording_studio_attachable
+    rows = [
+      {
+        label: "original",
+        original_key: original_key,
+        variant_key: original_key,
+        url: attachment.original_url(
+          mode: :direct,
+          rails_url: engine.attachment_file_path(attachment_recording)
+        ),
+        note: "Direct original uses the source blob key"
+      }
+    ]
+
+    %i[small med large xlarge].each do |variant_name|
+      rails_url = engine.attachment_preview_file_path(attachment_recording, variant_name: variant_name)
+      processed = attachment.variant_processed?(variant_name)
+      variant_image = processed ? attachment.variant_named(variant_name).image : nil
+      variant_key = variant_image.respond_to?(:key) ? variant_image.key : nil
+      url = attachment.url_for_variant(variant_name, mode: :direct, rails_url: rails_url)
+
+      rows << {
+        label: variant_name.to_s,
+        original_key: original_key,
+        variant_key: variant_key,
+        url: url,
+        note: if processed
+                "Direct URL uses the variant blob key (not the original)"
+              else
+                "Unprocessed: falls back to the authorized Rails preview path"
+              end
+      }
+    end
+
+    rows
+  end
 
   def configured_recordable_types
     return [] unless defined?(RecordingStudio) && RecordingStudio.respond_to?(:configuration)

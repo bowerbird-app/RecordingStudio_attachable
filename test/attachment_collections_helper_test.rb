@@ -141,8 +141,8 @@ class AttachmentCollectionsHelperTest < Minitest::Test
       return_to: "/attachment_editor"
     )
 
-    assert_equal 1, html.scan('value="image-1"').size
-    assert_equal 1, html.scan('value="image-2"').size
+    assert_equal 2, html.scan('value="image-1"').size
+    assert_equal 2, html.scan('value="image-2"').size
     assert_includes html, 'data-controller="recording-studio-attachable--collection-display"'
     assert_includes html, 'data-display="list"'
     assert_includes html, 'href="#list"'
@@ -155,14 +155,24 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, 'data-controller="flat-pack--carousel"'
     assert_equal 2, html.scan('data-flat-pack--carousel-target="slide"').size
     assert_equal 2, html.scan('collection-display-target="card"').size
-    assert_equal 2, html.scan("bg-[var(--card-background-color)]").size
-    assert_includes html, "group-data-[display=carousel]:sm:flex-col"
+    assert_equal 4, html.scan("bg-[var(--card-background-color)]").size
     assert_includes html, 'data-recording-studio-attachable--collection-display-target="carousel" hidden'
     assert_includes html, 'aria-label="Previous slide"'
     assert_includes html, 'aria-label="Next slide"'
     refute_includes html, "Go to slide"
-    assert_equal 2, html.scan('data-recording-studio-attachable--collection-display-target="row"').size
-    refute_match(/target="row"[^>]*hidden/, html)
+    list_form = form_markup(html, "attachment-collection-parent-1")
+    slide_form = form_markup(html, "attachment-collection-parent-1-slide-image-2")
+    assert_includes list_form, ">Save<"
+    assert_includes list_form, ">Trash<"
+    assert_includes list_form, 'name="attachment_collection[rows][][caption]"'
+    refute_includes list_form, "slideForm"
+    refute_match(/\bhidden(?:=|\s|>)/, list_form[/<form\b[^>]*>/])
+    assert_includes slide_form, ">Save<"
+    assert_includes slide_form, 'aria-label="Trash"'
+    assert_includes slide_form, 'form="attachment-collection-parent-1-slide-image-2"'
+    refute_includes slide_form, ">Trash<"
+    refute_includes slide_form, ">Order<"
+    assert_equal 4, html.scan('name="attachment_collection[rows][][caption]"').size
     assert_equal 2, html.scan('src="/attachments/image-1/preview/square_med"').size
     assert_includes html, 'src="/attachments/image-2/preview/square_med" alt="Thumbnail 1"'
     assert_includes html, 'src="/attachments/image-1/preview/square_med" alt="Thumbnail 2"'
@@ -183,9 +193,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
       return_to: "/attachment_editor"
     )
 
-    rows = html.scan(/<li[^>]*>/)
-    assert_equal 2, rows.size
-    assert(rows.all? { |row| row.include?("hidden") })
+    refute_includes html, "<li"
     assert_equal 2, html.scan('data-flat-pack--carousel-target="slide"').size
     assert_equal 2, html.scan('collection-display-target="card"').size
     assert_includes html, 'data-display="carousel"'
@@ -217,15 +225,18 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_equal 2, html.scan('name="attachment_collection[rows][][caption]"').size
     assert_includes html, "group-data-[display=carousel]:min-h-[26rem]"
     assert_includes html, "group-data-[display=carousel]:rounded-none"
-    assert_includes html, "group-data-[display=carousel]:w-full"
-    assert_includes html, "group-data-[display=carousel]:sm:items-stretch"
+    assert_equal 2, html.scan(">Save<").size
+    assert_equal 2, html.scan('aria-label="Trash"').size
+    refute_includes html, ">Trash<"
+    refute_includes html, 'id="attachment-collection-parent-1"'
+    assert_includes html, 'id="attachment-collection-parent-1-slide-image-1"'
+    refute_includes html, ">Order<"
     media_tag = html[/<div[^>]*target="slideMedia"[^>]*>/]
     refute_match(/(?<![\w-])hidden(?:=|\s|>)/, media_tag)
     slide_media = html.index('target="slideMedia"')
     preview_in_card = html.index("/preview/square_med", slide_media)
     assert_operator slide_media, :<, preview_in_card
-    assert_operator preview_in_card, :<, html.index('target="previewHome"', slide_media)
-    assert_includes html, 'target="previewHome" hidden'
+    refute_includes html, 'target="previewHome"'
     assert_equal 1, html.scan('data-modal-id="attachment-image-image-1"').size
   end
 
@@ -304,14 +315,24 @@ class AttachmentCollectionsHelperTest < Minitest::Test
       return_to: "/attachment_editor"
     )
 
-    assert_includes html, 'name="attachment_collection[rows][][order]"'
-    assert_includes html, 'value="1"'
-    assert_includes html, 'data-recording-studio-attachable--collection-display-target="listOnly" hidden'
-    assert_includes html, ">Drag<"
-    assert_includes html, ">Order<"
+    list_form = form_markup(html, "attachment-collection-parent-1")
+    slide_form = form_markup(html, "attachment-collection-parent-1-slide-image-1")
+
+    assert_includes list_form, 'name="attachment_collection[rows][][order]"'
+    assert_includes list_form, 'value="1"'
+    assert_includes list_form, ">Drag<"
+    assert_includes list_form, ">Order<"
+    assert_match(/\bhidden(?:=|\s|>)/, list_form[/<form\b[^>]*>/])
+    refute_includes slide_form, 'name="attachment_collection[rows][][order]"'
+    refute_includes slide_form, ">Order<"
+    refute_includes slide_form, ">Drag<"
   end
 
   private
+
+  def form_markup(html, id)
+    html[%r{<form\b[^>]*\bid="#{Regexp.escape(id)}"[^>]*>.*?</form>}m]
+  end
 
   def render_editor(recordings, fields:, sortable:, return_to:, parent: Parent.new("parent-1"))
     query = Object.new

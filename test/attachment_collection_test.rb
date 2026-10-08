@@ -432,6 +432,56 @@ class AttachmentCollectionTest < Minitest::Test
     assert_empty saved.revisions
   end
 
+  def test_one_row_without_order_revises_that_image_and_skips_reorder
+    image_1 = child("image-1", caption: "One")
+    image_2 = child("image-2", caption: "Two")
+    parent = orderable_parent([image_1, image_2])
+    collection = with_membership([image_1, image_2]) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent, association: :images, fields: [:caption], sortable: true
+      )
+    end
+
+    saved = with_membership([image_1, image_2]) do
+      RecordingStudioAttachable::AttachmentCollection.from_params(
+        recording: parent,
+        params: {
+          signed_editor: collection.signed_editor,
+          rows: [{ recording_id: "image-1", caption: "Pier light" }]
+        }
+      )
+    end
+
+    assert_nil saved.reorder_ids
+    assert_equal [{ caption: "Pier light" }], saved.revisions.map(&:changes)
+    assert_equal "image-1", saved.revisions.first.recording.id
+  end
+
+  def test_partial_order_still_raises
+    image_1 = child("image-1", caption: "One")
+    image_2 = child("image-2", caption: "Two")
+    parent = orderable_parent([image_1, image_2])
+    collection = with_membership([image_1, image_2]) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent, association: :images, fields: [:caption], sortable: true
+      )
+    end
+
+    saved = with_membership([image_1, image_2]) do
+      RecordingStudioAttachable::AttachmentCollection.from_params(
+        recording: parent,
+        params: {
+          signed_editor: collection.signed_editor,
+          rows: [{ recording_id: "image-1", order: "1", caption: "Pier light" }]
+        }
+      )
+    end
+
+    error = assert_raises(ArgumentError) { saved.reorder_ids }
+
+    assert_equal "One of these is gone. Reload the page and try again.", error.message
+  end
+
   def test_reorder_ids_are_nil_when_the_splice_matches_the_current_children
     file_a = child("file-a")
     image_1 = child("image-1")

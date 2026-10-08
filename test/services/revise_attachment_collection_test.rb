@@ -116,6 +116,20 @@ class ReviseAttachmentCollectionTest < Minitest::Test
     )
   end
 
+  def test_one_image_save_on_a_sortable_parent_revises_without_reordering
+    image_1 = attachment_recording("image-1", nil, caption: "One")
+    image_2 = attachment_recording("image-2", nil, caption: "Two")
+    parent = orderable_parent([image_1, image_2])
+    [image_1, image_2].each { |image| image.parent_recording = parent }
+    token = editor_token(parent, [image_1, image_2], sortable: true)
+
+    save_collection(parent, [image_1, image_2], token, [{ recording_id: "image-1", caption: "Pier light" }])
+
+    assert_equal [["image-1", "Pier light"]], recorded_captions
+    assert_equal "Two", image_2.recordable.caption
+    assert_empty parent.reorders
+  end
+
   def test_sortable_false_does_not_reorder_when_the_parent_can
     parent = orderable_parent([])
     image = attachment_recording("image-1", parent, caption: "Old")

@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["carousel", "row", "card", "pill", "listOnly", "slideMedia", "preview", "previewHome"]
+  static targets = ["carousel", "list", "pill", "slideForm", "card", "slideMedia", "preview", "previewHome"]
 
   static values = {
     display: String,
@@ -43,18 +43,10 @@ export default class extends Controller {
   apply() {
     const slides = this.displayValue === "carousel"
     this.element.dataset.display = this.displayValue
-
-    this.listOnlyTargets.forEach((element) => {
-      element.hidden = slides
-    })
-
-    this.placeCards(slides)
+    this.placeSlideForms(slides)
 
     if (this.hasCarouselTarget) this.carouselTarget.hidden = !slides
-
-    this.rowTargets.forEach((row) => {
-      row.hidden = slides
-    })
+    if (this.hasListTarget) this.listTarget.hidden = slides
 
     if (slides) {
       window.requestAnimationFrame(() => {
@@ -66,27 +58,23 @@ export default class extends Controller {
     this.markPills()
   }
 
-  placeCards(slides) {
+  placeSlideForms(slides) {
     const slideNodes = this.slideNodes()
     this.separateSlides(slideNodes, slides)
 
-    this.cardTargets.forEach((card, index) => {
-      if (slides) {
-        const slide = slideNodes[index]
-        if (!slide) return
+    this.slideFormTargets.forEach((form, index) => {
+      const slide = slideNodes[index]
+      if (!slide) return
 
-        slide.querySelector(".slide-placeholder")?.parentElement?.remove()
-        if (card.parentElement !== slide) slide.appendChild(card)
+      slide.querySelector(".slide-placeholder")?.parentElement?.remove()
+      if (form.parentElement !== slide) slide.appendChild(form)
 
-        const filePath = card.dataset.lightboxSrc
-        if (filePath) {
-          slide.dataset.lightboxEnabled = "true"
-          slide.dataset.lightboxSrc = filePath
-          slide.dataset.lightboxAlt = card.dataset.lightboxAlt || ""
-        }
-      } else {
-        const row = this.rowTargets[index]
-        if (row && card.parentElement !== row) row.appendChild(card)
+      const card = form.querySelector("[data-recording-studio-attachable--collection-display-target='card']")
+      const filePath = card?.dataset.lightboxSrc
+      if (filePath) {
+        slide.dataset.lightboxEnabled = "true"
+        slide.dataset.lightboxSrc = filePath
+        slide.dataset.lightboxAlt = card.dataset.lightboxAlt || ""
       }
     })
 
@@ -111,12 +99,15 @@ export default class extends Controller {
     previews.forEach((preview, index) => {
       const media = mediaNodes[index]
       const home = homes[index]
-      if (!media || !home) return
+      if (!media) return
 
-      const destination = slides ? media : home
-      if (preview.parentElement !== destination) destination.appendChild(preview)
-      media.hidden = !slides
-      home.hidden = slides
+      if (home) {
+        const destination = slides ? media : home
+        if (preview.parentElement !== destination) destination.appendChild(preview)
+        home.hidden = slides
+      }
+
+      media.hidden = home ? !slides : false
     })
   }
 

@@ -107,6 +107,7 @@ module RecordingStudioAttachable
 
     def reorder_ids
       return unless sortable?
+      return unless @submitted_rows.any? { |row| row.key?(:order) }
 
       AttachmentCollectionOrder.new(
         child_ids: membership.child_ids,

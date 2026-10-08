@@ -285,13 +285,13 @@ class RecordingStudioAttachableTest < Minitest::Test
     controller_path = File.expand_path("../app/javascript/controllers/recording_studio_attachable/collection_display_controller.js", __dir__)
     controller_source = File.read(controller_path)
 
-    assert_includes controller_source, 'static targets = ["carousel", "row", "card", "pill", "listOnly", "slideMedia", "preview", "previewHome"]'
-    assert_includes controller_source, "if (card.parentElement !== slide) slide.appendChild(card)"
+    assert_includes controller_source, 'static targets = ["carousel", "list", "pill", "slideForm", "card", "slideMedia", "preview", "previewHome"]'
+    assert_includes controller_source, "if (form.parentElement !== slide) slide.appendChild(form)"
     assert_includes controller_source, 'slide.style.paddingRight = showGap ? "1rem" : ""'
     assert_includes controller_source, "if (preview.parentElement !== destination) destination.appendChild(preview)"
-    assert_includes controller_source, "media.hidden = !slides"
+    assert_includes controller_source, "media.hidden = home ? !slides : false"
     assert_includes controller_source, "home.hidden = slides"
-    assert_includes controller_source, "if (row && card.parentElement !== row) row.appendChild(card)"
+    assert_includes controller_source, "if (this.hasListTarget) this.listTarget.hidden = slides"
     assert_includes controller_source, "viewport.style.height = `${height + indicatorRoom}px`"
     assert_includes controller_source, 'if (this.displayValue !== "carousel") return'
     assert_includes controller_source, "carousel:change"
@@ -300,9 +300,9 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes controller_source, 'if (tag !== "INPUT" && tag !== "TEXTAREA" && tag !== "SELECT") return'
     assert_includes controller_source, "event.preventDefault()"
     assert_includes controller_source, 'display !== "list" && display !== "carousel"'
-    assert_includes controller_source, "row.hidden = slides"
+    refute_includes controller_source, "row.hidden = slides"
     assert_includes controller_source, "this.carouselTarget.hidden = !slides"
-    assert_includes controller_source, "element.hidden = slides"
+    refute_includes controller_source, "element.hidden = slides"
     refute_includes controller_source, "location"
     refute_includes controller_source, "requestSubmit"
   end

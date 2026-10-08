@@ -3,10 +3,13 @@
 <% else %>
   <% carousel = collection.displays.include?(:carousel) %>
   <% list = collection.displays.include?(:list) %>
+  <% grid = collection.displays.include?(:grid) %>
+  <% interactive = carousel || grid %>
   <% open_slides = carousel && collection.default_display == :carousel %>
+  <% open_grid = grid && collection.default_display == :grid %>
   <% preview_on_slide = carousel && (open_slides || !list) %>
   <div class="flex w-full flex-col gap-4<%= " group" if carousel %>"
-       <% if carousel %>
+       <% if interactive %>
          data-controller="recording-studio-attachable--collection-display"
          data-display="<%= collection.default_display %>"
          data-recording-studio-attachable--collection-display-display-value="<%= collection.default_display %>"
@@ -150,15 +153,23 @@
       </div>
     <% end %>
 
+    <% if grid %>
+      <%= render "recording_studio_attachable/attachment_collections/grid",
+            collection: collection,
+            url: url,
+            return_to: return_to,
+            open_grid: open_grid %>
+    <% end %>
+
     <% if list %>
       <% list_data = { controller: "flat-pack--unsaved-changes" } %>
-      <% list_data[:recording_studio_attachable__collection_display_target] = "list" if carousel %>
+      <% list_data[:recording_studio_attachable__collection_display_target] = "list" if interactive %>
       <%= form_with url: url,
                     method: :patch,
                     id: collection.form_id,
                     class: "flex w-full flex-col gap-4",
                     data: list_data,
-                    html: (open_slides ? { hidden: true } : {}) do %>
+                    html: ((interactive && collection.default_display != :list) ? { hidden: true } : {}) do %>
         <%= hidden_field_tag "attachment_collection[signed_editor]", collection.signed_editor %>
         <% RecordingStudioAttachable::AttachmentFileButton.redirect_params(return_to: return_to).each do |key, value| %>
           <%= hidden_field_tag key, value %>

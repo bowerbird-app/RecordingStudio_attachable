@@ -1,7 +1,8 @@
 <% facts = RecordingStudioAttachable::AttachmentFileFacts.new(attachment) %>
 <% if facts.any? %>
   <%# px-14 keeps this line clear of the round previous and next buttons. %>
-  <div class="flex min-w-0 flex-col gap-3 px-14">
+  <% clear_controls = local_assigns.fetch(:clear_controls, true) %>
+  <div class="flex min-w-0 flex-col gap-3<%= " px-14" if clear_controls %>">
     <% if facts.filename %>
       <p class="truncate text-xs text-(--surface-muted-content-color)"><%= facts.filename %></p>
     <% end %>

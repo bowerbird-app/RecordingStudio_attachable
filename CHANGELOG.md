@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-08
+
+### Added
+- `attachment_collection_editor` accepts `:grid` in `displays`. Grid tiles the pictures at their own proportions. Click a tile to edit that image in a modal. Save writes that image and leaves the modal open. Omit `:grid` to keep the list and slides as they are.
+
+### Upgrade Notes
+- Pass `displays: [:list, :carousel, :grid]` when the host should offer Grid. The switch label is Grid. `displays: [:grid]` is the grid alone, with no switch.
+- Grid uses the natural preview even when `preview:` is `:square`. List and Slides still follow `preview:`.
+- A grid save does not reload the page and does not open the list. The list save still reloads. A grid save leaves order out, so it does not reorder.
+- No migration.
+
 ## [0.9.0] - 2026-10-08
 
 ### Added
@@ -237,7 +248,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.9.1...v0.10.0
 [0.9.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.7.3...v0.8.0
 [0.7.3]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.7.2...v0.7.3

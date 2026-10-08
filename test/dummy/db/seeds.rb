@@ -89,35 +89,28 @@ ensure
   RecordingStudioAccessible.configuration.access_management_authorizer = original_access_authorizer
 end
 
+# Oldest first. The editor shows newest first, so the last shot opens the grid.
 press_kit = [
-  {
-    file: "kiln-canister-open.jpg",
-    name: "Kiln canister, open",
-    caption: "Lid set aside",
-    credit: "Studio North",
-    alt_text: "Smoked glass canister with the brass lid resting beside it"
-  },
-  {
-    file: "kiln-canister-detail.jpg",
-    name: "Kiln canister, detail",
-    caption: "Brass lid",
-    credit: "Studio North",
-    alt_text: "Close view of the brass lid on the smoked glass canister"
-  },
-  {
-    file: "kiln-canister-table.jpg",
-    name: "Kiln canister, table",
-    caption: "On the breakfast table",
-    credit: "Studio North",
-    alt_text: "Smoked glass canister on a linen table beside a cup and napkin"
-  },
-  {
-    file: "kiln-canister-hero.jpg",
-    name: "Kiln canister",
-    caption: "Hero, three-quarter",
-    credit: "Studio North",
-    alt_text: "Smoked glass canister with a brass lid on pale limestone"
-  }
+  { file: "kiln-canister-open.jpg", name: "Kiln canister, open", caption: "Lid set aside", credit: "Studio North", alt_text: "Smoked glass canister with the brass lid resting beside it" },
+  { file: "kiln-canister-detail.jpg", name: "Kiln canister, detail", caption: "Brass lid", credit: "Studio North", alt_text: "Close view of the brass lid on the smoked glass canister" },
+  { file: "kiln-canister-table.jpg", name: "Kiln canister, table", caption: "On the breakfast table", credit: "Studio North", alt_text: "Smoked glass canister on a linen table beside a cup and napkin" },
+  { file: "kiln-canister-kitchen.jpg", name: "Kiln canister, kitchen", caption: "On the counter", credit: "Studio North", alt_text: "Wide view of the smoked glass canister on a pale oak counter" },
+  { file: "kiln-canister-shadow.jpg", name: "Kiln canister, shadow", caption: "Window shadow", credit: "Studio North", alt_text: "Portrait of the smoked glass canister under a diagonal window shadow" },
+  { file: "kiln-canister-pedestal.jpg", name: "Kiln canister, pedestal", caption: "On the pedestal", credit: "Studio North", alt_text: "Tall portrait of the smoked glass canister on a stone pedestal" },
+  { file: "kiln-canister-linen.jpg", name: "Kiln canister, linen", caption: "On the linen", credit: "Studio North", alt_text: "Landscape view of the smoked glass canister on oatmeal linen" },
+  { file: "kiln-canister-pair.jpg", name: "Kiln canister, pair", caption: "Two together", credit: "Studio North", alt_text: "Portrait of two smoked glass canisters on limestone" },
+  { file: "kiln-canister-square-open.jpg", name: "Kiln canister, open square", caption: "Open, square", credit: "Studio North", alt_text: "Square photo of the smoked glass canister with the lid off" },
+  { file: "kiln-canister-shelf.jpg", name: "Kiln canister, shelf", caption: "On the oak shelf", credit: "Studio North", alt_text: "Tall portrait of the smoked glass canister on an oak shelf" },
+  { file: "kiln-canister-side.jpg", name: "Kiln canister, side", caption: "Side profile", credit: "Studio North", alt_text: "Landscape side view of the smoked glass canister" },
+  { file: "kiln-canister-lid-aside.jpg", name: "Kiln canister, lid aside", caption: "Lid set beside", credit: "Studio North", alt_text: "Portrait of the smoked glass canister with the brass lid beside it" },
+  { file: "kiln-canister-morning.jpg", name: "Kiln canister, morning", caption: "Breakfast, wide", credit: "Studio North", alt_text: "Wide breakfast-table view of the smoked glass canister" },
+  { file: "kiln-canister-overhead.jpg", name: "Kiln canister, overhead", caption: "From above", credit: "Studio North", alt_text: "Square photo looking down on the smoked glass canister" },
+  { file: "kiln-canister-window.jpg", name: "Kiln canister, window", caption: "On the sill", credit: "Studio North", alt_text: "Tall portrait of the smoked glass canister on a windowsill" },
+  { file: "kiln-canister-group.jpg", name: "Kiln canister, group", caption: "A row of three", credit: "Studio North", alt_text: "Landscape photo of three smoked glass canisters in a row" },
+  { file: "kiln-canister-tall.jpg", name: "Kiln canister, tall", caption: "Three-quarter, tall", credit: "Studio North", alt_text: "Portrait three-quarter view of the smoked glass canister" },
+  { file: "kiln-canister-square.jpg", name: "Kiln canister, square", caption: "Square, front", credit: "Studio North", alt_text: "Square photo of the smoked glass canister on limestone" },
+  { file: "kiln-canister-hero.jpg", name: "Kiln canister", caption: "Hero, three-quarter", credit: "Studio North", alt_text: "Smoked glass canister with a brass lid on pale limestone" },
+  { file: "kiln-canister-portrait.jpg", name: "Kiln canister, portrait", caption: "Full height", credit: "Studio North", alt_text: "Tall portrait of the smoked glass canister on pale limestone" }
 ]
 press_kit_dir = Rails.root.join("db/seed_images")
 press_kit.each do |shot|

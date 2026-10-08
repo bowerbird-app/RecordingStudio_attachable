@@ -296,6 +296,8 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes controller_source, 'if (this.displayValue !== "carousel") return'
     assert_includes controller_source, "carousel:change"
     assert_includes controller_source, "flatPackCarousel"
+    assert_includes controller_source, "event.stopPropagation()"
+    assert_includes controller_source, 'if (tag !== "INPUT" && tag !== "TEXTAREA" && tag !== "SELECT") return'
     assert_includes controller_source, "event.preventDefault()"
     assert_includes controller_source, 'display !== "list" && display !== "carousel"'
     assert_includes controller_source, "row.hidden = slides"

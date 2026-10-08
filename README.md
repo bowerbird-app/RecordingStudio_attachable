@@ -564,7 +564,7 @@ The switch does not reload the page. There is one set of fields either way. Hidd
 
 Click a preview to open the original file in a modal. Trash sits under the fields as a red button. Slides uses the Flatpack carousel: its previous and next controls move between cards, and its expand control opens the original. One image hides those controls. Every card stays in the form, including the ones off to the side.
 
-Save starts as the default button. Change a caption, credit, alt text, name, or order and it turns primary. Put the fields back and it returns to default. That switch is Flatpack's unsaved-changes behavior on the save form.
+Save starts as the default button. Change a caption, credit, alt text, name, or order and it turns primary. Put the fields back and it returns to default. That switch is Flatpack's unsaved-changes behavior on the save form. The host layout needs `flat_pack/application` so the primary colour paints. On Slides, typing in a field stays there: the space bar and arrow keys do not move the carousel.
 
 `side_preview: true` peeks the next card on the right of the current slide. Omit it, or pass `false`, to keep each card full width. It is not in the signed save token.
 

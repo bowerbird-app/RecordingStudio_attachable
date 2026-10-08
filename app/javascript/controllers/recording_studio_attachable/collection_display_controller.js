@@ -10,16 +10,24 @@ export default class extends Controller {
   }
 
   connect() {
+    this.keepFieldKeys = (event) => {
+      const tag = (event.target?.tagName || "").toUpperCase()
+      if (tag !== "INPUT" && tag !== "TEXTAREA" && tag !== "SELECT") return
+
+      event.stopPropagation()
+    }
     this.onCarouselChange = () => {
       if (this.displayValue !== "carousel") return
 
       this.fitCarousel()
     }
+    this.cardTargets.forEach((card) => card.addEventListener("keydown", this.keepFieldKeys))
     this.element.addEventListener("carousel:change", this.onCarouselChange)
     this.apply()
   }
 
   disconnect() {
+    this.cardTargets.forEach((card) => card.removeEventListener("keydown", this.keepFieldKeys))
     this.element.removeEventListener("carousel:change", this.onCarouselChange)
   }
 

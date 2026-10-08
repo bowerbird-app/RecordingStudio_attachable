@@ -17,8 +17,10 @@ class DummyHomeDemoTest < Minitest::Test
                     application_layout.index('stylesheet_link_tag "flat_pack/variables"')
     assert_operator sidebar_layout.index('stylesheet_link_tag "tailwind.css"'), :<,
                     sidebar_layout.index('stylesheet_link_tag "flat_pack/variables"')
+    assert_includes application_layout, 'stylesheet_link_tag "flat_pack/application"'
     assert_includes application_layout, 'stylesheet_link_tag "flat_pack/rich_text"'
     assert_includes application_layout, 'stylesheet_link_tag "flat_pack/content_editor"'
+    assert_includes sidebar_layout, 'stylesheet_link_tag "flat_pack/application"'
     assert_includes sidebar_layout, 'stylesheet_link_tag "flat_pack/rich_text"'
     assert_includes sidebar_layout, 'stylesheet_link_tag "flat_pack/content_editor"'
   end
@@ -559,6 +561,7 @@ class DummyHomeDemoTest < Minitest::Test
     [application_layout, sidebar_layout, blank_layout].each do |layout|
       assert_includes layout, 'stylesheet_link_tag "application.css"'
       assert_includes layout, 'stylesheet_link_tag "flat_pack/variables"'
+      assert_includes layout, 'stylesheet_link_tag "flat_pack/application"'
       assert_includes layout, 'stylesheet_link_tag "flat_pack/rich_text"'
       assert_includes layout, 'stylesheet_link_tag "flat_pack/content_editor"'
       assert_includes layout, 'stylesheet_link_tag "tailwind.css"'

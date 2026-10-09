@@ -577,7 +577,7 @@ class AttachmentCollectionTest < Minitest::Test
     )
 
     assert_predicate collection, :placement?
-    refute_predicate collection, :inline_fields?
+    refute_respond_to collection, :inline_fields?
     assert_equal "Remove from here", collection.remove_label
     assert_equal "image-1", collection.rows.first.recording.id
     assert_equal "place-1", collection.rows.first.member.id
@@ -585,7 +585,7 @@ class AttachmentCollectionTest < Minitest::Test
     assert_equal 1, collection.rows.first.order
   end
 
-  def test_placement_save_reorders_members_and_skips_caption_revisions
+  def test_placement_save_reorders_members_and_revises_the_photo
     photo = child("image-1", caption: "Pier light")
     first = child("place-1")
     second = child("place-2")
@@ -624,7 +624,9 @@ class AttachmentCollectionTest < Minitest::Test
       )
 
       assert_equal %w[place-2 place-1], saved.reorder_ids
-      assert_empty saved.revisions
+      assert_equal ["image-1"], saved.revisions.map { |revision| revision.recording.id }.uniq
+      assert_includes saved.revisions.map(&:changes), { caption: "Sneaky" }
+      assert_includes saved.revisions.map(&:changes), { caption: "Also sneaky" }
     end
   end
 

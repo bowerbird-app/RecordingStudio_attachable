@@ -98,8 +98,6 @@ module RecordingStudioAttachable
     end
 
     def revisions
-      return [] if placement?
-
       change_pairs.filter_map { |item, changes| Revision.new(recording: item, changes: changes) }
     end
 
@@ -138,8 +136,6 @@ module RecordingStudioAttachable
 
     def placement? = association == :placements
 
-    def inline_fields? = !placement?
-
     def remove_label = placement? ? "Remove from here" : "Trash"
 
     private
@@ -158,7 +154,21 @@ module RecordingStudioAttachable
     end
 
     def change_pairs
-      AttachmentCollectionChanges.new(recordings: display_recordings, fields: fields, submitted_rows: @submitted_rows).pairs
+      AttachmentCollectionChanges.new(
+        recordings: display_recordings,
+        fields: fields,
+        submitted_rows: submitted_rows_for_changes
+      ).pairs
+    end
+
+    def submitted_rows_for_changes
+      return @submitted_rows unless placement?
+
+      members = display_items.index_by { |item| item.member.id.to_s }
+      @submitted_rows.map do |row|
+        item = members[row[:recording_id].to_s]
+        item ? row.merge(recording_id: item.attachment_recording.id) : row
+      end
     end
 
     def display_recordings

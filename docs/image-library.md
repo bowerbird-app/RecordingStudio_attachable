@@ -160,9 +160,9 @@ A photo from another workspace is refused. A photo that is not in a live library
 Reuse Attachable's listing, upload, picker, photo edit, and collection editor screens.
 
 - One library: `library_path(library)` or `recording_library_path(parent, key: :campaign)` opens the existing listing.
-- Host page: `recording_placements_path(parent)` mounts `attachment_collection_editor` with `association: :placements` and the resolved placements. List, Slides, and Grid are the same views used to edit direct images.
-- Add from library opens the existing picker. Upload writes the photo to the chosen library and places it. Remove from here drops the placement and leaves the photo. List reorder uses the existing drag handle and Order field.
-- Editing caption, credit, or alt from a placement opens `attachments#show` for the library photo.
+- Host page: `recording_placements_path(parent)` mounts `attachment_collection_editor` with `association: :placements` and the resolved placements. List, Slides, and Grid are the same views used to edit direct images, including the same Flatpack caption, credit, and alt fields.
+- Add from library opens the existing picker. Upload writes the photo to the chosen library and places it. Remove from here drops the placement and leaves the photo. List reorder uses the existing icon drag handle. Order stays a hidden input.
+- Saving the editor writes caption, credit, and alt on the library photo. `attachments#show` is still the full photo page.
 - The picker switcher shows only when the host passes more than one library.
 - The existing image picker can target a library: `recording_attachment_picker_path(library)`.
 - Photo edit still uses `attachments#show`. Caption, credit, and alt are on that form. If the photo is placed, the page warns how many places use it.

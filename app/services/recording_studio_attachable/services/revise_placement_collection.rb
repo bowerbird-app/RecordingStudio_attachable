@@ -19,17 +19,30 @@ module RecordingStudioAttachable
         sheet = AttachmentCollection.from_params(recording: recording, params: AttachmentCollection.permit(params))
         raise ArgumentError, AttachmentCollection::STALE_FORM unless sheet.placement?
 
+        resolved_actor = resolve_actor(actor)
+        apply_revisions(sheet, resolved_actor)
         ids = sheet.reorder_ids
-        return success(recording) if ids.nil?
+        return success(sheet.revisions.any? ? :saved : recording) if ids.nil?
 
         outcome = ReorderPlacements.call(
           parent_recording: recording,
           ordered_recording_ids: ids,
-          actor: resolve_actor(actor)
+          actor: resolved_actor
         )
         return outcome if outcome.failure?
 
-        success(:reordered)
+        success(sheet.revisions.any? ? :saved : :reordered)
+      end
+
+      def apply_revisions(sheet, resolved_actor)
+        sheet.revisions.each do |revision|
+          result = ReviseAttachmentMetadata.call(
+            attachment_recording: revision.recording,
+            actor: resolved_actor,
+            **revision.changes
+          )
+          raise ArgumentError, result.error if result.failure?
+        end
       end
     end
   end

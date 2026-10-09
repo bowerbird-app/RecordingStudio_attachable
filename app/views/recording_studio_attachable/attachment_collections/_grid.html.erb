@@ -9,35 +9,67 @@
        file_extension: File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || "FILE",
        edit_name: attachment.name.to_s.presence || "image",
        modal_id: "#{collection.form_id}-edit-#{row.member.id}",
-       form_id: "#{collection.form_id}-grid-#{row.member.id}",
-       image_path: attachment_collection_image_path(collection, row, return_to: return_to)
+       form_id: "#{collection.form_id}-grid-#{row.member.id}"
      }
    end %>
 <div data-recording-studio-attachable--collection-display-target="grid" <% unless open_grid %>hidden<% end %>>
   <%= render FlatPack::Grid::Component.new(cols: :auto, gap: :md, align: :start) do %>
     <% tiles.each do |tile| %>
-      <div class="flex w-full flex-col gap-3">
-        <% if collection.inline_fields? %>
-          <button type="button" class="block w-full cursor-pointer overflow-hidden rounded-lg" data-modal-id="<%= tile[:modal_id] %>" aria-label="Edit <%= tile[:edit_name] %>">
-            <% if tile[:preview_path].present? %>
-              <%= image_tag tile[:preview_path], alt: "", class: "block h-auto w-full" %>
-            <% else %>
-              <div class="flex aspect-square w-full items-center justify-center rounded-lg bg-(--surface-background-color) text-(--surface-content-color) shadow-sm ring-1 ring-(--surface-border-color)">
-                <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)"><%= tile[:file_extension] %></span>
-              </div>
-            <% end %>
-          </button>
+      <button type="button" class="block w-full cursor-pointer overflow-hidden rounded-lg" data-modal-id="<%= tile[:modal_id] %>" aria-label="Edit <%= tile[:edit_name] %>">
+        <% if tile[:preview_path].present? %>
+          <%= image_tag tile[:preview_path], alt: "", class: "block h-auto w-full" %>
         <% else %>
-          <a href="<%= tile[:image_path] %>" class="block w-full cursor-pointer overflow-hidden rounded-lg" aria-label="Edit <%= tile[:edit_name] %>">
-            <% if tile[:preview_path].present? %>
-              <%= image_tag tile[:preview_path], alt: "", class: "block h-auto w-full" %>
-            <% else %>
-              <div class="flex aspect-square w-full items-center justify-center rounded-lg bg-(--surface-background-color) text-(--surface-content-color) shadow-sm ring-1 ring-(--surface-border-color)">
-                <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)"><%= tile[:file_extension] %></span>
-              </div>
+          <div class="flex aspect-square w-full items-center justify-center rounded-lg bg-(--surface-background-color) text-(--surface-content-color) shadow-sm ring-1 ring-(--surface-border-color)">
+            <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)"><%= tile[:file_extension] %></span>
+          </div>
+        <% end %>
+      </button>
+    <% end %>
+  <% end %>
+
+  <% tiles.each do |tile| %>
+    <%= form_with url: url,
+                  method: :patch,
+                  id: tile[:form_id],
+                  data: {
+                    controller: "flat-pack--unsaved-changes",
+                    turbo: false,
+                    action: "submit->recording-studio-attachable--collection-display#saveSlide",
+                    recording_studio_attachable__collection_display_target: "gridForm"
+                  } do %>
+      <%= hidden_field_tag "attachment_collection[signed_editor]", collection.signed_editor %>
+      <% RecordingStudioAttachable::AttachmentFileButton.redirect_params(return_to: return_to).each do |key, value| %>
+        <%= hidden_field_tag key, value %>
+      <% end %>
+      <%= render FlatPack::Modal::Component.new(id: tile[:modal_id], title: tile[:attachment].name.presence || "Image", size: :xl, scroll: :page) do |modal| %>
+        <% modal.body do %>
+          <div class="flex flex-col gap-4">
+            <% if tile[:file_path].present? %>
+              <%= image_tag tile[:file_path], alt: tile[:attachment].name.to_s, class: "mx-auto block h-auto w-full" %>
             <% end %>
-          </a>
-          <div class="inline-flex">
+            <%= render "recording_studio_attachable/attachment_collections/file_facts",
+                  attachment: tile[:attachment],
+                  clear_controls: false %>
+            <%= render "recording_studio_attachable/attachment_collections/fields",
+                  collection: collection,
+                  row: tile[:row],
+                  form_id: tile[:form_id],
+                  show_order: false %>
+          </div>
+        <% end %>
+        <% modal.footer do %>
+          <div class="flex w-full items-center justify-between gap-4">
+            <div class="inline-flex items-center gap-3">
+              <%= render FlatPack::Button::Component.new(
+                    text: "Save",
+                    style: :default,
+                    size: :md,
+                    type: "submit",
+                    form: tile[:form_id],
+                    data: { flat_pack__unsaved_changes_target: "submit" }
+                  ) %>
+              <p class="text-sm text-(--surface-muted-content-color)" data-save-status role="status" hidden></p>
+            </div>
             <%= render FlatPack::Button::Component.new(
                   text: collection.remove_label,
                   icon: "trash",
@@ -48,66 +80,6 @@
                   form: "#{collection.form_id}-trash-#{tile[:row].member.id}"
                 ) %>
           </div>
-        <% end %>
-      </div>
-    <% end %>
-  <% end %>
-
-  <% if collection.inline_fields? %>
-    <% tiles.each do |tile| %>
-      <%= form_with url: url,
-                    method: :patch,
-                    id: tile[:form_id],
-                    data: {
-                      controller: "flat-pack--unsaved-changes",
-                      turbo: false,
-                      action: "submit->recording-studio-attachable--collection-display#saveSlide",
-                      recording_studio_attachable__collection_display_target: "gridForm"
-                    } do %>
-        <%= hidden_field_tag "attachment_collection[signed_editor]", collection.signed_editor %>
-        <% RecordingStudioAttachable::AttachmentFileButton.redirect_params(return_to: return_to).each do |key, value| %>
-          <%= hidden_field_tag key, value %>
-        <% end %>
-        <%= render FlatPack::Modal::Component.new(id: tile[:modal_id], title: tile[:attachment].name.presence || "Image", size: :xl, scroll: :page) do |modal| %>
-          <% modal.body do %>
-            <div class="flex flex-col gap-4">
-              <% if tile[:file_path].present? %>
-                <%= image_tag tile[:file_path], alt: tile[:attachment].name.to_s, class: "mx-auto block h-auto w-full" %>
-              <% end %>
-              <%= render "recording_studio_attachable/attachment_collections/file_facts",
-                    attachment: tile[:attachment],
-                    clear_controls: false %>
-              <%= render "recording_studio_attachable/attachment_collections/fields",
-                    collection: collection,
-                    row: tile[:row],
-                    form_id: tile[:form_id],
-                    show_order: false %>
-            </div>
-          <% end %>
-          <% modal.footer do %>
-            <div class="flex w-full items-center justify-between gap-4">
-              <div class="inline-flex items-center gap-3">
-                <%= render FlatPack::Button::Component.new(
-                      text: "Save",
-                      style: :default,
-                      size: :md,
-                      type: "submit",
-                      form: tile[:form_id],
-                      data: { flat_pack__unsaved_changes_target: "submit" }
-                    ) %>
-                <p class="text-sm text-(--surface-muted-content-color)" data-save-status role="status" hidden></p>
-              </div>
-              <%= render FlatPack::Button::Component.new(
-                    text: collection.remove_label,
-                    icon: "trash",
-                    icon_only: true,
-                    style: :danger,
-                    size: :md,
-                    type: "submit",
-                    form: "#{collection.form_id}-trash-#{tile[:row].member.id}"
-                  ) %>
-            </div>
-          <% end %>
         <% end %>
       <% end %>
     <% end %>

@@ -42,6 +42,8 @@ module RecordingStudioAttachable
         params: params,
         actor: current_attachable_actor
       )
+      return render_slide_save(result) if stay_on_slide?
+
       redirect_to recording_placements_path(recording, attachment_navigation_params),
                   collection_flash(result)
     end

@@ -607,7 +607,7 @@ Replace never navigates to the attachment details screen. Keep `attachments#show
 
 ### Edit many images
 
-`attachment_collection_editor` edits the direct images, files, or attachments on a parent and saves the rows that changed. Pass `association: :placements` and `items:` (resolved placements) to render the same List, Slides, and Grid for a host page that points at library photos. Caption, credit, and alt text belong to the attachment snapshot, so two uses of the same file can differ. Nothing is written onto the blob. `:name` edits the existing name. There is no title column. From a placement, Edit opens the existing photo page. Remove from here drops the pointer.
+`attachment_collection_editor` edits the direct images, files, or attachments on a parent and saves the rows that changed. Pass `association: :placements` and `items:` (resolved placements) to render the same List, Slides, and Grid for a host page that points at library photos. Caption, credit, and alt use the same Flatpack fields. Saving a placement writes those on the library photo. Nothing is written onto the blob. `:name` edits the existing name. There is no title column. Remove from here drops the pointer.
 
 ```ruby
 attachment_collection_editor(

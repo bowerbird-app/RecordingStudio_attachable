@@ -117,37 +117,22 @@
                 <% card.body do %>
                   <div class="flex flex-col gap-4">
                     <%= render "recording_studio_attachable/attachment_collections/file_facts", attachment: attachment %>
-                    <% if collection.inline_fields? %>
-                      <%= render "recording_studio_attachable/attachment_collections/fields",
-                            collection: collection,
-                            row: row,
-                            form_id: slide_form_id,
-                            show_order: false %>
-                    <% else %>
-                      <%= render "recording_studio_attachable/attachment_collections/values",
-                            collection: collection,
-                            row: row %>
-                    <% end %>
+                    <%= render "recording_studio_attachable/attachment_collections/fields",
+                          collection: collection,
+                          row: row,
+                          form_id: slide_form_id,
+                          show_order: false %>
                     <div class="flex items-center justify-between gap-4">
                       <div class="inline-flex items-center gap-3">
-                        <% if collection.inline_fields? %>
-                          <%= render FlatPack::Button::Component.new(
-                                text: "Save",
-                                style: :default,
-                                size: :md,
-                                type: "submit",
-                                form: slide_form_id,
-                                data: { flat_pack__unsaved_changes_target: "submit" }
-                              ) %>
-                          <p class="text-sm text-(--surface-muted-content-color)" data-save-status role="status" hidden></p>
-                        <% else %>
-                          <%= render FlatPack::Button::Component.new(
-                                text: "Edit",
-                                style: :secondary,
-                                size: :md,
-                                href: attachment_collection_image_path(collection, row, return_to: return_to)
-                              ) %>
-                        <% end %>
+                        <%= render FlatPack::Button::Component.new(
+                              text: "Save",
+                              style: :default,
+                              size: :md,
+                              type: "submit",
+                              form: slide_form_id,
+                              data: { flat_pack__unsaved_changes_target: "submit" }
+                            ) %>
+                        <p class="text-sm text-(--surface-muted-content-color)" data-save-status role="status" hidden></p>
                       </div>
                       <%= render FlatPack::Button::Component.new(
                             text: collection.remove_label,
@@ -203,6 +188,8 @@
                     <% if collection.sortable? %>
                       <%= render FlatPack::Button::Component.new(
                         text: "Drag",
+                        icon: "bars-2",
+                        icon_only: true,
                         style: :ghost,
                         size: :md,
                         type: "button",
@@ -226,31 +213,11 @@
                     </div>
 
                     <div class="flex min-w-0 flex-1 flex-col gap-4">
-                      <% if collection.inline_fields? %>
-                        <%= render "recording_studio_attachable/attachment_collections/fields",
-                              collection: collection,
-                              row: row,
-                              form_id: collection.form_id,
-                              show_order: collection.sortable? %>
-                      <% else %>
-                        <%= render "recording_studio_attachable/attachment_collections/values",
-                              collection: collection,
-                              row: row %>
-                        <% if collection.sortable? %>
-                          <%= render "recording_studio_attachable/attachment_collections/fields",
-                                collection: collection,
-                                row: row,
-                                form_id: collection.form_id,
-                                show_order: true,
-                                order_only: true %>
-                        <% end %>
-                        <%= render FlatPack::Button::Component.new(
-                              text: "Edit",
-                              style: :secondary,
-                              size: :md,
-                              href: attachment_collection_image_path(collection, row, return_to: return_to)
-                            ) %>
-                      <% end %>
+                      <%= render "recording_studio_attachable/attachment_collections/fields",
+                            collection: collection,
+                            row: row,
+                            form_id: collection.form_id,
+                            show_order: collection.sortable? %>
                       <div class="inline-flex">
                         <%= render FlatPack::Button::Component.new(
                               text: collection.remove_label,
@@ -269,18 +236,16 @@
           <% end %>
         </ol>
 
-        <% if collection.inline_fields? || collection.sortable? %>
-          <div class="inline-flex">
-            <%= render FlatPack::Button::Component.new(
-                  text: "Save",
-                  style: :default,
-                  size: :md,
-                  type: "submit",
-                  form: collection.form_id,
-                  data: { flat_pack__unsaved_changes_target: "submit" }
-                ) %>
-          </div>
-        <% end %>
+        <div class="inline-flex">
+          <%= render FlatPack::Button::Component.new(
+                text: "Save",
+                style: :default,
+                size: :md,
+                type: "submit",
+                form: collection.form_id,
+                data: { flat_pack__unsaved_changes_target: "submit" }
+              ) %>
+        </div>
       <% end %>
     <% end %>
   </div>

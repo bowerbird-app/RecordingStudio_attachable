@@ -36,6 +36,19 @@ module RecordingStudioAttachable
       { notice: t("recording_studio_attachable.attachments.updated") }
     end
 
+    def stay_on_slide?
+      params[:stay] == "slide" && request.xhr? && request.format.json?
+    end
+
+    def render_slide_save(result)
+      if result.success?
+        render json: { saved: true }, status: :ok
+        return
+      end
+
+      render json: { saved: false, error: result.error.presence || "Could not save." }, status: :unprocessable_entity
+    end
+
     def authorize_placement_action!(action, recording)
       RecordingStudioAttachable::Authorization.authorize_placement!(
         action: action,

@@ -244,7 +244,10 @@ class ImageLibraryTest < Minitest::Test
   private
 
   def stub_library_class!
-    return if defined?(RecordingStudioAttachable::Library)
+    if RecordingStudioAttachable.const_defined?(:Library)
+      @original_library = RecordingStudioAttachable.const_get(:Library)
+      RecordingStudioAttachable.send(:remove_const, :Library)
+    end
 
     RecordingStudioAttachable.const_set(
       :Library,
@@ -256,7 +259,6 @@ class ImageLibraryTest < Minitest::Test
         end
       end
     )
-    @created_library_stub = true
   end
 
   def stub_studio!
@@ -274,8 +276,9 @@ class ImageLibraryTest < Minitest::Test
   end
 
   def restore_studio!
-    return unless @created_library_stub && RecordingStudioAttachable.const_defined?(:Library)
+    return unless RecordingStudioAttachable.const_defined?(:Library)
 
     RecordingStudioAttachable.send(:remove_const, :Library)
+    RecordingStudioAttachable.const_set(:Library, @original_library) if @original_library
   end
 end

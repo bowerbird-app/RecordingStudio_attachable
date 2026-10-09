@@ -37,7 +37,7 @@ module RecordingStudioAttachable
       if RecordingStudioAttachable::Placements.library_recording?(parent_or_library)
         attachable_routes.library_path(parent_or_library, **options)
       else
-        attachable_routes.recording_library_path(parent_or_library, { key: key }.merge(options))
+        attachable_routes.recording_library_path(parent_or_library, key: key, **options)
       end
     end
 

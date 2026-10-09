@@ -22,10 +22,9 @@ class ImageLibraryTest < ActionDispatch::IntegrationTest
     get workspace_images_path
     assert_response :redirect
     follow_redirect!
-
-    assert_includes path, "/libraries/#{library.id}"
-    follow_redirect! if response.redirect?
-    assert_includes path, "/attachments"
+    assert_includes path, "/recordings/#{root.id}/library"
+    follow_redirect!
+    assert_includes path, "/recordings/#{library.id}/attachments"
     assert_includes response.body, "Library"
   end
 
@@ -39,10 +38,10 @@ class ImageLibraryTest < ActionDispatch::IntegrationTest
     get campaign_images_path
     assert_response :redirect
     follow_redirect!
-
-    assert_includes path, "/libraries/#{library.id}"
-    follow_redirect! if response.redirect?
-    assert_includes path, "/attachments"
+    assert_includes path, "/recordings/#{root.id}/library"
+    assert_includes request.fullpath, "key=campaign"
+    follow_redirect!
+    assert_includes path, "/recordings/#{library.id}/attachments"
   end
 
   test "gallery show opens placements for the seeded gallery" do

@@ -198,6 +198,28 @@ class ImageLibraryTest < Minitest::Test
     refute_respond_to recording, :default_library
   end
 
+  def test_library_label_uses_host_config
+    original = RecordingStudioAttachable.configuration.library_label
+    RecordingStudioAttachable.configuration.library_label = ->(key) { key == "campaign" ? "Ads" : "Images" }
+
+    assert_equal "Ads", RecordingStudioAttachable::Services::LibraryQuery.label_for_key(:campaign)
+    assert_equal "Images", RecordingStudioAttachable::Services::LibraryQuery.label_for_key(:default)
+  ensure
+    RecordingStudioAttachable.configuration.library_label = original
+  end
+
+  def test_image_library_parent_walks_up_to_an_enabled_parent
+    root = Root.new(id: "root-1", recordable_type: "Workspace")
+    gallery = Root.new(id: "gallery-1", recordable_type: "Gallery", root_recording: root)
+    gallery.define_singleton_method(:parent_recording) { root }
+
+    RecordingStudioAttachable::Authorization.stub(:library_enabled?, lambda { |recording:|
+      recording.recordable_type == "Workspace"
+    }) do
+      assert_equal root, RecordingStudioAttachable::Services::LibraryQuery.image_library_parent_for(gallery)
+    end
+  end
+
   def test_libraries_in_root_and_title
     root = Root.new(id: "root-1", recordable_type: "Workspace")
     library = LibraryRecording.new(

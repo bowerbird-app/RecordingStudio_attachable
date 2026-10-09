@@ -1,0 +1,133 @@
+<% navigation_params = attachment_navigation_params %>
+
+<div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+  <%= render FlatPack::PageNav::Component.new(
+    back_icon: "arrow-left",
+    back_label: "Back",
+    anchor_url: attachment_page_nav_anchor_url(fallback: main_app.root_path),
+    anchor_label: "Return to source page"
+  ) %>
+
+  <%= render FlatPack::PageTitle::Component.new(
+    title: t("recording_studio_attachable.libraries.title"),
+    subtitle: t("recording_studio_attachable.libraries.subtitle"),
+    variant: :h1
+  ) %>
+
+  <% if @can_manage %>
+    <%= form_with url: recording_libraries_path(@parent_recording, navigation_params), method: :post, class: "flex flex-col gap-4" do %>
+      <%= render FlatPack::TextInput::Component.new(
+        name: "library[name]",
+        label: t("recording_studio_attachable.libraries.name"),
+        required: true
+      ) %>
+      <%= render FlatPack::TextInput::Component.new(
+        name: "library[description]",
+        label: t("recording_studio_attachable.libraries.description")
+      ) %>
+      <%= render FlatPack::Button::Component.new(
+        text: t("recording_studio_attachable.libraries.create"),
+        style: :primary,
+        size: :md,
+        icon: "plus",
+        type: "submit"
+      ) %>
+    <% end %>
+  <% end %>
+
+  <% if @libraries.any? %>
+    <div class="flex flex-col gap-4">
+      <% @libraries.each do |library| %>
+        <% usages = @library_usages.fetch(library.id.to_s, []) %>
+        <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
+          <% card.body do %>
+            <div class="flex flex-col gap-4">
+              <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                <div class="min-w-0 space-y-1">
+                  <p class="text-sm font-semibold text-(--surface-content-color)"><%= library_title_for(library) %></p>
+                  <% if library_description_for(library).present? %>
+                    <p class="text-sm text-(--surface-muted-content-color)"><%= library_description_for(library) %></p>
+                  <% end %>
+                  <p class="text-xs text-(--surface-muted-content-color)">
+                    <%= [
+                      t("recording_studio_attachable.libraries.photo_count", count: library_photo_count(library)),
+                      (t("recording_studio_attachable.libraries.used_in", count: usages.size) if usages.any?),
+                      (t("recording_studio_attachable.libraries.default") if default_library?(library))
+                    ].compact.join(" · ") %>
+                  </p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                  <%= render FlatPack::Button::Component.new(
+                    text: t("recording_studio_attachable.libraries.open"),
+                    style: :secondary,
+                    size: :sm,
+                    href: library_path(library, navigation_params.merge(redirect_mode: "return_to", return_to: recording_libraries_path(@parent_recording, navigation_params)))
+                  ) %>
+                  <% if @can_remove %>
+                    <%= button_to destroy_library_path(library, navigation_params),
+                                  method: :delete,
+                                  data: { turbo_confirm: usages.any? ? t("recording_studio_attachable.libraries.trash_in_use") : nil } do %>
+                      <%= render FlatPack::Button::Component.new(
+                        text: t("recording_studio_attachable.libraries.trash"),
+                        style: :secondary,
+                        size: :sm,
+                        type: "submit"
+                      ) %>
+                    <% end %>
+                  <% end %>
+                </div>
+              </div>
+
+              <% if usages.any? %>
+                <%= render FlatPack::Alert::Component.new(
+                  title: t("recording_studio_attachable.libraries.used_in", count: usages.size),
+                  description: [
+                    usages.map(&:label).to_sentence,
+                    t("recording_studio_attachable.libraries.trash_in_use")
+                  ].compact_blank.join(" "),
+                  style: :warning
+                ) %>
+              <% end %>
+
+              <% if @can_manage %>
+                <%= form_with url: library_path(library, navigation_params), method: :patch, class: "flex flex-col gap-3 sm:flex-row sm:items-end" do %>
+                  <%= render FlatPack::TextInput::Component.new(
+                    name: "library[name]",
+                    label: t("recording_studio_attachable.libraries.name"),
+                    value: library_title_for(library),
+                    required: true
+                  ) %>
+                  <%= render FlatPack::TextInput::Component.new(
+                    name: "library[description]",
+                    label: t("recording_studio_attachable.libraries.description"),
+                    value: library_description_for(library)
+                  ) %>
+                  <%= render FlatPack::Button::Component.new(
+                    text: t("recording_studio_attachable.libraries.rename"),
+                    style: :secondary,
+                    size: :md,
+                    type: "submit"
+                  ) %>
+                <% end %>
+              <% end %>
+            </div>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+  <% else %>
+    <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
+      <% card.body do %>
+        <div class="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center">
+          <%= render FlatPack::PageTitle::Component.new(
+            title: t("recording_studio_attachable.libraries.empty_title"),
+            subtitle: t("recording_studio_attachable.libraries.empty"),
+            variant: :h3,
+            class: "mb-0 pb-0"
+          ) %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

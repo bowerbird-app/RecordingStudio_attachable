@@ -2,8 +2,11 @@
 
 require "test_helper"
 require_relative "../app/services/recording_studio_attachable/services/application_service"
+require_relative "../app/services/recording_studio_attachable/services/library_query"
 require_relative "../app/services/recording_studio_attachable/services/find_or_create_library"
 require_relative "../app/services/recording_studio_attachable/services/place_library_image"
+require_relative "../app/services/recording_studio_attachable/services/library_usage"
+require_relative "../app/services/recording_studio_attachable/services/purge_library_placements"
 require_relative "../app/services/recording_studio_attachable/services/remove_placement"
 require_relative "../app/services/recording_studio_attachable/services/reorder_placements"
 require_relative "../app/services/recording_studio_attachable/services/resolve_placements"
@@ -71,12 +74,13 @@ class PlacementsTest < Minitest::Test
 
   def test_place_library_image_records_a_pointer_and_appends_order
     root = Recording.new(id: "root-1", recordable_type: "Workspace")
-    library = Recording.new(id: "lib-1", recordable_type: "RecordingStudioAttachable::Library", parent_recording_id: "root-1")
+    library = Recording.new(id: "lib-1", recordable_type: "RecordingStudioAttachable::Library", parent_recording_id: "root-1", root_recording_id: "root-1")
     parent = Recording.new(id: "gallery-1", recordable_type: "Gallery", root_recording_id: "root-1", root_recording: root)
     attachment = Recording.new(
       id: "att-1",
       recordable_type: "RecordingStudioAttachable::Attachment",
       parent_recording_id: "lib-1",
+      parent_recording: library,
       root_recording_id: "root-1",
       recordable: Attachment.new(id: "snap-1", name: "Hero")
     )
@@ -97,12 +101,14 @@ class PlacementsTest < Minitest::Test
   def test_place_library_image_refuses_another_workspace
     root = Recording.new(id: "root-1", recordable_type: "Workspace")
     other = Recording.new(id: "root-2", recordable_type: "Workspace")
-    library = Recording.new(id: "lib-1", recordable_type: "RecordingStudioAttachable::Library", parent_recording_id: "root-1")
+    library = Recording.new(id: "lib-1", recordable_type: "RecordingStudioAttachable::Library", parent_recording_id: "root-1", root_recording_id: "root-1")
+    other_library = Recording.new(id: "lib-2", recordable_type: "RecordingStudioAttachable::Library", parent_recording_id: "root-2", root_recording_id: "root-2")
     parent = Recording.new(id: "gallery-1", recordable_type: "Gallery", root_recording_id: "root-1", root_recording: root)
     attachment = Recording.new(
       id: "att-1",
       recordable_type: "RecordingStudioAttachable::Attachment",
       parent_recording_id: "lib-2",
+      parent_recording: other_library,
       root_recording_id: "root-2",
       root_recording: other,
       recordable: Attachment.new(id: "snap-1", name: "Hero")
@@ -122,12 +128,14 @@ class PlacementsTest < Minitest::Test
 
   def test_place_library_image_refuses_a_photo_that_is_not_in_the_library
     root = Recording.new(id: "root-1", recordable_type: "Workspace")
-    library = Recording.new(id: "lib-1", recordable_type: "RecordingStudioAttachable::Library", parent_recording_id: "root-1")
+    library = Recording.new(id: "lib-1", recordable_type: "RecordingStudioAttachable::Library", parent_recording_id: "root-1", root_recording_id: "root-1")
+    page = Recording.new(id: "page-1", recordable_type: "Page", parent_recording_id: "root-1", root_recording_id: "root-1")
     parent = Recording.new(id: "gallery-1", recordable_type: "Gallery", root_recording_id: "root-1", root_recording: root)
     attachment = Recording.new(
       id: "att-1",
       recordable_type: "RecordingStudioAttachable::Attachment",
       parent_recording_id: "page-1",
+      parent_recording: page,
       root_recording_id: "root-1",
       recordable: Attachment.new(id: "snap-1", name: "Page photo")
     )
@@ -140,17 +148,46 @@ class PlacementsTest < Minitest::Test
       )
 
       assert result.failure?
-      assert_match(/not in this workspace library/, result.error)
+      assert_match(/not in a library in this workspace/, result.error)
     end
+  end
+
+  def test_place_library_image_accepts_a_photo_from_another_library_in_the_same_workspace
+    root = Recording.new(id: "root-1", recordable_type: "Workspace")
+    campaign = Recording.new(
+      id: "lib-2",
+      recordable_type: "RecordingStudioAttachable::Library",
+      parent_recording_id: "root-1",
+      root_recording_id: "root-1"
+    )
+    parent = Recording.new(id: "gallery-1", recordable_type: "Gallery", root_recording_id: "root-1", root_recording: root)
+    attachment = Recording.new(
+      id: "att-2",
+      recordable_type: "RecordingStudioAttachable::Attachment",
+      parent_recording_id: "lib-2",
+      parent_recording: campaign,
+      root_recording_id: "root-1",
+      recordable: Attachment.new(id: "snap-2", name: "Campaign")
+    )
+
+    result = RecordingStudioAttachable::Services::PlaceLibraryImage.call(
+      parent_recording: parent,
+      attachment_recording: attachment,
+      actor: :ada
+    )
+
+    assert result.success?
+    assert_equal "att-2", result.value.recordable.attachment_recording_id
   end
 
   def test_resolve_skips_trashed_images_and_keeps_the_placement
     root = Recording.new(id: "root-1", recordable_type: "Workspace")
-    library = Recording.new(id: "lib-1", recordable_type: "RecordingStudioAttachable::Library", parent_recording_id: "root-1")
+    library = Recording.new(id: "lib-1", recordable_type: "RecordingStudioAttachable::Library", parent_recording_id: "root-1", root_recording_id: "root-1")
     live_attachment = Recording.new(
       id: "att-live",
       recordable_type: "RecordingStudioAttachable::Attachment",
       parent_recording_id: "lib-1",
+      parent_recording: library,
       root_recording_id: "root-1",
       recordable: Attachment.new(id: "snap-live", name: "Live")
     )
@@ -158,6 +195,7 @@ class PlacementsTest < Minitest::Test
       id: "att-trash",
       recordable_type: "RecordingStudioAttachable::Attachment",
       parent_recording_id: "lib-1",
+      parent_recording: library,
       root_recording_id: "root-1",
       trashed_at: Time.now,
       recordable: Attachment.new(id: "snap-trash", name: "Trashed")
@@ -302,12 +340,13 @@ class PlacementsTest < Minitest::Test
 
   def test_upload_to_library_and_place_uploads_then_places
     root = Recording.new(id: "root-1", recordable_type: "Workspace")
-    library = Recording.new(id: "lib-1", recordable_type: "RecordingStudioAttachable::Library", parent_recording_id: "root-1")
+    library = Recording.new(id: "lib-1", recordable_type: "RecordingStudioAttachable::Library", parent_recording_id: "root-1", root_recording_id: "root-1")
     parent = Recording.new(id: "gallery-1", recordable_type: "Gallery", root_recording_id: "root-1", root_recording: root)
     uploaded = Recording.new(
       id: "att-new",
       recordable_type: "RecordingStudioAttachable::Attachment",
       parent_recording_id: "lib-1",
+      parent_recording: library,
       root_recording_id: "root-1",
       recordable: Attachment.new(id: "snap-new", name: "New")
     )
@@ -399,6 +438,53 @@ class PlacementsTest < Minitest::Test
     assert_same recording, captured
   end
 
+  def test_storage_release_purges_placements_for_a_library
+    recording = Object.new
+    recording.extend(RecordingStudioAttachable::StorageRelease)
+    recording.define_singleton_method(:recordable_type) { "RecordingStudioAttachable::Library" }
+    captured = nil
+    RecordingStudioAttachable::Placements.stub(:purge_library, ->(value) { captured = value }) do
+      recording.recording_studio_attachable_purge_placements
+    end
+
+    assert_same recording, captured
+  end
+
+  def test_library_usage_rolls_up_places_across_photos
+    library = Recording.new(id: "lib-1", recordable_type: "RecordingStudioAttachable::Library")
+    attachment = Recording.new(id: "att-1", recordable_type: "RecordingStudioAttachable::Attachment")
+    parent = Recording.new(id: "gallery-1", recordable_type: "Gallery", recordable: ParentRecordable.new(title: "Kiln shots"))
+    usage = RecordingStudioAttachable::Placements::Usage.new(
+      placement_recording: Recording.new(id: "place-1"),
+      parent_recording: parent,
+      label: "Kiln shots"
+    )
+    attachments = [attachment]
+    attachments.define_singleton_method(:includes) { |*| attachments }
+
+    recording_class.stub(:where, attachments) do
+      RecordingStudioAttachable::Services::PlacementUsage.stub(:call, success_result([usage])) do
+        usages = RecordingStudioAttachable::Placements.usage_for_library(library)
+
+        assert_equal 1, usages.size
+        assert_equal "Kiln shots", usages.first.label
+      end
+    end
+  end
+
+  def test_picker_libraries_use_the_host_list
+    parent = Recording.new(id: "gallery-1", recordable_type: "Gallery")
+    allowed = Recording.new(id: "lib-1", recordable_type: "RecordingStudioAttachable::Library")
+    hidden = Recording.new(id: "lib-2", recordable_type: "RecordingStudioAttachable::Library")
+    original = RecordingStudioAttachable.configuration.placement_picker_libraries
+    RecordingStudioAttachable.configuration.placement_picker_libraries = ->(_parent) { [allowed] }
+
+    assert_equal [allowed], RecordingStudioAttachable::Placements.picker_libraries_for(parent)
+    refute_includes RecordingStudioAttachable::Placements.picker_libraries_for(parent), hidden
+  ensure
+    RecordingStudioAttachable.configuration.placement_picker_libraries = original
+  end
+
   private
 
   def stub_placement_class!
@@ -457,7 +543,9 @@ class PlacementsTest < Minitest::Test
   end
 
   def with_library(library, &)
-    recording_class.stub(:where, [library], &)
+    recording_class.stub(:where, [library]) do
+      recording_class.stub(:find_by, ->(**kwargs) { kwargs[:id].to_s == library.id.to_s ? library : nil }, &)
+    end
   end
 
   def success_result(value)

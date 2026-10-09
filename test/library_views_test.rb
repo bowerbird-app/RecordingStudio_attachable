@@ -21,6 +21,8 @@ class LibraryViewsTest < Minitest::Test
     assert_includes source, "recording-studio-attachable--attachment-image-picker"
     assert_includes source, "recording_attachment_picker_path(@library)"
     assert_includes source, "recording_attachments_path(@library)"
+    assert_includes source, "FlatPack::Select::Component"
+    assert_includes source, "switchLibrary"
     assert_includes source, 'text: t("recording_studio_attachable.placements.add")'
     assert_includes source, 'text: t("recording_studio_attachable.placements.upload")'
     assert_includes source, "attachment_image_pickers/modal"
@@ -53,11 +55,24 @@ class LibraryViewsTest < Minitest::Test
       File.expand_path("../app/javascript/controllers/recording_studio_attachable/library_placement_controller.js", __dir__)
     )
 
-    assert_includes source, 'static targets = ["form", "attachmentId"]'
+    assert_includes source, 'static targets = ["form", "attachmentId", "uploadLibraryId", "switcher"]'
     assert_includes source, "addFromLibrary(event)"
     assert_includes source, "this.formTarget.requestSubmit()"
     assert_includes source, "browseUpload(event)"
+    assert_includes source, "switchLibrary(event)"
     assert_includes source, 'form?.querySelector("input[type=file]")'
+  end
+
+  def test_libraries_index_lists_creates_and_renames
+    source = File.read(File.expand_path("../app/views/recording_studio_attachable/libraries/index.html.erb", __dir__))
+
+    assert_includes source, 'title: t("recording_studio_attachable.libraries.title")'
+    assert_includes source, 'text: t("recording_studio_attachable.libraries.create")'
+    assert_includes source, 'text: t("recording_studio_attachable.libraries.rename")'
+    assert_includes source, 'text: t("recording_studio_attachable.libraries.open")'
+    assert_includes source, "trash_in_use"
+    refute_includes source, "recordable"
+    refute_includes source, "Recordable"
   end
 
   def test_helper_reorders_placement_ids
@@ -69,5 +84,20 @@ class LibraryViewsTest < Minitest::Test
 
     assert_equal %w[place-2 place-1], helper.move_placement_ids(resolved, 0, 1)
     assert_equal %w[place-1 place-2], helper.move_placement_ids(resolved, 0, -1)
+  end
+
+  def test_helper_builds_picker_switcher_payload
+    helper = Object.new
+    helper.extend(RecordingStudioAttachable::ApplicationHelper)
+    library = Struct.new(:id).new("lib-1")
+    routes = Object.new
+    routes.define_singleton_method(:recording_attachment_picker_path) { |item| "/picker/#{item.id}" }
+    routes.define_singleton_method(:recording_attachments_path) { |item| "/upload/#{item.id}" }
+    helper.define_singleton_method(:attachable_routes) { routes }
+
+    assert_equal(
+      { "lib-1" => { pickerUrl: "/picker/lib-1", uploadUrl: "/upload/lib-1" } },
+      helper.library_picker_switcher_payload([library])
+    )
   end
 end

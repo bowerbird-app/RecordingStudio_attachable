@@ -246,6 +246,36 @@ class AuthorizationTest < Minitest::Test
     end
   end
 
+  def test_authorize_library_returns_true_when_actor_is_allowed
+    recording = FakeRecording.new(recordable_type: "Workspace")
+
+    RecordingStudio.configuration.stub(:capability_enabled?, true) do
+      RecordingStudioAccessible::Authorization.stub(:allowed?, true) do
+        assert RecordingStudioAttachable::Authorization.authorize_library!(
+          action: :view,
+          actor: Object.new,
+          recording: recording
+        )
+      end
+    end
+  end
+
+  def test_authorize_library_raises_when_capability_is_disabled
+    recording = FakeRecording.new(recordable_type: "Workspace")
+
+    RecordingStudio.configuration.stub(:capability_enabled?, false) do
+      error = assert_raises(RecordingStudioAttachable::Authorization::CapabilityNotEnabledError) do
+        RecordingStudioAttachable::Authorization.authorize_library!(
+          action: :view,
+          actor: Object.new,
+          recording: recording
+        )
+      end
+
+      assert_includes error.message, "Image library is not enabled"
+    end
+  end
+
   def test_placement_allowed_uses_custom_adapter
     recording = FakeRecording.new(recordable_type: "Gallery")
     captured = nil

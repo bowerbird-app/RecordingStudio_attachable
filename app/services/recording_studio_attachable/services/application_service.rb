@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "placement_guards"
+require_relative "library_query"
 
 module RecordingStudioAttachable
   module Services

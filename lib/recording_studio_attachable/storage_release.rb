@@ -13,9 +13,12 @@ module RecordingStudioAttachable
     end
 
     def recording_studio_attachable_purge_placements
-      return unless recordable_type == "RecordingStudioAttachable::Attachment"
-
-      RecordingStudioAttachable::Placements.purge_for(self)
+      case recordable_type
+      when "RecordingStudioAttachable::Attachment"
+        RecordingStudioAttachable::Placements.purge_for(self)
+      when "RecordingStudioAttachable::Library"
+        RecordingStudioAttachable::Placements.purge_library(self)
+      end
     end
 
     def recording_studio_attachable_detach_storage

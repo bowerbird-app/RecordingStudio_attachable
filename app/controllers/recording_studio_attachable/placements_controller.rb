@@ -6,7 +6,8 @@ module RecordingStudioAttachable
       @recording = find_recording
       authorize_placement_action!(:view, @recording)
       @resolved = RecordingStudioAttachable::Placements.resolve(@recording)
-      @library = RecordingStudioAttachable.library_for(root_recording_for(@recording), actor: current_attachable_actor)
+      @picker_libraries = RecordingStudioAttachable::Placements.picker_libraries_for(@recording)
+      @library = selected_picker_library
       @can_add = RecordingStudioAttachable::Authorization.placement_allowed?(
         action: :upload,
         actor: current_attachable_actor,
@@ -78,6 +79,7 @@ module RecordingStudioAttachable
       else
         RecordingStudioAttachable::Services::UploadToLibraryAndPlace.call(
           parent_recording: recording,
+          library_recording: selected_library_recording(recording, attributes[:library_recording_id]),
           actor: current_attachable_actor,
           impersonator: current_attachable_impersonator,
           **upload_attributes(attributes)
@@ -87,7 +89,44 @@ module RecordingStudioAttachable
 
     def placement_params
       raw = params[:placement].presence || params
-      raw.permit(:attachment_recording_id, :signed_blob_id, :name, :description, :caption, :credit, :alt_text, :file)
+      raw.permit(:attachment_recording_id, :library_recording_id, :signed_blob_id, :name, :description, :caption, :credit,
+                 :alt_text, :file)
+    end
+
+    def selected_library_recording(parent, library_id)
+      return if library_id.blank?
+
+      library = RecordingStudio::Recording.find(library_id)
+      return unless Placements.library_recording?(library)
+      return unless Placements.picker_libraries_for(parent).any? { |item| item.id.to_s == library.id.to_s }
+
+      library
+    end
+
+    def selected_picker_library
+      requested = params[:library_id].presence
+      chosen = @picker_libraries.find { |library| library.id.to_s == requested.to_s } if requested
+      return chosen if chosen.present?
+
+      default = RecordingStudioAttachable.library_for(
+        image_library_parent_for(@recording),
+        actor: current_attachable_actor
+      )
+      @picker_libraries.find { |library| library.id.to_s == default.id.to_s } || @picker_libraries.first || default
+    end
+
+    def image_library_parent_for(recording)
+      current = recording
+      while current
+        return current if RecordingStudioAttachable::Authorization.library_enabled?(recording: current)
+
+        next_parent = current.try(:parent_recording)
+        break if next_parent.blank? || next_parent == current
+
+        current = next_parent
+      end
+
+      root_recording_for(recording)
     end
 
     def upload_attributes(attributes)

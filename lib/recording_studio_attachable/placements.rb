@@ -25,6 +25,25 @@ module RecordingStudioAttachable
         Services::PurgePlacements.call(attachment_recording: attachment_recording).value
       end
 
+      def usage_for_library(library_recording)
+        Services::LibraryUsage.call(library_recording: library_recording).value || []
+      end
+
+      def purge_library(library_recording)
+        Services::PurgeLibraryPlacements.call(library_recording: library_recording).value
+      end
+
+      def picker_libraries_for(parent_recording)
+        resolver = RecordingStudioAttachable.configuration.placement_picker_libraries
+        Array(resolver.call(parent_recording)).select { |library| Services::LibraryQuery.live?(library) }
+      rescue StandardError
+        Services::LibraryQuery.live_in_root(parent_recording)
+      end
+
+      def library_title(library_recording)
+        Services::LibraryQuery.title_for(library_recording)
+      end
+
       def library_recording?(recording)
         recording.respond_to?(:recordable_type) && recording.recordable_type == LIBRARY_TYPE
       end

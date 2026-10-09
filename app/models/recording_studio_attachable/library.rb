@@ -19,8 +19,12 @@ module RecordingStudioAttachable
       )
     end
 
+    include RecordingStudio::Capabilities::Trashable.to if defined?(RecordingStudio::Capabilities::Trashable)
+
+    validates :name, presence: true
+
     def title
-      "Image library"
+      name.to_s.strip.presence || "Library"
     end
   end
 end

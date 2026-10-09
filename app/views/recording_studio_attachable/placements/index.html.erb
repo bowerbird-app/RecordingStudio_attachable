@@ -5,6 +5,7 @@
   class="mx-auto flex w-full max-w-6xl flex-col gap-6"
   data-controller="recording-studio-attachable--attachment-image-picker recording-studio-attachable--library-placement"
   data-action="recording-studio-attachable--attachment-image-picker:selected->recording-studio-attachable--library-placement#addFromLibrary"
+  data-recording-studio-attachable--library-placement-libraries-value="<%= library_picker_switcher_payload(@picker_libraries).to_json %>"
   data-recording-studio-attachable--attachment-image-picker-picker-url-value="<%= recording_attachment_picker_path(@library) %>"
   data-recording-studio-attachable--attachment-image-picker-upload-url-value="<%= recording_attachments_path(@library) %>"
   data-recording-studio-attachable--attachment-image-picker-direct-upload-url-value="<%= main_app.rails_direct_uploads_path %>"
@@ -30,6 +31,19 @@
   ) %>
 
   <% if @can_add %>
+    <% if @picker_libraries.size > 1 %>
+      <%= render FlatPack::Select::Component.new(
+        name: "library_id",
+        label: t("recording_studio_attachable.placements.picker_library"),
+        options: @picker_libraries.map { |library| [library_title_for(library), library.id.to_s] },
+        value: @library.id.to_s,
+        data: {
+          action: "change->recording-studio-attachable--library-placement#switchLibrary",
+          recording_studio_attachable__library_placement_target: "switcher"
+        }
+      ) %>
+    <% end %>
+
     <div class="flex flex-wrap items-center gap-3">
       <%= render FlatPack::Button::Component.new(
         text: t("recording_studio_attachable.placements.add"),
@@ -41,6 +55,9 @@
       ) %>
 
       <%= form_with url: recording_placements_path(@recording, navigation_params), method: :post, class: "inline-flex" do %>
+        <%= hidden_field_tag "placement[library_recording_id]",
+                             @library.id,
+                             data: { recording_studio_attachable__library_placement_target: "uploadLibraryId" } %>
         <%= file_field_tag "placement[file]",
                            accept: "image/*",
                            class: "sr-only",

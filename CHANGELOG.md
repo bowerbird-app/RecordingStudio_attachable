@@ -10,18 +10,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.12.0] - 2026-10-09
 
 ### Added
-- A per-workspace image library. Photos live once under `RecordingStudioAttachable::Library`, a find-or-create child of the root. Attachable stays off the shared root.
-- `RecordingStudioAttachable::Placement` points a host page at a library photo and reuses Orderable for position. Caption, credit, and alt stay on the photo.
-- Host API: `ImageLibrary.to` on the root, `LibraryPlacement.to` on parents, `library_for`, add from library, upload-and-place, resolve, reorder, and remove a placement. Photos from another workspace are refused.
-- Library listing, upload, picker, and photo edit reuse the existing Attachable screens. The photo edit form now includes caption, credit, and alt. A placed photo warns how many places use it before trash.
-- Permanently deleting a library photo removes its placements. Removing a placement never deletes the photo. Trashed photos stay pointed at and are skipped when resolving.
-- Dummy app: Image library page and a Gallery that places library photos.
+- Named image libraries. `RecordingStudioAttachable::Library` is a first-class child with a name, optional description, and a default flag. A parent can hold many. Enable `ImageLibrary.to` on a root or on a brand / client / project so libraries can live deeper in the tree. Access follows Accessible.
+- `library_for` / `default_library` still find-or-create one default library per parent. Helpers also list, create, rename, and trash libraries.
+- `RecordingStudioAttachable::Placement` points a host page at a photo in any live library in the same workspace and reuses Orderable for position. Caption, credit, and alt stay on the photo. Cross-workspace and non-library photos are refused.
+- Libraries index lists, creates, and renames libraries and links into the existing listing, upload, picker, and photo edit screens. The add-from-library picker has a library switcher and defaults to the default library. Hosts may restrict `placement_picker_libraries`.
+- Trashing a library with in-use photos shows the same in-use warning with rolled-up counts. Permanently deleting a library or a photo removes its placements. Removing a placement never deletes the photo. Trashed photos stay pointed at and are skipped when resolving.
+- Dummy app: two workspace libraries (Kiln shots and Campaign stills) and a Gallery that places a photo from each.
 
 ### Upgrade Notes
-- Bump to `0.12.0` and run `rails generate recording_studio_attachable:migrations` then `db:migrate`. That adds `recording_studio_attachable_libraries` and `recording_studio_attachable_placements`.
+- Bump to `0.12.0` and run `rails generate recording_studio_attachable:migrations` then `db:migrate`. That adds `recording_studio_attachable_libraries` (name, description, default) and `recording_studio_attachable_placements`.
 - Add `RecordingStudioAttachable::Library` and `RecordingStudioAttachable::Placement` to `config.recordable_types`.
-- Enable `include RecordingStudio::Capabilities::ImageLibrary.to` on the root. Enable `include RecordingStudio::Capabilities::LibraryPlacement.to` on host types that should hold library photos.
+- Enable `include RecordingStudio::Capabilities::ImageLibrary.to` on each parent that should hold libraries (the root, or a brand / client / project). Enable `include RecordingStudio::Capabilities::LibraryPlacement.to` on host types that should hold library photos.
 - Reorder needs Recording Studio Orderable on the placement parent (`allows: ["RecordingStudioAttachable::Placement"]`).
+- Simple hosts can keep calling `library_for(parent)` / `default_library`. Named libraries and the libraries index are optional.
+- Restrict the picker with `config.placement_picker_libraries` when a page should not see every library in the workspace.
 - Presskits and other hosts that still attach files under a section should move to placements in a follow-up. Existing direct attachments are unchanged.
 - See [docs/image-library.md](docs/image-library.md).
 

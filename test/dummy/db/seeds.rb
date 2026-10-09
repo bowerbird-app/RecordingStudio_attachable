@@ -172,35 +172,60 @@ puts "Seeded: Workspace '#{workspace.name}' with root recording ##{root_recordin
 puts "Seeded: Page '#{page.title}' beneath the workspace root recording"
 puts "Seeded: User '#{user.name}' beneath the workspace root recording"
 puts "Seeded: Chat thread '#{chat_thread.title}' with #{chat_messages.count} recorded messages"
-library_recording = RecordingStudioAttachable.library_for(root_recording, actor: user)
-library_images = library_recording.images(per_page: 20).to_a
-library_shots = press_kit.last(3)
-library_shots.each do |shot|
-  existing = library_images.find { |recording| recording.recordable.original_filename == shot[:file] }
-  next if existing && seed_attachment_blob_available.call(existing)
-
-  existing&.remove_attachment(actor: user)
-
-  recording = File.open(press_kit_dir.join(shot[:file]), "rb") do |io|
-    library_recording.import_attachment(
-      io: io,
-      filename: shot[:file],
-      content_type: "image/jpeg",
-      name: shot[:name],
-      actor: user,
-      source: "image_library"
-    )
-  end
-  raise "Could not import library #{shot[:file]}" if recording.nil?
-
-  recording.revise_attachment_metadata(
-    actor: user,
-    caption: shot[:caption],
-    credit: shot[:credit],
-    alt_text: shot[:alt_text]
+kiln_library = RecordingStudioAttachable.library_for(root_recording, actor: user)
+if kiln_library.recordable.name.in?([ "Library", "Image library" ])
+  RecordingStudioAttachable.rename_library(
+    kiln_library,
+    name: "Kiln shots",
+    description: "Hero product photos",
+    actor: user
   )
 end
-library_images = library_recording.images(per_page: 20).to_a
+
+campaign_library = RecordingStudioAttachable.libraries_for(root_recording).find do |library|
+  library.recordable.name == "Campaign stills"
+end
+campaign_library ||= RecordingStudioAttachable.create_library(
+  root_recording,
+  name: "Campaign stills",
+  description: "Ads and cutdowns",
+  actor: user
+)
+
+seed_library_photos = lambda do |library_recording, shots, source|
+  images = library_recording.images(per_page: 20).to_a
+  shots.each do |shot|
+    existing = images.find { |recording| recording.recordable.original_filename == shot[:file] }
+    next if existing && seed_attachment_blob_available.call(existing)
+
+    existing&.remove_attachment(actor: user)
+
+    recording = File.open(press_kit_dir.join(shot[:file]), "rb") do |io|
+      library_recording.import_attachment(
+        io: io,
+        filename: shot[:file],
+        content_type: "image/jpeg",
+        name: shot[:name],
+        actor: user,
+        source: source
+      )
+    end
+    raise "Could not import library #{shot[:file]}" if recording.nil?
+
+    recording.revise_attachment_metadata(
+      actor: user,
+      caption: shot[:caption],
+      credit: shot[:credit],
+      alt_text: shot[:alt_text]
+    )
+  end
+  library_recording.images(per_page: 20).to_a
+end
+
+kiln_shots = press_kit.last(2)
+campaign_shots = press_kit.slice(-3, 1)
+kiln_images = seed_library_photos.call(kiln_library, kiln_shots, "image_library")
+campaign_images = seed_library_photos.call(campaign_library, campaign_shots, "campaign_library")
 
 gallery = Gallery.find_or_create_by!(title: "Kiln shots")
 gallery_recording = RecordingStudio::Recording.unscoped.find_or_create_by!(
@@ -210,11 +235,11 @@ gallery_recording = RecordingStudio::Recording.unscoped.find_or_create_by!(
 )
 
 if gallery_recording.library_placements.empty?
-  library_images.first(2).each do |attachment_recording|
+  [ kiln_images.first, campaign_images.first ].compact.each do |attachment_recording|
     gallery_recording.place_library_image(attachment_recording: attachment_recording, actor: user)
   end
 end
 
 puts "Seeded: Kiln canister press kit (#{press_kit.size} images) on the workspace"
-puts "Seeded: Image library with #{library_shots.size} reusable photos"
-puts "Seeded: Gallery '#{gallery.title}' with #{gallery_recording.library_placements.size} placed photos"
+puts "Seeded: Kiln shots library with #{kiln_shots.size} photos and Campaign stills with #{campaign_shots.size}"
+puts "Seeded: Gallery '#{gallery.title}' with #{gallery_recording.library_placements.size} placed photos from both libraries"

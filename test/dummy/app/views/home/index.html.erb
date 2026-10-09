@@ -57,13 +57,13 @@
       <% card.body do %>
         <div class="space-y-4">
           <%= render FlatPack::SectionTitle::Component.new(
-            title: "Reusable library",
-            subtitle: "Photos live once in the workspace library. A gallery only points at them.",
+            title: "Reusable libraries",
+            subtitle: "Photos live once across workspace libraries. A gallery can point at photos from any of them.",
             anchor_link: true
           ) %>
 
           <div class="flex flex-wrap gap-3">
-            <%= render FlatPack::Button::Component.new(text: "Image library", style: :primary, size: :md, href: @image_library_path) %>
+            <%= render FlatPack::Button::Component.new(text: "Image libraries", style: :primary, size: :md, href: @image_library_path) %>
             <% if @gallery_path.present? %>
               <%= render FlatPack::Button::Component.new(text: "Gallery", style: :secondary, size: :md, href: @gallery_path) %>
             <% end %>

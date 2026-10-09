@@ -44,22 +44,27 @@ module RecordingStudioAttachable
       def library_child?(parent, attachment)
         return false unless Placements.attachment_recording?(attachment)
 
-        library = existing_library_for(parent)
-        return false if library.blank?
+        library = library_for_attachment(attachment)
+        return false unless LibraryQuery.live?(library)
 
-        attachment.parent_recording_id.to_s == library.id.to_s
+        same_root?(parent, library)
+      end
+
+      def library_for_attachment(attachment)
+        parent = attachment.try(:parent_recording)
+        return parent if parent.present?
+
+        id = attachment.try(:parent_recording_id)
+        return if id.blank?
+
+        RecordingStudio::Recording.find_by(id: id)
+      rescue StandardError
+        nil
       end
 
       def existing_library_for(parent)
-        root = root_recording_for(parent)
-        return if root.blank?
-
-        RecordingStudio::Recording.where(
-          parent_recording_id: root.id,
-          recordable_type: Placements::LIBRARY_TYPE
-        ).find { |recording| recording.try(:trashed_at).blank? }
-      rescue StandardError
-        nil
+        LibraryQuery.default_for_parent(root_recording_for(parent)) ||
+          LibraryQuery.default_for_parent(parent)
       end
 
       def root_id_for(recording)

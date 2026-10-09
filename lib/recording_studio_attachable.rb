@@ -24,8 +24,55 @@ module RecordingStudioAttachable
       yield(configuration) if block_given?
     end
 
-    def library_for(root_recording, actor: nil)
-      result = Services::FindOrCreateLibrary.call(root_recording: root_recording, actor: actor)
+    def library_for(parent_recording, actor: nil)
+      result = Services::FindOrCreateLibrary.call(parent_recording: parent_recording, actor: actor)
+      raise ArgumentError, result.error if result.failure?
+
+      result.value
+    end
+
+    def default_library(parent_recording, actor: nil)
+      library_for(parent_recording, actor: actor)
+    end
+
+    def libraries_for(parent_recording)
+      Services::LibraryQuery.live_for_parent(parent_recording)
+    end
+
+    def libraries_in_root(recording)
+      Services::LibraryQuery.live_in_root(recording)
+    end
+
+    def create_library(parent_recording, name:, description: nil, actor: nil)
+      result = Services::CreateLibrary.call(
+        parent_recording: parent_recording,
+        name: name,
+        description: description,
+        actor: actor
+      )
+      raise ArgumentError, result.error if result.failure?
+
+      result.value
+    end
+
+    def rename_library(library_recording, name:, description: :keep, actor: nil)
+      result = Services::RenameLibrary.call(
+        library_recording: library_recording,
+        name: name,
+        description: description,
+        actor: actor
+      )
+      raise ArgumentError, result.error if result.failure?
+
+      result.value
+    end
+
+    def trash_library(library_recording, actor: nil, impersonator: nil)
+      result = Services::TrashLibrary.call(
+        library_recording: library_recording,
+        actor: actor,
+        impersonator: impersonator
+      )
       raise ArgumentError, result.error if result.failure?
 
       result.value

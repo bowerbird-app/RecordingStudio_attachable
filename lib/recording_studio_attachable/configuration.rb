@@ -123,7 +123,8 @@ module RecordingStudioAttachable
                   :authorize_with,
                   :google_drive,
                   :direct_url_host,
-                  :placement_place_label
+                  :placement_place_label,
+                  :placement_picker_libraries
 
     attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode
 
@@ -304,10 +305,15 @@ module RecordingStudioAttachable
       @classify_attachment_kind = default_attachment_kind_classifier
       @authorize_with = nil
       @placement_place_label = default_placement_place_label
+      @placement_picker_libraries = default_placement_picker_libraries
     end
 
     def default_placement_place_label
       ->(parent_recording) { RecordingStudioAttachable::Placements.fallback_place_label(parent_recording) }
+    end
+
+    def default_placement_picker_libraries
+      ->(parent_recording) { RecordingStudioAttachable.libraries_in_root(parent_recording) }
     end
 
     def default_auth_roles

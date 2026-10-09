@@ -42,8 +42,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes home_view, 'text: "Page library"'
     assert_includes home_view, 'text: "View"'
     assert_includes home_view, 'text: "Edit inline"'
-    assert_includes home_view, 'title: "Reusable library"'
-    assert_includes home_view, 'text: "Image library"'
+    assert_includes home_view, 'title: "Reusable libraries"'
+    assert_includes home_view, 'text: "Image libraries"'
     assert_includes home_view, 'text: "Gallery"'
     assert_includes home_view, 'title: "Chat demo"'
     assert_includes home_view, 'subtitle: "Try the reusable image picker inside a FlatPack chat composer."'
@@ -162,6 +162,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes seeds, "import_attachment("
     assert_includes seeds, "revise_attachment_metadata("
     assert_includes seeds, "RecordingStudioAttachable.library_for"
+    assert_includes seeds, "RecordingStudioAttachable.create_library"
+    assert_includes seeds, "Campaign stills"
     assert_includes seeds, 'Gallery.find_or_create_by!(title: "Kiln shots")'
     assert_includes seeds, "place_library_image"
     assert_includes seeds, "window.jpg"
@@ -192,6 +194,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes schema, 't.text "body"'
     assert_includes schema, 'create_table "recording_studio_attachable_attachments"'
     assert_includes schema, 'create_table "recording_studio_attachable_libraries"'
+    assert_includes schema, 't.string "name", default: "Library", null: false'
+    assert_includes schema, 't.boolean "default", default: false, null: false'
     assert_includes schema, 'create_table "recording_studio_attachable_placements"'
     assert_includes schema, 'create_table "galleries"'
     assert_includes schema, "recording_studio_orderable_position"

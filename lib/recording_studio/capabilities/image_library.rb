@@ -15,6 +15,35 @@ module RecordingStudio
           RecordingStudioAttachable.library_for(self, actor: actor)
         end
 
+        def default_library(actor: nil)
+          image_library(actor: actor)
+        end
+
+        def image_libraries
+          assert_image_library_capability!
+          RecordingStudioAttachable.libraries_for(self)
+        end
+
+        def create_image_library(name:, description: nil, actor: nil)
+          assert_image_library_capability!
+          RecordingStudioAttachable.create_library(self, name: name, description: description, actor: actor)
+        end
+
+        def rename_image_library(library_recording, name:, description: :keep, actor: nil)
+          assert_image_library_capability!
+          RecordingStudioAttachable.rename_library(
+            library_recording,
+            name: name,
+            description: description,
+            actor: actor
+          )
+        end
+
+        def trash_image_library(library_recording, actor: nil, impersonator: nil)
+          assert_image_library_capability!
+          RecordingStudioAttachable.trash_library(library_recording, actor: actor, impersonator: impersonator)
+        end
+
         private
 
         def assert_image_library_capability!

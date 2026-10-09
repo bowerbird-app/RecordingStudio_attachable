@@ -13,9 +13,12 @@ RecordingStudioAttachable::Engine.routes.draw do
     patch "attachment_collection", to: "attachment_collections#update", as: :attachment_collection
     resources :placements, only: %i[index create], controller: "placements"
     patch "placements/reorder", to: "placements#reorder", as: :reorder_placements
+    resources :libraries, only: %i[index create], controller: "libraries"
   end
 
-  get "libraries/:root_recording_id", to: "libraries#show", as: :library
+  get "libraries/:id", to: "libraries#show", as: :library
+  patch "libraries/:id", to: "libraries#update"
+  delete "libraries/:id", to: "libraries#destroy", as: :destroy_library
   delete "placements/:id", to: "placements#destroy", as: :destroy_placement
 
   get "attachments/:id", to: "attachments#show", as: :attachment

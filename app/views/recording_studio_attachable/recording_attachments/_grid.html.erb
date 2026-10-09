@@ -26,13 +26,13 @@
                     <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
                   </svg>
                 </div>
-                <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)">IMAGE</span>
-                <span class="text-sm text-(--surface-muted-content-color)">Preview unavailable</span>
+                <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)"><%= t("recording_studio.attachable.attachments.image_fallback") %></span>
+                <span class="text-sm text-(--surface-muted-content-color)"><%= t("recording_studio.attachable.attachments.preview_unavailable") %></span>
               </div>
             </div>
           </div>
         <% else %>
-          <% file_extension = File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || "FILE" %>
+          <% file_extension = File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || t("recording_studio.attachable.attachments.file_fallback") %>
           <div class="aspect-4/3 flex items-center justify-center bg-(--surface-background-color)">
             <div class="flex flex-col items-center justify-center gap-3 px-4 text-center">
               <div class="flex h-16 w-16 items-center justify-center rounded-full bg-(--surface-background-color) text-(--surface-content-color) shadow-sm ring-1 ring-(--surface-border-color)">

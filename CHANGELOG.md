@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-09
+
+### Added
+
+- English Rails I18n keys for static interface copy in the gem's own views,
+  partials, layout, and Google Drive import screen (`config/locales/en.yml`
+  under `recording_studio.attachable`)
+
+### Changed
+
+- Hard-coded buttons, labels, headings, empty states, aria-labels, placeholders,
+  and hints in gem views resolve through `t("recording_studio.attachable.*")`
+  (English output unchanged)
+
+### Upgrade Notes
+
+- No migration or host code change is required for English.
+- Existing top-level keys in `config/locales/recording_studio_attachable.en.yml`
+  (`recording_studio_attachable.*`) and their callers are unchanged.
+- To translate or override the new defaults, add keys under
+  `recording_studio.attachable` in the host's locale files.
+- There is no dependency on `recording_studio_internationalization`.
+
 ## [0.12.0] - 2026-10-09
 
 ### Added

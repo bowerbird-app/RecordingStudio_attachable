@@ -21,9 +21,9 @@
 
   <%= render FlatPack::PageNav::Component.new(
     back_icon: "arrow-left",
-    back_label: "Back",
+    back_label: t("recording_studio.attachable.navigation.back"),
     anchor_url: attachment_page_nav_anchor_url(fallback: main_app.root_path),
-    anchor_label: "Return to source page"
+    anchor_label: t("recording_studio.attachable.navigation.return_to_source")
   ) %>
 
   <%= render FlatPack::PageTitle::Component.new(

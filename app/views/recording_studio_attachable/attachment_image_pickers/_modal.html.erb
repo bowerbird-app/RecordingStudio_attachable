@@ -13,9 +13,9 @@
     <div class="flex h-full min-h-0 flex-col gap-4">
       <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div class="flex flex-wrap items-center gap-3">
-          <%= render FlatPack::Button::Dropdown::Component.new(text: "Upload", style: :primary, size: :md) do |dropdown| %>
+          <%= render FlatPack::Button::Dropdown::Component.new(text: t("recording_studio.attachable.picker.upload"), style: :primary, size: :md) do |dropdown| %>
             <% dropdown.menu_item(
-              text: "Upload from device",
+              text: t("recording_studio.attachable.picker.upload_from_device"),
               icon: "upload",
               href: "#",
               data: { action: "recording-studio-attachable--attachment-image-picker#browseUpload" }
@@ -46,7 +46,7 @@
               input_id: "#{modal_id}-search",
               name: :picker_search,
               value: nil,
-              placeholder: "Search",
+              placeholder: t("recording_studio.attachable.picker.search_placeholder"),
               max_width: :lg,
               aria: { label: search_aria_label },
               data: {
@@ -66,7 +66,7 @@
         data-action="change->recording-studio-attachable--attachment-image-picker#uploadSelected">
 
       <template data-recording-studio-attachable--attachment-image-picker-target="progressTemplate">
-        <%= render FlatPack::Progress::Component.new(value: 0, max: 100, label: "Progress") %>
+        <%= render FlatPack::Progress::Component.new(value: 0, max: 100, label: t("recording_studio.attachable.picker.progress")) %>
       </template>
 
       <p class="hidden text-sm text-(--surface-muted-content-color)" data-recording-studio-attachable--attachment-image-picker-target="status"></p>
@@ -81,18 +81,18 @@
 
       <div class="hidden rounded-xl border border-(--surface-border-color) bg-(--surface-muted-background-color) px-4 py-3" data-recording-studio-attachable--attachment-image-picker-target="selectionActions">
         <div class="flex items-center justify-between gap-3">
-          <p class="text-sm text-(--surface-content-color)" data-recording-studio-attachable--attachment-image-picker-target="selectionCount">Select one or more images</p>
+          <p class="text-sm text-(--surface-content-color)" data-recording-studio-attachable--attachment-image-picker-target="selectionCount"><%= t("recording_studio.attachable.picker.select_images") %></p>
 
           <div class="flex items-center gap-2">
             <%= render FlatPack::Button::Component.new(
-              text: "Clear",
+              text: t("recording_studio.attachable.picker.clear"),
               style: :secondary,
               size: :sm,
               type: "button",
               data: { action: "recording-studio-attachable--attachment-image-picker#clearSelection" }
             ) %>
             <%= render FlatPack::Button::Component.new(
-              text: "Add selected",
+              text: t("recording_studio.attachable.picker.add_selected"),
               style: :primary,
               size: :sm,
               type: "button",

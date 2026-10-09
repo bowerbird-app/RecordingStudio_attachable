@@ -4,11 +4,11 @@
     <% if @authorization_path.present? %>
       <div class="space-y-4" data-controller="recording-studio-attachable--provider-modal-frame">
         <p class="text-sm text-(--surface-muted-content-color)">
-          Connect a Google account to browse Drive files. Imported files still go through RecordingStudioAttachable's standard validation and recording creation flow.
+          <%= t("recording_studio.attachable.google_drive.connect_help") %>
         </p>
 
         <%= link_to @authorization_path, class: "inline-flex", data: { action: (embedded_upload_provider_request? ? "recording-studio-attachable--provider-modal-frame#openPopup" : nil) } do %>
-          <%= render FlatPack::Button::Component.new(text: "Connect Google Drive", style: :primary, size: :md, icon: "cloud") %>
+          <%= render FlatPack::Button::Component.new(text: t("recording_studio.attachable.google_drive.connect"), style: :primary, size: :md, icon: "cloud") %>
         <% end %>
       </div>
     <% else %>
@@ -24,11 +24,11 @@
               <%= render FlatPack::Search::Component.new(
                 name: :query,
                 value: @query,
-                placeholder: "Search Drive files",
-                aria: { label: "Search Google Drive files" }
+                placeholder: t("recording_studio.attachable.google_drive.search_placeholder"),
+                aria: { label: t("recording_studio.attachable.google_drive.search_aria") }
               ) %>
             </div>
-            <%= render FlatPack::Button::Component.new(text: "Search", style: :secondary, size: :md, type: "submit") %>
+            <%= render FlatPack::Button::Component.new(text: t("recording_studio.attachable.google_drive.search"), style: :secondary, size: :md, type: "submit") %>
           <% end %>
 
           <%= form_with url: google_drive.recording_disconnect_path(@recording), method: :delete, class: "inline-flex" do %>
@@ -37,7 +37,7 @@
             <%= hidden_field_tag :provider_modal_id, current_upload_provider_modal_id if current_upload_provider_modal_id.present? %>
             <%= hidden_field_tag :redirect_mode, redirect_params[:redirect_mode] if redirect_params[:redirect_mode].present? %>
             <%= hidden_field_tag :return_to, redirect_params[:return_to] if redirect_params[:return_to].present? %>
-            <%= render FlatPack::Button::Component.new(text: "Disconnect", style: :secondary, size: :md) %>
+            <%= render FlatPack::Button::Component.new(text: t("recording_studio.attachable.google_drive.disconnect"), style: :secondary, size: :md) %>
           <% end %>
         </div>
 
@@ -64,16 +64,16 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-3">
-              <%= render FlatPack::Button::Component.new(text: "Import selected", style: :primary, size: :md, type: "submit", icon: "cloud") %>
+              <%= render FlatPack::Button::Component.new(text: t("recording_studio.attachable.google_drive.import_selected"), style: :primary, size: :md, type: "submit", icon: "cloud") %>
               <% unless embedded_upload_provider_request? %>
                 <%= link_to recording_studio_attachable.recording_attachment_upload_path(@recording, redirect_params), class: "inline-flex" do %>
-                  <%= render FlatPack::Button::Component.new(text: "Back to upload page", style: :secondary, size: :md) %>
+                  <%= render FlatPack::Button::Component.new(text: t("recording_studio.attachable.google_drive.back_to_upload"), style: :secondary, size: :md) %>
                 <% end %>
               <% end %>
             </div>
           <% end %>
         <% else %>
-          <p class="text-sm text-(--surface-muted-content-color)">No Google Drive files matched the current search.</p>
+          <p class="text-sm text-(--surface-muted-content-color)"><%= t("recording_studio.attachable.google_drive.empty") %></p>
         <% end %>
 
         <% if @next_page_token.present? %>
@@ -88,7 +88,7 @@
               redirect_mode: redirect_params[:redirect_mode],
               return_to: redirect_params[:return_to]
             ), class: "inline-flex" do %>
-              <%= render FlatPack::Button::Component.new(text: "Next page", style: :secondary, size: :md) %>
+              <%= render FlatPack::Button::Component.new(text: t("recording_studio.attachable.google_drive.next_page"), style: :secondary, size: :md) %>
             <% end %>
           </div>
         <% end %>
@@ -105,16 +105,16 @@
   <div class="mx-auto flex w-full max-w-5xl flex-col gap-6">
     <%= render FlatPack::PageNav::Component.new(
       back_icon: "arrow-left",
-      back_label: "Back",
+      back_label: t("recording_studio.attachable.navigation.back"),
       anchor_url: attachment_page_nav_anchor_url(
         fallback: recording_studio_attachable.recording_attachment_upload_path(@recording, redirect_params)
       ),
-      anchor_label: "Return to source page"
+      anchor_label: t("recording_studio.attachable.navigation.return_to_source")
     ) %>
 
     <%= render FlatPack::PageTitle::Component.new(
-      title: "Google Drive",
-      subtitle: "Import files into recording ##{@recording.id} using the built-in addon",
+      title: t("recording_studio.attachable.google_drive.title"),
+      subtitle: t("recording_studio.attachable.google_drive.subtitle", recording_id: @recording.id),
       variant: :h1
     ) %>
 

@@ -2,9 +2,9 @@
 <div class="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6">
   <%= render FlatPack::PageNav::Component.new(
     back_icon: "arrow-left",
-    back_label: "Back",
+    back_label: t("recording_studio.attachable.navigation.back"),
     anchor_url: attachment_page_nav_anchor_url(fallback: main_app.root_path),
-    anchor_label: "Return to source page"
+    anchor_label: t("recording_studio.attachable.navigation.return_to_source")
   ) %>
 
   <%= render FlatPack::PageTitle::Component.new(
@@ -25,25 +25,25 @@
   <% end %>
 
   <div class="flex flex-wrap gap-3">
-    <%= render FlatPack::Tooltip::Component.new(text: "Download") do %>
+    <%= render FlatPack::Tooltip::Component.new(text: t("recording_studio.attachable.attachments.download")) do %>
       <%= render FlatPack::Button::Component.new(
         icon: "arrow-down-tray",
         icon_only: true,
         style: :secondary,
         size: :md,
-        aria: { label: "Download attachment" },
+        aria: { label: t("recording_studio.attachable.attachments.download_aria") },
         href: download_attachment_path(@attachment_recording),
         data: { turbo_frame: "_top" }
       ) %>
     <% end %>
 
     <% unless @attachment_recording.respond_to?(:trashed_at) && @attachment_recording.trashed_at.present? %>
-      <%= render FlatPack::Tooltip::Component.new(text: "Trash") do %>
+      <%= render FlatPack::Tooltip::Component.new(text: t("recording_studio.attachable.attachments.trash")) do %>
         <%= form_with url: destroy_attachment_path(@attachment_recording),
                       method: :delete,
                       class: "inline-flex",
                       data: { turbo_confirm: @placement_usages.any? ? t("recording_studio_attachable.attachments.trash_in_use") : nil } do %>
-          <%= render FlatPack::Button::Component.new(icon: "trash", icon_only: true, style: :secondary, size: :md, type: "submit", aria: { label: "Trash attachment" }) %>
+          <%= render FlatPack::Button::Component.new(icon: "trash", icon_only: true, style: :secondary, size: :md, type: "submit", aria: { label: t("recording_studio.attachable.attachments.trash_aria") }) %>
         <% end %>
       <% end %>
     <% end %>
@@ -51,7 +51,7 @@
 
   <div class="grid gap-6 lg:grid-cols-2 lg:items-start">
     <% preview_path = authorized_attachment_preview_path(@attachment_recording, :large) %>
-    <% file_extension = File.extname(@attachment.original_filename.to_s).delete(".").upcase.presence || "FILE" %>
+    <% file_extension = File.extname(@attachment.original_filename.to_s).delete(".").upcase.presence || t("recording_studio.attachable.attachments.file_fallback") %>
 
     <div class="space-y-4">
       <% if preview_path.present? %>
@@ -70,8 +70,8 @@
                     <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
                   </svg>
                 </div>
-                <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)">IMAGE</span>
-                <span class="text-sm text-(--surface-muted-content-color)">Preview unavailable</span>
+                <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)"><%= t("recording_studio.attachable.attachments.image_fallback") %></span>
+                <span class="text-sm text-(--surface-muted-content-color)"><%= t("recording_studio.attachable.attachments.preview_unavailable") %></span>
               </div>
             </div>
           </div>
@@ -96,15 +96,15 @@
     <div id="edit-attachment" class="space-y-4 lg:col-start-2">
       <%= form_with model: @attachment, url: attachment_path(@attachment_recording, navigation_params), method: :patch, class: "space-y-4" do |form| %>
         <div class="space-y-4">
-          <%= render FlatPack::TextInput::Component.new(name: "attachment[name]", label: "Name", value: @attachment.name, required: true) %>
-          <%= render FlatPack::TextInput::Component.new(name: "attachment[caption]", label: "Caption", value: @attachment.caption) %>
-          <%= render FlatPack::TextInput::Component.new(name: "attachment[credit]", label: "Credit", value: @attachment.credit) %>
+          <%= render FlatPack::TextInput::Component.new(name: "attachment[name]", label: t("recording_studio.attachable.attachments.name"), value: @attachment.name, required: true) %>
+          <%= render FlatPack::TextInput::Component.new(name: "attachment[caption]", label: t("recording_studio.attachable.attachments.caption"), value: @attachment.caption) %>
+          <%= render FlatPack::TextInput::Component.new(name: "attachment[credit]", label: t("recording_studio.attachable.attachments.credit"), value: @attachment.credit) %>
           <%= render FlatPack::Tooltip::Component.new(text: t("recording_studio_attachable.attachments.alt_text_hint")) do %>
-            <%= render FlatPack::TextInput::Component.new(name: "attachment[alt_text]", label: "Alt text", value: @attachment.alt_text) %>
+            <%= render FlatPack::TextInput::Component.new(name: "attachment[alt_text]", label: t("recording_studio.attachable.attachments.alt_text"), value: @attachment.alt_text) %>
           <% end %>
 
           <div>
-            <label class="mb-2 block text-sm font-medium">Description</label>
+            <label class="mb-2 block text-sm font-medium"><%= t("recording_studio.attachable.attachments.description") %></label>
             <%= form.text_area :description,
                                name: "attachment[description]",
                                value: @attachment.description,
@@ -112,7 +112,7 @@
           </div>
         </div>
 
-        <%= render FlatPack::Button::Component.new(text: "Save", style: :primary, size: :md, type: "submit") %>
+        <%= render FlatPack::Button::Component.new(text: t("recording_studio.attachable.attachments.save"), style: :primary, size: :md, type: "submit") %>
       <% end %>
     </div>
   </div>

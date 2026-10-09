@@ -59,10 +59,22 @@ class LibraryViewsTest < Minitest::Test
 
   def test_locales_avoid_backend_words
     source = File.read(File.expand_path("../config/locales/recording_studio_attachable.en.yml", __dir__))
+    nested = File.read(File.expand_path("../config/locales/en.yml", __dir__))
 
     refute_includes source, "recordable"
     refute_includes source, "capability"
     refute_includes source, "Recordable"
+    refute_includes nested, "recordable"
+    refute_includes nested, "capability"
+  end
+
+  def test_library_index_uses_nested_attachable_i18n_keys
+    source = File.read(File.expand_path("../app/views/recording_studio_attachable/recording_attachments/index.html.erb", __dir__))
+
+    assert_includes source, 't("recording_studio.attachable.library.title")'
+    assert_includes source, 't("recording_studio.attachable.library.upload")'
+    assert_includes source, 't("recording_studio.attachable.library.empty_title")'
+    assert_includes source, 't("recording_studio.attachable.navigation.back")'
   end
 
   def test_library_placement_controller_submits_the_picked_image

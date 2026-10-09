@@ -13,3 +13,4 @@ Use it to verify:
 - a host-added `:poster` image variant (and no explicit `preprocessed_variants`) so the default preprocess set (`small`/`med`/`large` plus host-added names) is what `/url_modes` demos; `:xlarge` stays unprocessed for the Rails-path fallback row
 - twenty press kit JPGs under `db/seed_images/`, portrait, square, and landscape, re-imported when Active Storage blobs are missing from the current Disk service
 - host-mounted image libraries (`/images` and `/campaign`) and a Gallery that places photos from both (`/galleries/:id`) so listing, picker switcher, the shared list/slides/grid editor, add-from-library, upload-and-place, reorder, trash warning, and purge can be walked through
+- operations-API attachment metrics via RecordingStudio Metrics (`attachments.storage_used`, `uploads_over_time`, `by_kind`, `by_content_type`) authorized with AdminRoot `:view`

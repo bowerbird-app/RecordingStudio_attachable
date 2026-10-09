@@ -125,4 +125,11 @@ module RecordingStudioAttachable
       end
     end
   end
+
+  Engine.initializer "recording_studio_attachable.metrics" do
+    Engine.config.to_prepare do
+      require "recording_studio_attachable/metrics"
+      Metrics.register!
+    end
+  end
 end

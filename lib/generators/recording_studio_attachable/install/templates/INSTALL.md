@@ -18,7 +18,10 @@
    - upload one or more files
    - confirm server-side file type, file size, and file count rules
    - revise metadata and replace a file from the detail page
-12. For contributor validation, mirror CI:
+12. For operations-API storage and upload metrics, add RecordingStudio Metrics
+    (`~> 0.2`, GitHub tag `v0.2.0`). This gem registers `:attachments` metrics
+    only. The host calls `RecordingStudioMetrics::Api.register!(api: :operations)`.
+13. For contributor validation, mirror CI:
    - run `bundle install` inside `test/dummy`
    - run `bundle exec rake db:migrate RAILS_ENV=test` inside `test/dummy`
    - return to the repo root and run `bundle exec rubocop` and `bundle exec rake test`

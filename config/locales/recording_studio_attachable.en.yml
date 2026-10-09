@@ -15,27 +15,8 @@ en:
       disconnected: "Disconnected Google Drive."
       session_expired: "Google Drive session expired. Reconnect to continue."
     libraries:
-      title: "Image libraries"
-      subtitle: "Keep photos in as many libraries as you need. Pages can pick from any of them."
-      empty_title: "No libraries yet"
-      empty: "Start one and drop photos in. Pages can borrow from any library in this workspace."
-      name: "Name"
-      description: "Description"
-      create: "Create library"
-      open: "Open"
-      rename: "Rename"
-      trash: "Trash library"
-      default: "Default"
-      created: "Library created."
-      renamed: "Library renamed."
-      trashed: "Library moved to trash."
-      name_blank: "Give the library a name."
-      photo_count:
-        one: "1 photo"
-        other: "%{count} photos"
-      used_in:
-        one: "Used in 1 place"
-        other: "Used in %{count} places"
+      keys:
+        default: "Images"
       trash_in_use: "Trashing this library hides every photo in it, including the ones already placed. You can bring it back."
     placements:
       title: "Images"

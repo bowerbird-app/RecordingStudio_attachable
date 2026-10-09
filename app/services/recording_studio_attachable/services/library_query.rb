@@ -3,8 +3,9 @@
 module RecordingStudioAttachable
   module Services
     module LibraryQuery
-      DEFAULT_NAME = "Library"
-      DEFAULT_IDEMPOTENCY_PREFIX = "recording-studio-attachable-library:default"
+      DEFAULT_KEY = "default"
+      KEY_PATTERN = /\A[a-z][a-z0-9_]*\z/
+      IDEMPOTENCY_PREFIX = "recording-studio-attachable-library"
 
       module_function
 
@@ -21,36 +22,58 @@ module RecordingStudioAttachable
         recordings_for(root_recording_id: root.id).select { |library| live?(library) }
       end
 
-      def default_for_parent(parent)
-        live = live_for_parent(parent)
-        live.find { |recording| default?(recording) } || (live.one? ? live.first : nil)
+      def for_parent_and_key(parent, key)
+        normalized = normalize_key(key)
+        live_for_parent(parent).find { |recording| key_for(recording) == normalized }
       end
 
-      def trashed_default_for_parent(parent)
+      def trashed_for_parent_and_key(parent, key)
         return if parent.blank?
 
+        normalized = normalize_key(key)
         recordings_for(parent_recording_id: parent.id).find do |recording|
-          recording.try(:trashed_at).present? && default?(recording)
+          recording.try(:trashed_at).present? && key_for(recording) == normalized
         end
+      end
+
+      def key_for(library_recording)
+        recordable = library_recording.try(:recordable)
+        return DEFAULT_KEY unless recordable.respond_to?(:key)
+
+        normalize_key(recordable.key)
+      rescue ArgumentError
+        DEFAULT_KEY
       end
 
       def title_for(library_recording)
-        recordable = library_recording.try(:recordable)
-        %i[title name].each do |method_name|
-          next unless recordable.respond_to?(method_name)
-
-          value = recordable.public_send(method_name).to_s.strip
-          return value if value.present?
-        end
-
-        DEFAULT_NAME
+        label_for_key(key_for(library_recording))
       end
 
-      def default?(library_recording)
-        recordable = library_recording.try(:recordable)
-        return false unless recordable.respond_to?(:default)
+      def label_for_key(key)
+        normalized = begin
+          normalize_key(key)
+        rescue ArgumentError
+          key.to_s.strip.downcase.presence || DEFAULT_KEY
+        end
 
-        recordable.default
+        resolver = RecordingStudioAttachable.configuration.library_label
+        resolver.call(normalized).to_s.strip.presence || humanized_key(normalized)
+      rescue StandardError
+        humanized_key(normalized || DEFAULT_KEY)
+      end
+
+      def normalize_key(key)
+        return DEFAULT_KEY if key.nil?
+
+        value = key.to_s.strip.downcase
+        return DEFAULT_KEY if value.blank?
+        raise ArgumentError, "Use a simple library key, like campaign" unless value.match?(KEY_PATTERN)
+
+        value
+      end
+
+      def humanized_key(key)
+        key.to_s.tr("_", " ").capitalize
       end
 
       def live?(recording)
@@ -64,8 +87,22 @@ module RecordingStudioAttachable
         recording.root_recording || recording
       end
 
-      def default_idempotency_key(parent)
-        "#{DEFAULT_IDEMPOTENCY_PREFIX}:#{parent.id}"
+      def image_library_parent_for(recording)
+        current = recording
+        while current
+          return current if library_enabled?(current)
+
+          next_parent = current.try(:parent_recording)
+          break if next_parent.blank? || next_parent == current
+
+          current = next_parent
+        end
+
+        root_for(recording)
+      end
+
+      def idempotency_key(parent, key)
+        "#{IDEMPOTENCY_PREFIX}:#{normalize_key(key)}:#{parent.id}"
       end
 
       def recordings_for(**attributes)
@@ -80,6 +117,12 @@ module RecordingStudioAttachable
         relation.to_a
       rescue StandardError
         []
+      end
+
+      def library_enabled?(recording)
+        RecordingStudioAttachable::Authorization.library_enabled?(recording: recording)
+      rescue StandardError
+        false
       end
     end
   end

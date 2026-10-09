@@ -12,23 +12,37 @@ class ImageLibraryTest < ActionDispatch::IntegrationTest
     sign_in @user
   end
 
-  test "image library path lists named libraries for the workspace" do
+  test "host images path opens the default keyed library listing" do
     workspace = Workspace.find_or_create_by!(name: "Studio Workspace")
     Current.actor = @user
     root = RecordingStudio.root_recording_for(workspace)
     grant_workspace_access!(root)
-    RecordingStudioAttachable.library_for(root, actor: @user)
-    unless RecordingStudioAttachable.libraries_for(root).any? { |library| library.recordable.name == "Campaign stills" }
-      RecordingStudioAttachable.create_library(root, name: "Campaign stills", actor: @user)
-    end
+    library = RecordingStudioAttachable.library_for(root, actor: @user)
 
-    get image_library_path
+    get workspace_images_path
     assert_response :redirect
     follow_redirect!
 
-    assert_includes path, "/libraries"
-    assert_includes response.body, "Image libraries"
-    assert_includes response.body, "Campaign stills"
+    assert_includes path, "/libraries/#{library.id}"
+    follow_redirect! if response.redirect?
+    assert_includes path, "/attachments"
+    assert_includes response.body, "Library"
+  end
+
+  test "host campaign path opens the campaign keyed library listing" do
+    workspace = Workspace.find_or_create_by!(name: "Studio Workspace")
+    Current.actor = @user
+    root = RecordingStudio.root_recording_for(workspace)
+    grant_workspace_access!(root)
+    library = RecordingStudioAttachable.library_for(root, key: :campaign, actor: @user)
+
+    get campaign_images_path
+    assert_response :redirect
+    follow_redirect!
+
+    assert_includes path, "/libraries/#{library.id}"
+    follow_redirect! if response.redirect?
+    assert_includes path, "/attachments"
   end
 
   test "gallery show opens placements for the seeded gallery" do
@@ -52,14 +66,13 @@ class ImageLibraryTest < ActionDispatch::IntegrationTest
     assert_equal gallery_recording.id.to_s, path.split("/")[3]
   end
 
-  test "gallery places photos from two libraries in the same workspace" do
+  test "gallery places photos from two host-mounted libraries" do
     workspace = Workspace.find_or_create_by!(name: "Studio Workspace")
     Current.actor = @user
     root = RecordingStudio.root_recording_for(workspace)
     grant_workspace_access!(root)
-    kiln = RecordingStudioAttachable.library_for(root, actor: @user)
-    campaign = RecordingStudioAttachable.libraries_for(root).find { |library| library.recordable.name == "Campaign stills" }
-    campaign ||= RecordingStudioAttachable.create_library(root, name: "Campaign stills", actor: @user)
+    images = RecordingStudioAttachable.library_for(root, actor: @user)
+    campaign = RecordingStudioAttachable.library_for(root, key: :campaign, actor: @user)
     gallery = Gallery.find_or_create_by!(title: "Kiln shots")
     gallery_recording = RecordingStudio::Recording.unscoped.find_or_create_by!(
       root_recording_id: root.id,
@@ -67,15 +80,15 @@ class ImageLibraryTest < ActionDispatch::IntegrationTest
       recordable: gallery
     )
 
-    kiln_photo = first_or_import_photo(kiln, "kiln-canister-hero.jpg")
+    images_photo = first_or_import_photo(images, "kiln-canister-hero.jpg")
     campaign_photo = first_or_import_photo(campaign, "kiln-canister-portrait.jpg")
     clear_placements(gallery_recording)
-    gallery_recording.place_library_image(attachment_recording: kiln_photo, actor: @user)
+    gallery_recording.place_library_image(attachment_recording: images_photo, actor: @user)
     gallery_recording.place_library_image(attachment_recording: campaign_photo, actor: @user)
 
     placed_library_ids = gallery_recording.library_placements.map { |item| item.attachment_recording.parent_recording_id }
     assert_equal 2, placed_library_ids.size
-    assert_includes placed_library_ids, kiln.id
+    assert_includes placed_library_ids, images.id
     assert_includes placed_library_ids, campaign.id
   end
 

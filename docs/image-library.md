@@ -1,6 +1,6 @@
 # Image libraries
 
-A workspace can keep reusable photos in one or more named libraries. Other gems place those photos on their own pages without copying the file.
+A host mounts reusable photo libraries. People upload and edit photos in a library the host already provisioned. They do not create, title, rename, or browse libraries.
 
 ## Why a library recordable
 
@@ -8,7 +8,8 @@ Attachable already warns against enabling itself on a shared root. A dedicated `
 
 - The root stays a billing and access bucket.
 - Library photos do not mix with other attachments on the workspace.
-- A parent can hold many named libraries. Hosts can also enable the library capability on a brand, client, or project so libraries live deeper in the tree.
+- The host enables the library capability on a root, brand, client, or project and gets one library per parent by default.
+- Extra libraries in the same parent are keyed (`library_for(parent, key: :campaign)`).
 - Access follows the tree through Accessible.
 - Attachable's existing listing, upload, picker, and edit screens work on each library as-is.
 
@@ -18,13 +19,13 @@ Do not enable Attachable on the shared root to fake a library.
 
 | Type | Role |
 | --- | --- |
-| `RecordingStudioAttachable::Library` | A named library under a parent. Holds `Attachment` children. |
+| `RecordingStudioAttachable::Library` | A keyed library under a parent. Holds `Attachment` children. The key is the identifier. The label comes from i18n or `config.library_label`, not a user-editable name. |
 | `RecordingStudioAttachable::Attachment` | The photo and its caption, credit, and alt text. |
 | `RecordingStudioAttachable::Placement` | A pointer from a host page to a library photo, plus Orderable position. |
 
 Caption, credit, and alt live on the photo. A placement does not override them.
 
-`library_for(parent)` / `default_library(parent)` still find-or-create one default library per parent so simple hosts do not have to manage names. Extra libraries are created with a name.
+`library_for(parent)` find-or-creates the default library for that parent (`key: "default"`). A second library is `library_for(parent, key: :campaign)` — idempotent per parent and key.
 
 ## Enable it
 
@@ -70,25 +71,79 @@ Register the addon types in `config.recordable_types`:
 
 Run `rails generate recording_studio_attachable:migrations` and migrate. Orderable needs its own install if the host reorders placements.
 
-## Helpers
+## Provision and mount
+
+The host provisions libraries in code and mounts the listing where it wants. There is no Attachable-owned libraries index or nav entry.
 
 ```ruby
 library = RecordingStudioAttachable.library_for(parent_recording, actor: current_user)
-library = RecordingStudioAttachable.default_library(parent_recording, actor: current_user)
 # or
 library = parent_recording.image_library(actor: current_user)
-library = parent_recording.default_library(actor: current_user)
+
+campaign = RecordingStudioAttachable.library_for(parent_recording, key: :campaign, actor: current_user)
+# or
+campaign = parent_recording.image_library(key: :campaign, actor: current_user)
 
 RecordingStudioAttachable.libraries_for(parent_recording)
 RecordingStudioAttachable.libraries_in_root(parent_recording)
 parent_recording.image_libraries
+```
 
-library = RecordingStudioAttachable.create_library(parent_recording, name: "Campaign stills", description: "Ads", actor: current_user)
-RecordingStudioAttachable.rename_library(library, name: "Campaign", actor: current_user)
-RecordingStudioAttachable.trash_library(library, actor: current_user)
+Mount the existing listing, upload, and edit screens:
 
+```ruby
+# Path helper: library recording, or parent + key
+library_path_for(library)
+library_path_for(parent_recording)
+library_path_for(parent_recording, key: :campaign)
+
+# Engine routes
+recording_studio_attachable.library_path(library)
+recording_studio_attachable.recording_library_path(parent_recording)
+recording_studio_attachable.recording_library_path(parent_recording, key: :campaign)
+```
+
+A host nav can point at those paths:
+
+```erb
+<%= render FlatPack::Sidebar::Item::Component.new(text: "Images", href: workspace_images_path) %>
+<%= render FlatPack::Sidebar::Item::Component.new(text: "Campaign", href: campaign_images_path) %>
+```
+
+```ruby
+# Host wrapper that find-or-creates then opens the listing
+redirect_to recording_studio_attachable.recording_library_path(
+  root_recording,
+  key: params[:key],
+  redirect_mode: "return_to",
+  return_to: root_path
+)
+```
+
+Labels come from i18n, not a form:
+
+```yaml
+en:
+  recording_studio_attachable:
+    libraries:
+      keys:
+        default: "Images"
+        campaign: "Campaign"
+```
+
+Or set `config.library_label` when i18n is not enough:
+
+```ruby
+RecordingStudioAttachable.configure do |config|
+  config.library_label = ->(key) { key.to_s == "campaign" ? "Campaign" : "Images" }
+end
+```
+
+## Placements
+
+```ruby
 parent.place_library_image(attachment_recording: photo, actor: current_user)
-parent.upload_to_library_and_place(signed_blob_id: blob.signed_id, library_recording: library, actor: current_user)
+parent.upload_to_library_and_place(signed_blob_id: blob.signed_id, library_recording: campaign, actor: current_user)
 parent.library_placements
 parent.reorder_library_placements!(ordered_recording_ids: ids, actor: current_user)
 parent.remove_library_placement(placement_recording: placement, actor: current_user)
@@ -98,29 +153,33 @@ RecordingStudioAttachable::Placements.usage_for(photo)
 RecordingStudioAttachable::Placements.usage_for_library(library)
 ```
 
-A photo from another workspace is refused. A photo that is not in a live library in this workspace is refused. A page may place a photo from any library in the same workspace.
+A photo from another workspace is refused. A photo that is not in a live library in this workspace is refused. A page may place a photo from any live library in the same workspace.
 
 ## Screens
 
 Reuse Attachable's listing, upload, picker, and photo edit screens on each library recording.
 
-- Libraries index: `recording_libraries_path(parent)` lists, creates, and renames libraries.
-- One library: `library_path(library)` or `library_path(parent)` (the parent shortcut find-or-creates the default library) and opens the existing listing.
-- Host page: `recording_placements_path(parent)` adds from a library, uploads and places, reorders, and removes a placement. The picker includes a library switcher when more than one library is offered.
+- One library: `library_path(library)` or `recording_library_path(parent, key: :campaign)` opens the existing listing.
+- Host page: `recording_placements_path(parent)` adds from the libraries the host passed, uploads and places, reorders, and removes a placement.
+- The picker switcher shows only when the host passes more than one library.
 - The existing image picker can target a library: `recording_attachment_picker_path(library)`.
 - Photo edit still uses `attachments#show`. Caption, credit, and alt are on that form. If the photo is placed, the page warns how many places use it.
 
-Hosts can restrict which libraries the picker offers:
+The host chooses which libraries the picker offers:
 
 ```ruby
 RecordingStudioAttachable.configure do |config|
   config.placement_picker_libraries = ->(parent_recording) {
-    RecordingStudioAttachable.libraries_for(parent_recording.root_recording)
+    root = parent_recording.root_recording || parent_recording
+    [
+      RecordingStudioAttachable.library_for(root),
+      RecordingStudioAttachable.library_for(root, key: :campaign)
+    ]
   }
 end
 ```
 
-The default offers every live library in the same workspace. The switcher opens on the default library.
+The default offers the default library for the nearest parent that enables `ImageLibrary`. One library means no switcher.
 
 Removing a placement never deletes the photo.
 
@@ -149,4 +208,4 @@ Name places with `config.placement_place_label` when the default title/name is n
 
 ## Presskits
 
-Presskits should stop attaching kit photos directly under an Images section. Enable `ImageLibrary` on the workspace (or on a brand / client if kits live there), enable `LibraryPlacement` on the Images section, move existing section attachments into a library, and create placements that point at them. A workspace may keep a default library plus named ones (for example product vs campaign). The Images picker can switch libraries; restrict `placement_picker_libraries` if a kit should only see one. That follow-up stays in Presskits.
+Presskits should stop attaching kit photos directly under an Images section. Enable `ImageLibrary` on the workspace (or on a brand / client if kits live there), enable `LibraryPlacement` on the Images section, move existing section attachments into a library, and create placements that point at them. The host mounts each library it needs (`library_for` plus a nav link). Pass those libraries to `placement_picker_libraries` when a kit should pick from more than one. That follow-up stays in Presskits.

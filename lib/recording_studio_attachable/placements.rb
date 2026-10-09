@@ -37,7 +37,7 @@ module RecordingStudioAttachable
         resolver = RecordingStudioAttachable.configuration.placement_picker_libraries
         Array(resolver.call(parent_recording)).select { |library| Services::LibraryQuery.live?(library) }
       rescue StandardError
-        Services::LibraryQuery.live_in_root(parent_recording)
+        []
       end
 
       def library_title(library_recording)

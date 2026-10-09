@@ -4,31 +4,17 @@ require "test_helper"
 require_relative "../app/services/recording_studio_attachable/services/application_service"
 require_relative "../app/services/recording_studio_attachable/services/library_query"
 require_relative "../app/services/recording_studio_attachable/services/find_or_create_library"
-require_relative "../app/services/recording_studio_attachable/services/create_library"
-require_relative "../app/services/recording_studio_attachable/services/rename_library"
-require_relative "../app/services/recording_studio_attachable/services/trash_library"
 
 class ImageLibraryTest < Minitest::Test
   Root = Struct.new(:id, :recordable_type, :root_recording, keyword_init: true)
-  LibraryRecordable = Struct.new(:name, :description, :default, keyword_init: true)
+  LibraryRecordable = Struct.new(:key, keyword_init: true)
   LibraryRecording = Struct.new(:id, :recordable_type, :parent_recording_id, :root_recording_id, :trashed_at, :recordable,
                                 keyword_init: true) do
-    attr_accessor :restored_with, :trashed_with, :revised_with
+    attr_accessor :restored_with, :trashed_with
 
     def recording_studio_trashable_restore!(actor:)
       self.trashed_at = nil
       self.restored_with = actor
-    end
-
-    def recording_studio_trashable_trash!(actor:, impersonator: nil)
-      self.trashed_at = Time.now
-      self.trashed_with = [actor, impersonator]
-    end
-
-    def revise(_recording = nil, actor: nil)
-      yield recordable if block_given?
-      self.revised_with = actor
-      self
     end
   end
 
@@ -52,13 +38,12 @@ class ImageLibraryTest < Minitest::Test
       parent_recording_id: "root-1",
       root_recording_id: "root-1",
       trashed_at: nil,
-      recordable: LibraryRecordable.new(name: "Library", default: true)
+      recordable: LibraryRecordable.new(key: "default")
     )
     recording_class.stub(:where, [existing]) do
       result = RecordingStudioAttachable.library_for(root, actor: :ada)
 
       assert_equal existing, result
-      assert_equal existing, RecordingStudioAttachable.default_library(root, actor: :ada)
     end
   end
 
@@ -70,14 +55,14 @@ class ImageLibraryTest < Minitest::Test
       recordable_type: "RecordingStudioAttachable::Library",
       parent_recording_id: "brand-1",
       root_recording_id: "root-1",
-      recordable: LibraryRecordable.new(name: "Brand kit", default: true)
+      recordable: LibraryRecordable.new(key: "default")
     )
     recording_class.stub(:where, [existing]) do
       assert_equal existing, RecordingStudioAttachable.library_for(brand, actor: :ada)
     end
   end
 
-  def test_library_for_restores_a_trashed_default_library
+  def test_library_for_restores_a_trashed_keyed_library
     root = Root.new(id: "root-1", recordable_type: "Workspace")
     trashed = LibraryRecording.new(
       id: "lib-1",
@@ -85,10 +70,10 @@ class ImageLibraryTest < Minitest::Test
       parent_recording_id: "root-1",
       root_recording_id: "root-1",
       trashed_at: Time.now,
-      recordable: LibraryRecordable.new(name: "Library", default: true)
+      recordable: LibraryRecordable.new(key: "campaign")
     )
     recording_class.stub(:where, [trashed]) do
-      result = RecordingStudioAttachable.library_for(root, actor: :ada)
+      result = RecordingStudioAttachable.library_for(root, key: :campaign, actor: :ada)
 
       assert_equal trashed, result
       assert_nil trashed.trashed_at
@@ -110,14 +95,39 @@ class ImageLibraryTest < Minitest::Test
         assert_equal created, result
         assert_equal "created", captured[:action]
         assert_instance_of RecordingStudioAttachable::Library, captured[:recordable]
-        assert_equal "Library", captured[:recordable].name
-        assert captured[:recordable].default
+        assert_equal "default", captured[:recordable].key
         assert_equal root, captured[:root_recording]
         assert_equal root, captured[:parent_recording]
         assert_equal :ada, captured[:actor]
         assert_equal "recording-studio-attachable-library:default:root-1", captured[:idempotency_key]
       end
     end
+  end
+
+  def test_library_for_creates_a_keyed_library
+    root = Root.new(id: "root-1", recordable_type: "Workspace")
+    created = LibraryRecording.new(id: "lib-3", recordable_type: "RecordingStudioAttachable::Library")
+    captured = nil
+    recording_class.stub(:where, []) do
+      RecordingStudio.stub(:record!, lambda { |**kwargs|
+        captured = kwargs
+        Event.new(recording: created)
+      }) do
+        result = RecordingStudioAttachable.library_for(root, key: :campaign, actor: :ada)
+
+        assert_equal created, result
+        assert_equal "campaign", captured[:recordable].key
+        assert_equal "recording-studio-attachable-library:campaign:root-1", captured[:idempotency_key]
+      end
+    end
+  end
+
+  def test_library_for_rejects_a_messy_key
+    root = Root.new(id: "root-1", recordable_type: "Workspace")
+
+    error = assert_raises(ArgumentError) { RecordingStudioAttachable.library_for(root, key: "Campaign Stills") }
+
+    assert_match(/simple library key/, error.message)
   end
 
   def test_library_for_requires_a_parent
@@ -132,77 +142,25 @@ class ImageLibraryTest < Minitest::Test
       id: "lib-1",
       recordable_type: "RecordingStudioAttachable::Library",
       parent_recording_id: "root-1",
-      recordable: LibraryRecordable.new(name: "Library", default: true)
+      recordable: LibraryRecordable.new(key: "default")
     )
     campaign = LibraryRecording.new(
       id: "lib-2",
       recordable_type: "RecordingStudioAttachable::Library",
       parent_recording_id: "root-1",
-      recordable: LibraryRecordable.new(name: "Campaign stills", default: false)
+      recordable: LibraryRecordable.new(key: "campaign")
     )
     trashed = LibraryRecording.new(
       id: "lib-3",
       recordable_type: "RecordingStudioAttachable::Library",
       parent_recording_id: "root-1",
       trashed_at: Time.now,
-      recordable: LibraryRecordable.new(name: "Old", default: false)
+      recordable: LibraryRecordable.new(key: "old")
     )
 
     recording_class.stub(:where, [default, campaign, trashed]) do
       assert_equal [default, campaign], RecordingStudioAttachable.libraries_for(root)
     end
-  end
-
-  def test_create_library_records_a_named_library
-    root = Root.new(id: "root-1", recordable_type: "Workspace")
-    created = LibraryRecording.new(id: "lib-2", recordable_type: "RecordingStudioAttachable::Library")
-    captured = nil
-    RecordingStudio.stub(:record!, lambda { |**kwargs|
-      captured = kwargs
-      Event.new(recording: created)
-    }) do
-      result = RecordingStudioAttachable.create_library(root, name: "Campaign stills", description: "Ads", actor: :ada)
-
-      assert_equal created, result
-      assert_equal "Campaign stills", captured[:recordable].name
-      assert_equal "Ads", captured[:recordable].description
-      refute captured[:recordable].default
-      assert_nil captured[:idempotency_key]
-    end
-  end
-
-  def test_rename_library_revises_the_name
-    library = LibraryRecording.new(
-      id: "lib-1",
-      recordable_type: "RecordingStudioAttachable::Library",
-      recordable: LibraryRecordable.new(name: "Library", description: "Hero", default: true)
-    )
-
-    RecordingStudioAttachable.rename_library(library, name: "Kiln shots", description: "Product", actor: :ada)
-
-    assert_equal "Kiln shots", library.recordable.name
-    assert_equal "Product", library.recordable.description
-    assert_equal :ada, library.revised_with
-  end
-
-  def test_trash_library_uses_trashable
-    library = LibraryRecording.new(id: "lib-1", recordable_type: "RecordingStudioAttachable::Library")
-
-    RecordingStudioAttachable.trash_library(library, actor: :ada, impersonator: :imp)
-
-    assert_equal %i[ada imp], library.trashed_with
-    assert library.trashed_at
-  end
-
-  def test_trash_library_destroys_when_trashable_is_unavailable
-    library = Object.new
-    library.define_singleton_method(:recordable_type) { "RecordingStudioAttachable::Library" }
-    library.define_singleton_method(:destroy!) { @destroyed = true }
-    library.define_singleton_method(:destroyed) { @destroyed }
-
-    RecordingStudioAttachable.trash_library(library, actor: :ada)
-
-    assert library.destroyed
   end
 
   def test_image_library_capability_module_delegates_to_include_for
@@ -222,23 +180,22 @@ class ImageLibraryTest < Minitest::Test
     recording.define_singleton_method(:recordable_type) { "Workspace" }
     recording.extend(RecordingStudio::Capabilities::ImageLibrary::RecordingMethods)
     recording.define_singleton_method(:assert_capability!) { |*| true }
+    captured = nil
 
-    RecordingStudioAttachable.stub(:library_for, :library) do
-      assert_equal :library, recording.image_library(actor: :ada)
-      assert_equal :library, recording.default_library(actor: :ada)
+    RecordingStudioAttachable.stub(:library_for, lambda { |parent, **kwargs|
+      captured = [parent, kwargs]
+      :library
+    }) do
+      assert_equal :library, recording.image_library(key: :campaign, actor: :ada)
+      assert_equal [recording, { key: :campaign, actor: :ada }], captured
     end
     RecordingStudioAttachable.stub(:libraries_for, %i[one two]) do
       assert_equal %i[one two], recording.image_libraries
     end
-    RecordingStudioAttachable.stub(:create_library, :created) do
-      assert_equal :created, recording.create_image_library(name: "Campaign")
-    end
-    RecordingStudioAttachable.stub(:rename_library, :renamed) do
-      assert_equal :renamed, recording.rename_image_library(:library, name: "Kiln")
-    end
-    RecordingStudioAttachable.stub(:trash_library, :trashed) do
-      assert_equal :trashed, recording.trash_image_library(:library)
-    end
+    refute_respond_to recording, :create_image_library
+    refute_respond_to recording, :rename_image_library
+    refute_respond_to recording, :trash_image_library
+    refute_respond_to recording, :default_library
   end
 
   def test_libraries_in_root_and_title
@@ -247,12 +204,19 @@ class ImageLibraryTest < Minitest::Test
       id: "lib-1",
       recordable_type: "RecordingStudioAttachable::Library",
       root_recording_id: "root-1",
-      recordable: LibraryRecordable.new(name: "Kiln shots", default: true)
+      recordable: LibraryRecordable.new(key: "campaign")
     )
     recording_class.stub(:where, [library]) do
       assert_equal [library], RecordingStudioAttachable.libraries_in_root(root)
-      assert_equal "Kiln shots", RecordingStudioAttachable::Placements.library_title(library)
+      assert_equal "Campaign", RecordingStudioAttachable::Placements.library_title(library)
     end
+  end
+
+  def test_public_api_does_not_create_rename_or_trash
+    refute_respond_to RecordingStudioAttachable, :create_library
+    refute_respond_to RecordingStudioAttachable, :rename_library
+    refute_respond_to RecordingStudioAttachable, :trash_library
+    refute_respond_to RecordingStudioAttachable, :default_library
   end
 
   private
@@ -263,12 +227,10 @@ class ImageLibraryTest < Minitest::Test
     RecordingStudioAttachable.const_set(
       :Library,
       Class.new do
-        attr_accessor :name, :description, :default
+        attr_accessor :key
 
-        def initialize(name: nil, description: nil, default: false)
-          @name = name
-          @description = description
-          @default = default
+        def initialize(key: nil)
+          @key = key
         end
       end
     )

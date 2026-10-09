@@ -16,8 +16,14 @@
       ) %>
 
       <%= render FlatPack::Sidebar::Item::Component.new(
-        text: "Image libraries",
-        href: image_library_path,
+        text: "Images",
+        href: workspace_images_path,
+        icon: :image
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
+        text: "Campaign",
+        href: campaign_images_path,
         icon: :image
       ) %>
 

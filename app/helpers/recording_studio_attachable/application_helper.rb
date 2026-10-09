@@ -33,47 +33,25 @@ module RecordingStudioAttachable
       attachable_routes.recording_attachment_imports_path(recording, **options)
     end
 
-    def library_path_for(parent_or_library, **options)
-      attachable_routes.library_path(parent_or_library, **options)
+    def library_path_for(parent_or_library, key: :default, **options)
+      if RecordingStudioAttachable::Placements.library_recording?(parent_or_library)
+        attachable_routes.library_path(parent_or_library, **options)
+      else
+        attachable_routes.recording_library_path(parent_or_library, { key: key }.merge(options))
+      end
     end
 
-    def libraries_path_for(parent_recording, **options)
-      attachable_routes.recording_libraries_path(parent_recording, **options)
-    end
-
-    def library_picker_path_for(parent_or_library, **options)
+    def library_picker_path_for(parent_or_library, key: :default, **options)
       library = if RecordingStudioAttachable::Placements.library_recording?(parent_or_library)
                   parent_or_library
                 else
-                  RecordingStudioAttachable.library_for(parent_or_library)
+                  RecordingStudioAttachable.library_for(parent_or_library, key: key)
                 end
       attachable_routes.recording_attachment_picker_path(library, **options)
     end
 
     def library_title_for(library_recording)
       RecordingStudioAttachable::Placements.library_title(library_recording)
-    end
-
-    def library_description_for(library_recording)
-      library_recording.try(:recordable).try(:description).to_s.strip.presence
-    end
-
-    def default_library?(library_recording)
-      recordable = library_recording.try(:recordable)
-      recordable.respond_to?(:default) && recordable.default
-    end
-
-    def library_photo_count(library_recording)
-      if library_recording.respond_to?(:images)
-        collection = library_recording.images
-        return collection.count if collection.respond_to?(:count)
-
-        Array(collection).size
-      else
-        Array(library_recording.try(:child_recordings)).count do |child|
-          RecordingStudioAttachable::Placements.attachment_recording?(child)
-        end
-      end
     end
 
     def library_picker_switcher_payload(libraries)

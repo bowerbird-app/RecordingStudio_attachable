@@ -6,8 +6,10 @@
   data-controller="recording-studio-attachable--attachment-image-picker recording-studio-attachable--library-placement"
   data-action="recording-studio-attachable--attachment-image-picker:selected->recording-studio-attachable--library-placement#addFromLibrary"
   data-recording-studio-attachable--library-placement-libraries-value="<%= library_picker_switcher_payload(@picker_libraries).to_json %>"
+  <% if @library.present? %>
   data-recording-studio-attachable--attachment-image-picker-picker-url-value="<%= recording_attachment_picker_path(@library) %>"
   data-recording-studio-attachable--attachment-image-picker-upload-url-value="<%= recording_attachments_path(@library) %>"
+  <% end %>
   data-recording-studio-attachable--attachment-image-picker-direct-upload-url-value="<%= main_app.rails_direct_uploads_path %>"
   data-recording-studio-attachable--attachment-image-picker-max-file-size-value="<%= RecordingStudioAttachable.configuration.max_file_size %>"
   data-recording-studio-attachable--attachment-image-picker-image-processing-enabled-value="<%= RecordingStudioAttachable.configuration.image_processing_enabled %>"
@@ -30,7 +32,7 @@
     variant: :h1
   ) %>
 
-  <% if @can_add %>
+  <% if @can_add && @library.present? %>
     <% if @picker_libraries.size > 1 %>
       <%= render FlatPack::Select::Component.new(
         name: "library_id",
@@ -171,10 +173,12 @@
     <% end %>
   <% end %>
 
-  <%= render "recording_studio_attachable/attachment_image_pickers/modal",
-             recording: @library,
-             modal_id: picker_modal_id,
-             modal_title: t("recording_studio_attachable.placements.picker_title"),
-             search_aria_label: t("recording_studio_attachable.placements.search"),
-             empty_state_text: t("recording_studio_attachable.placements.picker_empty") %>
+  <% if @library.present? %>
+    <%= render "recording_studio_attachable/attachment_image_pickers/modal",
+               recording: @library,
+               modal_id: picker_modal_id,
+               modal_title: t("recording_studio_attachable.placements.picker_title"),
+               search_aria_label: t("recording_studio_attachable.placements.search"),
+               empty_state_text: t("recording_studio_attachable.placements.picker_empty") %>
+  <% end %>
 </div>

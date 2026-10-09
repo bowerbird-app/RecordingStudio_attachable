@@ -63,16 +63,43 @@ class LibraryViewsTest < Minitest::Test
     assert_includes source, 'form?.querySelector("input[type=file]")'
   end
 
-  def test_libraries_index_lists_creates_and_renames
-    source = File.read(File.expand_path("../app/views/recording_studio_attachable/libraries/index.html.erb", __dir__))
+  def test_libraries_index_is_gone
+    refute File.exist?(File.expand_path("../app/views/recording_studio_attachable/libraries/index.html.erb", __dir__))
 
-    assert_includes source, 'title: t("recording_studio_attachable.libraries.title")'
-    assert_includes source, 'text: t("recording_studio_attachable.libraries.create")'
-    assert_includes source, 'text: t("recording_studio_attachable.libraries.rename")'
-    assert_includes source, 'text: t("recording_studio_attachable.libraries.open")'
-    assert_includes source, "trash_in_use"
-    refute_includes source, "recordable"
-    refute_includes source, "Recordable"
+    routes = File.read(File.expand_path("../config/routes.rb", __dir__))
+    assert_includes routes, "resource :library, only: :show, controller: \"libraries\""
+    assert_includes routes, 'get "libraries/:id", to: "libraries#show", as: :library'
+    refute_includes routes, "resources :libraries"
+    refute_includes routes, "libraries#update"
+    refute_includes routes, "libraries#destroy"
+    refute_includes routes, "libraries#index"
+    refute_includes routes, "libraries#create"
+  end
+
+  def test_helper_mounts_a_library_or_parent_plus_key
+    helper = Object.new
+    helper.extend(RecordingStudioAttachable::ApplicationHelper)
+    library = Struct.new(:id, :recordable_type).new("lib-1", "RecordingStudioAttachable::Library")
+    parent = Struct.new(:id, :recordable_type).new("root-1", "Workspace")
+    routes = Object.new
+    routes.define_singleton_method(:library_path) { |item, **| "/libraries/#{item.id}" }
+    routes.define_singleton_method(:recording_library_path) do |item, **options|
+      "/recordings/#{item.id}/library?key=#{options[:key]}"
+    end
+    helper.define_singleton_method(:attachable_routes) { routes }
+
+    assert_equal "/libraries/lib-1", helper.library_path_for(library)
+    assert_equal "/recordings/root-1/library?key=campaign", helper.library_path_for(parent, key: :campaign)
+  end
+
+  def test_locales_keep_host_labels_and_drop_user_library_forms
+    source = File.read(File.expand_path("../config/locales/recording_studio_attachable.en.yml", __dir__))
+
+    assert_includes source, "keys:"
+    assert_includes source, 'default: "Images"'
+    refute_includes source, "Create library"
+    refute_includes source, "Rename"
+    refute_includes source, "Give the library a name"
   end
 
   def test_helper_reorders_placement_ids

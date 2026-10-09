@@ -59,7 +59,7 @@ Recording Studio 4 requires every configured host-app recordable to declare whet
 
 Do not enable `:attachable` on a shared root (`shared: true`). Attachments are capability-owned children, so enable the capability on domain recordables beneath that shared root instead.
 
-Reusable photos belong in named image libraries, not on the shared root. `RecordingStudioAttachable::Library` is a child of a parent that enables `ImageLibrary` — the root, or a brand / client / project. `library_for` still find-or-creates one default library per parent. Host gems place those photos with `RecordingStudioAttachable::Placement`. See [Image libraries](docs/image-library.md).
+Reusable photos belong in host-mounted image libraries, not on the shared root. `RecordingStudioAttachable::Library` is a child of a parent that enables `ImageLibrary` — the root, or a brand / client / project. `library_for(parent)` find-or-creates one library per parent. Extra libraries use a host key, for example `library_for(parent, key: :campaign)`. People do not create or browse libraries. Host gems place those photos with `RecordingStudioAttachable::Placement`. See [Image libraries](docs/image-library.md).
 
 `RecordingStudioAttachable::Attachment` is owned by this addon. The addon declares it as `root: false` and registers it as a child recordable of the `:attachable` capability, so host apps should not add host-specific `allowed_parent_types:` to the attachment model.
 
@@ -478,7 +478,7 @@ The most important per-recordable options are:
 
 ## Image libraries
 
-Photos that several pages reuse live once in named libraries under a parent. A host page stores a placement, not a second file. A workspace can hold many libraries, and hosts may enable `ImageLibrary` on a brand, client, or project.
+Photos that several pages reuse live once in a library the host mounts. A host page stores a placement, not a second file. Enable `ImageLibrary` on a root, brand, client, or project. People upload and edit photos. They do not create, title, or browse libraries.
 
 ```ruby
 class Workspace < ApplicationRecord
@@ -493,13 +493,13 @@ class Gallery < ApplicationRecord
 end
 
 library = root_recording.image_library(actor: current_user)
-campaign = root_recording.create_image_library(name: "Campaign stills", actor: current_user)
+campaign = root_recording.image_library(key: :campaign, actor: current_user)
 gallery.place_library_image(attachment_recording: photo, actor: current_user)
 gallery.upload_to_library_and_place(signed_blob_id: blob.signed_id, library_recording: campaign, actor: current_user)
 gallery.library_placements
 ```
 
-`recording_libraries_path(parent)` lists and creates libraries. `library_path(library)` or `library_path(parent)` opens the existing listing. `recording_placements_path(gallery)` adds from any library in the workspace, with a switcher when more than one is offered. Restrict that list with `config.placement_picker_libraries`.
+`library_path_for(library)` or `library_path_for(parent, key: :campaign)` opens the existing listing. Put those paths in the host nav. `recording_placements_path(gallery)` adds from the libraries the host passed. The switcher shows only when that list has more than one. Set `config.placement_picker_libraries` to pass the list.
 
 Trashing a library or a photo that is in use warns how many places point at it. Resolve skips a trashed photo. Permanently deleting a library or a photo removes its placements. Removing a placement leaves the photo in the library.
 

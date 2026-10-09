@@ -118,10 +118,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_021003) do
   end
 
   create_table "recording_studio_attachable_libraries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.string "name", default: "Library", null: false
-    t.text "description"
-    t.boolean "default", default: false, null: false
+    t.string "key", default: "default", null: false
     t.datetime "created_at", null: false
+    t.index ["key"], name: "index_recording_studio_attachable_libraries_on_key"
   end
 
   create_table "recording_studio_attachable_placements", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

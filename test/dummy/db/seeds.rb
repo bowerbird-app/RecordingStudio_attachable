@@ -173,24 +173,7 @@ puts "Seeded: Page '#{page.title}' beneath the workspace root recording"
 puts "Seeded: User '#{user.name}' beneath the workspace root recording"
 puts "Seeded: Chat thread '#{chat_thread.title}' with #{chat_messages.count} recorded messages"
 kiln_library = RecordingStudioAttachable.library_for(root_recording, actor: user)
-if kiln_library.recordable.name.in?([ "Library", "Image library" ])
-  RecordingStudioAttachable.rename_library(
-    kiln_library,
-    name: "Kiln shots",
-    description: "Hero product photos",
-    actor: user
-  )
-end
-
-campaign_library = RecordingStudioAttachable.libraries_for(root_recording).find do |library|
-  library.recordable.name == "Campaign stills"
-end
-campaign_library ||= RecordingStudioAttachable.create_library(
-  root_recording,
-  name: "Campaign stills",
-  description: "Ads and cutdowns",
-  actor: user
-)
+campaign_library = RecordingStudioAttachable.library_for(root_recording, key: :campaign, actor: user)
 
 seed_library_photos = lambda do |library_recording, shots, source|
   images = library_recording.images(per_page: 20).to_a
@@ -241,5 +224,5 @@ if gallery_recording.library_placements.empty?
 end
 
 puts "Seeded: Kiln canister press kit (#{press_kit.size} images) on the workspace"
-puts "Seeded: Kiln shots library with #{kiln_shots.size} photos and Campaign stills with #{campaign_shots.size}"
+puts "Seeded: Images library with #{kiln_shots.size} photos and Campaign library with #{campaign_shots.size}"
 puts "Seeded: Gallery '#{gallery.title}' with #{gallery_recording.library_placements.size} placed photos from both libraries"

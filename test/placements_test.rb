@@ -539,6 +539,16 @@ class PlacementsTest < Minitest::Test
     RecordingStudioAttachable.configuration.placement_picker_libraries = original
   end
 
+  def test_picker_libraries_are_empty_when_the_host_list_raises
+    parent = Recording.new(id: "gallery-1", recordable_type: "Gallery")
+    original = RecordingStudioAttachable.configuration.placement_picker_libraries
+    RecordingStudioAttachable.configuration.placement_picker_libraries = ->(_parent) { raise "boom" }
+
+    assert_empty RecordingStudioAttachable::Placements.picker_libraries_for(parent)
+  ensure
+    RecordingStudioAttachable.configuration.placement_picker_libraries = original
+  end
+
   private
 
   def stub_placement_class!

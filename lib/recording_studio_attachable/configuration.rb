@@ -124,7 +124,8 @@ module RecordingStudioAttachable
                   :google_drive,
                   :direct_url_host,
                   :placement_place_label,
-                  :placement_picker_libraries
+                  :placement_picker_libraries,
+                  :library_label
 
     attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode
 
@@ -306,6 +307,7 @@ module RecordingStudioAttachable
       @authorize_with = nil
       @placement_place_label = default_placement_place_label
       @placement_picker_libraries = default_placement_picker_libraries
+      @library_label = default_library_label
     end
 
     def default_placement_place_label
@@ -313,7 +315,19 @@ module RecordingStudioAttachable
     end
 
     def default_placement_picker_libraries
-      ->(parent_recording) { RecordingStudioAttachable.libraries_in_root(parent_recording) }
+      lambda { |parent_recording|
+        holder = RecordingStudioAttachable::Services::LibraryQuery.image_library_parent_for(parent_recording)
+        [RecordingStudioAttachable.library_for(holder)]
+      }
+    end
+
+    def default_library_label
+      lambda { |key|
+        I18n.t(
+          "recording_studio_attachable.libraries.keys.#{key}",
+          default: RecordingStudioAttachable::Services::LibraryQuery.humanized_key(key)
+        )
+      }
     end
 
     def default_auth_roles

@@ -42,14 +42,14 @@ module RecordingStudioAttachable
       end
 
       def library_for!(parent)
-        library = library_recording.presence || default_library_for(parent)
+        library = library_recording.presence || hosted_library_for(parent)
         raise ArgumentError, I18n.t("recording_studio_attachable.placements.not_in_library") unless LibraryQuery.live?(library)
         raise ArgumentError, I18n.t("recording_studio_attachable.placements.different_workspace") unless same_root?(parent, library)
 
         library
       end
 
-      def default_library_for(parent)
+      def hosted_library_for(parent)
         result = FindOrCreateLibrary.call(
           parent_recording: image_library_parent_for(parent),
           actor: resolve_actor(actor)

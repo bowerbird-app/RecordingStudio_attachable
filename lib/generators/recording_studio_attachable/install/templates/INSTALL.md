@@ -5,19 +5,20 @@
 5. Declare each host-app domain recordable with `recording_studio_recordable(...)`, including `root:` and `allowed_parent_types:` for non-root domain recordables.
 6. Opt each parent recordable into `RecordingStudio::Capabilities::Attachable.to(...)` and set any per-recordable overrides there.
 7. Do not add host-specific `allowed_parent_types:` to `RecordingStudioAttachable::Attachment`; the addon declares it as a non-root child and registers it through the `:attachable` capability.
-8. Choose the gem layout behavior in `config/initializers/recording_studio_attachable.rb`:
+8. For a reusable workspace photo library, enable `ImageLibrary.to` on the root and `LibraryPlacement.to` on host types. Register `RecordingStudioAttachable::Library` and `RecordingStudioAttachable::Placement`. See docs/image-library.md.
+9. Choose the gem layout behavior in `config/initializers/recording_studio_attachable.rb`:
    - leave `config.layout = :blank` to use the gem's centered blank layout
    - set `config.layout = "application"` (or another host-app layout) to render gem views inside your shell
-9. Confirm your host app includes:
+10. Confirm your host app includes:
    - the `@rails/activestorage` importmap pin
    - `ActiveStorage.start()` in `app/javascript/application.js`
    - eager loading for `controllers/recording_studio_attachable`
-10. Validate the mounted engine flow end-to-end:
+11. Validate the mounted engine flow end-to-end:
    - open the attachment listing
    - upload one or more files
    - confirm server-side file type, file size, and file count rules
    - revise metadata and replace a file from the detail page
-11. For contributor validation, mirror CI:
+12. For contributor validation, mirror CI:
    - run `bundle install` inside `test/dummy`
    - run `bundle exec rake db:migrate RAILS_ENV=test` inside `test/dummy`
    - return to the repo root and run `bundle exec rubocop` and `bundle exec rake test`

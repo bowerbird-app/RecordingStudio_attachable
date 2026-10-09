@@ -59,6 +59,8 @@ Recording Studio 4 requires every configured host-app recordable to declare whet
 
 Do not enable `:attachable` on a shared root (`shared: true`). Attachments are capability-owned children, so enable the capability on domain recordables beneath that shared root instead.
 
+Reusable photos belong in the workspace image library, not on the shared root. `RecordingStudioAttachable::Library` is a find-or-create child of the root with Attachable enabled. Host gems place those photos with `RecordingStudioAttachable::Placement`. See [Image library](docs/image-library.md).
+
 `RecordingStudioAttachable::Attachment` is owned by this addon. The addon declares it as `root: false` and registers it as a child recordable of the `:attachable` capability, so host apps should not add host-specific `allowed_parent_types:` to the attachment model.
 
 ### 3. Opt parent recordables into attachable
@@ -474,6 +476,36 @@ The most important per-recordable options are:
 - `auth_roles`
 - `authorize_with`
 
+## Image library
+
+Photos that several pages reuse live once in a per-root library. A host page stores a placement, not a second file.
+
+```ruby
+class Workspace < ApplicationRecord
+  recording_studio_recordable label: "Workspace", root: true
+  include RecordingStudio::Capabilities::ImageLibrary.to
+end
+
+class Gallery < ApplicationRecord
+  recording_studio_recordable label: "Gallery", root: false, allowed_parent_types: ["Workspace"]
+  include RecordingStudio::Capabilities::LibraryPlacement.to
+  include RecordingStudio::Capabilities::Orderable.to(allows: ["RecordingStudioAttachable::Placement"])
+end
+
+library = root_recording.image_library(actor: current_user)
+gallery.place_library_image(attachment_recording: photo, actor: current_user)
+gallery.upload_to_library_and_place(signed_blob_id: blob.signed_id, actor: current_user)
+gallery.library_placements
+```
+
+`library_path(root_recording)` opens the existing listing on that library. `recording_placements_path(gallery)` adds from the library, uploads and places, reorders, and removes a placement. The bundled image picker can target the library with `recording_attachment_picker_path(library)`.
+
+Trashing a library photo that is in use warns how many places point at it. Resolve skips a trashed photo. Permanently deleting the photo removes its placements. Removing a placement leaves the photo in the library.
+
+Access follows the root. Public pages render through `RecordingStudioAttachable::Placements.resolve`. Duplicating a host page copies placements, not files.
+
+Full setup, trash rules, and a Presskits note: [docs/image-library.md](docs/image-library.md).
+
 ## Helpers and queries
 
 The engine exposes a small set of route helpers that host apps typically use directly:
@@ -621,7 +653,7 @@ Dummy credentials (`test/dummy/config/credentials.yml.enc`) are encrypted with t
 
 - the dummy app is a validation shell, not a production template
 - CI installs the dummy app bundle and runs dummy-app migrations before the root checks
-- the dummy app pins RecordingStudio `v4.2.2` and Recording Studio Accessible `v0.6.0`
+- the dummy app pins RecordingStudio `v4.3.0`, Recording Studio Accessible `v0.6.0`, and Recording Studio Orderable `v0.2.7`
 - make sure engine, Active Storage, and Recording Studio tables are migrated in the dummy app before validating upload flows locally
 - `bin/rails db:seed` attaches a twenty-shot Kiln canister press kit to the workspace. The shots mix portrait, square, and landscape frames. Edit images uses those files. Seeds also remove the colour-block stand-ins `window.jpg`, `dock.jpg`, and `pier.jpg` when they are still on the workspace.
 - set `DUMMY_ACTIVE_STORAGE_SERVICE=amazon` plus `DUMMY_AWS_ACCESS_KEY_ID`, `DUMMY_AWS_SECRET_ACCESS_KEY`, `DUMMY_AWS_REGION`, and `DUMMY_AWS_BUCKET` to exercise S3-backed uploads in the dummy app; `DUMMY_AWS_BUCKET` may be either the plain bucket name or a bucket ARN

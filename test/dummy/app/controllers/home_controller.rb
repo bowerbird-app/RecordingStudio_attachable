@@ -20,6 +20,9 @@ class HomeController < ApplicationController
     @page_attachment_upload_path = page_attachment_upload_path
     @attachment_chromes_path = attachment_chromes_path
     @attachment_editor_path = attachment_editor_path
+    @image_library_path = image_library_path
+    @gallery = Gallery.first
+    @gallery_path = gallery_path(@gallery) if @gallery.present?
   end
 
   private

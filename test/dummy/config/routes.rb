@@ -28,6 +28,8 @@ Rails.application.routes.draw do
   resources :pages, only: %i[show edit update]
   get "attachment_chromes", to: "attachment_chromes#show", as: :attachment_chromes
   get "attachment_editor", to: "attachment_editors#show", as: :attachment_editor
+  get "image_library", to: "image_libraries#show", as: :image_library
+  resources :galleries, only: :show
 
   root "home#index"
 end

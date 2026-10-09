@@ -33,6 +33,24 @@ module RecordingStudioAttachable
       attachable_routes.recording_attachment_imports_path(recording, **options)
     end
 
+    def library_path_for(root_recording, **options)
+      attachable_routes.library_path(root_recording, **options)
+    end
+
+    def library_picker_path_for(root_recording, **options)
+      library = RecordingStudioAttachable.library_for(root_recording)
+      attachable_routes.recording_attachment_picker_path(library, **options)
+    end
+
+    def move_placement_ids(resolved, index, delta)
+      ids = resolved.map { |item| item.placement_recording.id }
+      target = index + delta
+      return ids if target.negative? || target >= ids.length
+
+      ids[index], ids[target] = ids[target], ids[index]
+      ids
+    end
+
     private
 
     def attachable_routes

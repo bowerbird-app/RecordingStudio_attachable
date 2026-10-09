@@ -129,17 +129,7 @@ class EngineTest < Minitest::Test
     end
 
     assert_equal ["RecordingStudioAttachable::Attachment"], recordable_types
-    assert_equal [
-      [
-        :attachable,
-        nil,
-        {
-          recording_methods: RecordingStudio::Capabilities::Attachable::RecordingMethods,
-          source: "recording_studio_attachable",
-          child_recordables: ["RecordingStudioAttachable::Attachment"]
-        }
-      ]
-    ], capabilities
+    assert_equal expected_registered_capabilities, capabilities
     assert_not_nil after_initialize
   end
 
@@ -167,17 +157,7 @@ class EngineTest < Minitest::Test
     end
 
     assert_equal ["RecordingStudioAttachable::Attachment"], recordable_types
-    assert_equal [
-      [
-        :attachable,
-        nil,
-        {
-          recording_methods: RecordingStudio::Capabilities::Attachable::RecordingMethods,
-          source: "recording_studio_attachable",
-          child_recordables: ["RecordingStudioAttachable::Attachment"]
-        }
-      ]
-    ], capabilities
+    assert_equal expected_registered_capabilities, capabilities
   end
 
   def test_register_initializer_skips_re_registering_attachment_when_already_configured
@@ -202,17 +182,7 @@ class EngineTest < Minitest::Test
     end
 
     assert_not register_recordable_type_called
-    assert_equal [
-      [
-        :attachable,
-        nil,
-        {
-          recording_methods: RecordingStudio::Capabilities::Attachable::RecordingMethods,
-          source: "recording_studio_attachable",
-          child_recordables: ["RecordingStudioAttachable::Attachment"]
-        }
-      ]
-    ], capabilities
+    assert_equal expected_registered_capabilities, capabilities
   end
 
   def test_google_drive_initializer_registers_provider_when_picker_is_configured
@@ -343,5 +313,37 @@ class EngineTest < Minitest::Test
 
   def find_google_drive_initializer(name)
     RecordingStudioAttachable::GoogleDrive::Engine.initializers.find { |initializer| initializer.name == name }
+  end
+
+  def expected_registered_capabilities
+    [
+      [
+        :attachable,
+        nil,
+        {
+          recording_methods: RecordingStudio::Capabilities::Attachable::RecordingMethods,
+          source: "recording_studio_attachable",
+          child_recordables: ["RecordingStudioAttachable::Attachment"]
+        }
+      ],
+      [
+        :image_library,
+        nil,
+        {
+          recording_methods: RecordingStudio::Capabilities::ImageLibrary::RecordingMethods,
+          source: "recording_studio_attachable",
+          child_recordables: ["RecordingStudioAttachable::Library"]
+        }
+      ],
+      [
+        :library_placement,
+        nil,
+        {
+          recording_methods: RecordingStudio::Capabilities::LibraryPlacement::RecordingMethods,
+          source: "recording_studio_attachable",
+          child_recordables: ["RecordingStudioAttachable::Placement"]
+        }
+      ]
+    ]
   end
 end

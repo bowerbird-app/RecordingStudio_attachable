@@ -23,6 +23,13 @@ module RecordingStudioAttachable
     def configure
       yield(configuration) if block_given?
     end
+
+    def library_for(root_recording, actor: nil)
+      result = Services::FindOrCreateLibrary.call(root_recording: root_recording, actor: actor)
+      raise ArgumentError, result.error if result.failure?
+
+      result.value
+    end
   end
 end
 
@@ -41,7 +48,10 @@ require "recording_studio_attachable/upload_provider"
 require "recording_studio_attachable/authorization"
 require "recording_studio_attachable/storage_release"
 require "recording_studio_attachable/storage_limit"
+require "recording_studio_attachable/placements"
 require "recording_studio_attachable/services/base_service"
+require "recording_studio/capabilities/image_library"
+require "recording_studio/capabilities/library_placement"
 require "recording_studio_attachable/google_drive/oauth_client"
 require "recording_studio_attachable/google_drive/client"
 require "recording_studio_attachable/google_drive/session_access_token"

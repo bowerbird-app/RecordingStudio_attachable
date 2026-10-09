@@ -192,6 +192,80 @@ class AuthorizationTest < Minitest::Test
     assert_equal "Not authorized to view attachments for Workspace", error.message
   end
 
+  def test_placement_enabled_is_false_without_a_type
+    recording = FakeRecording.new(recordable_type: nil)
+
+    assert_not RecordingStudioAttachable::Authorization.placement_enabled?(recording: recording)
+  end
+
+  def test_authorize_placement_returns_true_when_actor_is_allowed
+    recording = FakeRecording.new(recordable_type: "Gallery")
+
+    RecordingStudio.configuration.stub(:capability_enabled?, true) do
+      RecordingStudioAccessible::Authorization.stub(:allowed?, true) do
+        assert RecordingStudioAttachable::Authorization.authorize_placement!(
+          action: :upload,
+          actor: Object.new,
+          recording: recording
+        )
+      end
+    end
+  end
+
+  def test_authorize_placement_raises_when_capability_is_disabled
+    recording = FakeRecording.new(recordable_type: "Gallery")
+
+    RecordingStudio.configuration.stub(:capability_enabled?, false) do
+      error = assert_raises(RecordingStudioAttachable::Authorization::CapabilityNotEnabledError) do
+        RecordingStudioAttachable::Authorization.authorize_placement!(
+          action: :upload,
+          actor: Object.new,
+          recording: recording
+        )
+      end
+
+      assert_includes error.message, "Library placement is not enabled"
+    end
+  end
+
+  def test_authorize_placement_raises_when_actor_is_denied
+    recording = FakeRecording.new(recordable_type: "Gallery")
+
+    RecordingStudio.configuration.stub(:capability_enabled?, true) do
+      RecordingStudioAccessible::Authorization.stub(:allowed?, false) do
+        error = assert_raises(RecordingStudioAttachable::Authorization::NotAuthorizedError) do
+          RecordingStudioAttachable::Authorization.authorize_placement!(
+            action: :upload,
+            actor: Object.new,
+            recording: recording
+          )
+        end
+
+        assert_includes error.message, "Not authorized to upload photos"
+      end
+    end
+  end
+
+  def test_placement_allowed_uses_custom_adapter
+    recording = FakeRecording.new(recordable_type: "Gallery")
+    captured = nil
+    RecordingStudioAttachable.configuration.authorize_with = lambda { |**kwargs|
+      captured = kwargs
+      true
+    }
+
+    RecordingStudio.configuration.stub(:capability_enabled?, true) do
+      assert RecordingStudioAttachable::Authorization.placement_allowed?(
+        action: :upload,
+        actor: :ada,
+        recording: recording
+      )
+    end
+
+    assert_equal :edit, captured[:role]
+    assert_equal :ada, captured[:actor]
+  end
+
   private
 
   def stub_recording_studio!

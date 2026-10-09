@@ -16,6 +16,11 @@ module RecordingStudioAttachable
       @image_processing_max_height = configured_attachable_option(@attachment_recording, :image_processing_max_height)
       @image_processing_quality = configured_attachable_option(@attachment_recording, :image_processing_quality)
       @owner_recording = attachable_owner_recording(@attachment_recording)
+      @placement_usages = if Placements.library_recording?(@owner_recording)
+                            RecordingStudioAttachable::Placements.usage_for(@attachment_recording)
+                          else
+                            []
+                          end
     end
 
     def update
@@ -37,7 +42,10 @@ module RecordingStudioAttachable
                    actor: current_attachable_actor,
                    impersonator: current_attachable_impersonator,
                    name: attachment_params[:name],
-                   description: attachment_params[:description]
+                   description: attachment_params[:description],
+                   caption: attachment_params[:caption],
+                   credit: attachment_params[:credit],
+                   alt_text: attachment_params[:alt_text]
                  )
                end
 
@@ -83,7 +91,7 @@ module RecordingStudioAttachable
     private
 
     def attachment_params
-      params.expect(attachment: %i[name description signed_blob_id])
+      params.expect(attachment: %i[name description caption credit alt_text signed_blob_id])
     end
 
     def send_attachment_data(attachment_recording, disposition:)

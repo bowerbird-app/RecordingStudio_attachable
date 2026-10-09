@@ -42,6 +42,9 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes home_view, 'text: "Page library"'
     assert_includes home_view, 'text: "View"'
     assert_includes home_view, 'text: "Edit inline"'
+    assert_includes home_view, 'title: "Reusable library"'
+    assert_includes home_view, 'text: "Image library"'
+    assert_includes home_view, 'text: "Gallery"'
     assert_includes home_view, 'title: "Chat demo"'
     assert_includes home_view, 'subtitle: "Try the reusable image picker inside a FlatPack chat composer."'
     assert_includes home_view, 'text: "Open chat demo"'
@@ -77,6 +80,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes home_controller, "recording_studio_attachable.recording_attachment_upload_path("
     assert_includes home_controller, 'redirect_mode: "return_to"'
     assert_includes home_controller, "return_to: @page_show_path"
+    assert_includes home_controller, "@image_library_path = image_library_path"
+    assert_includes home_controller, "@gallery = Gallery.first"
   end
 
   def test_dummy_page_recordable_is_registered_seeded_and_migrated
@@ -105,6 +110,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes workspace_model, 'label: "Workspace"'
     assert_includes workspace_model, "root: true"
     assert_includes workspace_model, 'allowed_content_types: [ "image/*", "application/pdf", "text/plain" ]'
+    assert_includes workspace_model, "include RecordingStudio::Capabilities::ImageLibrary.to"
     assert_includes workspace_model, "include RecordingStudio::Capabilities::Attachable.to("
     assert_includes workspace_model, "enabled_attachment_kinds: %i[ image file ]"
     assert_includes chat_thread_model, "class ChatThread < ApplicationRecord"
@@ -139,6 +145,9 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes chat_message_attachment_model, "validates :attachment_recording_id, uniqueness: { scope: :chat_message_id }"
     assert_includes recording_studio_initializer, '"ChatThread"'
     assert_includes recording_studio_initializer, '"ChatMessage"'
+    assert_includes recording_studio_initializer, '"Gallery"'
+    assert_includes recording_studio_initializer, '"RecordingStudioAttachable::Library"'
+    assert_includes recording_studio_initializer, '"RecordingStudioAttachable::Placement"'
     assert_includes seeds, "user = User.find_or_initialize_by(email: admin_email)"
     assert_includes seeds, "unless user.persisted? && user.valid_password?(admin_password)"
     assert_includes seeds, 'page = Page.find_or_create_by!(title: "Home page")'
@@ -152,6 +161,9 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes seeds, "recordable: chat_message"
     assert_includes seeds, "import_attachment("
     assert_includes seeds, "revise_attachment_metadata("
+    assert_includes seeds, "RecordingStudioAttachable.library_for"
+    assert_includes seeds, 'Gallery.find_or_create_by!(title: "Kiln shots")'
+    assert_includes seeds, "place_library_image"
     assert_includes seeds, "window.jpg"
     assert_includes seeds, "Missing seed image fixture"
     assert_includes seeds, "blob.service.exist?(blob.key)"
@@ -179,6 +191,10 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes schema, 't.integer "position", null: false'
     assert_includes schema, 't.text "body"'
     assert_includes schema, 'create_table "recording_studio_attachable_attachments"'
+    assert_includes schema, 'create_table "recording_studio_attachable_libraries"'
+    assert_includes schema, 'create_table "recording_studio_attachable_placements"'
+    assert_includes schema, 'create_table "galleries"'
+    assert_includes schema, "recording_studio_orderable_position"
     assert_includes schema, 't.string "title"'
     assert_includes page_model, "validates :title, presence: true"
   end

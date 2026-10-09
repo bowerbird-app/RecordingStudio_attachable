@@ -16,6 +16,18 @@
       ) %>
 
       <%= render FlatPack::Sidebar::Item::Component.new(
+        text: "Image library",
+        href: image_library_path,
+        icon: :image
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
+        text: "Gallery",
+        href: Gallery.first.present? ? gallery_path(Gallery.first) : "/",
+        icon: :image
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
         text: "Setup",
         href: setup_docs_path,
         icon: :folder

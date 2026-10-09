@@ -172,4 +172,49 @@ puts "Seeded: Workspace '#{workspace.name}' with root recording ##{root_recordin
 puts "Seeded: Page '#{page.title}' beneath the workspace root recording"
 puts "Seeded: User '#{user.name}' beneath the workspace root recording"
 puts "Seeded: Chat thread '#{chat_thread.title}' with #{chat_messages.count} recorded messages"
+library_recording = RecordingStudioAttachable.library_for(root_recording, actor: user)
+library_images = library_recording.images(per_page: 20).to_a
+library_shots = press_kit.last(3)
+library_shots.each do |shot|
+  existing = library_images.find { |recording| recording.recordable.original_filename == shot[:file] }
+  next if existing && seed_attachment_blob_available.call(existing)
+
+  existing&.remove_attachment(actor: user)
+
+  recording = File.open(press_kit_dir.join(shot[:file]), "rb") do |io|
+    library_recording.import_attachment(
+      io: io,
+      filename: shot[:file],
+      content_type: "image/jpeg",
+      name: shot[:name],
+      actor: user,
+      source: "image_library"
+    )
+  end
+  raise "Could not import library #{shot[:file]}" if recording.nil?
+
+  recording.revise_attachment_metadata(
+    actor: user,
+    caption: shot[:caption],
+    credit: shot[:credit],
+    alt_text: shot[:alt_text]
+  )
+end
+library_images = library_recording.images(per_page: 20).to_a
+
+gallery = Gallery.find_or_create_by!(title: "Kiln shots")
+gallery_recording = RecordingStudio::Recording.unscoped.find_or_create_by!(
+  root_recording_id: root_recording.id,
+  parent_recording_id: root_recording.id,
+  recordable: gallery
+)
+
+if gallery_recording.library_placements.empty?
+  library_images.first(2).each do |attachment_recording|
+    gallery_recording.place_library_image(attachment_recording: attachment_recording, actor: user)
+  end
+end
+
 puts "Seeded: Kiln canister press kit (#{press_kit.size} images) on the workspace"
+puts "Seeded: Image library with #{library_shots.size} reusable photos"
+puts "Seeded: Gallery '#{gallery.title}' with #{gallery_recording.library_placements.size} placed photos"

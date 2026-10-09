@@ -6,6 +6,8 @@ class Workspace < ApplicationRecord
   )
   RecordingStudio.enable_capability(:accessible, on: self) if defined?(RecordingStudio)
 
+  include RecordingStudio::Capabilities::ImageLibrary.to
+
   include RecordingStudio::Capabilities::Attachable.to(
     allowed_content_types: [ "image/*", "application/pdf", "text/plain" ],
     max_file_size: 25.megabytes,

@@ -194,6 +194,17 @@ class ImageLibraryTest < Minitest::Test
     assert library.trashed_at
   end
 
+  def test_trash_library_destroys_when_trashable_is_unavailable
+    library = Object.new
+    library.define_singleton_method(:recordable_type) { "RecordingStudioAttachable::Library" }
+    library.define_singleton_method(:destroy!) { @destroyed = true }
+    library.define_singleton_method(:destroyed) { @destroyed }
+
+    RecordingStudioAttachable.trash_library(library, actor: :ada)
+
+    assert library.destroyed
+  end
+
   def test_image_library_capability_module_delegates_to_include_for
     captured = nil
     RecordingStudio::Capabilities.stub(:include_for, lambda { |name, **options|
@@ -216,11 +227,31 @@ class ImageLibraryTest < Minitest::Test
       assert_equal :library, recording.image_library(actor: :ada)
       assert_equal :library, recording.default_library(actor: :ada)
     end
-    RecordingStudioAttachable.stub(:libraries_for, [:one, :two]) do
+    RecordingStudioAttachable.stub(:libraries_for, %i[one two]) do
       assert_equal %i[one two], recording.image_libraries
     end
     RecordingStudioAttachable.stub(:create_library, :created) do
       assert_equal :created, recording.create_image_library(name: "Campaign")
+    end
+    RecordingStudioAttachable.stub(:rename_library, :renamed) do
+      assert_equal :renamed, recording.rename_image_library(:library, name: "Kiln")
+    end
+    RecordingStudioAttachable.stub(:trash_library, :trashed) do
+      assert_equal :trashed, recording.trash_image_library(:library)
+    end
+  end
+
+  def test_libraries_in_root_and_title
+    root = Root.new(id: "root-1", recordable_type: "Workspace")
+    library = LibraryRecording.new(
+      id: "lib-1",
+      recordable_type: "RecordingStudioAttachable::Library",
+      root_recording_id: "root-1",
+      recordable: LibraryRecordable.new(name: "Kiln shots", default: true)
+    )
+    recording_class.stub(:where, [library]) do
+      assert_equal [library], RecordingStudioAttachable.libraries_in_root(root)
+      assert_equal "Kiln shots", RecordingStudioAttachable::Placements.library_title(library)
     end
   end
 

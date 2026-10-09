@@ -1,11 +1,15 @@
 # frozen_string_literal: true
 
+require_relative "library_authorization"
+
 module RecordingStudioAttachable
   module Authorization
     class NotAuthorizedError < RecordingStudioAttachable::Error; end
     class CapabilityNotEnabledError < NotAuthorizedError; end
 
     class << self
+      include LibraryAuthorization
+
       def authorize!(action:, actor:, recording:, capability_options: nil)
         assert_attachable_enabled!(recording: recording, capability_options: capability_options)
         return true if allowed?(action: action, actor: actor, recording: recording, capability_options: capability_options)
@@ -103,52 +107,6 @@ module RecordingStudioAttachable
         return if placement_enabled?(recording: recording)
 
         raise CapabilityNotEnabledError, "Library placement is not enabled for #{recording&.recordable_type || recording.class.name}"
-      end
-
-      def authorize_library!(action:, actor:, recording:)
-        assert_library_enabled!(recording: recording)
-        return true if library_allowed?(action: action, actor: actor, recording: recording)
-
-        raise NotAuthorizedError, "Not authorized to #{action} libraries for #{recording&.recordable_type || recording.class.name}"
-      end
-
-      def library_allowed?(action:, actor:, recording:)
-        return false unless library_enabled?(recording: recording)
-
-        role = required_role_for(action)
-        return false if role.blank?
-
-        adapter = authorization_adapter({})
-        return !!adapter.call(action: action, actor: actor, recording: recording, role: role) if adapter.respond_to?(:call)
-
-        return false unless defined?(RecordingStudioAccessible::Authorization)
-
-        RecordingStudioAccessible::Authorization.allowed?(actor: actor, recording: recording, role: role)
-      end
-
-      def library_enabled?(recording:)
-        owner = library_owner_for(recording)
-        type = owner.respond_to?(:recordable_type) ? owner.recordable_type : nil
-        return false if type.blank? || !defined?(RecordingStudio)
-
-        if RecordingStudio.respond_to?(:configuration) && RecordingStudio.configuration.respond_to?(:capability_enabled?)
-          RecordingStudio.configuration.capability_enabled?(:image_library, for_type: type)
-        else
-          RecordingStudio.respond_to?(:capability_enabled?) &&
-            RecordingStudio.capability_enabled?(:image_library, for: type)
-        end
-      end
-
-      def assert_library_enabled!(recording:)
-        return if library_enabled?(recording: recording)
-
-        raise CapabilityNotEnabledError, "Image library is not enabled for #{library_owner_for(recording)&.recordable_type || recording.class.name}"
-      end
-
-      def library_owner_for(recording)
-        return recording.parent_recording if Placements.library_recording?(recording) && recording.respond_to?(:parent_recording)
-
-        recording
       end
     end
   end

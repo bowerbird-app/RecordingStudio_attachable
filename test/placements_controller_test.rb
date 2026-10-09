@@ -36,9 +36,9 @@ module RecordingStudioAttachable
               RecordingStudioAttachable::Placements.stub(:picker_libraries_for, [library]) do
                 RecordingStudioAttachable.stub(:library_for, library) do
                   RecordingStudioAttachable::Authorization.stub(:placement_allowed?, true) do
-                  @controller.define_singleton_method(:default_render) do
-                    render plain: [@recording.id, @library.id, @resolved.size, @can_add].join("|")
-                  end
+                    @controller.define_singleton_method(:default_render) do
+                      render plain: [@recording.id, @library.id, @resolved.size, @can_add].join("|")
+                    end
 
                     get :index, params: { recording_id: parent.id }
                   end

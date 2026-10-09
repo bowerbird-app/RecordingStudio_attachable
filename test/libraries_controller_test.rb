@@ -117,6 +117,80 @@ module RecordingStudioAttachable
       assert_equal "Campaign stills", captured[:name]
     end
 
+    def test_update_renames_a_library
+      parent = FakeRecording.new(id: "root-1", recordable_type: "Workspace")
+      library = FakeRecording.new(id: "lib-1", recordable_type: "RecordingStudioAttachable::Library", parent_recording: parent)
+      result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: library)
+      captured = nil
+
+      with_routing do |set|
+        set.draw do
+          patch "libraries/:id", to: "recording_studio_attachable/libraries#update"
+          get "recordings/:recording_id/libraries",
+              to: "recording_studio_attachable/libraries#index",
+              as: :recording_libraries
+        end
+
+        @routes = set
+
+        RecordingStudio::Recording.stub(:find, library) do
+          @controller.stub(:authorize_library_action!, true) do
+            @controller.stub(:protect_against_forgery?, false) do
+              RecordingStudioAttachable::Services::RenameLibrary.stub(
+                :call,
+                lambda { |**kwargs|
+                  captured = kwargs
+                  result
+                }
+              ) do
+                patch :update, params: { id: library.id, library: { name: "Kiln shots" } }
+              end
+            end
+          end
+        end
+      end
+
+      assert_redirected_to "/recordings/#{parent.id}/libraries"
+      assert_equal "Kiln shots", captured[:name]
+    end
+
+    def test_destroy_trashes_a_library
+      parent = FakeRecording.new(id: "root-1", recordable_type: "Workspace")
+      library = FakeRecording.new(id: "lib-1", recordable_type: "RecordingStudioAttachable::Library", parent_recording: parent)
+      result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: library)
+      captured = nil
+
+      with_routing do |set|
+        set.draw do
+          delete "libraries/:id", to: "recording_studio_attachable/libraries#destroy"
+          get "recordings/:recording_id/libraries",
+              to: "recording_studio_attachable/libraries#index",
+              as: :recording_libraries
+        end
+
+        @routes = set
+
+        RecordingStudio::Recording.stub(:find, library) do
+          @controller.stub(:authorize_library_action!, true) do
+            @controller.stub(:protect_against_forgery?, false) do
+              RecordingStudioAttachable::Services::TrashLibrary.stub(
+                :call,
+                lambda { |**kwargs|
+                  captured = kwargs
+                  result
+                }
+              ) do
+                delete :destroy, params: { id: library.id }
+              end
+            end
+          end
+        end
+      end
+
+      assert_redirected_to "/recordings/#{parent.id}/libraries"
+      assert_equal library, captured[:library_recording]
+    end
+
     private
 
     def with_library_routes(&)

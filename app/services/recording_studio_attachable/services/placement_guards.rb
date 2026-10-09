@@ -37,7 +37,7 @@ module RecordingStudioAttachable
 
         raise ArgumentError, I18n.t(
           "recording_studio_attachable.placements.not_in_library",
-          default: "That photo is not in this workspace library."
+          default: "That photo is not in a library in this workspace."
         )
       end
 

@@ -472,6 +472,60 @@ class PlacementsTest < Minitest::Test
     end
   end
 
+  def test_purge_library_removes_placements_for_its_photos
+    library = Recording.new(id: "lib-1", recordable_type: "RecordingStudioAttachable::Library")
+    attachment = Recording.new(id: "att-1", recordable_type: "RecordingStudioAttachable::Attachment")
+    attachments = [attachment]
+    attachments.define_singleton_method(:to_a) { attachments }
+
+    recording_class.stub(:unscoped, recording_class) do
+      recording_class.stub(:where, attachments) do
+        RecordingStudioAttachable::Services::PurgePlacements.stub(:call, success_result([:removed])) do
+          result = RecordingStudioAttachable::Placements.purge_library(library)
+
+          assert_equal [:removed], result
+        end
+      end
+    end
+  end
+
+  def test_upload_to_a_named_library_then_places
+    root = Recording.new(id: "root-1", recordable_type: "Workspace")
+    campaign = Recording.new(
+      id: "lib-2",
+      recordable_type: "RecordingStudioAttachable::Library",
+      parent_recording_id: "root-1",
+      root_recording_id: "root-1"
+    )
+    parent = Recording.new(id: "gallery-1", recordable_type: "Gallery", root_recording_id: "root-1", root_recording: root)
+    uploaded = Recording.new(
+      id: "att-new",
+      recordable_type: "RecordingStudioAttachable::Attachment",
+      parent_recording_id: "lib-2",
+      parent_recording: campaign,
+      root_recording_id: "root-1",
+      recordable: Attachment.new(id: "snap-new", name: "New")
+    )
+
+    RecordingStudioAttachable::Services::RecordAttachmentUpload.stub(
+      :call,
+      lambda { |**kwargs|
+        assert_equal campaign, kwargs[:parent_recording]
+        success_result(uploaded)
+      }
+    ) do
+      result = RecordingStudioAttachable::Services::UploadToLibraryAndPlace.call(
+        parent_recording: parent,
+        library_recording: campaign,
+        signed_blob_id: "signed-1",
+        actor: :ada
+      )
+
+      assert result.success?
+      assert_equal "att-new", result.value.recordable.attachment_recording_id
+    end
+  end
+
   def test_picker_libraries_use_the_host_list
     parent = Recording.new(id: "gallery-1", recordable_type: "Gallery")
     allowed = Recording.new(id: "lib-1", recordable_type: "RecordingStudioAttachable::Library")
@@ -543,9 +597,7 @@ class PlacementsTest < Minitest::Test
   end
 
   def with_library(library, &)
-    recording_class.stub(:where, [library]) do
-      recording_class.stub(:find_by, ->(**kwargs) { kwargs[:id].to_s == library.id.to_s ? library : nil }, &)
-    end
+    recording_class.stub(:where, [library], &)
   end
 
   def success_result(value)

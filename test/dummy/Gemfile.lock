@@ -48,7 +48,7 @@ GIT
 PATH
   remote: ../..
   specs:
-    recording_studio_attachable (0.14.0)
+    recording_studio_attachable (0.14.1)
       flat_pack (>= 0.1.213)
       rails (~> 8.1.0)
       recording_studio (~> 4.2)
@@ -633,7 +633,7 @@ CHECKSUMS
   rdoc (8.1.0) sha256=befc37880a5cfd36dcb176c748b5fd5ee39dd3536a75e81824e4972ce230f60a
   recording_studio (4.4.0)
   recording_studio_accessible (0.13.0)
-  recording_studio_attachable (0.14.0)
+  recording_studio_attachable (0.14.1)
   recording_studio_metrics (0.2.0)
   recording_studio_orderable (0.2.3)
   regexp_parser (2.11.3) sha256=ca13f381a173b7a93450e53459075c9b76a10433caadcb2f1180f2c741fc55a4

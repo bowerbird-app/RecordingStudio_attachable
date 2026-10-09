@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-10-09
+
+### Fixed
+
+- Site-wide attachment metrics resolve the admin root through `site_admin_recording_resolver` when that callable is set, and through `access_recording_resolver` otherwise.
+- When resolving that admin root raises, `RecordingStudioAttachable::Api::Access.can_view?` denies access. Metrics discovery stays up.
+
+### Upgrade Notes
+
+- Bump to `0.14.1`. No migration.
+- A host that sets `site_admin_recording_resolver` now uses it for attachment metrics. `access_recording_resolver` is only the fallback.
+- A resolver error is treated as no access. The view check is still Recording Studio Accessible on the resolved admin root.
+
 ## [0.14.0] - 2026-10-09
 
 ### Added
@@ -350,4 +363,5 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 [0.2.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/releases/tag/v0.1.1
 [0.1.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/releases/tag/v0.1.0
+[0.14.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.13.0...v0.14.0

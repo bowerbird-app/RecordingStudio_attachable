@@ -34,6 +34,18 @@ module RecordingStudioAttachable
                   result.success? ? { notice: t("recording_studio_attachable.placements.added") } : { alert: result.error }
     end
 
+    def update
+      recording = find_recording
+      authorize_placement_action!(:revise, recording)
+      result = Services::RevisePlacementCollection.call(
+        recording: recording,
+        params: params,
+        actor: current_attachable_actor
+      )
+      redirect_to recording_placements_path(recording, attachment_navigation_params),
+                  collection_flash(result)
+    end
+
     def reorder
       recording = find_recording
       authorize_placement_action!(:revise, recording)

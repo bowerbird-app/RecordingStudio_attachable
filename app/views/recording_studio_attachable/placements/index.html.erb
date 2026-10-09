@@ -7,8 +7,8 @@
   data-action="recording-studio-attachable--attachment-image-picker:selected->recording-studio-attachable--library-placement#addFromLibrary"
   data-recording-studio-attachable--library-placement-libraries-value="<%= library_picker_switcher_payload(@picker_libraries).to_json %>"
   <% if @library.present? %>
-  data-recording-studio-attachable--attachment-image-picker-picker-url-value="<%= recording_attachment_picker_path(@library) %>"
-  data-recording-studio-attachable--attachment-image-picker-upload-url-value="<%= recording_attachments_path(@library) %>"
+    data-recording-studio-attachable--attachment-image-picker-picker-url-value="<%= recording_attachment_picker_path(@library) %>"
+    data-recording-studio-attachable--attachment-image-picker-upload-url-value="<%= recording_attachments_path(@library) %>"
   <% end %>
   data-recording-studio-attachable--attachment-image-picker-direct-upload-url-value="<%= main_app.rails_direct_uploads_path %>"
   data-recording-studio-attachable--attachment-image-picker-max-file-size-value="<%= RecordingStudioAttachable.configuration.max_file_size %>"
@@ -85,93 +85,20 @@
                          data: { recording_studio_attachable__library_placement_target: "attachmentId" } %>
   <% end %>
 
-  <% if @resolved.any? %>
-    <div class="flex flex-col gap-4">
-      <% @resolved.each_with_index do |item, index| %>
-        <% preview = authorized_attachment_preview_path(item.attachment_recording, :square_med) %>
-        <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
-          <% card.body do %>
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div class="h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-(--surface-muted-background-color)">
-                <% if preview.present? %>
-                  <%= image_tag preview, alt: item.attachment.alt_text.presence || item.attachment.name, class: "h-full w-full object-cover" %>
-                <% end %>
-              </div>
-
-              <div class="min-w-0 flex-1 space-y-1">
-                <p class="text-sm font-semibold text-(--surface-content-color)"><%= item.attachment.name %></p>
-                <% if item.attachment.caption.present? %>
-                  <p class="text-sm text-(--surface-muted-content-color)"><%= item.attachment.caption %></p>
-                <% end %>
-                <% if item.attachment.credit.present? %>
-                  <p class="text-xs text-(--surface-muted-content-color)"><%= item.attachment.credit %></p>
-                <% end %>
-              </div>
-
-              <div class="flex flex-wrap items-center gap-2">
-                <% if @can_reorder %>
-                  <%= button_to recording_reorder_placements_path(@recording, navigation_params),
-                                method: :patch,
-                                params: { ordered_recording_ids: move_placement_ids(@resolved, index, -1) },
-                                disabled: index.zero? do %>
-                    <%= render FlatPack::Button::Component.new(
-                      icon: "chevron-up",
-                      icon_only: true,
-                      style: :secondary,
-                      size: :sm,
-                      type: "submit",
-                      disabled: index.zero?,
-                      aria: { label: t("recording_studio_attachable.placements.move_up") }
-                    ) %>
-                  <% end %>
-                  <%= button_to recording_reorder_placements_path(@recording, navigation_params),
-                                method: :patch,
-                                params: { ordered_recording_ids: move_placement_ids(@resolved, index, 1) },
-                                disabled: index == @resolved.length - 1 do %>
-                    <%= render FlatPack::Button::Component.new(
-                      icon: "chevron-down",
-                      icon_only: true,
-                      style: :secondary,
-                      size: :sm,
-                      type: "submit",
-                      disabled: index == @resolved.length - 1,
-                      aria: { label: t("recording_studio_attachable.placements.move_down") }
-                    ) %>
-                  <% end %>
-                <% end %>
-
-                <% if @can_remove %>
-                  <%= button_to destroy_placement_path(item.placement_recording, navigation_params), method: :delete do %>
-                    <%= render FlatPack::Button::Component.new(
-                      icon: "trash",
-                      icon_only: true,
-                      style: :secondary,
-                      size: :sm,
-                      type: "submit",
-                      aria: { label: t("recording_studio_attachable.placements.remove") }
-                    ) %>
-                  <% end %>
-                <% end %>
-              </div>
-            </div>
-          <% end %>
-        <% end %>
-      <% end %>
-    </div>
-  <% else %>
-    <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
-      <% card.body do %>
-        <div class="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center">
-          <%= render FlatPack::PageTitle::Component.new(
-            title: t("recording_studio_attachable.placements.empty_title"),
-            subtitle: t("recording_studio_attachable.placements.empty"),
-            variant: :h3,
-            class: "mb-0 pb-0"
-          ) %>
-        </div>
-      <% end %>
-    <% end %>
-  <% end %>
+  <%= attachment_collection_editor(
+        @recording,
+        association: :placements,
+        items: @resolved,
+        fields: %i[caption credit alt_text],
+        sortable: @can_reorder,
+        displays: %i[list carousel grid],
+        default_display: :list,
+        side_preview: true,
+        items_per_view: { mobile: 1, tablet: 1, desktop: 2 },
+        url: recording_placements_path(@recording, navigation_params),
+        return_to: recording_placements_path(@recording, navigation_params),
+        empty_message: t("recording_studio_attachable.placements.empty")
+      ) %>
 
   <% if @library.present? %>
     <%= render "recording_studio_attachable/attachment_image_pickers/modal",

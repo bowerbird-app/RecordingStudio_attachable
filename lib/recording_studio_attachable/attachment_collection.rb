@@ -8,10 +8,12 @@ module RecordingStudioAttachable
     GONE = "One of these is gone. Reload the page and try again."
     SORTABLE_MISSING = "sortable: true needs the parent to respond to recording_studio_orderable_reorder!. This parent does not."
     ORDERABLE_ALLOWS = "The parent must allow RecordingStudioAttachable::Attachment in Orderable allows, or omit allows."
+    ORDERABLE_PLACEMENTS = "The parent must allow RecordingStudioAttachable::Placement in Orderable allows, or omit allows."
     EMPTY_MESSAGES = {
       images: "No images yet.",
       files: "No files yet.",
-      attachments: "Nothing here yet."
+      attachments: "Nothing here yet.",
+      placements: "Pull one from a library or drop a new one in."
     }.freeze
 
     Field = Data.define(:key, :label, :column, :blank, :control)
@@ -22,10 +24,10 @@ module RecordingStudioAttachable
       name: Field.new(:name, "Name", :name, :keep, :text),
       description: Field.new(:description, "Description", :description, :clear, :area)
     }.freeze
-    ASSOCIATIONS = { images: :images, attachments: :all, files: :files }.freeze
+    ASSOCIATIONS = { images: :images, attachments: :all, files: :files, placements: :placements }.freeze
     ROW_KEYS = %i[recording_id order name description caption credit alt_text].freeze
 
-    Row = Data.define(:recording, :order, :values)
+    Row = Data.define(:recording, :order, :values, :member)
     Revision = Data.define(:recording, :changes)
 
     private_constant :Field, :Revision
@@ -91,37 +93,14 @@ module RecordingStudioAttachable
       "attachment-collection-#{recording.id}"
     end
 
-    def empty_message
-      EMPTY_MESSAGES.fetch(association)
-    end
-
     def input_name(key)
       "attachment_collection[rows][][#{key}]"
     end
 
-    def rows
-      @rows ||= display_recordings.each_with_index.map { |item, index| build_row(item, index) }
-    end
-
     def revisions
+      return [] if placement?
+
       change_pairs.filter_map { |item, changes| Revision.new(recording: item, changes: changes) }
-    end
-
-    def reorder_ids
-      return unless sortable?
-      return unless @submitted_rows.any? { |row| row.key?(:order) }
-
-      AttachmentCollectionOrder.new(
-        child_ids: membership.child_ids,
-        recordings: display_recordings,
-        submitted_rows: @submitted_rows
-      ).ids
-    end
-
-    def prepare!
-      ensure_sortable_parent! if sortable?
-      rows
-      assert_known_rows!
     end
 
     private
@@ -132,10 +111,46 @@ module RecordingStudioAttachable
   end
 
   module AttachmentCollectionSheet
+    def empty_message
+      @empty_message.presence || AttachmentCollection::EMPTY_MESSAGES.fetch(association)
+    end
+
+    def rows
+      @rows ||= display_items.each_with_index.map { |item, index| build_row(item, index) }
+    end
+
+    def reorder_ids
+      return unless sortable?
+      return unless @submitted_rows.any? { |row| row.key?(:order) }
+
+      AttachmentCollectionOrder.new(
+        child_ids: membership.child_ids,
+        recordings: display_members,
+        submitted_rows: @submitted_rows
+      ).ids
+    end
+
+    def prepare!
+      ensure_sortable_parent! if sortable?
+      rows
+      assert_known_rows!
+    end
+
+    def placement? = association == :placements
+
+    def inline_fields? = !placement?
+
+    def remove_label = placement? ? "Remove from here" : "Trash"
+
     private
 
     def build_row(item, index)
-      AttachmentCollection::Row.new(recording: item, order: sortable? ? index + 1 : nil, values: field_values(item))
+      AttachmentCollection::Row.new(
+        recording: item.attachment_recording,
+        member: item.member,
+        order: sortable? ? index + 1 : nil,
+        values: field_values(item.attachment_recording)
+      )
     end
 
     def field_values(item)
@@ -147,7 +162,33 @@ module RecordingStudioAttachable
     end
 
     def display_recordings
-      @display_recordings ||= membership.recordings
+      display_items.map(&:attachment_recording)
+    end
+
+    def display_members
+      display_items.map(&:member)
+    end
+
+    def display_items
+      @display_items ||= sortable? ? align_items(source_items) : source_items
+    end
+
+    def source_items
+      return wrapped_items(@provided_items) unless @provided_items.nil?
+
+      membership.items
+    end
+
+    def wrapped_items(list)
+      Array(list).map { |item| AttachmentCollectionItem.wrap(item) }
+    end
+
+    def align_items(list)
+      AttachmentCollectionAligner.new(
+        items: list,
+        child_ids: membership.child_ids,
+        message: membership.orderable_allows_message
+      ).items
     end
 
     def membership
@@ -161,6 +202,8 @@ module RecordingStudioAttachable
       @return_to = options[:return_to]
       @side_preview = ActiveModel::Type::Boolean.new.cast(options.fetch(:side_preview, false)) == true
       @items_per_view = AttachmentCollectionItemsPerView.choose(options.fetch(:items_per_view, 1))
+      @provided_items = options[:items]
+      @empty_message = options[:empty_message]
     end
 
     def ensure_sortable_parent!
@@ -170,7 +213,7 @@ module RecordingStudioAttachable
     end
 
     def assert_known_rows!
-      known = display_recordings.map { |item| item.id.to_s }
+      known = display_items.map { |item| item.member.id.to_s }
       return if @submitted_rows.all? { |row| row[:recording_id].blank? || known.include?(row[:recording_id].to_s) }
 
       raise ArgumentError, AttachmentCollection::GONE
@@ -402,6 +445,25 @@ module RecordingStudioAttachable
     end
   end
 
+  class AttachmentCollectionItem
+    def self.wrap(item)
+      if item.is_a?(self)
+        item
+      elsif item.respond_to?(:placement_recording) && item.respond_to?(:attachment_recording)
+        new(member: item.placement_recording, attachment_recording: item.attachment_recording)
+      else
+        new(member: item, attachment_recording: item)
+      end
+    end
+
+    attr_reader :member, :attachment_recording
+
+    def initialize(member:, attachment_recording:)
+      @member = member
+      @attachment_recording = attachment_recording
+    end
+  end
+
   class AttachmentCollectionMembership
     def initialize(recording:, association:, sortable:)
       @recording = recording
@@ -409,17 +471,38 @@ module RecordingStudioAttachable
       @sortable = sortable
     end
 
+    def items
+      @items ||= placement? ? placement_items : attachment_items
+    end
+
     def recordings
-      @recordings ||= @sortable ? orderable_recordings(loaded) : newest_first(loaded)
+      items.map(&:attachment_recording)
     end
 
     def child_ids
       orderable_children.map { |child| child.respond_to?(:id) ? child.id : child }
     end
 
+    def orderable_allows_message
+      placement? ? AttachmentCollection::ORDERABLE_PLACEMENTS : AttachmentCollection::ORDERABLE_ALLOWS
+    end
+
     private
 
     attr_reader :recording, :association
+
+    def placement?
+      association == :placements
+    end
+
+    def placement_items
+      Array(Placements.resolve(recording)).map { |item| AttachmentCollectionItem.wrap(item) }
+    end
+
+    def attachment_items
+      list = loaded.map { |item| AttachmentCollectionItem.wrap(item) }
+      @sortable ? orderable_items(list) : newest_first_items(list)
+    end
 
     def loaded
       @loaded ||= Array(query.unpaged)
@@ -434,17 +517,12 @@ module RecordingStudioAttachable
       )
     end
 
-    def newest_first(list)
-      list.sort_by { |item| [item.created_at, item.id] }.reverse
+    def newest_first_items(list)
+      list.sort_by { |item| [item.attachment_recording.created_at, item.attachment_recording.id] }.reverse
     end
 
-    def orderable_recordings(list)
-      known = child_ids.map(&:to_s)
-      missing = list.reject { |item| known.include?(item.id.to_s) }
-      raise ArgumentError, AttachmentCollection::ORDERABLE_ALLOWS if missing.any?
-
-      by_id = list.index_by { |item| item.id.to_s }
-      child_ids.filter_map { |id| by_id[id.to_s] }
+    def orderable_items(list)
+      AttachmentCollectionAligner.new(items: list, child_ids: child_ids, message: orderable_allows_message).items
     end
 
     def orderable_children
@@ -561,7 +639,29 @@ module RecordingStudioAttachable
     end
   end
 
+  class AttachmentCollectionAligner
+    def initialize(items:, child_ids:, message:)
+      @items = items
+      @child_ids = child_ids
+      @message = message
+    end
+
+    def items
+      raise ArgumentError, @message if missing.any?
+
+      by_id = @items.index_by { |item| item.member.id.to_s }
+      @child_ids.filter_map { |id| by_id[id.to_s] }
+    end
+
+    private
+
+    def missing
+      known = @child_ids.map(&:to_s)
+      @items.reject { |item| known.include?(item.member.id.to_s) }
+    end
+  end
+
   private_constant :AttachmentCollectionSheet, :AttachmentCollectionPreview, :AttachmentCollectionParams,
-                   :AttachmentCollectionToken,
+                   :AttachmentCollectionToken, :AttachmentCollectionItem, :AttachmentCollectionAligner,
                    :AttachmentCollectionMembership, :AttachmentCollectionChanges, :AttachmentCollectionOrder
 end

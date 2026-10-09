@@ -529,6 +529,7 @@ class AttachmentCollectionTest < Minitest::Test
     assert_equal "No images yet.", message_for(:images)
     assert_equal "No files yet.", message_for(:files)
     assert_equal "Nothing here yet.", message_for(:attachments)
+    assert_equal "Pull one from a library or drop a new one in.", placement_message
 
     permitted = RecordingStudioAttachable::AttachmentCollection.permit(
       ActionController::Parameters.new(
@@ -557,6 +558,76 @@ class AttachmentCollectionTest < Minitest::Test
     assert_equal "/pages/1", permitted[:return_to]
   end
 
+  def test_items_accept_resolved_placements_instead_of_direct_children
+    photo = child("image-1", caption: "Pier light", credit: "Ada", alt_text: "A pier")
+    placement = child("place-1")
+    resolved = RecordingStudioAttachable::Placements::Resolved.new(
+      placement_recording: placement,
+      attachment_recording: photo,
+      attachment: photo.recordable
+    )
+    parent = orderable_parent([placement])
+
+    collection = RecordingStudioAttachable::AttachmentCollection.for(
+      recording: parent,
+      association: :placements,
+      fields: %i[caption credit alt_text],
+      sortable: true,
+      items: [resolved]
+    )
+
+    assert_predicate collection, :placement?
+    refute_predicate collection, :inline_fields?
+    assert_equal "Remove from here", collection.remove_label
+    assert_equal "image-1", collection.rows.first.recording.id
+    assert_equal "place-1", collection.rows.first.member.id
+    assert_equal "Pier light", collection.rows.first.values[:caption]
+    assert_equal 1, collection.rows.first.order
+  end
+
+  def test_placement_save_reorders_members_and_skips_caption_revisions
+    photo = child("image-1", caption: "Pier light")
+    first = child("place-1")
+    second = child("place-2")
+    parent = orderable_parent([first, second])
+    resolved = [
+      RecordingStudioAttachable::Placements::Resolved.new(
+        placement_recording: first,
+        attachment_recording: photo,
+        attachment: photo.recordable
+      ),
+      RecordingStudioAttachable::Placements::Resolved.new(
+        placement_recording: second,
+        attachment_recording: photo,
+        attachment: photo.recordable
+      )
+    ]
+
+    collection = RecordingStudioAttachable::AttachmentCollection.for(
+      recording: parent,
+      association: :placements,
+      fields: [:caption],
+      sortable: true,
+      items: resolved
+    )
+
+    RecordingStudioAttachable::Placements.stub(:resolve, resolved) do
+      saved = RecordingStudioAttachable::AttachmentCollection.from_params(
+        recording: parent,
+        params: {
+          signed_editor: collection.signed_editor,
+          rows: [
+            { recording_id: "place-2", order: "1", caption: "Sneaky" },
+            { recording_id: "place-1", order: "2", caption: "Also sneaky" }
+          ]
+        }
+      )
+
+      assert_equal %w[place-2 place-1], saved.reorder_ids
+      assert_empty saved.revisions
+    end
+  end
+
   private
 
   def message_for(association)
@@ -568,6 +639,16 @@ class AttachmentCollectionTest < Minitest::Test
         sortable: false
       ).empty_message
     end
+  end
+
+  def placement_message
+    RecordingStudioAttachable::AttachmentCollection.for(
+      recording: Parent.new("parent-1"),
+      association: :placements,
+      fields: [:caption],
+      sortable: false,
+      items: []
+    ).empty_message
   end
 
   def collection_for(parent, **options)

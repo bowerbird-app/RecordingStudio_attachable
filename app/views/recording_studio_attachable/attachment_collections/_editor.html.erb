@@ -35,9 +35,9 @@
     <% end %>
 
     <% collection.rows.each do |row| %>
-      <%= form_with url: attachable_destroy_attachment_path(row.recording, **RecordingStudioAttachable::AttachmentFileButton.redirect_params(return_to: return_to)),
+      <%= form_with url: attachment_collection_remove_path(collection, row, return_to: return_to),
                     method: :delete,
-                    id: "#{collection.form_id}-trash-#{row.recording.id}",
+                    id: "#{collection.form_id}-trash-#{row.member.id}",
                     html: { hidden: true } do %>
       <% end %>
     <% end %>
@@ -76,7 +76,7 @@
             <% preview_path = authorized_attachment_preview_path(row.recording, collection.preview_variant) %>
             <% file_path = preview_path.present? ? authorized_attachment_file_path(row.recording) : nil %>
             <% file_extension = File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || "FILE" %>
-            <% slide_form_id = "#{collection.form_id}-slide-#{row.recording.id}" %>
+            <% slide_form_id = "#{collection.form_id}-slide-#{row.member.id}" %>
             <%= form_with url: url,
                           method: :patch,
                           id: slide_form_id,
@@ -117,31 +117,46 @@
                 <% card.body do %>
                   <div class="flex flex-col gap-4">
                     <%= render "recording_studio_attachable/attachment_collections/file_facts", attachment: attachment %>
-                    <%= render "recording_studio_attachable/attachment_collections/fields",
-                          collection: collection,
-                          row: row,
-                          form_id: slide_form_id,
-                          show_order: false %>
+                    <% if collection.inline_fields? %>
+                      <%= render "recording_studio_attachable/attachment_collections/fields",
+                            collection: collection,
+                            row: row,
+                            form_id: slide_form_id,
+                            show_order: false %>
+                    <% else %>
+                      <%= render "recording_studio_attachable/attachment_collections/values",
+                            collection: collection,
+                            row: row %>
+                    <% end %>
                     <div class="flex items-center justify-between gap-4">
                       <div class="inline-flex items-center gap-3">
-                        <%= render FlatPack::Button::Component.new(
-                              text: "Save",
-                              style: :default,
-                              size: :md,
-                              type: "submit",
-                              form: slide_form_id,
-                              data: { flat_pack__unsaved_changes_target: "submit" }
-                            ) %>
-                        <p class="text-sm text-(--surface-muted-content-color)" data-save-status role="status" hidden></p>
+                        <% if collection.inline_fields? %>
+                          <%= render FlatPack::Button::Component.new(
+                                text: "Save",
+                                style: :default,
+                                size: :md,
+                                type: "submit",
+                                form: slide_form_id,
+                                data: { flat_pack__unsaved_changes_target: "submit" }
+                              ) %>
+                          <p class="text-sm text-(--surface-muted-content-color)" data-save-status role="status" hidden></p>
+                        <% else %>
+                          <%= render FlatPack::Button::Component.new(
+                                text: "Edit",
+                                style: :secondary,
+                                size: :md,
+                                href: attachment_collection_image_path(collection, row, return_to: return_to)
+                              ) %>
+                        <% end %>
                       </div>
                       <%= render FlatPack::Button::Component.new(
-                            text: "Trash",
+                            text: collection.remove_label,
                             icon: "trash",
                             icon_only: true,
                             style: :danger,
                             size: :md,
                             type: "submit",
-                            form: "#{collection.form_id}-trash-#{row.recording.id}"
+                            form: "#{collection.form_id}-trash-#{row.member.id}"
                           ) %>
                     </div>
                   </div>
@@ -211,19 +226,39 @@
                     </div>
 
                     <div class="flex min-w-0 flex-1 flex-col gap-4">
-                      <%= render "recording_studio_attachable/attachment_collections/fields",
-                            collection: collection,
-                            row: row,
-                            form_id: collection.form_id,
-                            show_order: collection.sortable? %>
+                      <% if collection.inline_fields? %>
+                        <%= render "recording_studio_attachable/attachment_collections/fields",
+                              collection: collection,
+                              row: row,
+                              form_id: collection.form_id,
+                              show_order: collection.sortable? %>
+                      <% else %>
+                        <%= render "recording_studio_attachable/attachment_collections/values",
+                              collection: collection,
+                              row: row %>
+                        <% if collection.sortable? %>
+                          <%= render "recording_studio_attachable/attachment_collections/fields",
+                                collection: collection,
+                                row: row,
+                                form_id: collection.form_id,
+                                show_order: true,
+                                order_only: true %>
+                        <% end %>
+                        <%= render FlatPack::Button::Component.new(
+                              text: "Edit",
+                              style: :secondary,
+                              size: :md,
+                              href: attachment_collection_image_path(collection, row, return_to: return_to)
+                            ) %>
+                      <% end %>
                       <div class="inline-flex">
                         <%= render FlatPack::Button::Component.new(
-                              text: "Trash",
+                              text: collection.remove_label,
                               icon: "trash",
                               style: :danger,
                               size: :md,
                               type: "submit",
-                              form: "#{collection.form_id}-trash-#{row.recording.id}"
+                              form: "#{collection.form_id}-trash-#{row.member.id}"
                             ) %>
                       </div>
                     </div>
@@ -234,16 +269,18 @@
           <% end %>
         </ol>
 
-        <div class="inline-flex">
-          <%= render FlatPack::Button::Component.new(
-                text: "Save",
-                style: :default,
-                size: :md,
-                type: "submit",
-                form: collection.form_id,
-                data: { flat_pack__unsaved_changes_target: "submit" }
-              ) %>
-        </div>
+        <% if collection.inline_fields? || collection.sortable? %>
+          <div class="inline-flex">
+            <%= render FlatPack::Button::Component.new(
+                  text: "Save",
+                  style: :default,
+                  size: :md,
+                  type: "submit",
+                  form: collection.form_id,
+                  data: { flat_pack__unsaved_changes_target: "submit" }
+                ) %>
+          </div>
+        <% end %>
       <% end %>
     <% end %>
   </div>

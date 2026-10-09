@@ -62,7 +62,40 @@ class ImageLibraryTest < ActionDispatch::IntegrationTest
 
     assert_includes path, "/placements"
     assert_includes response.body, "Images"
+    assert_includes response.body, "Add from library"
+    assert_includes response.body, "Upload"
     assert_equal gallery_recording.id.to_s, path.split("/")[3]
+  end
+
+  test "gallery placements reuse list slides and grid" do
+    workspace = Workspace.find_or_create_by!(name: "Studio Workspace")
+    Current.actor = @user
+    root = RecordingStudio.root_recording_for(workspace)
+    grant_workspace_access!(root)
+    images = RecordingStudioAttachable.library_for(root, actor: @user)
+    gallery = Gallery.find_or_create_by!(title: "Kiln shots")
+    gallery_recording = RecordingStudio::Recording.unscoped.find_or_create_by!(
+      root_recording_id: root.id,
+      parent_recording_id: root.id,
+      recordable: gallery
+    )
+    photo = first_or_import_photo(images, "kiln-canister-hero.jpg")
+    clear_placements(gallery_recording)
+    gallery_recording.place_library_image(attachment_recording: photo, actor: @user)
+
+    get gallery_path(gallery)
+    follow_redirect!
+
+    assert_includes response.body, "List"
+    assert_includes response.body, "Slides"
+    assert_includes response.body, "Grid"
+    assert_includes response.body, "Add from library"
+    assert_includes response.body, "Upload"
+    assert_includes response.body, "Remove from here"
+    assert_includes response.body, "Edit"
+    assert_includes response.body, "/attachments/#{photo.id}"
+    assert_not_includes response.body, "Move up"
+    assert_not_includes response.body, "Move down"
   end
 
   test "gallery places photos from two host-mounted libraries" do

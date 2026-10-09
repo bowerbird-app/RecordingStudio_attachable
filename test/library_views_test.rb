@@ -30,6 +30,21 @@ class LibraryViewsTest < Minitest::Test
     refute_includes source, "Recordable"
   end
 
+  def test_placements_index_reuses_the_collection_editor
+    source = File.read(File.expand_path("../app/views/recording_studio_attachable/placements/index.html.erb", __dir__))
+
+    assert_includes source, "attachment_collection_editor("
+    assert_includes source, "association: :placements"
+    assert_includes source, "items: @resolved"
+    assert_includes source, "displays: %i[list carousel grid]"
+    assert_includes source, "sortable: @can_reorder"
+    refute_includes source, "move_placement_ids"
+    refute_includes source, "chevron-up"
+    refute_includes source, "chevron-down"
+    refute_includes source, "move_up"
+    refute_includes source, "move_down"
+  end
+
   def test_library_and_placement_models_declare_product_labels
     library = File.read(File.expand_path("../app/models/recording_studio_attachable/library.rb", __dir__))
     placement = File.read(File.expand_path("../app/models/recording_studio_attachable/placement.rb", __dir__))
@@ -100,17 +115,6 @@ class LibraryViewsTest < Minitest::Test
     refute_includes source, "Create library"
     refute_includes source, "Rename"
     refute_includes source, "Give the library a name"
-  end
-
-  def test_helper_reorders_placement_ids
-    helper = Object.new
-    helper.extend(RecordingStudioAttachable::ApplicationHelper)
-    first = Struct.new(:placement_recording).new(Struct.new(:id).new("place-1"))
-    second = Struct.new(:placement_recording).new(Struct.new(:id).new("place-2"))
-    resolved = [first, second]
-
-    assert_equal %w[place-2 place-1], helper.move_placement_ids(resolved, 0, 1)
-    assert_equal %w[place-1 place-2], helper.move_placement_ids(resolved, 0, -1)
   end
 
   def test_helper_builds_picker_switcher_payload

@@ -425,6 +425,45 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, 'src="/attachments/image-1/preview/med" alt="Thumbnail 1"'
   end
 
+  def test_placement_editor_reuses_list_slides_and_grid_and_opens_the_photo
+    photo = child("image-1", name: "Pier", caption: "Light", credit: "Ada")
+    placement = Child.new(id: "place-1", created_at: Time.utc(2026, 1, 1), recordable: photo.recordable)
+    resolved = RecordingStudioAttachable::Placements::Resolved.new(
+      placement_recording: placement,
+      attachment_recording: photo,
+      attachment: photo.recordable
+    )
+    parent = orderable_parent([placement])
+    @displays = %i[list carousel grid]
+    html = render_editor(
+      [photo],
+      parent: parent,
+      fields: %i[caption credit alt_text],
+      sortable: true,
+      return_to: "/galleries/1",
+      association: :placements,
+      items: [resolved]
+    )
+
+    assert_includes html, ">List<"
+    assert_includes html, ">Slides<"
+    assert_includes html, ">Grid<"
+    assert_includes html, ">Caption<"
+    assert_includes html, "Light"
+    assert_includes html, ">Credit<"
+    assert_includes html, "Ada"
+    assert_includes html, ">Edit<"
+    assert_includes html, 'href="/attachments/image-1?redirect_mode=return_to&amp;return_to=%2Fgalleries%2F1"'
+    assert_includes html, ">Remove from here<"
+    assert_includes html, 'form="attachment-collection-parent-1-trash-place-1"'
+    assert_includes html, 'value="place-1"'
+    assert_includes html, ">Order<"
+    assert_includes html, 'aria-label="Edit Pier"'
+    refute_includes html, ">Trash<"
+    refute_includes html, 'name="attachment_collection[rows][][caption]"'
+    refute_includes html, 'data-modal-id="attachment-collection-parent-1-edit-image-1"'
+  end
+
   def test_sortable_slides_keep_order_inputs_and_hide_the_reorder_controls
     image = child("image-1", name: "Pier", caption: "Light")
     parent = orderable_parent([image])
@@ -457,22 +496,23 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     html[%r{<form\b[^>]*\bid="#{Regexp.escape(id)}"[^>]*>.*?</form>}m]
   end
 
-  def render_editor(recordings, fields:, sortable:, return_to:, parent: Parent.new("parent-1"))
+  def render_editor(recordings, **options)
     query = Object.new
     query.define_singleton_method(:unpaged) { recordings }
     RecordingStudioAttachable::Queries::ForRecording.stub(:new, ->(**) { query }) do
       editor_view.attachment_collection_editor(
-        parent,
-        association: :images,
-        fields: fields,
-        sortable: sortable,
+        options.fetch(:parent, Parent.new("parent-1")),
+        association: options.fetch(:association, :images),
+        fields: options.fetch(:fields),
+        sortable: options.fetch(:sortable),
         preview: @row_preview || :square,
         displays: @displays || [:list],
         default_display: @default_display,
         side_preview: @side_preview || false,
         items_per_view: @items_per_view || 1,
+        items: options[:items],
         url: "/save",
-        return_to: return_to
+        return_to: options.fetch(:return_to)
       )
     end
   end
@@ -494,6 +534,14 @@ class AttachmentCollectionsHelperTest < Minitest::Test
       "/attachments/#{recording.id}/file"
     end
     view.define_singleton_method(:attachable_destroy_attachment_path) do |recording, **options|
+      query = options.map { |key, value| "#{key}=#{CGI.escape(value.to_s)}" }.join("&")
+      "/attachments/#{recording.id}?#{query}"
+    end
+    view.define_singleton_method(:attachable_destroy_placement_path) do |recording, **options|
+      query = options.map { |key, value| "#{key}=#{CGI.escape(value.to_s)}" }.join("&")
+      "/placements/#{recording.id}?#{query}"
+    end
+    view.define_singleton_method(:attachable_attachment_path) do |recording, **options|
       query = options.map { |key, value| "#{key}=#{CGI.escape(value.to_s)}" }.join("&")
       "/attachments/#{recording.id}?#{query}"
     end

@@ -29,6 +29,13 @@ module RecordingStudioAttachable
       recording
     end
 
+    def collection_flash(result)
+      return { alert: result.error } unless result.success?
+      return { notice: t("recording_studio_attachable.placements.reordered") } if result.value == :reordered
+
+      { notice: t("recording_studio_attachable.attachments.updated") }
+    end
+
     def authorize_placement_action!(action, recording)
       RecordingStudioAttachable::Authorization.authorize_placement!(
         action: action,

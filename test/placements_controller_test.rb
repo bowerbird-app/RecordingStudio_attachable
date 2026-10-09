@@ -4,6 +4,11 @@ require "test_helper"
 require_relative "../app/controllers/recording_studio_attachable/application_controller"
 require_relative "../app/controllers/recording_studio_attachable/placements_controller"
 require_relative "../lib/recording_studio_attachable/services/base_service"
+require_relative "../app/services/recording_studio_attachable/services/place_library_image"
+require_relative "../app/services/recording_studio_attachable/services/upload_to_library_and_place"
+require_relative "../app/services/recording_studio_attachable/services/reorder_placements"
+require_relative "../app/services/recording_studio_attachable/services/remove_placement"
+require_relative "../app/services/recording_studio_attachable/services/revise_placement_collection"
 
 module RecordingStudioAttachable
   class PlacementsControllerTest < ActionController::TestCase
@@ -89,6 +94,45 @@ module RecordingStudioAttachable
       assert_redirected_to "/recordings/#{parent.id}/placements"
       assert_equal parent, captured[:parent_recording]
       assert_equal attachment, captured[:attachment_recording]
+    end
+
+    def test_update_reorders_from_the_collection_sheet
+      parent = FakeRecording.new(id: "gallery-1", recordable_type: "Gallery")
+      result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: :reordered)
+      captured = nil
+
+      with_routing do |set|
+        set.draw do
+          patch "recordings/:recording_id/placements", to: "recording_studio_attachable/placements#update"
+          get "recordings/:recording_id/placements",
+              to: "recording_studio_attachable/placements#index",
+              as: :recording_placements
+        end
+
+        @routes = set
+
+        RecordingStudio::Recording.stub(:find, parent) do
+          @controller.stub(:authorize_placement_action!, true) do
+            @controller.stub(:protect_against_forgery?, false) do
+              RecordingStudioAttachable::Services::RevisePlacementCollection.stub(
+                :call,
+                lambda { |**kwargs|
+                  captured = kwargs
+                  result
+                }
+              ) do
+                patch :update, params: {
+                  recording_id: parent.id,
+                  attachment_collection: { signed_editor: "token", rows: [] }
+                }
+              end
+            end
+          end
+        end
+      end
+
+      assert_redirected_to "/recordings/#{parent.id}/placements"
+      assert_equal parent, captured[:recording]
     end
 
     def test_reorder_uses_orderable_and_redirects

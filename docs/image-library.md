@@ -157,13 +157,26 @@ A photo from another workspace is refused. A photo that is not in a live library
 
 ## Screens
 
-Reuse Attachable's listing, upload, picker, and photo edit screens on each library recording.
+Reuse Attachable's listing, upload, picker, photo edit, and collection editor screens.
 
 - One library: `library_path(library)` or `recording_library_path(parent, key: :campaign)` opens the existing listing.
-- Host page: `recording_placements_path(parent)` adds from the libraries the host passed, uploads and places, reorders, and removes a placement.
+- Host page: `recording_placements_path(parent)` mounts `attachment_collection_editor` with `association: :placements` and the resolved placements. List, Slides, and Grid are the same views used to edit direct images.
+- Add from library opens the existing picker. Upload writes the photo to the chosen library and places it. Remove from here drops the placement and leaves the photo. List reorder uses the existing drag handle and Order field.
+- Editing caption, credit, or alt from a placement opens `attachments#show` for the library photo.
 - The picker switcher shows only when the host passes more than one library.
 - The existing image picker can target a library: `recording_attachment_picker_path(library)`.
 - Photo edit still uses `attachments#show`. Caption, credit, and alt are on that form. If the photo is placed, the page warns how many places use it.
+
+```erb
+<%= attachment_collection_editor(
+      @page,
+      association: :placements,
+      items: RecordingStudioAttachable::Placements.resolve(@page),
+      fields: [:caption, :credit, :alt_text],
+      displays: [:list, :carousel, :grid],
+      sortable: true
+    ) %>
+```
 
 The host chooses which libraries the picker offers:
 

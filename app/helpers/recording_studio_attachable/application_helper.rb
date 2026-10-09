@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require_relative "attachment_file_buttons_helper"
+require_relative "attachment_collections_helper"
+
 module RecordingStudioAttachable
   module ApplicationHelper
     include AttachmentFileButtonsHelper
@@ -61,15 +64,6 @@ module RecordingStudioAttachable
           uploadUrl: attachable_routes.recording_attachments_path(library)
         }
       end
-    end
-
-    def move_placement_ids(resolved, index, delta)
-      ids = resolved.map { |item| item.placement_recording.id }
-      target = index + delta
-      return ids if target.negative? || target >= ids.length
-
-      ids[index], ids[target] = ids[target], ids[index]
-      ids
     end
 
     private

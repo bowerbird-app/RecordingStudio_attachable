@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The add-from-library picker uses the libraries the host passes in `placement_picker_libraries`. The switcher shows only when that list has more than one. The default list is the default library for the nearest `ImageLibrary` parent.
 - Trashing a library with in-use photos shows the same in-use warning with rolled-up counts. Permanently deleting a library or a photo removes its placements. Removing a placement never deletes the photo. Trashed photos stay pointed at and are skipped when resolving.
 - Dummy app: the host mounts Images and Campaign in its own nav. The Gallery places a photo from each.
+- Placements reuse `attachment_collection_editor`. Pass `association: :placements` and the resolved placements. The host page keeps Add from library, Upload, list reorder, and Remove from here. Editing caption, credit, or alt opens the existing photo page.
 
 ### Upgrade Notes
 - Bump to `0.12.0` and run `rails generate recording_studio_attachable:migrations` then `db:migrate`. That adds `recording_studio_attachable_libraries` (`key`) and `recording_studio_attachable_placements`.

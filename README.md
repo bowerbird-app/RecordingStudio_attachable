@@ -499,7 +499,7 @@ gallery.upload_to_library_and_place(signed_blob_id: blob.signed_id, library_reco
 gallery.library_placements
 ```
 
-`library_path_for(library)` or `library_path_for(parent, key: :campaign)` opens the existing listing. Put those paths in the host nav. `recording_placements_path(gallery)` adds from the libraries the host passed. The switcher shows only when that list has more than one. Set `config.placement_picker_libraries` to pass the list.
+`library_path_for(library)` or `library_path_for(parent, key: :campaign)` opens the existing listing. Put those paths in the host nav. `recording_placements_path(gallery)` mounts the existing list, slides, and grid editor for the resolved placements. Add from library, Upload, list reorder, and Remove from here sit on top of that editor. Editing caption, credit, or alt opens the library photo. The switcher shows only when the host passed more than one library. Set `config.placement_picker_libraries` to pass the list.
 
 Trashing a library or a photo that is in use warns how many places point at it. Resolve skips a trashed photo. Permanently deleting a library or a photo removes its placements. Removing a placement leaves the photo in the library.
 
@@ -607,7 +607,7 @@ Replace never navigates to the attachment details screen. Keep `attachments#show
 
 ### Edit many images
 
-`attachment_collection_editor` edits the direct images, files, or attachments on a parent and saves the rows that changed. Caption, credit, and alt text belong to the attachment snapshot, so two uses of the same file can differ. Nothing is written onto the blob. `:name` edits the existing name. There is no title column.
+`attachment_collection_editor` edits the direct images, files, or attachments on a parent and saves the rows that changed. Pass `association: :placements` and `items:` (resolved placements) to render the same List, Slides, and Grid for a host page that points at library photos. Caption, credit, and alt text belong to the attachment snapshot, so two uses of the same file can differ. Nothing is written onto the blob. `:name` edits the existing name. There is no title column. From a placement, Edit opens the existing photo page. Remove from here drops the pointer.
 
 ```ruby
 attachment_collection_editor(

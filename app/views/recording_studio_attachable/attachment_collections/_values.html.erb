@@ -1,0 +1,8 @@
+<div class="flex flex-col gap-4">
+  <% collection.fields.each do |field| %>
+    <div>
+      <p class="mb-2 text-sm font-medium"><%= field.label %></p>
+      <p class="text-sm text-(--surface-content-color)"><%= row.values[field.key].presence || "—" %></p>
+    </div>
+  <% end %>
+</div>

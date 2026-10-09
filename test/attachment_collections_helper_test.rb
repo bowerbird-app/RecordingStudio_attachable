@@ -98,6 +98,9 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, "max-h-72"
     assert_includes html, "object-contain"
     assert_includes html, 'src="/attachments/image-1/file"'
+    assert_includes html, 'data-fp-modal-scroll="page"'
+    refute_includes html, "max-h-[70vh]"
+    refute_includes html, "fp-modal-dialog-cap"
     assert_includes html, 'role="dialog"'
   end
 
@@ -229,8 +232,10 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes list_form, 'src="/attachments/image-1/preview/square_med"'
     assert_includes grid_form, 'id="attachment-collection-parent-1-edit-image-1"'
     assert_includes grid_form, 'src="/attachments/image-1/file"'
-    assert_includes grid_form, "max-h-[70vh]"
-    assert_includes grid_form, "object-contain"
+    assert_includes grid_form, 'data-fp-modal-scroll="page"'
+    refute_includes grid_form, "fp-modal-dialog-cap"
+    refute_includes grid_form, "max-h-[70vh]"
+    assert_includes grid_form, "h-auto w-full"
     assert_includes grid_form, "image-1.png"
     assert_includes grid_form, ">PNG<"
     assert_includes grid_form, "1280 × 720"
@@ -497,6 +502,11 @@ class AttachmentCollectionsHelperTest < Minitest::Test
 
   def load_flat_pack_components!
     root = Gem.loaded_specs.fetch("flat_pack").full_gem_path
+    locale = File.join(root, "config/locales/flatpack.en.yml")
+    unless I18n.load_path.include?(locale)
+      I18n.load_path << locale
+      I18n.backend.load_translations
+    end
     %w[
       lib/flat_pack/button/style_registry.rb
       app/components/flat_pack/base_component.rb

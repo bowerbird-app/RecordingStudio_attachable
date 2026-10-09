@@ -299,6 +299,8 @@ Options:
 - `id` required
 - `title`
 - `size`
+- `scroll` (`:body` default, `:page` sizes the dialog to its content and scrolls the overlay)
+- `sticky_footer` (only with `scroll: :page`)
 - `body_height_mode`
 - `body_height`
 - `close_on_backdrop`

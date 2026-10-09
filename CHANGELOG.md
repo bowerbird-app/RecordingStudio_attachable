@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-09
+
+### Changed
+- Image modals use Flatpack `scroll: :page`. The edit modal and the original-file modal grow with the picture. You scroll the overlay to see the rest. The picture is no longer capped at 70vh.
+- Requires Flatpack `>= 0.1.213`. The root Gemfile and the dummy app pin tag `v0.1.213`.
+
+### Upgrade Notes
+- Update Flatpack to `0.1.213` or newer. Rebuild host Tailwind so `sm:my-auto` is generated, and reload Flatpack CSS and JavaScript.
+- Upload and library-picker modals stay a fixed height. They hold an iframe or a scrolling library, and they still scroll inside the card.
+- No migration.
+
 ## [0.10.0] - 2026-10-08
 
 ### Added
@@ -249,7 +260,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.9.1...v0.10.0
 [0.9.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.7.3...v0.8.0

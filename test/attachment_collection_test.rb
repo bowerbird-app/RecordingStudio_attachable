@@ -147,6 +147,15 @@ class AttachmentCollectionTest < Minitest::Test
         default_display: "carousel"
       )
     end
+    grid = with_membership([]) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent,
+        association: :images,
+        fields: [:caption],
+        sortable: false,
+        displays: [:grid]
+      )
+    end
     reloaded = with_membership([]) do
       RecordingStudioAttachable::AttachmentCollection.from_params(
         recording: parent,
@@ -160,8 +169,14 @@ class AttachmentCollectionTest < Minitest::Test
     assert_equal :carousel, slides.default_display
     assert_equal "Slides", RecordingStudioAttachable::AttachmentCollectionDisplay.label(:carousel)
     assert_equal "List", RecordingStudioAttachable::AttachmentCollectionDisplay.label(:list)
+    assert_equal "Grid", RecordingStudioAttachable::AttachmentCollectionDisplay.label(:grid)
     assert_equal false, listed.side_preview
     assert_equal listed.signed_editor, slides.signed_editor
+    assert_equal [:grid], grid.displays
+    assert_equal :grid, grid.default_display
+    assert_equal :square_med, grid.preview_variant
+    assert_equal :med, grid.natural_preview_variant
+    assert_equal listed.signed_editor, grid.signed_editor
     assert_equal [:list], reloaded.displays
     assert_equal :list, reloaded.default_display
   end
@@ -217,7 +232,7 @@ class AttachmentCollectionTest < Minitest::Test
     parent = Parent.new("parent-1")
     unknown = assert_raises(ArgumentError) do
       RecordingStudioAttachable::AttachmentCollection.for(
-        recording: parent, association: :images, fields: [:caption], sortable: false, displays: [:grid]
+        recording: parent, association: :images, fields: [:caption], sortable: false, displays: [:mosaic]
       )
     end
     missing = assert_raises(ArgumentError) do
@@ -236,7 +251,7 @@ class AttachmentCollectionTest < Minitest::Test
       )
     end
 
-    assert_equal "Unknown display: :grid. Use :list or :carousel.", unknown.message
+    assert_equal "Unknown display: :mosaic. Use :list, :carousel, or :grid.", unknown.message
     assert_equal "displays must be present", missing.message
     assert_equal "default_display :carousel is not in displays.", outside.message
   end

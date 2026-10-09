@@ -150,19 +150,24 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes seeds, "recordable: page"
     assert_includes seeds, "recordable: chat_thread"
     assert_includes seeds, "recordable: chat_message"
-    assert_includes seeds, "kiln-canister-hero.jpg"
-    assert_includes seeds, "kiln-canister-table.jpg"
-    assert_includes seeds, "kiln-canister-detail.jpg"
-    assert_includes seeds, "kiln-canister-open.jpg"
     assert_includes seeds, "import_attachment("
     assert_includes seeds, "revise_attachment_metadata("
     assert_includes seeds, "window.jpg"
     assert_includes seeds, "Missing seed image fixture"
     assert_includes seeds, "blob.service.exist?(blob.key)"
     assert_includes seeds, "but blob is missing from storage"
-    %w[kiln-canister-hero.jpg kiln-canister-table.jpg kiln-canister-detail.jpg kiln-canister-open.jpg].each do |file|
+    %w[
+      kiln-canister-hero.jpg
+      kiln-canister-table.jpg
+      kiln-canister-detail.jpg
+      kiln-canister-open.jpg
+      kiln-canister-portrait.jpg
+      kiln-canister-square.jpg
+    ].each do |file|
+      assert_includes seeds, file
       assert File.exist?(File.expand_path("dummy/db/seed_images/#{file}", __dir__)), "missing press kit image #{file}"
     end
+    assert_equal 20, Dir[File.expand_path("dummy/db/seed_images/kiln-canister-*.jpg", __dir__)].size
     assert_includes schema, 'create_table "chat_message_attachments"'
     assert_includes schema, 't.string "status", default: "draft", null: false'
     assert_includes schema, 't.boolean "seeded", default: false, null: false'

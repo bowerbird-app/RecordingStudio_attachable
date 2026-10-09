@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["carousel", "list", "pill", "slideForm", "card", "slideMedia", "preview", "previewHome"]
+  static targets = ["carousel", "list", "pill", "slideForm", "grid", "gridForm", "card", "slideMedia", "preview", "previewHome"]
 
   static values = {
     display: String,
@@ -34,7 +34,7 @@ export default class extends Controller {
   select(event) {
     event.preventDefault()
     const display = event.currentTarget.dataset.display
-    if (display !== "list" && display !== "carousel") return
+    if (display !== "list" && display !== "carousel" && display !== "grid") return
 
     this.displayValue = display
     this.apply()
@@ -74,7 +74,8 @@ export default class extends Controller {
     this.placeSlideForms(slides)
 
     if (this.hasCarouselTarget) this.carouselTarget.hidden = !slides
-    if (this.hasListTarget) this.listTarget.hidden = slides
+    if (this.hasListTarget) this.listTarget.hidden = this.displayValue !== "list"
+    if (this.hasGridTarget) this.gridTarget.hidden = this.displayValue !== "grid"
 
     if (slides) {
       window.requestAnimationFrame(() => {
@@ -215,15 +216,29 @@ export default class extends Controller {
   }
 
   copySavedRow(form) {
-    if (!this.hasListTarget) return
-
     const recordingId = this.recordingId(form)
-    const row = this.listRow(recordingId)
-    if (!row) return
+    if (!recordingId) return
 
-    this.copyFields(form, row)
-    const listForm = this.application.getControllerForElementAndIdentifier(this.listTarget, "flat-pack--unsaved-changes")
-    if (listForm && listForm.userEdited === false) this.markSaved(this.listTarget)
+    if (this.hasListTarget) {
+      const row = this.listRow(recordingId)
+      if (row) {
+        this.copyFields(form, row)
+        const listForm = this.application.getControllerForElementAndIdentifier(this.listTarget, "flat-pack--unsaved-changes")
+        if (listForm && listForm.userEdited === false) this.markSaved(this.listTarget)
+      }
+    }
+
+    this.siblingForms(recordingId, form).forEach((other) => {
+      this.copyFields(form, other)
+      const changes = this.application.getControllerForElementAndIdentifier(other, "flat-pack--unsaved-changes")
+      if (changes && changes.userEdited === false) this.markSaved(other)
+    })
+  }
+
+  siblingForms(recordingId, form) {
+    return [...this.slideFormTargets, ...this.gridFormTargets].filter((other) => {
+      return other !== form && this.recordingId(other) === recordingId
+    })
   }
 
   copyFields(form, row) {

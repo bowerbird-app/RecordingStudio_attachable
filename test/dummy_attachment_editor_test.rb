@@ -21,7 +21,7 @@ class DummyAttachmentEditorTest < Minitest::Test
     assert_includes view, "association: :images"
     assert_includes view, "fields: [:caption, :credit, :alt_text]"
     assert_includes view, "sortable: false"
-    assert_includes view, "displays: [:list, :carousel]"
+    assert_includes view, "displays: [:list, :carousel, :grid]"
     assert_includes view, "default_display: :list"
     assert_includes view, "side_preview: true"
     assert_includes view, "items_per_view: { mobile: 1, tablet: 1, desktop: 2 }"

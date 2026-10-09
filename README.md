@@ -581,21 +581,23 @@ attachment_collection_editor(
   @section,
   association: :images,
   fields: [:caption, :credit, :alt_text],
-  displays: [:list, :carousel],
+  displays: [:list, :carousel, :grid],
   default_display: :list,
   sortable: true
 )
 ```
 
-Leave `displays` out and the helper renders the list only, with no switch. That is the same screen as before. `displays` is the set, in switch order. `:list` is the rows side by side with their fields. `:carousel` slides the cards in the Flatpack carousel. The switch labels are List and Slides.
+Leave `displays` out and the helper renders the list only, with no switch. That is the same screen as before. `displays` is the set, in switch order. `:list` is the rows side by side with their fields. `:carousel` slides the cards in the Flatpack carousel. `:grid` tiles the pictures and keeps each file's proportions. The switch labels are List, Slides, and Grid.
 
 Each image sits in a card. On Slides, the picture moves into that card and the fields stay with the slide. Above those fields, the card shows the file name, then the type, the pixel size, and the file size when those are known. The tray around the cards has no border and no fill. Image thumbs sit under the carousel, one per card, and use the same preview. A gap separates one card from the next. The picture sits flush with the card edges, and the fields span the card beneath it. The next card peeks in when `side_preview` is on.
 
-`default_display` must be one of `displays`. Leave it out and the first entry opens. `displays: [:carousel]` is slides only, with no switch. An unknown display raises. A default that is not in the set raises.
+`default_display` must be one of `displays`. Leave it out and the first entry opens. `displays: [:carousel]` is slides only, with no switch. `displays: [:grid]` is the grid only, with no switch. An unknown display raises. A default that is not in the set raises.
 
-The switch does not reload the page. List and Slides keep separate copies of the fields. The list has one Save, and that save writes every row that changed, then the page reloads on the list. Each slide has its own Save, and that save writes that image without reloading the page. The slide you are on stays on screen, and its Save returns to the default button. The list copy of that image picks up the saved text. Text typed on another slide stays there. The picture moves between the list thumbnail and the slide. Refreshing returns to `default_display`. The choice is not in the signed save token.
+The switch does not reload the page. List, Slides, and Grid keep separate copies of the fields. The list has one Save, and that save writes every row that changed, then the page reloads on the list. Each slide has its own Save, and that save writes that image without reloading the page. The slide you are on stays on screen, and its Save returns to the default button. Grid works the same way inside the edit modal: Save writes that image, the modal stays open, and the list and slide copies of that image pick up the saved text. Text typed on another slide or in another grid modal stays there. The picture moves between the list thumbnail and the slide. The grid tile is its own picture. Refreshing returns to `default_display`. The choice is not in the signed save token.
 
-`sortable: true` reuses Orderable on that parent (`recording_studio_orderable_reorder!`) and splices this association into the parent's existing child order. This gem does not depend on `recording_studio_orderable`. Without that method, the helper raises. Omit `sortable` to keep newest-first and skip reorder. The drag handle and Order field show on List. A slide form leaves order out, so saving one slide does not reorder the set. Reorder from List, then use the list Save.
+`sortable: true` reuses Orderable on that parent (`recording_studio_orderable_reorder!`) and splices this association into the parent's existing child order. This gem does not depend on `recording_studio_orderable`. Without that method, the helper raises. Omit `sortable` to keep newest-first and skip reorder. The drag handle and Order field show on List. A slide form and a grid form leave order out, so saving one image from Slides or Grid does not reorder the set. Reorder from List, then use the list Save.
+
+On Grid, each tile is the natural preview, even when `preview:` is `:square`. A short picture can leave space under it when the neighbor in that row is taller. Click a tile to edit that image. The modal shows the original file, then the file name, type, pixel size, and file size, then the fields. Save sits on the left. Trash is the icon on the right. Close the modal without saving and the text is still there the next time you open it. List and Slides still open the original file when you click a preview.
 
 Click a preview to open the original file in a modal. On the list, Trash sits under the fields as a red button. On a slide, Trash is the icon at the right of the fields, and Save sits on the left of that row. Slides uses the Flatpack carousel: its previous and next controls move between cards, its expand control opens the original, and a thumb under the tray jumps to that card. The dot indicators stay off. One image hides the previous and next controls. The thumb stays. Every slide keeps its own form, including the ones off to the side.
 
@@ -605,7 +607,7 @@ Save starts as the default button and is only as wide as its label. Change a cap
 
 `items_per_view` chooses how many cards are on screen. Omit it and one card shows at every width. Pass a whole number to use that count on mobile, tablet, and desktop. Pass `mobile:`, `tablet:`, and `desktop:` when the count should change with the width. Tablet starts at 768px and desktop at 1024px. A missing width stays at one. Zero, a fraction, and an unknown width raise. It is not in the signed save token.
 
-`preview:` chooses the picture in the card. The default `:square` uses the `square_med` crop. `preview: :natural` uses the `med` variant and keeps the file's proportions. On the list the picture stays about 208px wide beside the fields. On Slides the picture bleeds to the card edges. It stays tall enough for the previous and next controls, and it is capped in height. The fields span the width under it. The modal still opens the original file. `preview:` is not in the signed save token. An unknown value raises.
+`preview:` chooses the picture in the list and on Slides. The default `:square` uses the `square_med` crop. `preview: :natural` uses the `med` variant and keeps the file's proportions. On the list the picture stays about 208px wide beside the fields. On Slides the picture bleeds to the card edges. It stays tall enough for the previous and next controls, and it is capped in height. The fields span the width under it. Clicking those previews still opens the original file. Grid ignores `preview:` and always uses the natural `med` preview. `preview:` is not in the signed save token. An unknown value raises.
 
 FlatPack is the default UI system for the engine and the dummy app (pinned to `v0.1.205` in the root Gemfile and the dummy app; gem requires `>= 0.1.205`).
 
@@ -621,7 +623,7 @@ Dummy credentials (`test/dummy/config/credentials.yml.enc`) are encrypted with t
 - CI installs the dummy app bundle and runs dummy-app migrations before the root checks
 - the dummy app pins RecordingStudio `v4.2.2` and Recording Studio Accessible `v0.6.0`
 - make sure engine, Active Storage, and Recording Studio tables are migrated in the dummy app before validating upload flows locally
-- `bin/rails db:seed` attaches a four-shot Kiln canister press kit to the workspace. Edit images uses those files. Seeds also remove the colour-block stand-ins `window.jpg`, `dock.jpg`, and `pier.jpg` when they are still on the workspace.
+- `bin/rails db:seed` attaches a twenty-shot Kiln canister press kit to the workspace. The shots mix portrait, square, and landscape frames. Edit images uses those files. Seeds also remove the colour-block stand-ins `window.jpg`, `dock.jpg`, and `pier.jpg` when they are still on the workspace.
 - set `DUMMY_ACTIVE_STORAGE_SERVICE=amazon` plus `DUMMY_AWS_ACCESS_KEY_ID`, `DUMMY_AWS_SECRET_ACCESS_KEY`, `DUMMY_AWS_REGION`, and `DUMMY_AWS_BUCKET` to exercise S3-backed uploads in the dummy app; `DUMMY_AWS_BUCKET` may be either the plain bucket name or a bucket ARN
 - optional `DUMMY_AWS_ENDPOINT` for Cloudflare R2 (or another S3-compatible API URL). When it is unset, the dummy `amazon` service keeps talking to AWS S3. When it is set, the dummy also uses `force_path_style: true` and checksum calculation/validation `when_required` (R2-safe).
 - **Object storage (host Active Storage, not Attachable config):** this gem does not hard-code AWS S3 or Cloudflare R2. File blobs, direct uploads, and previews use whatever service the **host app** selects via `config.active_storage.service` and `config/storage.yml`. Attachable has no separate storage backend setting.

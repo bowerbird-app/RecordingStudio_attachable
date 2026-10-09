@@ -83,6 +83,8 @@ module RecordingStudioAttachable
 
     def preview_variant = AttachmentCollectionPreview.variant(preview)
 
+    def natural_preview_variant = AttachmentCollectionPreview.variant(:natural)
+
     def square_preview? = preview == :square
 
     def form_id
@@ -180,8 +182,8 @@ module RecordingStudioAttachable
   end
 
   class AttachmentCollectionDisplay
-    LABELS = { list: "List", carousel: "Slides" }.freeze
-    UNKNOWN = "Unknown display: %s. Use :list or :carousel."
+    LABELS = { list: "List", carousel: "Slides", grid: "Grid" }.freeze
+    UNKNOWN = "Unknown display: %s. Use :list, :carousel, or :grid."
     MISSING = "displays must be present"
     DEFAULT_OUTSIDE = "default_display %s is not in displays."
 

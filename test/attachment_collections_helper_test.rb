@@ -195,6 +195,81 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_operator preview_home, :<, html.index("/preview/square_med", preview_home)
   end
 
+  def test_grid_tiles_keep_their_proportions_and_open_an_edit_modal
+    hero = child("image-1", name: "Pier", caption: "Light")
+    hero.recordable.file = sized_file("width" => "1280", "height" => 720)
+    @displays = %i[list carousel grid]
+    @default_display = :list
+    html = render_editor(
+      [hero, child("image-2", name: "Dock", caption: "Dawn")],
+      fields: [:caption],
+      sortable: false,
+      return_to: "/attachment_editor"
+    )
+
+    list_form = form_markup(html, "attachment-collection-parent-1")
+    slide_form = form_markup(html, "attachment-collection-parent-1-slide-image-1")
+    grid_form = form_markup(html, "attachment-collection-parent-1-grid-image-1")
+    grid = html[/data-recording-studio-attachable--collection-display-target="grid".*?<form/m]
+
+    assert_includes html, ">Grid<"
+    assert_includes html, 'href="#grid"'
+    assert_includes html, "grid-cols-1"
+    assert_includes html, "sm:grid-cols-2"
+    assert_includes html, "lg:grid-cols-3"
+    assert_includes html, "xl:grid-cols-4"
+    assert_includes html, "items-start"
+    assert_includes grid, "hidden"
+    assert_includes grid, 'aria-label="Edit Pier"'
+    assert_includes grid, 'src="/attachments/image-1/preview/med"'
+    assert_includes grid, "h-auto w-full"
+    refute_includes grid, "object-cover"
+    refute_includes grid, "aspect-square"
+    assert_includes grid, 'data-modal-id="attachment-collection-parent-1-edit-image-1"'
+    assert_includes list_form, 'src="/attachments/image-1/preview/square_med"'
+    assert_includes grid_form, 'id="attachment-collection-parent-1-edit-image-1"'
+    assert_includes grid_form, 'src="/attachments/image-1/file"'
+    assert_includes grid_form, "max-h-[70vh]"
+    assert_includes grid_form, "object-contain"
+    assert_includes grid_form, "image-1.png"
+    assert_includes grid_form, ">PNG<"
+    assert_includes grid_form, "1280 × 720"
+    assert_includes grid_form, "200 KB"
+    refute_includes grid_form, "px-14"
+    assert_includes grid_form, "collection-display#saveSlide"
+    assert_includes grid_form, 'data-turbo="false"'
+    assert_includes grid_form, "data-save-status"
+    assert_includes grid_form, 'role="status"'
+    assert_includes grid_form, 'aria-label="Trash"'
+    refute_includes grid_form, ">Order<"
+    refute_includes grid_form, 'name="attachment_collection[rows][][order]"'
+    refute_includes list_form, "gridForm"
+    refute_includes list_form, "saveSlide"
+    assert_includes slide_form, "px-14"
+    assert_equal 6, html.scan('name="attachment_collection[rows][][caption]"').size
+    refute_match(/\bhidden(?:=|\s|>)/, list_form[/<form\b[^>]*>/])
+  end
+
+  def test_grid_alone_has_no_switch_and_opens_on_the_tiles
+    @displays = [:grid]
+    html = render_editor(
+      [child("image-1", name: "Pier", caption: "Light")],
+      fields: [:caption],
+      sortable: false,
+      return_to: "/attachment_editor"
+    )
+
+    assert_includes html, 'data-display="grid"'
+    assert_includes html, 'src="/attachments/image-1/preview/med"'
+    refute_includes html, 'target="grid" hidden'
+    refute_includes html, ">List<"
+    refute_includes html, ">Slides<"
+    refute_includes html, 'href="#list"'
+    refute_includes html, "flat-pack--carousel"
+    refute_includes html, 'id="attachment-collection-parent-1"'
+    assert_includes html, 'id="attachment-collection-parent-1-grid-image-1"'
+  end
+
   def test_slide_cards_show_file_facts_above_the_fields_and_the_list_does_not
     @displays = %i[list carousel]
     hero = child("image-1", name: "Pier", caption: "Light")
@@ -435,6 +510,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
       app/components/flat_pack/text_input/component.rb
       app/components/flat_pack/tooltip/component.rb
       app/components/flat_pack/badge/component.rb
+      app/components/flat_pack/grid/component.rb
       app/components/flat_pack/modal/component.rb
       app/components/flat_pack/carousel/component.rb
       app/components/flat_pack/card/media/component.rb

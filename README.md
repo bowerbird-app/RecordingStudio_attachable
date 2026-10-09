@@ -19,6 +19,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - Recording Studio 4.2.0 or newer installed in the host app
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
+- RecordingStudio Metrics `~> 0.2` (GitHub tag `v0.2.0`) for operations-API storage and upload metrics
 
 ## Quick start
 
@@ -196,6 +197,19 @@ end
 The product stores the cap in Stripe metadata as `limit_<name>`. For the example above that key is `limit_storage_bytes`. Attachable registers the usage provider. The provider calls `RecordingStudioAttachable.storage_bytes_for(root)` and returns that integer. The total does not reset each billing period.
 
 `storage_bytes_for` sums distinct original file blobs on attachment rows stamped with that root. The same blob counts once under one root. It counts again, in full, under every other root that still has it. Variant files are not included. Rows whose recording and events were already gone before the backfill stay uncounted. The total is an ActiveRecord query on the host connection.
+
+### Operations API metrics
+
+The gem registers site-wide `:attachments` metrics with RecordingStudio Metrics (`expose: { api: [:operations] }`). Values come from live `RecordingStudio::Recording` rows (`recordable_type` Attachment, `trashed_at: nil`) joined to the current recordable snapshot, not the raw attachment table.
+
+| Identifier | Meaning |
+| --- | --- |
+| `attachments.storage_used` | Sum of `byte_size` on live current snapshots |
+| `attachments.uploads_over_time` | Uploads over time |
+| `attachments.by_kind` | Breakdown by `attachment_kind` |
+| `attachments.by_content_type` | Breakdown by `content_type` |
+
+`api_authorize` is `RecordingStudioAttachable::Api::Access.can_view?`: AdminRoot `:view` through Recording Studio Accessible. The host calls `RecordingStudioMetrics::Api.register!(api: :operations)`. This gem does not register API endpoints.
 
 Trash and restore leave the file attached, so the total stays the same. Permanent deletion is `Recording#destroy!`. `RemoveAttachment` uses that when the recording has no Trashable hook. Trashable purge uses that after the recording is already trashed. Destroy detaches the file rows for the current attachment and earlier snapshots on that recording, then purges a blob that no other attachment still references. The total drops when those file rows are gone.
 

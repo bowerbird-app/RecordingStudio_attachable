@@ -30,6 +30,10 @@ module RecordingStudioAttachable
       end
     end
 
+    initializer "recording_studio_attachable.metrics" do
+      config.to_prepare { RecordingStudioAttachable::Metrics.register! }
+    end
+
     initializer "recording_studio_attachable.action_view_helpers" do
       ActiveSupport.on_load(:action_view) do
         include RecordingStudioAttachable::ApplicationHelper

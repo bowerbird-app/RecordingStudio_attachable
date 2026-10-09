@@ -8,6 +8,9 @@ gemspec
 gem "flat_pack", github: "bowerbird-app/flatpack", tag: "v0.1.213"
 gem "puma"
 gem "recording_studio", github: "bowerbird-app/RecordingStudio", tag: "v4.4.0"
+gem "recording_studio_metrics",
+    github: "bowerbird-app/RecordingStudio_metrics",
+    tag: "v0.2.0"
 gem "sprockets-rails"
 
 group :development, :test do

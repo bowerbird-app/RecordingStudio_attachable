@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-10-09
+
+### Added
+
+- Site-wide attachment metrics register with Recording Studio Metrics for the
+  operations API. `RecordingStudioAttachable::Metrics.register!` registers an
+  `:attachments` resource (`blast_radius: :site`) with RecordingStudioMetrics.
+  Metrics: `attachments.storage_used` (sum of `byte_size` on live current
+  snapshots), `attachments.uploads_over_time`, `attachments.by_kind`
+  (`attachment_kind`), and `attachments.by_content_type`. Counts and sums go
+  through `RecordingStudio::Recording` (`recordable_type` + `trashed_at: nil`)
+  joined to the current `recordable_id`, so revisions and the raw attachment
+  table are not double-counted.
+- `api_authorize` uses `RecordingStudioAttachable::Api::Access.can_view?`
+  (AdminRoot `:view` via Recording Studio Accessible). The gem only registers
+  metrics. The host calls `RecordingStudioMetrics::Api.register!(api: :operations)`.
+
+### Upgrade Notes
+
+- Bump to `0.14.0` and add `recording_studio_metrics` `~> 0.2` (GitHub tag
+  `v0.2.0`).
+- In the host, call `RecordingStudioMetrics::Api.register!(api: :operations)`
+  after configuring the operations API. This gem does not register API
+  endpoints.
+- No migration. No logging or table changes.
+
 ## [0.13.0] - 2026-10-09
 
 ### Added
@@ -324,3 +350,4 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 [0.2.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/releases/tag/v0.1.1
 [0.1.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/releases/tag/v0.1.0
+[0.14.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.13.0...v0.14.0

@@ -4,11 +4,16 @@ require "test_helper"
 
 class ImageLibraryTest < ActionDispatch::IntegrationTest
   setup do
-    @user = User.find_or_initialize_by(email: "admin@admin.com")
-    @user.password = "Password"
-    @user.password_confirmation = "Password"
-    @user.name = "Avery" if @user.name.blank?
-    @user.save!
+    @user = User.find_by(email: "admin@admin.com")
+    if @user.blank?
+      @user = User.new(
+        email: "admin@admin.com",
+        password: "Password",
+        password_confirmation: "Password",
+        name: "Avery"
+      )
+      @user.save!
+    end
     sign_in @user
   end
 

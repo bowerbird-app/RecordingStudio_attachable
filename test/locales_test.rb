@@ -4,6 +4,7 @@ require "test_helper"
 require "yaml"
 
 class LocalesTest < Minitest::Test
+  # rubocop:disable Style/FormatStringToken -- I18n interpolation tokens match en.yml
   EXPECTED_KEYS = {
     "navigation.back" => "Back",
     "navigation.return_to_source" => "Return to source page",
@@ -74,6 +75,7 @@ class LocalesTest < Minitest::Test
     "google_drive.next_page" => "Next page",
     "google_drive.title" => "Google Drive"
   }.freeze
+  # rubocop:enable Style/FormatStringToken
 
   def test_engine_ships_only_english_locale_files
     files = Dir[File.join(engine_locales_dir, "*")].map { |path| File.basename(path) }

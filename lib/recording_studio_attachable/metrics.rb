@@ -15,9 +15,9 @@ module RecordingStudioAttachable
     def register!
       RecordingStudioMetrics.register(
         RESOURCE,
-        model: RecordingStudioAttachable::Attachment,
+        model: RecordingStudio::Recording,
         blast_radius: :site,
-        scope: method(:live_current_attachments),
+        scope: method(:live_attachment_recordings),
         api_authorize: ->(context) { RecordingStudioAttachable::Api::Access.can_view?(context) }
       ) do
         RecordingStudioAttachable::Metrics.define_metrics(self)
@@ -25,18 +25,42 @@ module RecordingStudioAttachable
     end
 
     def define_metrics(dsl)
-      dsl.sum :storage_used, title: "Storage used", field: :byte_size, unit: "bytes", expose: EXPOSE
+      dsl.custom :storage_used, result_type: :scalar, title: "Storage used", unit: "bytes", expose: EXPOSE,
+                 &storage_used_calculator
       dsl.timeseries :uploads_over_time, title: "Uploads over time", field: :created_at, expose: EXPOSE
-      dsl.breakdown :by_kind, title: "Uploads by kind", field: :attachment_kind, expose: EXPOSE
-      dsl.breakdown :by_content_type, title: "Uploads by content type", field: :content_type, expose: EXPOSE
+      dsl.custom :by_kind, result_type: :breakdown, title: "Uploads by kind", expose: EXPOSE, &breakdown_calculator(:attachment_kind)
+      dsl.custom :by_content_type, result_type: :breakdown, title: "Uploads by content type", expose: EXPOSE,
+                 &breakdown_calculator(:content_type)
     end
 
-    def live_current_attachments(relation)
-      recordings = RecordingStudio::Recording.where(
-        recordable_type: RECORDABLE_TYPE,
-        trashed_at: nil
+    def live_attachment_recordings(relation)
+      relation.where(recordable_type: RECORDABLE_TYPE, trashed_at: nil)
+    end
+
+    def storage_used_calculator
+      lambda do |relation, _context|
+        join_current_attachments(relation).sum(attachment_table[:byte_size])
+      end
+    end
+
+    def breakdown_calculator(field)
+      lambda do |relation, _context|
+        join_current_attachments(relation).group(attachment_table[field]).count.map do |key, value|
+          { key: key, value: value }
+        end
+      end
+    end
+
+    def join_current_attachments(relation)
+      recordings = relation.arel_table
+      attachments = attachment_table
+      relation.joins(
+        recordings.join(attachments).on(attachments[:id].eq(recordings[:recordable_id])).join_sources
       )
-      relation.where(id: recordings.select(:recordable_id))
+    end
+
+    def attachment_table
+      RecordingStudioAttachable::Attachment.arel_table
     end
   end
 end

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "recording_studio_attachable/api/access"
 
 class MetricsTest < Minitest::Test
   def test_engine_registers_metrics_on_to_prepare
@@ -10,7 +11,8 @@ class MetricsTest < Minitest::Test
 
     assert initializer
     source = File.read(File.expand_path("../lib/recording_studio_attachable/engine.rb", __dir__))
-    assert_includes source, "config.to_prepare { RecordingStudioAttachable::Metrics.register! }"
+    assert_includes source, "require \"recording_studio_attachable/metrics\""
+    assert_includes source, "Metrics.register!"
   end
 
   def test_access_denies_without_an_admin_root
@@ -26,10 +28,10 @@ class MetricsTest < Minitest::Test
   def test_metrics_file_scopes_through_live_recordings
     source = File.read(File.expand_path("../lib/recording_studio_attachable/metrics.rb", __dir__))
 
-    assert_includes source, "RecordingStudio::Recording.where("
+    assert_includes source, "model: RecordingStudio::Recording"
     assert_includes source, "recordable_type: RECORDABLE_TYPE"
     assert_includes source, "trashed_at: nil"
-    assert_includes source, "recordings.select(:recordable_id)"
+    assert_includes source, "attachments[:id].eq(recordings[:recordable_id])"
     refute_includes source, "Attachment.all"
   end
 end

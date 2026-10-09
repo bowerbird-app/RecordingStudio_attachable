@@ -16,7 +16,9 @@ class AttachmentsMetricsTest < ActiveSupport::TestCase
   end
 
   teardown do
-    RecordingStudioAdmin.configuration.access_recording_resolver = nil
+    configuration = RecordingStudioAdmin.configuration
+    configuration.site_admin_recording_resolver = nil
+    configuration.access_recording_resolver = nil
   end
 
   test "registers the attachments metrics on the operations API" do
@@ -127,6 +129,48 @@ class AttachmentsMetricsTest < ActiveSupport::TestCase
     refute RecordingStudioAttachable::Api::Access.can_view?(build_api_context(@denied))
   end
 
+  test "site resolver is preferred when set" do
+    other = other_root
+    with_admin_resolvers(site: ->(_context) { other }, access: ->(_context) { @root }) do
+      refute RecordingStudioAttachable::Api::Access.can_view?(build_api_context(@actor))
+    end
+
+    grant_view!(@actor, other, role: :view)
+    with_admin_resolvers(site: ->(_context) { other }, access: ->(_context) { @root }) do
+      assert RecordingStudioAttachable::Api::Access.can_view?(build_api_context(@actor))
+    end
+  end
+
+  test "access resolver is used when the site resolver is unset" do
+    with_admin_resolvers(site: nil, access: ->(_context) { @root }) do
+      assert RecordingStudioAttachable::Api::Access.can_view?(build_api_context(@actor))
+      refute RecordingStudioAttachable::Api::Access.can_view?(build_api_context(@denied))
+    end
+  end
+
+  test "resolver raising denies without an exception" do
+    result = nil
+
+    with_admin_resolvers(
+      site: ->(_context) { raise NoMethodError, "undefined method `controller'" },
+      access: ->(_context) { @root }
+    ) do
+      result = RecordingStudioAttachable::Api::Access.can_view?(build_api_context(@actor))
+    end
+
+    assert_equal false, result
+  end
+
+  test "resolver returning nil denies" do
+    result = nil
+
+    with_admin_resolvers(site: ->(_context) {}, access: ->(_context) { @root }) do
+      result = RecordingStudioAttachable::Api::Access.can_view?(build_api_context(@actor))
+    end
+
+    assert_equal false, result
+  end
+
   test "discovery hides metrics from denied callers" do
     denied = RecordingStudioMetrics::Api::DiscoveryHandler.call(build_api_context(@denied))
     denied_ids = denied.fetch(:metrics).map { |row| row[:identifier] }
@@ -183,12 +227,30 @@ class AttachmentsMetricsTest < ActiveSupport::TestCase
   def install_admin_resolver!(recording)
     unless defined?(RecordingStudioAdmin)
       admin = Module.new
-      configuration = Struct.new(:access_recording_resolver).new
+      configuration = Struct.new(:site_admin_recording_resolver, :access_recording_resolver).new
       admin.define_singleton_method(:configuration) { configuration }
       Object.const_set(:RecordingStudioAdmin, admin)
     end
 
+    RecordingStudioAdmin.configuration.site_admin_recording_resolver = nil
     RecordingStudioAdmin.configuration.access_recording_resolver = ->(_context) { recording }
+  end
+
+  def with_admin_resolvers(site:, access:)
+    configuration = RecordingStudioAdmin.configuration
+    original_site = configuration.site_admin_recording_resolver
+    original_access = configuration.access_recording_resolver
+    configuration.site_admin_recording_resolver = site
+    configuration.access_recording_resolver = access
+    yield
+  ensure
+    configuration.site_admin_recording_resolver = original_site
+    configuration.access_recording_resolver = original_access
+  end
+
+  def other_root
+    workspace = Workspace.create!(name: "Metrics other #{SecureRandom.hex(4)}")
+    RecordingStudio.root_recording_for(workspace)
   end
 
   def grant_view!(actor, recording, role: :view)

@@ -26,7 +26,7 @@ module RecordingStudioAttachable
 
     def library_for(parent_recording, actor: nil)
       result = Services::FindOrCreateLibrary.call(parent_recording: parent_recording, actor: actor)
-      raise ArgumentError, result.error if result.failure?
+      raise ArgumentError, result.error.presence || "Could not change the library" if result.failure?
 
       result.value
     end
@@ -50,7 +50,7 @@ module RecordingStudioAttachable
         description: description,
         actor: actor
       )
-      raise ArgumentError, result.error if result.failure?
+      raise ArgumentError, result.error.presence || "Could not change the library" if result.failure?
 
       result.value
     end
@@ -62,7 +62,7 @@ module RecordingStudioAttachable
         description: description,
         actor: actor
       )
-      raise ArgumentError, result.error if result.failure?
+      raise ArgumentError, result.error.presence || "Could not change the library" if result.failure?
 
       result.value
     end
@@ -73,7 +73,7 @@ module RecordingStudioAttachable
         actor: actor,
         impersonator: impersonator
       )
-      raise ArgumentError, result.error if result.failure?
+      raise ArgumentError, result.error.presence || "Could not change the library" if result.failure?
 
       result.value
     end

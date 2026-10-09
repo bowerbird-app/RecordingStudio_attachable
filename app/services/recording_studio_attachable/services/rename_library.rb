@@ -31,8 +31,9 @@ module RecordingStudioAttachable
       end
 
       def apply_name(library, title)
-        if library.respond_to?(:revise)
-          library.revise(actor: resolve_actor(actor)) { |recordable| assign_attributes(recordable, title) }
+        root = LibraryQuery.root_for(library)
+        if root.respond_to?(:revise)
+          root.revise(library, actor: resolve_actor(actor)) { |recordable| assign_attributes(recordable, title) }
         else
           assign_attributes(library.try(:recordable), title)
         end

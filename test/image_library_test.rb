@@ -25,7 +25,7 @@ class ImageLibraryTest < Minitest::Test
       self.trashed_with = [actor, impersonator]
     end
 
-    def revise(actor:)
+    def revise(_recording = nil, actor: nil)
       yield recordable if block_given?
       self.revised_with = actor
       self

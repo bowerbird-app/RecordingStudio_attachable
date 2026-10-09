@@ -65,8 +65,8 @@ module RecordingStudioAttachable
 
     def library_photo_count(library_recording)
       if library_recording.respond_to?(:images)
-        collection = library_recording.images(per_page: 1)
-        return collection.total_count if collection.respond_to?(:total_count)
+        collection = library_recording.images
+        return collection.count if collection.respond_to?(:count)
 
         Array(collection).size
       else

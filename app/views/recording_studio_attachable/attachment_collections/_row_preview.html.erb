@@ -21,9 +21,9 @@
         </div>
       </div>
     </button>
-    <%= render FlatPack::Modal::Component.new(id: modal_id, title: attachment.name, size: :xl) do |modal| %>
+    <%= render FlatPack::Modal::Component.new(id: modal_id, title: attachment.name, size: :xl, scroll: :page) do |modal| %>
       <% modal.body do %>
-        <%= image_tag file_path, alt: attachment.name, class: "mx-auto max-h-[70vh] w-full object-contain" %>
+        <%= image_tag file_path, alt: attachment.name, class: "mx-auto block h-auto w-full" %>
       <% end %>
     <% end %>
   <% else %>

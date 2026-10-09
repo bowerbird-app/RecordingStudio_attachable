@@ -41,11 +41,11 @@
       <% RecordingStudioAttachable::AttachmentFileButton.redirect_params(return_to: return_to).each do |key, value| %>
         <%= hidden_field_tag key, value %>
       <% end %>
-      <%= render FlatPack::Modal::Component.new(id: tile[:modal_id], title: tile[:attachment].name.presence || "Image", size: :xl) do |modal| %>
+      <%= render FlatPack::Modal::Component.new(id: tile[:modal_id], title: tile[:attachment].name.presence || "Image", size: :xl, scroll: :page) do |modal| %>
         <% modal.body do %>
           <div class="flex flex-col gap-4">
             <% if tile[:file_path].present? %>
-              <%= image_tag tile[:file_path], alt: tile[:attachment].name.to_s, class: "mx-auto max-h-[70vh] w-full object-contain" %>
+              <%= image_tag tile[:file_path], alt: tile[:attachment].name.to_s, class: "mx-auto block h-auto w-full" %>
             <% end %>
             <%= render "recording_studio_attachable/attachment_collections/file_facts",
                   attachment: tile[:attachment],

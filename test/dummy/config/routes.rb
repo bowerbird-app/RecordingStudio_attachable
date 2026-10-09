@@ -28,6 +28,9 @@ Rails.application.routes.draw do
   resources :pages, only: %i[show edit update]
   get "attachment_chromes", to: "attachment_chromes#show", as: :attachment_chromes
   get "attachment_editor", to: "attachment_editors#show", as: :attachment_editor
+  get "images", to: "image_libraries#show", defaults: { key: "default" }, as: :workspace_images
+  get "campaign", to: "image_libraries#show", defaults: { key: "campaign" }, as: :campaign_images
+  resources :galleries, only: :show
 
   root "home#index"
 end

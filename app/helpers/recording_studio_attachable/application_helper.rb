@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require_relative "attachment_file_buttons_helper"
+require_relative "attachment_collections_helper"
+
 module RecordingStudioAttachable
   module ApplicationHelper
     include AttachmentFileButtonsHelper
@@ -31,6 +34,36 @@ module RecordingStudioAttachable
 
     def attachable_attachment_imports_path(recording, **options)
       attachable_routes.recording_attachment_imports_path(recording, **options)
+    end
+
+    def library_path_for(parent_or_library, key: :default, **options)
+      if RecordingStudioAttachable::Placements.library_recording?(parent_or_library)
+        attachable_routes.library_path(parent_or_library, **options)
+      else
+        attachable_routes.recording_library_path(parent_or_library, key: key, **options)
+      end
+    end
+
+    def library_picker_path_for(parent_or_library, key: :default, **options)
+      library = if RecordingStudioAttachable::Placements.library_recording?(parent_or_library)
+                  parent_or_library
+                else
+                  RecordingStudioAttachable.library_for(parent_or_library, key: key)
+                end
+      attachable_routes.recording_attachment_picker_path(library, **options)
+    end
+
+    def library_title_for(library_recording)
+      RecordingStudioAttachable::Placements.library_title(library_recording)
+    end
+
+    def library_picker_switcher_payload(libraries)
+      Array(libraries).each_with_object({}) do |library, payload|
+        payload[library.id.to_s] = {
+          pickerUrl: attachable_routes.recording_attachment_picker_path(library),
+          uploadUrl: attachable_routes.recording_attachments_path(library)
+        }
+      end
     end
 
     private

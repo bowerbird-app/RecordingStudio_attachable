@@ -32,6 +32,14 @@ RecordingStudioAttachable.configure do |config|
   config.google_drive.redirect_uri = ENV["DUMMY_GOOGLE_REDIRECT_URI"].presence ||
                                      ENV.fetch("DUMMY_GOOGLE_DRIVE_REDIRECT_URI", codespaces_redirect_uri)
 
+  config.placement_picker_libraries = lambda { |parent_recording|
+    root = parent_recording.try(:root_recording) || parent_recording
+    [
+      RecordingStudioAttachable.library_for(root),
+      RecordingStudioAttachable.library_for(root, key: :campaign)
+    ]
+  }
+
   config.register_upload_provider(
     :demo_cloud,
     label: "Demo cloud import",

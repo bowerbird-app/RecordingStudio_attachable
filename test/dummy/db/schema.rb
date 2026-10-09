@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_01_140100) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_09_021003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -74,6 +74,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_140100) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "galleries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "title", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "pages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -109,6 +115,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_140100) do
     t.index ["attachment_kind", "content_type"], name: "idx_rs_attachable_kind_type"
     t.index ["attachment_kind"], name: "idx_on_attachment_kind_d683071625"
     t.index ["root_recording_id"], name: "index_rs_attachable_attachments_on_root_recording_id"
+  end
+
+  create_table "recording_studio_attachable_libraries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "key", default: "default", null: false
+    t.datetime "created_at", null: false
+    t.index ["key"], name: "index_recording_studio_attachable_libraries_on_key"
+  end
+
+  create_table "recording_studio_attachable_placements", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "attachment_recording_id", null: false
+    t.datetime "created_at", null: false
+    t.index ["attachment_recording_id"], name: "idx_on_attachment_recording_id_76c6286907"
   end
 
   create_table "recording_studio_device_sessions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -155,6 +173,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_140100) do
     t.uuid "root_recording_id"
     t.datetime "trashed_at"
     t.datetime "updated_at", null: false
+    t.integer "recording_studio_orderable_position"
+    t.index ["parent_recording_id", "recording_studio_orderable_position"], name: "idx_rs_recordings_orderable_sibling_position"
     t.index ["parent_recording_id"], name: "idx_rs_attachable_parent_active", where: "(((recordable_type)::text = 'RecordingStudioAttachable::Attachment'::text) AND (trashed_at IS NULL))"
     t.index ["parent_recording_id"], name: "index_recording_studio_recordings_on_parent_recording_id"
     t.index ["parent_recording_id"], name: "index_rs_unique_active_access_boundary_per_parent", unique: true, where: "(((recordable_type)::text = 'RecordingStudio::AccessBoundary'::text) AND (trashed_at IS NULL))"

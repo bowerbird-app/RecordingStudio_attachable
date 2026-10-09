@@ -172,4 +172,57 @@ puts "Seeded: Workspace '#{workspace.name}' with root recording ##{root_recordin
 puts "Seeded: Page '#{page.title}' beneath the workspace root recording"
 puts "Seeded: User '#{user.name}' beneath the workspace root recording"
 puts "Seeded: Chat thread '#{chat_thread.title}' with #{chat_messages.count} recorded messages"
+kiln_library = RecordingStudioAttachable.library_for(root_recording, actor: user)
+campaign_library = RecordingStudioAttachable.library_for(root_recording, key: :campaign, actor: user)
+
+seed_library_photos = lambda do |library_recording, shots, source|
+  images = library_recording.images(per_page: 20).to_a
+  shots.each do |shot|
+    existing = images.find { |recording| recording.recordable.original_filename == shot[:file] }
+    next if existing && seed_attachment_blob_available.call(existing)
+
+    existing&.remove_attachment(actor: user)
+
+    recording = File.open(press_kit_dir.join(shot[:file]), "rb") do |io|
+      library_recording.import_attachment(
+        io: io,
+        filename: shot[:file],
+        content_type: "image/jpeg",
+        name: shot[:name],
+        actor: user,
+        source: source
+      )
+    end
+    raise "Could not import library #{shot[:file]}" if recording.nil?
+
+    recording.revise_attachment_metadata(
+      actor: user,
+      caption: shot[:caption],
+      credit: shot[:credit],
+      alt_text: shot[:alt_text]
+    )
+  end
+  library_recording.images(per_page: 20).to_a
+end
+
+kiln_shots = press_kit.last(2)
+campaign_shots = press_kit.slice(-3, 1)
+kiln_images = seed_library_photos.call(kiln_library, kiln_shots, "image_library")
+campaign_images = seed_library_photos.call(campaign_library, campaign_shots, "campaign_library")
+
+gallery = Gallery.find_or_create_by!(title: "Kiln shots")
+gallery_recording = RecordingStudio::Recording.unscoped.find_or_create_by!(
+  root_recording_id: root_recording.id,
+  parent_recording_id: root_recording.id,
+  recordable: gallery
+)
+
+if gallery_recording.library_placements.empty?
+  [ kiln_images.first, campaign_images.first ].compact.each do |attachment_recording|
+    gallery_recording.place_library_image(attachment_recording: attachment_recording, actor: user)
+  end
+end
+
 puts "Seeded: Kiln canister press kit (#{press_kit.size} images) on the workspace"
+puts "Seeded: Images library with #{kiln_shots.size} photos and Campaign library with #{campaign_shots.size}"
+puts "Seeded: Gallery '#{gallery.title}' with #{gallery_recording.library_placements.size} placed photos from both libraries"

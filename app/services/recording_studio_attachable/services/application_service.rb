@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require_relative "placement_guards"
+require_relative "library_query"
+
 module RecordingStudioAttachable
   module Services
     class ApplicationService < BaseService
@@ -120,6 +123,8 @@ module RecordingStudioAttachable
           yield
         end
       end
+
+      include PlacementGuards
     end
   end
 end

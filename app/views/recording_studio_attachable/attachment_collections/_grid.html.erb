@@ -8,8 +8,8 @@
        file_path: preview_path.present? ? authorized_attachment_file_path(row.recording) : nil,
        file_extension: File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || "FILE",
        edit_name: attachment.name.to_s.presence || "image",
-       modal_id: "#{collection.form_id}-edit-#{row.recording.id}",
-       form_id: "#{collection.form_id}-grid-#{row.recording.id}"
+       modal_id: "#{collection.form_id}-edit-#{row.member.id}",
+       form_id: "#{collection.form_id}-grid-#{row.member.id}"
      }
    end %>
 <div data-recording-studio-attachable--collection-display-target="grid" <% unless open_grid %>hidden<% end %>>
@@ -71,13 +71,13 @@
               <p class="text-sm text-(--surface-muted-content-color)" data-save-status role="status" hidden></p>
             </div>
             <%= render FlatPack::Button::Component.new(
-                  text: "Trash",
+                  text: collection.remove_label,
                   icon: "trash",
                   icon_only: true,
                   style: :danger,
                   size: :md,
                   type: "submit",
-                  form: "#{collection.form_id}-trash-#{tile[:row].recording.id}"
+                  form: "#{collection.form_id}-trash-#{tile[:row].member.id}"
                 ) %>
           </div>
         <% end %>

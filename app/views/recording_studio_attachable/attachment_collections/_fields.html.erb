@@ -1,4 +1,4 @@
-<%= hidden_field_tag collection.input_name(:recording_id), row.recording.id, form: form_id %>
+<%= hidden_field_tag collection.input_name(:recording_id), row.member.id, form: form_id %>
 <% collection.fields.each do |field| %>
   <% if field.control == :area %>
     <div>
@@ -19,11 +19,8 @@
   <% end %>
 <% end %>
 <% if show_order %>
-  <%= render FlatPack::TextInput::Component.new(
-    name: collection.input_name(:order),
-    label: "Order",
-    value: row.order,
-    form: form_id,
-    data: { recording_studio_attachable__collection_order_target: "order" }
-  ) %>
+  <%= hidden_field_tag collection.input_name(:order),
+                        row.order,
+                        form: form_id,
+                        data: { recording_studio_attachable__collection_order_target: "order" } %>
 <% end %>

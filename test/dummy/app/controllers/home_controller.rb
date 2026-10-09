@@ -20,6 +20,10 @@ class HomeController < ApplicationController
     @page_attachment_upload_path = page_attachment_upload_path
     @attachment_chromes_path = attachment_chromes_path
     @attachment_editor_path = attachment_editor_path
+    @workspace_images_path = workspace_images_path
+    @campaign_images_path = campaign_images_path
+    @gallery = Gallery.first
+    @gallery_path = gallery_path(@gallery) if @gallery.present?
   end
 
   private

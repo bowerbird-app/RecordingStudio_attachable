@@ -59,6 +59,8 @@ Recording Studio 4 requires every configured host-app recordable to declare whet
 
 Do not enable `:attachable` on a shared root (`shared: true`). Attachments are capability-owned children, so enable the capability on domain recordables beneath that shared root instead.
 
+Reusable photos belong in host-mounted image libraries, not on the shared root. `RecordingStudioAttachable::Library` is a child of a parent that enables `ImageLibrary` — the root, or a brand / client / project. `library_for(parent)` find-or-creates one library per parent. Extra libraries use a host key, for example `library_for(parent, key: :campaign)`. People do not create or browse libraries. Host gems place those photos with `RecordingStudioAttachable::Placement`. See [Image libraries](docs/image-library.md).
+
 `RecordingStudioAttachable::Attachment` is owned by this addon. The addon declares it as `root: false` and registers it as a child recordable of the `:attachable` capability, so host apps should not add host-specific `allowed_parent_types:` to the attachment model.
 
 ### 3. Opt parent recordables into attachable
@@ -474,6 +476,37 @@ The most important per-recordable options are:
 - `auth_roles`
 - `authorize_with`
 
+## Image libraries
+
+Photos that several pages reuse live once in a library the host mounts. A host page stores a placement, not a second file. Enable `ImageLibrary` on a root, brand, client, or project. People upload and edit photos. They do not create, title, or browse libraries.
+
+```ruby
+class Workspace < ApplicationRecord
+  recording_studio_recordable label: "Workspace", root: true
+  include RecordingStudio::Capabilities::ImageLibrary.to
+end
+
+class Gallery < ApplicationRecord
+  recording_studio_recordable label: "Gallery", root: false, allowed_parent_types: ["Workspace"]
+  include RecordingStudio::Capabilities::LibraryPlacement.to
+  include RecordingStudio::Capabilities::Orderable.to(allows: ["RecordingStudioAttachable::Placement"])
+end
+
+library = root_recording.image_library(actor: current_user)
+campaign = root_recording.image_library(key: :campaign, actor: current_user)
+gallery.place_library_image(attachment_recording: photo, actor: current_user)
+gallery.upload_to_library_and_place(signed_blob_id: blob.signed_id, library_recording: campaign, actor: current_user)
+gallery.library_placements
+```
+
+`library_path_for(library)` or `library_path_for(parent, key: :campaign)` opens the existing listing. Put those paths in the host nav. `recording_placements_path(gallery)` mounts the existing list, slides, and grid editor for the resolved placements. Add from library, Upload, list reorder, and Remove from here sit on top of that editor. Editing caption, credit, or alt opens the library photo. The switcher shows only when the host passed more than one library. Set `config.placement_picker_libraries` to pass the list.
+
+Trashing a library or a photo that is in use warns how many places point at it. Resolve skips a trashed photo. Permanently deleting a library or a photo removes its placements. Removing a placement leaves the photo in the library.
+
+Access follows the tree. Public pages render through `RecordingStudioAttachable::Placements.resolve`. Duplicating a host page copies placements, not files.
+
+Full setup, trash rules, and a Presskits note: [docs/image-library.md](docs/image-library.md).
+
 ## Helpers and queries
 
 The engine exposes a small set of route helpers that host apps typically use directly:
@@ -574,7 +607,7 @@ Replace never navigates to the attachment details screen. Keep `attachments#show
 
 ### Edit many images
 
-`attachment_collection_editor` edits the direct images, files, or attachments on a parent and saves the rows that changed. Caption, credit, and alt text belong to the attachment snapshot, so two uses of the same file can differ. Nothing is written onto the blob. `:name` edits the existing name. There is no title column.
+`attachment_collection_editor` edits the direct images, files, or attachments on a parent and saves the rows that changed. Pass `association: :placements` and `items:` (resolved placements) to render the same List, Slides, and Grid for a host page that points at library photos. Caption, credit, and alt use the same Flatpack fields. Saving a placement writes those on the library photo. Nothing is written onto the blob. `:name` edits the existing name. There is no title column. Remove from here drops the pointer.
 
 ```ruby
 attachment_collection_editor(
@@ -621,7 +654,7 @@ Dummy credentials (`test/dummy/config/credentials.yml.enc`) are encrypted with t
 
 - the dummy app is a validation shell, not a production template
 - CI installs the dummy app bundle and runs dummy-app migrations before the root checks
-- the dummy app pins RecordingStudio `v4.2.2` and Recording Studio Accessible `v0.6.0`
+- the dummy app pins RecordingStudio `v4.3.0`, Recording Studio Accessible `v0.6.0`, and Recording Studio Orderable `v0.2.7`
 - make sure engine, Active Storage, and Recording Studio tables are migrated in the dummy app before validating upload flows locally
 - `bin/rails db:seed` attaches a twenty-shot Kiln canister press kit to the workspace. The shots mix portrait, square, and landscape frames. Edit images uses those files. Seeds also remove the colour-block stand-ins `window.jpg`, `dock.jpg`, and `pier.jpg` when they are still on the workspace.
 - set `DUMMY_ACTIVE_STORAGE_SERVICE=amazon` plus `DUMMY_AWS_ACCESS_KEY_ID`, `DUMMY_AWS_SECRET_ACCESS_KEY`, `DUMMY_AWS_REGION`, and `DUMMY_AWS_BUCKET` to exercise S3-backed uploads in the dummy app; `DUMMY_AWS_BUCKET` may be either the plain bucket name or a bucket ARN

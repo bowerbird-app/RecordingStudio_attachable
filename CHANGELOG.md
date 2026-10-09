@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-09
+
+### Added
+- Host-mounted image libraries. `RecordingStudioAttachable::Library` is a first-class child under a parent that enables `ImageLibrary.to` (a root, or a brand / client / project). Access follows Accessible. People upload and edit photos. They do not create, title, rename, or browse libraries.
+- `library_for(parent)` find-or-creates one library per parent (`key: "default"`). Extra libraries in the same parent use a host key, for example `library_for(parent, key: :campaign)`, idempotent per parent and key. The label comes from i18n or `config.library_label`.
+- Mount the existing listing with `library_path_for(library)` or `library_path_for(parent, key: :campaign)` / `recording_library_path`. There is no Attachable-owned libraries index or nav entry.
+- `RecordingStudioAttachable::Placement` points a host page at a photo in any live library in the same workspace and reuses Orderable for position. Caption, credit, and alt stay on the photo. Cross-workspace and non-library photos are refused.
+- The add-from-library picker uses the libraries the host passes in `placement_picker_libraries`. The switcher shows only when that list has more than one. The default list is the default library for the nearest `ImageLibrary` parent.
+- Trashing a library with in-use photos shows the same in-use warning with rolled-up counts. Permanently deleting a library or a photo removes its placements. Removing a placement never deletes the photo. Trashed photos stay pointed at and are skipped when resolving.
+- Dummy app: the host mounts Images and Campaign in its own nav. The Gallery places a photo from each.
+- Placements reuse `attachment_collection_editor`. Pass `association: :placements` and the resolved placements. The host page keeps Add from library, Upload, list reorder, and Remove from here. Caption, credit, and alt use the same Flatpack fields as a direct image editor. Saving writes those on the library photo.
+
+### Changed
+- Collection editor list, slides, and grid match the main markup for both direct images and placements. The drag handle is icon-only. Order is a hidden input. Grid tiles are the original preview buttons.
+
+### Upgrade Notes
+- Bump to `0.12.0` and run `rails generate recording_studio_attachable:migrations` then `db:migrate`. That adds `recording_studio_attachable_libraries` (`key`) and `recording_studio_attachable_placements`.
+- Add `RecordingStudioAttachable::Library` and `RecordingStudioAttachable::Placement` to `config.recordable_types`.
+- Enable `include RecordingStudio::Capabilities::ImageLibrary.to` on each parent that should hold libraries (the root, or a brand / client / project). Enable `include RecordingStudio::Capabilities::LibraryPlacement.to` on host types that should hold library photos.
+- Reorder needs Recording Studio Orderable on the placement parent (`allows: ["RecordingStudioAttachable::Placement"]`).
+- Provision libraries in host code with `library_for`. Mount each one in the host nav. Do not send people to a libraries index.
+- Pass picker libraries with `config.placement_picker_libraries`. One library means no switcher.
+- Presskits and other hosts that still attach files under a section should move to placements in a follow-up. Existing direct attachments are unchanged.
+- See [docs/image-library.md](docs/image-library.md).
+
 ## [0.11.0] - 2026-10-09
 
 ### Changed

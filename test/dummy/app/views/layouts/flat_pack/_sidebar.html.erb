@@ -16,6 +16,24 @@
       ) %>
 
       <%= render FlatPack::Sidebar::Item::Component.new(
+        text: "Images",
+        href: workspace_images_path,
+        icon: :image
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
+        text: "Campaign",
+        href: campaign_images_path,
+        icon: :image
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
+        text: "Gallery",
+        href: Gallery.first.present? ? gallery_path(Gallery.first) : "/",
+        icon: :image
+      ) %>
+
+      <%= render FlatPack::Sidebar::Item::Component.new(
         text: "Setup",
         href: setup_docs_path,
         icon: :folder

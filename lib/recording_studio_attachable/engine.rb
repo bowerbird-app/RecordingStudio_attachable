@@ -39,25 +39,61 @@ module RecordingStudioAttachable
     def self.register_recording_studio_integration
       return unless defined?(RecordingStudio)
 
-      RecordingStudio.register_capability(
-        :attachable,
-        recording_methods: RecordingStudio::Capabilities::Attachable::RecordingMethods,
-        source: "recording_studio_attachable",
-        child_recordables: ["RecordingStudioAttachable::Attachment"]
-      )
+      register_attachable_capabilities
       register_attachment_recordable_type
+      register_library_recordable_types
+    end
+
+    def self.register_attachable_capabilities
+      register_one_capability(:attachable, RecordingStudio::Capabilities::Attachable, "RecordingStudioAttachable::Attachment")
+      register_one_capability(:image_library, RecordingStudio::Capabilities::ImageLibrary, "RecordingStudioAttachable::Library")
+      register_one_capability(:library_placement, RecordingStudio::Capabilities::LibraryPlacement, "RecordingStudioAttachable::Placement")
+    end
+
+    def self.register_one_capability(name, capability, child)
+      RecordingStudio.register_capability(
+        name,
+        recording_methods: capability::RecordingMethods,
+        source: "recording_studio_attachable",
+        child_recordables: [child]
+      )
+    end
+
+    def self.register_library_recordable_types
+      register_recordable_type_if_needed("RecordingStudioAttachable::Library") if image_library_parent_types_registered?
+      register_recordable_type_if_needed("RecordingStudioAttachable::Placement") if library_placement_parent_types_registered?
     end
 
     def self.register_attachment_recordable_type
       return unless attachable_parent_types_registered?
-      return if Array(RecordingStudio.configuration.recordable_types).map(&:to_s).include?("RecordingStudioAttachable::Attachment")
+
+      register_recordable_type_if_needed("RecordingStudioAttachable::Attachment")
+    end
+
+    def self.register_recordable_type_if_needed(type_name)
+      return if Array(RecordingStudio.configuration.recordable_types).map(&:to_s).include?(type_name)
       return if defined?(RecordingStudio::Recording) && !RecordingStudio::Recording.respond_to?(:delegated_type)
 
-      RecordingStudio.register_recordable_type("RecordingStudioAttachable::Attachment")
+      RecordingStudio.register_recordable_type(type_name)
     end
 
     def self.attachable_parent_types_registered?
-      RecordingStudio.configuration.enabled_recordable_types_for(:attachable).any?
+      capability_parent_types_registered?(:attachable)
+    end
+
+    def self.image_library_parent_types_registered?
+      capability_parent_types_registered?(:image_library)
+    end
+
+    def self.library_placement_parent_types_registered?
+      capability_parent_types_registered?(:library_placement)
+    end
+
+    def self.capability_parent_types_registered?(capability_name)
+      configuration = RecordingStudio.configuration
+      return false unless configuration.respond_to?(:enabled_recordable_types_for)
+
+      Array(configuration.enabled_recordable_types_for(capability_name)).any?
     end
 
     class << self

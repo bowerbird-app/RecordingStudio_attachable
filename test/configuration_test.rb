@@ -59,6 +59,9 @@ class ConfigurationTest < Minitest::Test
     assert_not @configuration.google_drive.configured?
     assert_not @configuration.google_drive.picker_configured?
     assert_equal ["https://www.googleapis.com/auth/drive.readonly"], @configuration.google_drive.scopes
+    assert_respond_to @configuration.placement_place_label, :call
+    assert_respond_to @configuration.placement_picker_libraries, :call
+    assert_respond_to @configuration.library_label, :call
   end
 
   def test_url_mode_accepts_rails_and_direct

@@ -6,7 +6,7 @@
        attachment: attachment,
        preview_path: preview_path,
        file_path: preview_path.present? ? authorized_attachment_file_path(row.recording) : nil,
-       file_extension: File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || "FILE",
+       file_extension: File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || t("recording_studio.attachable.collection.file_fallback"),
        edit_name: attachment.name.to_s.presence || "image",
        modal_id: "#{collection.form_id}-edit-#{row.member.id}",
        form_id: "#{collection.form_id}-grid-#{row.member.id}"
@@ -15,7 +15,7 @@
 <div data-recording-studio-attachable--collection-display-target="grid" <% unless open_grid %>hidden<% end %>>
   <%= render FlatPack::Grid::Component.new(cols: :auto, gap: :md, align: :start) do %>
     <% tiles.each do |tile| %>
-      <button type="button" class="block w-full cursor-pointer overflow-hidden rounded-lg" data-modal-id="<%= tile[:modal_id] %>" aria-label="Edit <%= tile[:edit_name] %>">
+      <button type="button" class="block w-full cursor-pointer overflow-hidden rounded-lg" data-modal-id="<%= tile[:modal_id] %>" aria-label="<%= t("recording_studio.attachable.collection.edit_aria", name: tile[:edit_name]) %>">
         <% if tile[:preview_path].present? %>
           <%= image_tag tile[:preview_path], alt: "", class: "block h-auto w-full" %>
         <% else %>
@@ -41,7 +41,7 @@
       <% RecordingStudioAttachable::AttachmentFileButton.redirect_params(return_to: return_to).each do |key, value| %>
         <%= hidden_field_tag key, value %>
       <% end %>
-      <%= render FlatPack::Modal::Component.new(id: tile[:modal_id], title: tile[:attachment].name.presence || "Image", size: :xl, scroll: :page) do |modal| %>
+      <%= render FlatPack::Modal::Component.new(id: tile[:modal_id], title: tile[:attachment].name.presence || t("recording_studio.attachable.collection.image_fallback_title"), size: :xl, scroll: :page) do |modal| %>
         <% modal.body do %>
           <div class="flex flex-col gap-4">
             <% if tile[:file_path].present? %>
@@ -61,7 +61,7 @@
           <div class="flex w-full items-center justify-between gap-4">
             <div class="inline-flex items-center gap-3">
               <%= render FlatPack::Button::Component.new(
-                    text: "Save",
+                    text: t("recording_studio.attachable.collection.save"),
                     style: :default,
                     size: :md,
                     type: "submit",

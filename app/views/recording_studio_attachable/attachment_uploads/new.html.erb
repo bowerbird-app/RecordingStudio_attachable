@@ -2,11 +2,11 @@
   allowed_type_labels = @allowed_content_types.map do |content_type|
     case content_type
     when "image/*"
-      "images"
+      t("recording_studio.attachable.upload.type_images")
     when "application/pdf"
-      "PDFs"
+      t("recording_studio.attachable.upload.type_pdfs")
     when "text/plain"
-      "text files"
+      t("recording_studio.attachable.upload.type_text_files")
     else
       content_type
     end
@@ -14,7 +14,7 @@
 
   remove_button_template = render(
     FlatPack::Button::Component.new(
-      text: "X",
+      text: t("recording_studio.attachable.upload.remove"),
       style: :ghost,
       size: :md,
       type: "button",
@@ -43,29 +43,29 @@
      data-recording-studio-attachable--upload-allowed-content-types-value="<%= @allowed_content_types.join(',') %>">
   <%= render FlatPack::PageNav::Component.new(
     back_icon: "arrow-left",
-    back_label: "Back",
+    back_label: t("recording_studio.attachable.navigation.back"),
     anchor_url: attachment_page_nav_anchor_url(fallback: recording_attachments_path(@recording)),
-    anchor_label: "Return to source page"
+    anchor_label: t("recording_studio.attachable.navigation.return_to_source")
   ) %>
 
   <%= render FlatPack::PageTitle::Component.new(
-    title: "Upload",
-    subtitle: "Allowed file types: #{allowed_type_labels.to_sentence} · Max size: #{number_to_human_size(@max_file_size)}",
+    title: t("recording_studio.attachable.upload.title"),
+    subtitle: t("recording_studio.attachable.upload.subtitle", types: allowed_type_labels.to_sentence, size: number_to_human_size(@max_file_size)),
     variant: :h1
   ) %>
 
   <template data-recording-studio-attachable--upload-target="progressTemplate">
-    <%= render FlatPack::Progress::Component.new(value: 0, max: 100, label: "Progress") %>
+    <%= render FlatPack::Progress::Component.new(value: 0, max: 100, label: t("recording_studio.attachable.upload.progress")) %>
   </template>
 
   <div class="flex min-h-80 flex-col gap-6">
     <div class="flex h-full min-h-[220px] flex-col gap-6">
       <div class="flex min-h-[220px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-(--surface-border-color) p-10 text-center" data-recording-studio-attachable--upload-target="dropzone">
-      <p class="text-sm text-(--surface-muted-content-color)">Drag and drop, or choose</p>
+      <p class="text-sm text-(--surface-muted-content-color)"><%= t("recording_studio.attachable.upload.drag_and_drop") %></p>
       <input type="file" multiple class="hidden" data-recording-studio-attachable--upload-target="input" data-action="change->recording-studio-attachable--upload#filesSelected">
       <div class="flex w-full max-w-sm flex-col items-stretch gap-3">
         <%= render FlatPack::Button::Component.new(
-          text: "Choose files",
+          text: t("recording_studio.attachable.upload.choose_files"),
           style: :primary,
           size: :md,
           type: "button",
@@ -109,7 +109,7 @@
       <% end %>
 
       <% modal.footer do %>
-        <%= render FlatPack::Button::Component.new(text: "Close", style: :secondary, size: :md, type: "button", data: { action: "flat-pack--modal#close" }) %>
+        <%= render FlatPack::Button::Component.new(text: t("recording_studio.attachable.upload.close"), style: :secondary, size: :md, type: "button", data: { action: "flat-pack--modal#close" }) %>
       <% end %>
     <% end %>
   <% end %>

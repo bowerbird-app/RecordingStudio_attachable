@@ -20,7 +20,7 @@
       <%= render FlatPack::Button::Pill::Component.new(
         items: collection.displays.map { |display|
           {
-            text: RecordingStudioAttachable::AttachmentCollectionDisplay.label(display),
+            text: t("recording_studio.attachable.collection.displays.#{display}"),
             href: "##{display}",
             active: display == collection.default_display,
             data: {
@@ -68,14 +68,14 @@
           items_per_view_tablet: collection.items_per_view.tablet,
           items_per_view_desktop: collection.items_per_view.desktop,
           aspect_ratio: collection.square_preview? ? "1/1" : "4/3",
-          aria_label: "Images"
+          aria_label: t("recording_studio.attachable.collection.images_aria")
         ) %>
         <div hidden>
           <% collection.rows.each do |row| %>
             <% attachment = row.recording.recordable %>
             <% preview_path = authorized_attachment_preview_path(row.recording, collection.preview_variant) %>
             <% file_path = preview_path.present? ? authorized_attachment_file_path(row.recording) : nil %>
-            <% file_extension = File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || "FILE" %>
+            <% file_extension = File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || t("recording_studio.attachable.collection.file_fallback") %>
             <% slide_form_id = "#{collection.form_id}-slide-#{row.member.id}" %>
             <%= form_with url: url,
                           method: :patch,
@@ -125,7 +125,7 @@
                     <div class="flex items-center justify-between gap-4">
                       <div class="inline-flex items-center gap-3">
                         <%= render FlatPack::Button::Component.new(
-                              text: "Save",
+                              text: t("recording_studio.attachable.collection.save"),
                               style: :default,
                               size: :md,
                               type: "submit",
@@ -180,14 +180,14 @@
             <% attachment = row.recording.recordable %>
             <% preview_path = authorized_attachment_preview_path(row.recording, collection.preview_variant) %>
             <% file_path = preview_path.present? ? authorized_attachment_file_path(row.recording) : nil %>
-            <% file_extension = File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || "FILE" %>
+            <% file_extension = File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || t("recording_studio.attachable.collection.file_fallback") %>
             <li <% if collection.sortable? %>data-recording-studio-attachable--collection-order-target="row"<% end %>>
               <%= render FlatPack::Card::Component.new(style: :default, class: "w-full") do |card| %>
                 <% card.body do %>
                   <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
                     <% if collection.sortable? %>
                       <%= render FlatPack::Button::Component.new(
-                        text: "Drag",
+                        text: t("recording_studio.attachable.collection.drag"),
                         icon: "bars-2",
                         icon_only: true,
                         style: :ghost,
@@ -238,7 +238,7 @@
 
         <div class="inline-flex">
           <%= render FlatPack::Button::Component.new(
-                text: "Save",
+                text: t("recording_studio.attachable.collection.save"),
                 style: :default,
                 size: :md,
                 type: "submit",

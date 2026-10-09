@@ -4,7 +4,7 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.12.0", RecordingStudioAttachable::VERSION
+    assert_equal "0.13.0", RecordingStudioAttachable::VERSION
   end
 
   def test_recording_studio_dependency_is_4_2_or_newer
@@ -90,12 +90,12 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, "image-processing-max-height-value"
     assert_includes view_source, "image-processing-quality-value"
     assert_includes view_source, "remove-button-template-value"
-    assert_includes view_source, 'text: "X"'
+    assert_includes view_source, 't("recording_studio.attachable.upload.remove")'
     assert_includes view_source, "style: :ghost"
     assert_includes view_source, "size: :md"
-    assert_includes view_source, 'title: "Upload"'
-    assert_includes view_source, "Allowed file types:"
-    assert_includes view_source, "Drag and drop, or choose"
+    assert_includes view_source, 'title: t("recording_studio.attachable.upload.title")'
+    assert_includes view_source, 't("recording_studio.attachable.upload.subtitle"'
+    assert_includes view_source, 't("recording_studio.attachable.upload.drag_and_drop")'
     assert_includes view_source, 'icon: "upload"'
     assert_includes view_source, 'data: { action: "recording-studio-attachable--upload#browse" }'
     assert_includes view_source, "FlatPack::Modal::Component.new("
@@ -116,9 +116,9 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes upload_controller_source, "labelNode.textContent = label"
     assert_includes upload_controller_source, "fillNode.style.width = `${percentage}%`"
     assert_includes view_source, 'data-recording-studio-attachable--upload-target="progressTemplate"'
-    assert_includes view_source, 'render FlatPack::Progress::Component.new(value: 0, max: 100, label: "Progress")'
+    assert_includes view_source, 'label: t("recording_studio.attachable.upload.progress")'
     assert_includes blank_layout_source, "FlatPack::Alert::Component.new(description: notice, style: :success)"
-    assert_includes blank_layout_source, 'FlatPack::Alert::Component.new(title: "Error", description: alert, style: :danger)'
+    assert_includes blank_layout_source, 'title: t("recording_studio.attachable.layout.error")'
     assert_not_includes blank_layout_source, "body: notice"
     assert_not_includes blank_layout_source, "body: alert"
     assert_not_includes blank_layout_source, 'title: "Notice"'
@@ -196,10 +196,10 @@ class RecordingStudioAttachableTest < Minitest::Test
 
     assert_includes view_source, 'class="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6"'
     assert_includes view_source, "FlatPack::PageNav::Component"
-    assert_includes view_source, 'back_label: "Back"'
+    assert_includes view_source, 'back_label: t("recording_studio.attachable.navigation.back")'
     assert_includes view_source, 'back_icon: "arrow-left"'
     assert_includes view_source, "anchor_url: attachment_page_nav_anchor_url(fallback: main_app.root_path)"
-    assert_includes view_source, 'anchor_label: "Return to source page"'
+    assert_includes view_source, 'anchor_label: t("recording_studio.attachable.navigation.return_to_source")'
     assert_match(/FlatPack::PageNav::Component.*FlatPack::PageTitle::Component/m, view_source)
     assert_includes configuration_source, "DEFAULT_IMAGE_VARIANTS = {"
     assert_includes configuration_source, "square_small: { resize_to_fill: [128, 128] }"
@@ -217,9 +217,9 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes controller_source, "def authorized_attachment_preview_path(recording, variant_name)"
     assert_includes controller_source, "attachment_preview_file_path(recording, variant_name: variant_name)"
     assert_includes controller_source, "helper_method :authorized_attachment_file_path"
-    assert_includes view_source, 'text: "Trash"'
-    assert_includes view_source, 'text: "Download"'
-    assert_includes view_source, 'text: "Save"'
+    assert_includes view_source, 't("recording_studio.attachable.attachments.trash")'
+    assert_includes view_source, 't("recording_studio.attachable.attachments.download")'
+    assert_includes view_source, 't("recording_studio.attachable.attachments.save")'
     assert_includes view_source, 'class="grid gap-6 lg:grid-cols-2 lg:items-start"'
     assert_includes view_source, 'id="edit-attachment" class="space-y-4 lg:col-start-2"'
     assert_includes view_source, "authorized_attachment_preview_path(@attachment_recording, :large)"
@@ -355,7 +355,7 @@ class RecordingStudioAttachableTest < Minitest::Test
 
     assert_includes view_source, "FlatPack::PageNav::Component"
     assert_includes view_source, "anchor_url: attachment_page_nav_anchor_url(fallback: main_app.root_path)"
-    assert_includes view_source, 'title: "Library"'
+    assert_includes view_source, 'title: t("recording_studio.attachable.library.title")'
     assert_includes view_source, "view: @view_mode"
     assert_includes view_source, "FlatPack::Button::Pill::Component.new("
     assert_includes view_source, "href: recording_attachments_path(@recording, navigation_params.merge(listing_params.merge(view: :grid)))"
@@ -369,7 +369,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, 'view_mode: "list"'
     assert_includes view_source, '<%= hidden_field_tag :view, @view_mode, data: { recording_studio_attachable__view_mode_target: "viewInput" } %>'
     assert_includes view_source, "FlatPack::Search::Component.new("
-    assert_includes view_source, 'placeholder: "Search"'
+    assert_includes view_source, 'placeholder: t("recording_studio.attachable.library.search_placeholder")'
     assert_includes view_source, '<circle cx="11" cy="11" r="6" />'
     assert_includes attachments_page_source, "view_mode = local_assigns.fetch(:view_mode)"
     assert_includes attachments_page_source, "list_view = view_mode == :list"
@@ -389,10 +389,10 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes grid_partial_source, "load->recording-studio-attachable--image-fallback#showImage"
     assert_includes grid_partial_source, "error->recording-studio-attachable--image-fallback#showFallback"
     assert_includes grid_partial_source, 'data-recording-studio-attachable--image-fallback-target="fallback"'
-    assert_includes grid_partial_source, "Preview unavailable"
-    assert_includes grid_partial_source, ">IMAGE<"
+    assert_includes grid_partial_source, 't("recording_studio.attachable.attachments.preview_unavailable")'
+    assert_includes grid_partial_source, 't("recording_studio.attachable.attachments.image_fallback")'
     assert_includes grid_partial_source, 'class="relative aspect-4/3 overflow-hidden bg-(--surface-muted-background-color)"'
-    assert_includes grid_partial_source, 'File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || "FILE"'
+    assert_includes grid_partial_source, 't("recording_studio.attachable.attachments.file_fallback")'
     assert_includes grid_partial_source, 'class="aspect-4/3 flex items-center justify-center bg-(--surface-background-color)"'
     assert_includes grid_partial_source, 'class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)"'
     assert_includes grid_partial_source, "preview_path = authorized_attachment_preview_path(attachment_recording, :med)"
@@ -406,9 +406,9 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes list_partial_source, "preview_column = lambda do |attachment_recording|"
     assert_includes list_partial_source, "name_column = lambda do |attachment_recording|"
     assert_includes list_partial_source, "actions_column = lambda do |attachment_recording|"
-    assert_includes list_partial_source, 'table.column(title: "Preview", html: preview_column)'
-    assert_includes list_partial_source, 'table.column(title: "Name", html: name_column)'
-    assert_includes list_partial_source, 'table.column(title: "Actions", html: actions_column)'
+    assert_includes list_partial_source, 't("recording_studio.attachable.attachments.preview_column")'
+    assert_includes list_partial_source, 't("recording_studio.attachable.attachments.name_column")'
+    assert_includes list_partial_source, 't("recording_studio.attachable.attachments.actions_column")'
     assert_not_includes list_partial_source, "FlatPack::Card::Component"
     assert_not_includes list_partial_source, "card.body do"
     assert_not_includes list_partial_source, ">Kind<"
@@ -421,21 +421,21 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_operator list_partial_source.scan("attachment_path(attachment_recording, navigation_params)").length, :>=, 2
     assert_includes list_partial_source, "preview_path = authorized_attachment_preview_path(attachment_recording, :square_small)"
     assert_includes list_partial_source, "image_tag(preview_path"
-    assert_includes list_partial_source, 'FlatPack::Tooltip::Component.new(text: "Download")'
+    assert_includes list_partial_source, 't("recording_studio.attachable.attachments.download")'
     assert_includes list_partial_source, 'icon: "arrow-down-tray"'
     assert_includes list_partial_source, "icon_only: true"
-    assert_includes list_partial_source, 'aria: { label: "Download attachment" }'
-    assert_includes list_partial_source, 'FlatPack::Tooltip::Component.new(text: "Trash")'
+    assert_includes list_partial_source, 't("recording_studio.attachable.attachments.download_aria")'
+    assert_includes list_partial_source, 't("recording_studio.attachable.attachments.trash")'
     assert_includes list_partial_source, "destroy_attachment_path(attachment_recording)"
     assert_includes list_partial_source, 'icon: "trash", icon_only: true'
-    assert_includes list_partial_source, 'aria: { label: "Trash attachment" }'
+    assert_includes list_partial_source, 't("recording_studio.attachable.attachments.trash_aria")'
     assert_includes list_partial_source, 'type: "submit"'
     assert_not_includes list_partial_source, "<table class="
     assert_not_includes list_partial_source, 'text: "View"'
     assert_not_includes list_partial_source, "<%= attachment.original_filename %>"
     assert_not_includes view_source, "No matching attachments"
     assert_not_includes view_source, "Try another image name."
-    assert_includes view_source, "Nothing uplaoded yet"
+    assert_includes view_source, 't("recording_studio.attachable.library.empty_title")'
     assert_not_includes view_source, 'text: "Previous"'
     assert_not_includes view_source, 'text: "Next"'
     assert_not_includes view_source, "FlatPack::Carousel::Component"
@@ -458,7 +458,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes attachments_page_source, "FlatPack::PaginationInfinite::Component.new("
     assert_includes attachments_page_source, "append_only: true"
     assert_includes attachments_page_source, "loading_variant: list_view ? :inline : :cards"
-    assert_includes attachments_page_source, 'loading_text: view_mode == :grid ? "Loading more attachments..." : "Loading more rows..."'
+    assert_includes attachments_page_source, 'loading_text: view_mode == :grid ? t("recording_studio.attachable.library.loading_more_attachments") : t("recording_studio.attachable.library.loading_more_rows")'
     assert_not_includes view_source, 'data-controller="flat-pack--tabs"'
     assert_not_includes view_source, 'href: "#recording-attachments-grid-panel"'
     assert_not_includes view_source, 'href: "#recording-attachments-list-panel"'
@@ -494,11 +494,11 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, "load->recording-studio-attachable--image-fallback#showImage"
     assert_includes view_source, "error->recording-studio-attachable--image-fallback#showFallback"
     assert_includes view_source, 'data-recording-studio-attachable--image-fallback-target="fallback"'
-    assert_includes view_source, "Preview unavailable"
-    assert_includes view_source, 'text: "Trash"'
+    assert_includes view_source, 't("recording_studio.attachable.attachments.preview_unavailable")'
+    assert_includes view_source, 't("recording_studio.attachable.attachments.trash")'
     assert_includes view_source, "destroy_attachment_path(@attachment_recording)"
     assert_includes view_source, 'type: "submit"'
-    assert_includes view_source, 'text: "Save"'
+    assert_includes view_source, 't("recording_studio.attachable.attachments.save")'
     assert_not_includes view_source, 'text: "Save revision"'
     assert_not_includes view_source, 'file_field_tag "attachment[signed_blob_id]"'
     assert_not_includes view_source, 'title: "Edit attachment"'
@@ -507,7 +507,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_not_includes view_source, 'controller: "recording-studio-attachable--attachment-revision-upload"'
     assert_not_includes view_source, 'hidden_field_tag "attachment[signed_blob_id]"'
     assert_not_includes view_source, 'file_field_tag "attachment[file]"'
-    assert_includes view_source, 'text: "Download"'
+    assert_includes view_source, 't("recording_studio.attachable.attachments.download")'
     assert_not_includes view_source, "Recording id"
     assert_not_includes view_source, "Parent recording id"
   end
@@ -549,9 +549,9 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes initializer_template, "payload.fetch(:provider_payload)"
     assert_includes initializer_template, "GOOGLE_DRIVE_API_KEY"
     assert_includes initializer_template, "GOOGLE_DRIVE_APP_ID"
-    assert_includes view_source, 'title: "Google Drive"'
-    assert_includes view_source, 'text: "Connect Google Drive"'
-    assert_includes view_source, 'text: "Import selected"'
+    assert_includes view_source, 'title: t("recording_studio.attachable.google_drive.title")'
+    assert_includes view_source, 't("recording_studio.attachable.google_drive.connect")'
+    assert_includes view_source, 't("recording_studio.attachable.google_drive.import_selected")'
     assert_includes view_source, "google_drive.recording_disconnect_path(@recording)"
     assert_includes view_source, "recording_studio_attachable.recording_attachment_upload_path(@recording, redirect_params)"
     assert_includes view_source, "recording-studio-attachable--provider-modal-frame#openPopup"

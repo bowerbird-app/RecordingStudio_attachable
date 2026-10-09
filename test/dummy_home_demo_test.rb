@@ -290,13 +290,13 @@ class DummyHomeDemoTest < Minitest::Test
     assert_not_includes view, 'text: "Close"'
     assert_includes view, 'text: "Save page"'
     assert_includes picker_modal_partial, "FlatPack::Modal::Component.new("
-    assert_includes picker_modal_partial, 'text: "Upload"'
-    assert_includes picker_modal_partial, 'text: "Upload from device"'
+    assert_includes picker_modal_partial, 't("recording_studio.attachable.picker.upload")'
+    assert_includes picker_modal_partial, 't("recording_studio.attachable.picker.upload_from_device")'
     assert_includes picker_modal_partial, "dropdown.menu_divider"
     assert_includes picker_modal_partial, 'class="flex h-full min-h-0 flex-col gap-4"'
     assert_includes picker_modal_partial, 'class="w-full lg:w-auto"'
     assert_includes picker_modal_partial, "FlatPack::Search::Component.new("
-    assert_includes picker_modal_partial, 'placeholder: "Search"'
+    assert_includes picker_modal_partial, 'placeholder: t("recording_studio.attachable.picker.search_placeholder")'
     assert_includes picker_modal_partial, 'class="min-h-0 flex-1 overflow-y-auto p-1"'
     assert_includes picker_modal_partial, 'data-recording-studio-attachable--attachment-image-picker-target="gallery"'
     assert_includes picker_modal_partial, 'data-recording-studio-attachable--attachment-image-picker-target="fileInput"'
@@ -452,8 +452,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes picker_controller, "`${count} selected`"
     assert_includes picker_controller, '"Select one or more"'
     assert_includes picker_modal_partial, 'data-recording-studio-attachable--attachment-image-picker-target="modeSummary"'
-    assert_includes picker_modal_partial, 'text: "Add selected"'
-    assert_includes picker_modal_partial, 'text: "Clear"'
+    assert_includes picker_modal_partial, 't("recording_studio.attachable.picker.add_selected")'
+    assert_includes picker_modal_partial, 't("recording_studio.attachable.picker.clear")'
     assert_not_includes panel_partial, "flex min-h-full flex-col justify-end gap-4"
     assert_not_includes panel_partial, 'class: "min-h-0"'
     assert_not_includes panel_partial, 'class: "shrink-0 border-t border-(--surface-border-color) p-4"'
@@ -502,10 +502,10 @@ class DummyHomeDemoTest < Minitest::Test
 
     assert_includes listing_view, "FlatPack::PageNav::Component"
     assert_includes listing_view, "anchor_url: attachment_page_nav_anchor_url(fallback: main_app.root_path)"
-    assert_includes listing_view, 'title: "Library"'
+    assert_includes listing_view, 'title: t("recording_studio.attachable.library.title")'
     assert_includes listing_view, "parent_recordable.respond_to?(:title) && parent_recordable.title.present?"
     assert_includes listing_view, "subtitle: parent_recordable_name"
-    assert_includes listing_view, 'text: "Upload"'
+    assert_includes listing_view, 't("recording_studio.attachable.library.upload")'
     assert_includes listing_view, "view: @view_mode"
     assert_includes listing_view, "FlatPack::Button::Pill::Component.new("
     assert_includes listing_view, "href: recording_attachments_path(@recording, navigation_params.merge(listing_params.merge(view: :grid)))"
@@ -519,12 +519,13 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes listing_view, 'action: "click->recording-studio-attachable--view-mode#select"'
     assert_includes listing_view, 'recording_studio_attachable__view_mode_target: "pill"'
     assert_includes listing_view, "FlatPack::Search::Component.new("
-    assert_includes listing_view, 'placeholder: "Search"'
+    assert_includes listing_view, 'placeholder: t("recording_studio.attachable.library.search_placeholder")'
     assert_not_includes listing_view, 'text: "Apply"'
     assert_not_includes listing_view, 'text: "Clear"'
     assert_includes listing_view, 'turbo_frame_tag "recording-attachments-results"'
     assert_includes listing_view, '<%= hidden_field_tag :view, @view_mode, data: { recording_studio_attachable__view_mode_target: "viewInput" } %>'
-    assert_includes listing_view, 'title: @query.present? ? "Nothing found" : "Nothing uplaoded yet"'
+    assert_includes listing_view, 't("recording_studio.attachable.library.empty_search_title")'
+    assert_includes listing_view, 't("recording_studio.attachable.library.empty_title")'
     assert_includes listing_view, '<circle cx="11" cy="11" r="6" />'
     assert_includes grid_partial, "href: attachment_path(attachment_recording, navigation_params)"
     assert_includes grid_partial, 'data-controller="recording-studio-attachable--image-fallback"'
@@ -546,9 +547,9 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes list_partial, "preview_column = lambda do |attachment_recording|"
     assert_includes list_partial, "name_column = lambda do |attachment_recording|"
     assert_includes list_partial, "actions_column = lambda do |attachment_recording|"
-    assert_includes list_partial, 'table.column(title: "Preview", html: preview_column)'
-    assert_includes list_partial, 'table.column(title: "Name", html: name_column)'
-    assert_includes list_partial, 'table.column(title: "Actions", html: actions_column)'
+    assert_includes list_partial, 't("recording_studio.attachable.attachments.preview_column")'
+    assert_includes list_partial, 't("recording_studio.attachable.attachments.name_column")'
+    assert_includes list_partial, 't("recording_studio.attachable.attachments.actions_column")'
     assert_not_includes list_partial, "FlatPack::Card::Component"
     assert_not_includes list_partial, "card.body do"
     assert_includes list_partial, 'class: "block max-w-[12rem] truncate font-medium sm:max-w-[18rem]"'
@@ -556,11 +557,11 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes list_partial, "tag.div(\"\#{display_content_type} \#{display_size}\", class: \"text-xs text-(--surface-muted-content-color)\")"
     assert_includes list_partial, 'data: { turbo_frame: "_top" }'
     assert_operator list_partial.scan("attachment_path(attachment_recording, navigation_params)").length, :>=, 2
-    assert_includes list_partial, 'FlatPack::Tooltip::Component.new(text: "Download")'
+    assert_includes list_partial, 't("recording_studio.attachable.attachments.download")'
     assert_includes list_partial, 'icon: "arrow-down-tray"'
     assert_includes list_partial, "icon_only: true"
     assert_includes list_partial, "href: download_attachment_path(attachment_recording)"
-    assert_includes list_partial, 'FlatPack::Tooltip::Component.new(text: "Trash")'
+    assert_includes list_partial, 't("recording_studio.attachable.attachments.trash")'
     assert_includes list_partial, "destroy_attachment_path(attachment_recording)"
     assert_includes list_partial, 'icon: "trash", icon_only: true'
     assert_not_includes list_partial, "<table class="
@@ -570,7 +571,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_not_includes list_partial, "<%= attachment.original_filename %>"
     assert_not_includes listing_view, "No matching attachments"
     assert_not_includes listing_view, "Try another image name."
-    assert_includes listing_view, "Nothing uplaoded yet"
+    assert_includes listing_view, 't("recording_studio.attachable.library.empty_title")'
     assert_not_includes listing_view, 'text: "Previous"'
     assert_not_includes listing_view, 'text: "Next"'
     assert_includes attachments_page, 'render "grid", attachments: attachments'
@@ -578,7 +579,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes attachments_page, "FlatPack::PaginationInfinite::Component.new("
     assert_includes attachments_page, "append_only: true"
     assert_includes attachments_page, "loading_variant: list_view ? :inline : :cards"
-    assert_includes attachments_page, 'loading_text: view_mode == :grid ? "Loading more attachments..." : "Loading more rows..."'
+    assert_includes attachments_page, 'loading_text: view_mode == :grid ? t("recording_studio.attachable.library.loading_more_attachments") : t("recording_studio.attachable.library.loading_more_rows")'
     assert_not_includes listing_view, 'data-controller="flat-pack--tabs"'
     assert_not_includes listing_view, 'href: "#recording-attachments-grid-panel"'
     assert_not_includes listing_view, 'href: "#recording-attachments-list-panel"'

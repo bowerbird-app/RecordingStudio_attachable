@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html data-theme="rounded">
   <head>
-    <title>Recording Studio Attachable</title>
+    <title><%= t("recording_studio.attachable.layout.title") %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
@@ -21,7 +21,7 @@
         <%= render FlatPack::Alert::Component.new(description: notice, style: :success) %>
       <% end %>
       <% if alert.present? %>
-        <%= render FlatPack::Alert::Component.new(title: "Error", description: alert, style: :danger) %>
+        <%= render FlatPack::Alert::Component.new(title: t("recording_studio.attachable.layout.error"), description: alert, style: :danger) %>
       <% end %>
       <%= yield %>
     </main>

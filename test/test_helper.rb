@@ -9,6 +9,12 @@ require "rails"
 require "active_storage/engine"
 require "recording_studio_attachable"
 
+Dir[File.expand_path("../config/locales/*.yml", __dir__)].each do |path|
+  expanded = File.expand_path(path)
+  I18n.load_path << expanded unless I18n.load_path.map { |entry| File.expand_path(entry) }.include?(expanded)
+end
+I18n.backend.load_translations
+
 Mime::Type.register "text/vnd.turbo-stream.html", :turbo_stream unless Mime::Type.lookup_by_extension(:turbo_stream)
 
 module Minitest

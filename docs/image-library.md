@@ -131,6 +131,12 @@ en:
         campaign: "Campaign"
 ```
 
+Static interface copy on the gem's own screens (library listing, upload,
+attachment edit, collection editor, picker modal, Google Drive import) uses
+nested keys under `recording_studio.attachable` in `config/locales/en.yml`.
+Hosts override those the same way. Older `recording_studio_attachable.*` keys
+stay for flashes, placement chrome, and library labels.
+
 Or set `config.library_label` when i18n is not enough:
 
 ```ruby

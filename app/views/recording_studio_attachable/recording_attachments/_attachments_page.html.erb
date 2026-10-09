@@ -16,7 +16,7 @@
       page: next_page,
       has_more: true,
       loading_variant: list_view ? :inline : :cards,
-      loading_text: view_mode == :grid ? "Loading more attachments..." : "Loading more rows..."
+      loading_text: view_mode == :grid ? t("recording_studio.attachable.library.loading_more_attachments") : t("recording_studio.attachable.library.loading_more_rows")
     ) %>
   <% end %>
 </div>

@@ -7,7 +7,7 @@
          "relative flex min-h-32 w-full items-center justify-center overflow-hidden rounded-lg#{ " group-data-[display=carousel]:min-h-[26rem] group-data-[display=carousel]:max-h-[32rem] group-data-[display=carousel]:rounded-none" if carousel }"
        end %>
     <% image_class = collection.square_preview? ? "h-full w-full object-cover" : "max-h-72 w-full object-contain" %>
-    <button type="button" class="block w-full cursor-pointer overflow-hidden rounded-lg<%= " group-data-[display=carousel]:rounded-none" if carousel %>" data-modal-id="<%= modal_id %>" aria-label="View <%= attachment.name %>">
+    <button type="button" class="block w-full cursor-pointer overflow-hidden rounded-lg<%= " group-data-[display=carousel]:rounded-none" if carousel %>" data-modal-id="<%= modal_id %>" aria-label="<%= t("recording_studio.attachable.collection.view_aria", name: attachment.name) %>">
       <div class="<%= frame_class %>" data-controller="recording-studio-attachable--image-fallback">
         <%= image_tag preview_path,
                       alt: attachment.name,
@@ -17,7 +17,7 @@
                         action: "error->recording-studio-attachable--image-fallback#showFallback"
                       } %>
         <div class="absolute inset-0 hidden items-center justify-center bg-(--surface-background-color)" data-recording-studio-attachable--image-fallback-target="fallback">
-          <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)">IMAGE</span>
+          <span class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)"><%= t("recording_studio.attachable.collection.image_fallback") %></span>
         </div>
       </div>
     </button>

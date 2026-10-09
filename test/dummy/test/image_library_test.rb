@@ -4,11 +4,16 @@ require "test_helper"
 
 class ImageLibraryTest < ActionDispatch::IntegrationTest
   setup do
-    @user = User.find_or_initialize_by(email: "admin@admin.com")
-    @user.password = "Password"
-    @user.password_confirmation = "Password"
-    @user.name = "Avery" if @user.name.blank?
-    @user.save!
+    @user = User.find_by(email: "admin@admin.com")
+    if @user.blank?
+      @user = User.new(
+        email: "admin@admin.com",
+        password: "Password",
+        password_confirmation: "Password",
+        name: "Avery"
+      )
+      @user.save!
+    end
     sign_in @user
   end
 
@@ -26,6 +31,9 @@ class ImageLibraryTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_includes path, "/recordings/#{library.id}/attachments"
     assert_includes response.body, "Library"
+    assert_includes response.body, "Upload"
+    assert_includes response.body, "Search"
+    assert_includes response.body, "Back"
   end
 
   test "host campaign path opens the campaign keyed library listing" do
@@ -64,6 +72,7 @@ class ImageLibraryTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Images"
     assert_includes response.body, "Add from library"
     assert_includes response.body, "Upload"
+    assert_includes response.body, "Back"
     assert_equal gallery_recording.id.to_s, path.split("/")[3]
   end
 
@@ -135,6 +144,90 @@ class ImageLibraryTest < ActionDispatch::IntegrationTest
     assert RecordingStudio.capability_enabled?(:library_placement, for: "Gallery")
     assert_includes RecordingStudio.allowed_parent_types_for("RecordingStudioAttachable::Library"), "Workspace"
     assert_includes RecordingStudio.allowed_parent_types_for("RecordingStudioAttachable::Placement"), "Gallery"
+  end
+
+  test "library upload page shows english upload chrome" do
+    workspace = Workspace.find_or_create_by!(name: "Studio Workspace")
+    Current.actor = @user
+    root = RecordingStudio.root_recording_for(workspace)
+    grant_workspace_access!(root)
+    library = RecordingStudioAttachable.library_for(root, actor: @user)
+
+    get recording_studio_attachable.recording_attachment_upload_path(library)
+    assert_response :success
+    assert_includes response.body, "Upload"
+    assert_includes response.body, "Allowed file types: images"
+    assert_includes response.body, "Drag and drop, or choose"
+    assert_includes response.body, "Choose files"
+    assert_includes response.body, "Back"
+  end
+
+  test "attachment show page shows english edit chrome" do
+    workspace = Workspace.find_or_create_by!(name: "Studio Workspace")
+    Current.actor = @user
+    root = RecordingStudio.root_recording_for(workspace)
+    grant_workspace_access!(root)
+    library = RecordingStudioAttachable.library_for(root, actor: @user)
+    photo = first_or_import_photo(library, "kiln-canister-hero.jpg")
+
+    get recording_studio_attachable.attachment_path(photo)
+    assert_response :success
+    assert_includes response.body, "Name"
+    assert_includes response.body, "Caption"
+    assert_includes response.body, "Credit"
+    assert_includes response.body, "Alt text"
+    assert_includes response.body, "Description"
+    assert_includes response.body, "Save"
+    assert_includes response.body, "Download"
+    assert_includes response.body, "Trash"
+    assert_includes response.body, "Back"
+  end
+
+  test "library list view and empty search show english table and empty copy" do
+    workspace = Workspace.find_or_create_by!(name: "Studio Workspace")
+    Current.actor = @user
+    root = RecordingStudio.root_recording_for(workspace)
+    grant_workspace_access!(root)
+    library = RecordingStudioAttachable.library_for(root, actor: @user)
+    first_or_import_photo(library, "kiln-canister-hero.jpg")
+
+    get recording_studio_attachable.recording_attachments_path(library, view: :list, kind: :images)
+    assert_response :success
+    assert_includes response.body, "Preview"
+    assert_includes response.body, "Name"
+    assert_includes response.body, "Actions"
+    assert_includes response.body, "Download"
+    assert_includes response.body, "Trash"
+
+    get recording_studio_attachable.recording_attachments_path(library, q: "zzzz-no-match", kind: :images)
+    assert_response :success
+    assert_includes response.body, "Nothing found"
+  end
+
+  test "attachment editor renders collection display and save labels" do
+    workspace = Workspace.find_or_create_by!(name: "Studio Workspace")
+    Current.actor = @user
+    root = RecordingStudio.root_recording_for(workspace)
+    grant_workspace_access!(root)
+    path = Rails.root.join("db/seed_images/kiln-canister-hero.jpg")
+    File.open(path, "rb") do |io|
+      root.import_attachment(
+        io: io,
+        filename: "kiln-canister-hero.jpg",
+        content_type: "image/jpeg",
+        name: "Kiln canister",
+        actor: @user,
+        source: "test"
+      )
+    end
+
+    get attachment_editor_path
+    assert_response :success
+    assert_includes response.body, "List"
+    assert_includes response.body, "Slides"
+    assert_includes response.body, "Grid"
+    assert_includes response.body, "Save"
+    assert_includes response.body, "Caption"
   end
 
   private

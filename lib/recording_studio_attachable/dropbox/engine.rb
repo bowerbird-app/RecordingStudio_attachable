@@ -23,30 +23,23 @@ module RecordingStudioAttachable
         private
 
         def register_upload_provider
-          return unless upload_provider_enabled?
+          return unless RecordingStudioAttachable.configuration.dropbox.available?
 
           RecordingStudioAttachable.configure do |config|
-            config.register_upload_provider(:dropbox, **upload_provider_options)
+            config.register_upload_provider(:dropbox, **client_picker_options)
           end
         end
 
-        def upload_provider_enabled?
-          RecordingStudioAttachable.configuration.dropbox.available?
-        end
-
-        def upload_provider_options # rubocop:disable Metrics/MethodLength
-          {
+        def client_picker_options
+          RecordingStudioAttachable::Adapter::ClientPicker.provider_options(
             label: "Dropbox",
-            icon: "cloud",
-            url: ->(route_helpers:, recording:) { bootstrap_path(route_helpers:, recording:) },
-            strategy: :client_picker,
             launcher: "dropbox",
             launcher_module: "controllers/recording_studio_attachable/dropbox_picker_launcher",
-            bootstrap_url: ->(route_helpers:, recording:) { bootstrap_path(route_helpers:, recording:) },
-            import_url: ->(route_helpers:, recording:) { import_path(route_helpers:, recording:) },
-            remote_importer: method(:remote_importer),
-            allowed_payload_keys: %w[id]
-          }
+            allowed_payload_keys: %w[id],
+            bootstrap_path: method(:bootstrap_path),
+            import_path: method(:import_path),
+            remote_importer: method(:remote_importer)
+          )
         end
 
         def bootstrap_path(route_helpers:, recording:)
@@ -58,27 +51,15 @@ module RecordingStudioAttachable
         end
 
         def remote_importer(parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil)
-          access_token = RecordingStudioAttachable::Dropbox::SessionAccessToken.fetch(session: context.session)
-          selections = normalized_selections(attachments)
-
-          RecordingStudioAttachable::Dropbox::Services::ImportSelectedFiles.call(
+          RecordingStudioAttachable::Adapter::ClientPicker.import_from_session(
+            context: context,
+            attachments: attachments,
+            session_token_class: SessionAccessToken,
+            import_class: Services::ImportSelectedFiles,
             parent_recording: parent_recording,
-            file_ids: selections,
-            access_token: access_token,
             actor: actor,
             impersonator: impersonator
           )
-        end
-
-        def normalized_selections(attachments)
-          Array(attachments).map do |payload|
-            provider_payload = payload.fetch(:provider_payload, {}).to_h.stringify_keys
-            provider_payload.merge(
-              "name" => payload[:name],
-              "description" => payload[:description],
-              "metadata" => payload.fetch(:metadata, {}).to_h.except("provider", :provider)
-            ).compact_blank
-          end
         end
       end
     end

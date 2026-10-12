@@ -50,13 +50,11 @@ module RecordingStudioAttachable
           redirect_mode: state["redirect_mode"],
           return_to: state["return_to"]
         ), notice: t("recording_studio_attachable.google_drive.connected", default: "Connected Google Drive.")
+      rescue ActionDispatch::Cookies::CookieOverflow
+        clear_google_drive_tokens!
+        redirect_drive_oauth_alert(recording_id, RecordingStudioAttachable::Adapter::SessionCookie.overflow_message)
       rescue RecordingStudioAttachable::Error, RecordingStudioAttachable::GoogleDrive::OAuthClient::Error => e
-        recording_id ||= params[:recording_id]
-        if recording_id.present?
-          redirect_to google_drive.recording_imports_path(recording_id, **attachment_redirect_params), alert: e.message
-        else
-          redirect_to main_app.root_path, alert: e.message
-        end
+        redirect_drive_oauth_alert(recording_id, e.message)
       end
 
       def destroy
@@ -67,6 +65,17 @@ module RecordingStudioAttachable
           @recording,
           upload_flow_params
         ), notice: t("recording_studio_attachable.google_drive.disconnected", default: "Disconnected Google Drive.")
+      end
+
+      private
+
+      def redirect_drive_oauth_alert(recording_id, message)
+        recording_id ||= params[:recording_id]
+        if recording_id.present?
+          redirect_to google_drive.recording_imports_path(recording_id, **attachment_redirect_params), alert: message
+        else
+          redirect_to main_app.root_path, alert: message
+        end
       end
     end
   end

@@ -133,8 +133,7 @@ module RecordingStudioAttachable
       end
 
       def selection_value(selection, *keys)
-        hash = selection.respond_to?(:to_h) ? selection.to_h : {}
-        keys.lazy.map { |key| hash[key.to_s] || hash[key] }.find(&:present?)
+        Adapter::Selection.value(selection, *keys)
       end
 
       def get_json(path, params = {})
@@ -183,9 +182,7 @@ module RecordingStudioAttachable
       end
 
       def parse_json(body)
-        JSON.parse(body.to_s)
-      rescue JSON::ParserError
-        {}
+        RecordingStudioAttachable::JsonBody.parse(body)
       end
 
       def request_error(response, body)

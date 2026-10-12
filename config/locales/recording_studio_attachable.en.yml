@@ -18,6 +18,8 @@ en:
       connected: "Dropbox is connected."
       disconnected: "Dropbox is disconnected."
       session_expired: "Dropbox signed you out. Connect again to keep going."
+    session_cookie:
+      overflow: "This cookie jar is full. Disconnect the other cloud provider and connect again, or switch the host to a server-side session store."
     libraries:
       keys:
         default: "Images"

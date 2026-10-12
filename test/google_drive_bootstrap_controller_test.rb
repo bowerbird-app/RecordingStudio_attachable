@@ -100,6 +100,50 @@ class GoogleDriveBootstrapControllerTest < ActionController::TestCase
     assert_nil payload["access_token"]
   end
 
+  def test_show_returns_forbidden_when_upload_is_denied
+    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+    @controller.define_singleton_method(:authorize_attachment_action!) do |_action, _recording, capability_options: {}|
+      raise RecordingStudioAttachable::Authorization::NotAuthorizedError, "Not authorized to upload attachments for Workspace"
+    end
+
+    with_routing do |set|
+      set.draw do
+        get "/google_drive/recordings/:recording_id/bootstrap(.:format)",
+            to: "recording_studio_attachable/google_drive/bootstrap#show"
+      end
+
+      @routes = set
+
+      RecordingStudio::Recording.stub(:find, recording) do
+        get :show, params: { recording_id: recording.id, format: :json }
+      end
+    end
+
+    assert_response :forbidden
+    assert_equal "Not authorized to upload attachments for Workspace", JSON.parse(@response.body).fetch("error")
+  end
+
+  def test_show_returns_unprocessable_when_google_drive_is_disabled
+    RecordingStudioAttachable.configuration.google_drive.enabled = false
+    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+
+    with_routing do |set|
+      set.draw do
+        get "/google_drive/recordings/:recording_id/bootstrap(.:format)",
+            to: "recording_studio_attachable/google_drive/bootstrap#show"
+      end
+
+      @routes = set
+
+      RecordingStudio::Recording.stub(:find, recording) do
+        get :show, params: { recording_id: recording.id, format: :json }
+      end
+    end
+
+    assert_response :unprocessable_content
+    assert_equal "Google Drive addon is not enabled", JSON.parse(@response.body).fetch("error")
+  end
+
   def test_show_preserves_attachment_redirect_params_in_import_url
     recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
     @request.session["recording_studio_attachable_google_drive"] = {

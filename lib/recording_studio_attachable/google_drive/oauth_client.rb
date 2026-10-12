@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "json"
-require "net/http"
 require "uri"
 
 module RecordingStudioAttachable
@@ -65,36 +63,10 @@ module RecordingStudioAttachable
 
       def post_form(attributes)
         ensure_configured!
+        response, body = Adapter::OauthHttp.post_form(TOKEN_ENDPOINT, attributes)
+        raise Error, Adapter::OauthHttp.error_message(body, "Google Drive authentication failed") unless response.is_a?(Net::HTTPSuccess)
 
-        uri = URI(TOKEN_ENDPOINT)
-        request = Net::HTTP::Post.new(uri)
-        request.set_form_data(attributes)
-
-        response = Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
-          http.request(request)
-        end
-
-        body = parse_json(response.body)
-        raise Error, response_error_message(body, "Google Drive authentication failed") unless response.is_a?(Net::HTTPSuccess)
-
-        normalize_token_response(body)
-      end
-
-      def normalize_token_response(body)
-        expires_in = body["expires_in"].to_i
-        return body unless expires_in.positive?
-
-        body.merge("expires_at" => Time.current.to_i + expires_in)
-      end
-
-      def parse_json(body)
-        JSON.parse(body.to_s)
-      rescue JSON::ParserError
-        {}
-      end
-
-      def response_error_message(body, default_message)
-        body["error_description"].presence || body["error"].presence || default_message
+        Adapter::OauthHttp.normalize_tokens(body)
       end
     end
   end

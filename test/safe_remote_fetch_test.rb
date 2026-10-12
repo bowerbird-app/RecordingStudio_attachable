@@ -207,6 +207,35 @@ class SafeRemoteFetchTest < Minitest::Test
     end
   end
 
+  def test_nil_max_bytes_skips_the_size_cap_and_still_enforces_the_deadline
+    ticks = [0.0, 0.1, 61.0]
+    response = StreamingResponse.new(chunks: %w[aaaa bbbb], content_type: "text/plain")
+
+    with_public_dns do
+      stub_http(->(_host, _request) { response }) do
+        Process.stub(:clock_gettime, ->(*) { ticks.shift || 61.0 }) do
+          error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
+            fetch(uri: "https://api.example.test/file", allowed_hosts: ["api.example.test"], max_bytes: nil)
+          end
+
+          assert_equal "Remote download timed out", error.message
+        end
+      end
+    end
+  end
+
+  def test_nil_max_bytes_downloads_a_file_that_would_exceed_a_numeric_cap
+    response = StreamingResponse.new(chunks: ["x" * 50], content_type: "text/plain", content_length: "50")
+
+    with_public_dns do
+      stub_http(->(_host, _request) { response }) do
+        result = fetch(uri: "https://api.example.test/file", allowed_hosts: ["api.example.test"], max_bytes: nil)
+
+        assert_equal 50, result.byte_size
+      end
+    end
+  end
+
   def test_declared_byte_size_is_refused_before_request
     started = false
     Net::HTTP.stub(:start, lambda { |*|

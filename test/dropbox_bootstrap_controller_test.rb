@@ -96,6 +96,50 @@ class DropboxBootstrapControllerTest < ActionController::TestCase
     assert_not payload.key?("access_token")
   end
 
+  def test_show_returns_forbidden_when_upload_is_denied
+    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+    @controller.define_singleton_method(:authorize_attachment_action!) do |_action, _recording, capability_options: {}|
+      raise RecordingStudioAttachable::Authorization::NotAuthorizedError, "Not authorized to upload attachments for Workspace"
+    end
+
+    with_routing do |set|
+      set.draw do
+        get "/dropbox/recordings/:recording_id/bootstrap(.:format)",
+            to: "recording_studio_attachable/dropbox/bootstrap#show"
+      end
+
+      @routes = set
+
+      RecordingStudio::Recording.stub(:find, recording) do
+        get :show, params: { recording_id: recording.id, format: :json }
+      end
+    end
+
+    assert_response :forbidden
+    assert_equal "Not authorized to upload attachments for Workspace", JSON.parse(@response.body).fetch("error")
+  end
+
+  def test_show_returns_unprocessable_when_dropbox_is_disabled
+    RecordingStudioAttachable.configuration.dropbox.enabled = false
+    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+
+    with_routing do |set|
+      set.draw do
+        get "/dropbox/recordings/:recording_id/bootstrap(.:format)",
+            to: "recording_studio_attachable/dropbox/bootstrap#show"
+      end
+
+      @routes = set
+
+      RecordingStudio::Recording.stub(:find, recording) do
+        get :show, params: { recording_id: recording.id, format: :json }
+      end
+    end
+
+    assert_response :unprocessable_content
+    assert_equal "Dropbox addon is not enabled", JSON.parse(@response.body).fetch("error")
+  end
+
   private
 
   def ensure_recording_lookup!

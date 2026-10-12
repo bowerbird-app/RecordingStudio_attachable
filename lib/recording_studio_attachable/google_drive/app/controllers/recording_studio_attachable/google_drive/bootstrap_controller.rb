@@ -9,7 +9,7 @@ module RecordingStudioAttachable
         ensure_google_drive_picker_configured!
 
         render json: bootstrap_payload
-      rescue RecordingStudioAttachable::DependencyUnavailableError, RecordingStudioAttachable::Error => e
+      rescue RecordingStudioAttachable::DependencyUnavailableError => e
         render json: { error: e.message }, status: :unprocessable_content
       end
 

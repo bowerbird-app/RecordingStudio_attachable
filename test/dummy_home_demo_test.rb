@@ -306,7 +306,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes picker_modal_partial, "recording-studio-attachable--attachment-image-picker#launchProvider"
     assert_includes picker_modal_partial, "recording-studio-attachable--attachment-image-picker#confirmSelection"
     assert_includes picker_modal_partial, "recording-studio-attachable--attachment-image-picker#clearSelection"
-    assert_includes picker_controller, 'import { getUploadProviderLauncher, onUploadProviderLaunchersChanged } from "controllers/recording_studio_attachable/provider_launchers"'
+    assert_includes picker_controller, 'import { getUploadProviderLauncher, onUploadProviderLaunchersChanged, relaunchUploadProvider } from "controllers/recording_studio_attachable/provider_launchers"'
     assert_includes picker_controller, "application.getControllerForElementAndIdentifier"
     assert_includes picker_controller, "openPickerFromToolbar(event)"
     assert_includes picker_controller, "async loadAttachments({ append = false, reset = false } = {}) {"

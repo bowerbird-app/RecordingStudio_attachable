@@ -62,10 +62,11 @@ class AttachmentCollectionI18nTest < Minitest::Test
     I18n.with_locale(:fr) do
       collection.instance_variable_set(:@association, :attachments)
       assert_equal "Trash", collection.remove_label
-      assert_equal "Corbeille", RecordingStudioAttachable::Copy.remove_label(placement: false)
+      assert_equal "Corbeille", RecordingStudioAttachable::Copy.translate_remove_label(collection.remove_label)
       collection.instance_variable_set(:@association, :placements)
       assert_equal "Remove from here", collection.remove_label
-      assert_equal "Retirer d'ici", RecordingStudioAttachable::Copy.remove_label(placement: true)
+      assert_equal "Retirer d'ici", RecordingStudioAttachable::Copy.translate_remove_label(collection.remove_label)
+      assert_equal "Custom", RecordingStudioAttachable::Copy.translate_remove_label("Custom")
     end
   end
 
@@ -135,9 +136,11 @@ class AttachmentCollectionI18nTest < Minitest::Test
 
     assert_includes editor, "<%= collection.empty_message %>"
     refute_includes editor, "empty_message_overridden?"
-    assert_includes editor, "Copy.remove_label(placement: collection.placement?)"
-    assert_includes grid, "Copy.remove_label(placement: collection.placement?)"
+    assert_includes editor, "Copy.translate_remove_label(collection.remove_label)"
+    assert_includes grid, "Copy.translate_remove_label(collection.remove_label)"
     assert_includes grid, "Copy.image_name_fallback"
+    refute_includes editor, "Copy.remove_label(placement:"
+    refute_includes grid, "Copy.remove_label(placement:"
     assert_includes facts, "facts.labels.any?"
     assert_includes facts, "facts.labels.each"
     refute_includes facts, "display_labels"

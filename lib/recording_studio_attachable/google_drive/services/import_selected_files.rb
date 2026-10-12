@@ -37,10 +37,7 @@ module RecordingStudioAttachable
 
             downloaded.merge(
               name: selection["name"].presence || file.fetch("name"),
-              description: selection["description"].presence || Copy.t(
-                "google_drive.imported_from",
-                default: "Imported from Google Drive"
-              ),
+              description: selection["description"].presence || "Imported from Google Drive",
               metadata: {
                 provider: "google_drive",
                 external_id: file.fetch("id"),

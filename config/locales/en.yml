@@ -119,7 +119,6 @@ en:
         select_at_least_one: "Select at least one Google Drive file to import"
         select_at_least_one_file: "Select at least one file"
         imported_count: "Imported %{count} Google Drive file(s)."
-        imported_from: "Imported from Google Drive"
         connect_before_import: "Connect Google Drive before importing files"
         reconnect_to_continue: "Reconnect Google Drive to continue"
       flashes:

@@ -18,12 +18,21 @@ module RecordingStudioAttachable
       )
     end
 
+    include RecordingStudio::Capabilities::Trashable.to if defined?(RecordingStudio::Capabilities::Trashable)
+
     validates :name, :attachment_kind, :original_filename, :content_type, :byte_size, presence: true
     validates :byte_size, numericality: { greater_than_or_equal_to: 0 }
     validate :content_type_must_be_allowed
     validate :attachment_kind_must_be_enabled
 
     after_commit :enqueue_variant_preprocessing, on: :create
+
+    def initialize(attributes = nil)
+      attrs = attributes.respond_to?(:to_h) ? attributes.to_h.symbolize_keys : {}
+      validation = attrs.delete(:validation_options)
+      super(attrs)
+      self.validation_options = validation if validation
+    end
 
     scope :images, -> { where(attachment_kind: "image") }
     scope :files, -> { where(attachment_kind: "file") }

@@ -332,7 +332,7 @@ class EngineTest < Minitest::Test
         {
           recording_methods: RecordingStudio::Capabilities::ImageLibrary::RecordingMethods,
           source: "recording_studio_attachable",
-          child_recordables: ["RecordingStudioAttachable::Library"]
+          child_recordables: []
         }
       ],
       [
@@ -341,7 +341,7 @@ class EngineTest < Minitest::Test
         {
           recording_methods: RecordingStudio::Capabilities::LibraryPlacement::RecordingMethods,
           source: "recording_studio_attachable",
-          child_recordables: ["RecordingStudioAttachable::Placement"]
+          child_recordables: []
         }
       ]
     ]

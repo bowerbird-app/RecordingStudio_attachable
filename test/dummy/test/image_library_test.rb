@@ -27,12 +27,11 @@ class ImageLibraryTest < ActionDispatch::IntegrationTest
     get workspace_images_path
     assert_response :redirect
     follow_redirect!
-    assert_includes path, "/recordings/#{root.id}/library"
-    follow_redirect!
-    assert_includes path, "/recordings/#{library.id}/attachments"
+    assert_includes path, "/recording_studio_library/libraries/#{library.id}"
+    assert_response :success
     assert_includes response.body, "Library"
-    assert_includes response.body, "Upload"
     assert_includes response.body, "Search"
+    assert_includes response.body, "Photo"
     assert_includes response.body, "Back"
   end
 
@@ -46,13 +45,10 @@ class ImageLibraryTest < ActionDispatch::IntegrationTest
     get campaign_images_path
     assert_response :redirect
     follow_redirect!
-    assert_includes path, "/recordings/#{root.id}/library"
-    assert_includes request.fullpath, "key=campaign"
-    follow_redirect!
-    assert_includes path, "/recordings/#{library.id}/attachments"
+    assert_includes path, "/recording_studio_library/libraries/#{library.id}"
   end
 
-  test "gallery show opens placements for the seeded gallery" do
+  test "gallery show opens library placements for the seeded gallery" do
     workspace = Workspace.find_or_create_by!(name: "Studio Workspace")
     Current.actor = @user
     root = RecordingStudio.root_recording_for(workspace)
@@ -69,14 +65,12 @@ class ImageLibraryTest < ActionDispatch::IntegrationTest
     follow_redirect!
 
     assert_includes path, "/placements"
-    assert_includes response.body, "Images"
     assert_includes response.body, "Add from library"
-    assert_includes response.body, "Upload"
     assert_includes response.body, "Back"
     assert_equal gallery_recording.id.to_s, path.split("/")[3]
   end
 
-  test "gallery placements reuse list slides and grid" do
+  test "gallery placements render library orderable list" do
     workspace = Workspace.find_or_create_by!(name: "Studio Workspace")
     Current.actor = @user
     root = RecordingStudio.root_recording_for(workspace)
@@ -95,22 +89,30 @@ class ImageLibraryTest < ActionDispatch::IntegrationTest
     get gallery_path(gallery)
     follow_redirect!
 
-    assert_includes response.body, "List"
-    assert_includes response.body, "Slides"
-    assert_includes response.body, "Grid"
     assert_includes response.body, "Add from library"
-    assert_includes response.body, "Upload"
-    assert_includes response.body, "Remove from here"
-    assert_includes response.body, "attachment_collection[rows][][caption]"
-    assert_includes response.body, "flat-pack-input"
-    assert_includes response.body, "border-[var(--surface-border-color)]"
-    assert_includes response.body, "grid-cols-1"
-    assert_includes response.body, "sm:grid-cols-2"
-    assert_includes response.body, "Edit #{photo.recordable.name}"
-    assert_not_includes response.body, ">Order<"
-    assert_not_includes response.body, ">Drag<"
-    assert_not_includes response.body, "Move up"
-    assert_not_includes response.body, "Move down"
+    assert_includes response.body, photo.recordable.name
+    assert_includes response.body, "moving_recording_id"
+    assert_includes response.body, "placements/reorder"
+  end
+
+  test "gallery picker opens the library picker" do
+    workspace = Workspace.find_or_create_by!(name: "Studio Workspace")
+    Current.actor = @user
+    root = RecordingStudio.root_recording_for(workspace)
+    grant_workspace_access!(root)
+    images = RecordingStudioAttachable.library_for(root, actor: @user)
+    gallery = Gallery.find_or_create_by!(title: "Kiln shots")
+    gallery_recording = RecordingStudio::Recording.unscoped.find_or_create_by!(
+      root_recording_id: root.id,
+      parent_recording_id: root.id,
+      recordable: gallery
+    )
+    photo = first_or_import_photo(images, "kiln-canister-hero.jpg")
+
+    get recording_studio_library.recording_picker_path(gallery_recording)
+    assert_response :success
+    assert_includes response.body, "Add selected"
+    assert_includes response.body, photo.recordable.name
   end
 
   test "gallery places photos from two host-mounted libraries" do
@@ -141,9 +143,11 @@ class ImageLibraryTest < ActionDispatch::IntegrationTest
 
   test "workspace enables the image library and gallery holds placements" do
     assert RecordingStudio.capability_enabled?(:image_library, for: "Workspace")
+    assert RecordingStudio.capability_enabled?(:library, for: "Workspace")
     assert RecordingStudio.capability_enabled?(:library_placement, for: "Gallery")
-    assert_includes RecordingStudio.allowed_parent_types_for("RecordingStudioAttachable::Library"), "Workspace"
-    assert_includes RecordingStudio.allowed_parent_types_for("RecordingStudioAttachable::Placement"), "Gallery"
+    assert RecordingStudio.capability_enabled?(:placeable, for: "Gallery")
+    assert_includes RecordingStudio.allowed_parent_types_for("RecordingStudioLibrary::Library"), "Workspace"
+    assert_includes RecordingStudio.allowed_parent_types_for("RecordingStudioLibrary::Placement"), "Gallery"
   end
 
   test "library upload page shows english upload chrome" do
@@ -183,23 +187,21 @@ class ImageLibraryTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Back"
   end
 
-  test "library list view and empty search show english table and empty copy" do
+  test "library list view and empty search show adapter chrome" do
     workspace = Workspace.find_or_create_by!(name: "Studio Workspace")
     Current.actor = @user
     root = RecordingStudio.root_recording_for(workspace)
     grant_workspace_access!(root)
     library = RecordingStudioAttachable.library_for(root, actor: @user)
-    first_or_import_photo(library, "kiln-canister-hero.jpg")
+    photo = first_or_import_photo(library, "kiln-canister-hero.jpg")
 
-    get recording_studio_attachable.recording_attachments_path(library, view: :list, kind: :images)
+    get recording_studio_library.library_path(library, view: :list)
     assert_response :success
     assert_includes response.body, "Preview"
     assert_includes response.body, "Name"
-    assert_includes response.body, "Actions"
-    assert_includes response.body, "Download"
-    assert_includes response.body, "Trash"
+    assert_includes response.body, photo.recordable.name
 
-    get recording_studio_attachable.recording_attachments_path(library, q: "zzzz-no-match", kind: :images)
+    get recording_studio_library.library_path(library, q: "zzzz-no-match")
     assert_response :success
     assert_includes response.body, "Nothing found"
   end

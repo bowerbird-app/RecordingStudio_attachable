@@ -42,7 +42,7 @@
         <%= form_with url: destroy_attachment_path(@attachment_recording),
                       method: :delete,
                       class: "inline-flex",
-                      data: { turbo_confirm: @placement_usages.any? ? t("recording_studio_attachable.attachments.trash_in_use") : nil } do %>
+                      data: { turbo_confirm: @usage_confirm } do %>
           <%= render FlatPack::Button::Component.new(icon: "trash", icon_only: true, style: :secondary, size: :md, type: "submit", aria: { label: t("recording_studio.attachable.attachments.trash_aria") }) %>
         <% end %>
       <% end %>

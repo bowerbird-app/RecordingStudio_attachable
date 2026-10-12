@@ -34,10 +34,7 @@ RecordingStudioAttachable.configure do |config|
 
   config.placement_picker_libraries = lambda { |parent_recording|
     root = parent_recording.try(:root_recording) || parent_recording
-    [
-      RecordingStudioAttachable.library_for(root),
-      RecordingStudioAttachable.library_for(root, key: :campaign)
-    ]
+    RecordingStudioAttachable.libraries_for(root)
   }
 
   config.register_upload_provider(

@@ -38,7 +38,7 @@ module RecordingStudioAttachable
     end
 
     def attachable_destroy_placement_path(recording, **options)
-      attachable_routes.destroy_placement_path(recording, **options)
+      library_collection_routes.destroy_placement_path(recording, **options)
     end
 
     def attachment_collection_remove_path(collection, row, return_to:)
@@ -56,12 +56,20 @@ module RecordingStudioAttachable
 
     def attachment_collection_save_path(collection, recording, url)
       return url if url.present?
-      return attachable_routes.recording_placements_path(recording) if collection.placement?
+      return library_collection_routes.recording_placements_path(recording) if collection.placement?
 
       attachable_attachment_collection_path(recording)
     end
 
     private
+
+    def library_collection_routes
+      if respond_to?(:recording_studio_library, true)
+        recording_studio_library
+      else
+        RecordingStudioLibrary::Engine.routes.url_helpers
+      end
+    end
 
     def editor_locals(collection, recording, url, return_to)
       {

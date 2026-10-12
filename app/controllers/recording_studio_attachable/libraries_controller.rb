@@ -4,9 +4,8 @@ module RecordingStudioAttachable
   class LibrariesController < ApplicationController
     def show
       recording = find_recording(params[:id] || params[:recording_id] || params[:root_recording_id])
-      authorize_library_action!(:view, recording)
       library = library_from(recording)
-      redirect_to recording_attachments_path(library, kind: :images, **attachment_navigation_params)
+      redirect_to library_engine.library_path(library, **library_redirect_params), status: :see_other
     end
 
     private
@@ -21,12 +20,15 @@ module RecordingStudioAttachable
       )
     end
 
-    def authorize_library_action!(action, recording)
-      RecordingStudioAttachable::Authorization.authorize_library!(
-        action: action,
-        actor: current_attachable_actor,
-        recording: recording
-      )
+    def library_engine
+      main_app.recording_studio_library
+    end
+
+    def library_redirect_params
+      {
+        redirect_mode: params[:redirect_mode].presence,
+        return_to: params[:return_to].presence
+      }.compact
     end
   end
 end

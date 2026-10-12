@@ -6,11 +6,14 @@ class Gallery < ApplicationRecord
     allowed_parent_types: ["Workspace"]
   )
 
-  include RecordingStudio::Capabilities::LibraryPlacement.to
+  include RecordingStudio::Capabilities::LibraryPlacement.to(
+    types: ["RecordingStudioAttachable::Attachment"],
+    libraries: [:default, :campaign]
+  )
 
   if defined?(RecordingStudio::Capabilities::Orderable)
     include RecordingStudio::Capabilities::Orderable.to(
-      allows: ["RecordingStudioAttachable::Placement"]
+      allows: ["RecordingStudioLibrary::Placement"]
     )
   end
 

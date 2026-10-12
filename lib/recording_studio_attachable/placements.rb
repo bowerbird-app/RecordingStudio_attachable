@@ -2,54 +2,67 @@
 
 module RecordingStudioAttachable
   module Placements
-    LIBRARY_TYPE = "RecordingStudioAttachable::Library"
-    PLACEMENT_TYPE = "RecordingStudioAttachable::Placement"
     ATTACHMENT_TYPE = "RecordingStudioAttachable::Attachment"
 
-    Resolved = Struct.new(:placement_recording, :attachment_recording, :attachment, keyword_init: true)
+    Resolved = Struct.new(
+      :placement_recording,
+      :attachment_recording,
+      :attachment,
+      :item_recording,
+      :item,
+      :adapter,
+      keyword_init: true
+    )
     Usage = Struct.new(:placement_recording, :parent_recording, :label, keyword_init: true)
 
     class << self
-      def resolve(parent_recording, include_trashed_images: false)
-        Services::ResolvePlacements.call(
-          parent_recording: parent_recording,
-          include_trashed_images: include_trashed_images
-        ).value || []
+      def resolve(parent_recording, include_trashed_images: false, **options)
+        wrap_resolved(
+          RecordingStudioLibrary.resolve(
+            parent_recording,
+            include_trashed: include_trashed_images,
+            actor: actor_for_resolve(options)
+          )
+        )
       end
 
       def usage_for(attachment_recording)
-        Services::PlacementUsage.call(attachment_recording: attachment_recording).value || []
-      end
-
-      def purge_for(attachment_recording)
-        Services::PurgePlacements.call(attachment_recording: attachment_recording).value
+        wrap_usages(RecordingStudioLibrary.usages(attachment_recording))
       end
 
       def usage_for_library(library_recording)
-        Services::LibraryUsage.call(library_recording: library_recording).value || []
+        wrap_usages(RecordingStudioLibrary.usages(library_recording))
+      end
+
+      def purge_for(item_recording)
+        RecordingStudioLibrary::Placements.purge_for(item_recording)
       end
 
       def purge_library(library_recording)
-        Services::PurgeLibraryPlacements.call(library_recording: library_recording).value
+        RecordingStudioLibrary::Placements.purge_library(library_recording)
       end
 
       def picker_libraries_for(parent_recording)
         resolver = RecordingStudioAttachable.configuration.placement_picker_libraries
-        Array(resolver.call(parent_recording)).select { |library| Services::LibraryQuery.live?(library) }
+        Array(resolver.call(parent_recording)).select { |library| live_library?(library) }
       rescue StandardError
         []
       end
 
+      def live_library?(library)
+        RecordingStudioLibrary::Services::LibraryQuery.live?(library)
+      end
+
       def library_title(library_recording)
-        Services::LibraryQuery.title_for(library_recording)
+        RecordingStudioLibrary::Placements.library_title(library_recording)
       end
 
       def library_recording?(recording)
-        recording.respond_to?(:recordable_type) && recording.recordable_type == LIBRARY_TYPE
+        RecordingStudioLibrary::Placements.library_recording?(recording)
       end
 
       def placement_recording?(recording)
-        recording.respond_to?(:recordable_type) && recording.recordable_type == PLACEMENT_TYPE
+        RecordingStudioLibrary::Placements.placement_recording?(recording)
       end
 
       def attachment_recording?(recording)
@@ -62,26 +75,39 @@ module RecordingStudioAttachable
       end
 
       def fallback_place_label(parent_recording)
-        recordable = parent_recording.try(:recordable)
-        %i[title name].each do |method_name|
-          next unless recordable.respond_to?(method_name)
-
-          value = recordable.public_send(method_name).to_s.strip
-          return value if value.present?
-        end
-
-        declared_label(parent_recording) || parent_recording.try(:recordable_type).to_s.demodulize.presence || "Untitled"
+        RecordingStudioLibrary::Placements.fallback_place_label(parent_recording)
       end
 
-      def declared_label(parent_recording)
-        return unless defined?(RecordingStudio) && RecordingStudio.respond_to?(:recordable_declaration_for)
+      private
 
-        type = parent_recording.try(:recordable_type)
-        return if type.blank?
+      def actor_for_resolve(options)
+        return options[:actor] if options.key?(:actor)
+        return Current.actor if defined?(Current) && Current.respond_to?(:actor)
 
-        RecordingStudio.recordable_declaration_for(type)&.label
-      rescue StandardError
         nil
+      end
+
+      def wrap_resolved(entries)
+        Array(entries).map do |entry|
+          Resolved.new(
+            placement_recording: entry.placement_recording,
+            attachment_recording: entry.item_recording,
+            attachment: entry.item,
+            item_recording: entry.item_recording,
+            item: entry.item,
+            adapter: entry.adapter
+          )
+        end
+      end
+
+      def wrap_usages(entries)
+        Array(entries).map do |entry|
+          Usage.new(
+            placement_recording: entry.placement_recording,
+            parent_recording: entry.parent_recording,
+            label: entry.label
+          )
+        end
       end
     end
   end

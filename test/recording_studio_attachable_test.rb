@@ -4,7 +4,7 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.14.1", RecordingStudioAttachable::VERSION
+    assert_equal "0.15.0", RecordingStudioAttachable::VERSION
   end
 
   def test_recording_studio_dependency_is_4_2_or_newer
@@ -23,17 +23,31 @@ class RecordingStudioAttachableTest < Minitest::Test
     dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
     root_lock = File.read(File.expand_path("../Gemfile.lock", __dir__))
     dummy_lock = File.read(File.expand_path("dummy/Gemfile.lock", __dir__))
-    pin = 'gem "flat_pack", github: "bowerbird-app/flatpack", tag: "v0.1.213"'
+    pin = 'gem "flat_pack", github: "bowerbird-app/flatpack", tag: "v0.1.227"'
 
-    assert spec.version >= Gem::Version.new("0.1.213"),
-           "expected flat_pack >= 0.1.213, got #{spec.version}"
-    assert_includes gemspec, 'spec.add_dependency "flat_pack", ">= 0.1.213"'
+    assert spec.version >= Gem::Version.new("0.1.216"),
+           "expected flat_pack >= 0.1.216, got #{spec.version}"
+    assert_includes gemspec, 'spec.add_dependency "flat_pack", ">= 0.1.216"'
     assert_includes root_gemfile, pin
     assert_includes dummy_gemfile, pin
-    assert_includes root_lock, "flat_pack (0.1.213)"
-    assert_includes root_lock, "tag: v0.1.213"
-    assert_includes dummy_lock, "flat_pack (0.1.213)"
-    assert_includes dummy_lock, "tag: v0.1.213"
+    assert_includes root_lock, "flat_pack (0.1.227)"
+    assert_includes root_lock, "tag: v0.1.227"
+    assert_includes dummy_lock, "flat_pack (0.1.227)"
+    assert_includes dummy_lock, "tag: v0.1.227"
+  end
+
+  def test_library_dependency_is_pinned_to_github_tag
+    spec = Gem.loaded_specs.fetch("recording_studio_library")
+    gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
+    root_gemfile = File.read(File.expand_path("../Gemfile", __dir__))
+    dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
+    pin = 'gem "recording_studio_library", github: "bowerbird-app/RecordingStudio_library", tag: "v0.1.0"'
+
+    assert spec.version >= Gem::Version.new("0.1.0"),
+           "expected recording_studio_library >= 0.1.0, got #{spec.version}"
+    assert_includes gemspec, 'spec.add_dependency "recording_studio_library", ">= 0.1.0"'
+    assert_includes root_gemfile, pin
+    assert_includes dummy_gemfile, pin
   end
 
   def test_engine_exists

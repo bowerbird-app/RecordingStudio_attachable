@@ -10,7 +10,6 @@ class DummyAttachmentEditorTest < Minitest::Test
     home = File.read(File.expand_path("dummy/app/views/home/index.html.erb", __dir__))
     home_controller = File.read(File.expand_path("dummy/app/controllers/home_controller.rb", __dir__))
     layout = File.read(File.expand_path("dummy/app/views/layouts/application.html.erb", __dir__))
-    gemfile = File.read(File.expand_path("../Gemfile", __dir__))
 
     assert_includes routes, 'get "attachment_editor", to: "attachment_editors#show", as: :attachment_editor'
     refute_includes controller, "UsesDefaultLayout"
@@ -29,6 +28,6 @@ class DummyAttachmentEditorTest < Minitest::Test
     assert_includes home, 'text: "Edit images"'
     assert_includes home_controller, "@attachment_editor_path = attachment_editor_path"
     assert_includes layout, '<html data-theme="rounded">'
-    refute_includes gemfile, "recording_studio_orderable"
+    assert_includes view, "sortable: false"
   end
 end

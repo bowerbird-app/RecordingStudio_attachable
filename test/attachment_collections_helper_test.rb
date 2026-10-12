@@ -632,6 +632,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
       app/components/flat_pack/button/pill_style.rb
       app/components/flat_pack/button/component.rb
       app/components/flat_pack/shared/pad_text_sizes.rb
+      app/components/flat_pack/shared/slide_indicator.rb
       app/components/flat_pack/button/pill/component.rb
       app/components/flat_pack/form_field/control_styles.rb
       app/components/flat_pack/form_field/component.rb

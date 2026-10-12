@@ -29,6 +29,11 @@
 
 en:
   hello: "Hello world"
+  recording_studio:
+    library:
+      keys:
+        default: "Images"
+        campaign: "Campaign"
   recording_studio_attachable:
     libraries:
       keys:

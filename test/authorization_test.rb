@@ -9,6 +9,7 @@ class AuthorizationTest < Minitest::Test
     @original_configuration = RecordingStudioAttachable.instance_variable_get(:@configuration)
     @original_studio_configuration = RecordingStudio.method(:configuration)
     RecordingStudioAttachable.instance_variable_set(:@configuration, RecordingStudioAttachable::Configuration.new)
+    RecordingStudioAttachable.configuration.sync_library_configuration!
     stub_recording_studio!
     stub_accessible!
   end
@@ -224,7 +225,7 @@ class AuthorizationTest < Minitest::Test
         )
       end
 
-      assert_includes error.message, "Library placement is not enabled"
+      assert_match(/not enabled|Placed items are not enabled/i, error.message)
     end
   end
 
@@ -241,7 +242,7 @@ class AuthorizationTest < Minitest::Test
           )
         end
 
-        assert_includes error.message, "Not authorized to upload photos"
+        assert_match(/not authorized|cannot upload/i, error.message)
       end
     end
   end
@@ -272,7 +273,7 @@ class AuthorizationTest < Minitest::Test
         )
       end
 
-      assert_includes error.message, "Image library is not enabled"
+      assert_match(/not enabled|Libraries are not enabled/i, error.message)
     end
   end
 

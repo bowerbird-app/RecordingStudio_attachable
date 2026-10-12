@@ -9,6 +9,8 @@ en:
         error: "Error"
       library:
         title: "Library"
+        image_type: "Photo"
+        file_type: "File"
         upload: "Upload"
         grid: "Grid"
         list: "List"

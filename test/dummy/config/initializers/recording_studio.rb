@@ -9,8 +9,9 @@ RecordingStudio.configure do |config|
     "ChatMessage",
     "Gallery",
     "RecordingStudioAttachable::Attachment",
-    "RecordingStudioAttachable::Library",
-    "RecordingStudioAttachable::Placement"
+    "RecordingStudioLibrary::Library",
+    "RecordingStudioLibrary::Placement",
+    "RecordingStudioLibrary::SampleItem"
   ]
   config.require_recordable_declarations = true
   config.actor = -> { Current.actor }

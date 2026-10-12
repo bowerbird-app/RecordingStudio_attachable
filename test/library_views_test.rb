@@ -15,46 +15,13 @@ class LibraryViewsTest < Minitest::Test
     assert_includes source, "trash_in_use"
   end
 
-  def test_placements_index_reuses_the_library_picker
-    source = File.read(File.expand_path("../app/views/recording_studio_attachable/placements/index.html.erb", __dir__))
-
-    assert_includes source, "recording-studio-attachable--attachment-image-picker"
-    assert_includes source, "recording_attachment_picker_path(@library)"
-    assert_includes source, "recording_attachments_path(@library)"
-    assert_includes source, "FlatPack::Select::Component"
-    assert_includes source, "switchLibrary"
-    assert_includes source, 'text: t("recording_studio_attachable.placements.add")'
-    assert_includes source, 'text: t("recording_studio_attachable.placements.upload")'
-    assert_includes source, "attachment_image_pickers/modal"
-    refute_includes source, "recordable"
-    refute_includes source, "Recordable"
-  end
-
-  def test_placements_index_reuses_the_collection_editor
-    source = File.read(File.expand_path("../app/views/recording_studio_attachable/placements/index.html.erb", __dir__))
-
-    assert_includes source, "attachment_collection_editor("
-    assert_includes source, "association: :placements"
-    assert_includes source, "items: @resolved"
-    assert_includes source, "displays: %i[list carousel grid]"
-    assert_includes source, "sortable: @can_reorder"
-    refute_includes source, "move_placement_ids"
-    refute_includes source, "chevron-up"
-    refute_includes source, "chevron-down"
-    refute_includes source, "move_up"
-    refute_includes source, "move_down"
-  end
-
-  def test_library_and_placement_models_declare_product_labels
-    library = File.read(File.expand_path("../app/models/recording_studio_attachable/library.rb", __dir__))
-    placement = File.read(File.expand_path("../app/models/recording_studio_attachable/placement.rb", __dir__))
-
-    assert_includes library, 'label: "Image library"'
-    refute_includes library, "allowed_parent_types:"
-    assert_includes placement, 'label: "Image"'
-    refute_includes placement, "allowed_parent_types:"
-    refute_includes library, "Recordable"
-    refute_includes placement, "Recordable"
+  def test_attachable_no_longer_ships_a_placements_index
+    refute File.exist?(File.expand_path("../app/views/recording_studio_attachable/placements/index.html.erb", __dir__))
+    refute File.exist?(
+      File.expand_path("../app/javascript/controllers/recording_studio_attachable/library_placement_controller.js", __dir__)
+    )
+    refute File.exist?(File.expand_path("../app/models/recording_studio_attachable/library.rb", __dir__))
+    refute File.exist?(File.expand_path("../app/models/recording_studio_attachable/placement.rb", __dir__))
   end
 
   def test_locales_avoid_backend_words
@@ -66,28 +33,6 @@ class LibraryViewsTest < Minitest::Test
     refute_includes source, "Recordable"
     refute_includes nested, "recordable"
     refute_includes nested, "capability"
-  end
-
-  def test_library_index_uses_nested_attachable_i18n_keys
-    source = File.read(File.expand_path("../app/views/recording_studio_attachable/recording_attachments/index.html.erb", __dir__))
-
-    assert_includes source, 't("recording_studio.attachable.library.title")'
-    assert_includes source, 't("recording_studio.attachable.library.upload")'
-    assert_includes source, 't("recording_studio.attachable.library.empty_title")'
-    assert_includes source, 't("recording_studio.attachable.navigation.back")'
-  end
-
-  def test_library_placement_controller_submits_the_picked_image
-    source = File.read(
-      File.expand_path("../app/javascript/controllers/recording_studio_attachable/library_placement_controller.js", __dir__)
-    )
-
-    assert_includes source, 'static targets = ["form", "attachmentId", "uploadLibraryId", "switcher"]'
-    assert_includes source, "addFromLibrary(event)"
-    assert_includes source, "this.formTarget.requestSubmit()"
-    assert_includes source, "browseUpload(event)"
-    assert_includes source, "switchLibrary(event)"
-    assert_includes source, 'form?.querySelector("input[type=file]")'
   end
 
   def test_libraries_index_is_gone
@@ -106,14 +51,14 @@ class LibraryViewsTest < Minitest::Test
   def test_helper_mounts_a_library_or_parent_plus_key
     helper = Object.new
     helper.extend(RecordingStudioAttachable::ApplicationHelper)
-    library = Struct.new(:id, :recordable_type).new("lib-1", "RecordingStudioAttachable::Library")
+    library = Struct.new(:id, :recordable_type).new("lib-1", "RecordingStudioLibrary::Library")
     parent = Struct.new(:id, :recordable_type).new("root-1", "Workspace")
     routes = Object.new
     routes.define_singleton_method(:library_path) { |item, **| "/libraries/#{item.id}" }
-    routes.define_singleton_method(:recording_library_path) do |item, **options|
+    routes.define_singleton_method(:recording_library_path) do |item, options = {}|
       "/recordings/#{item.id}/library?key=#{options[:key]}"
     end
-    helper.define_singleton_method(:attachable_routes) { routes }
+    helper.define_singleton_method(:library_engine_routes) { routes }
 
     assert_equal "/libraries/lib-1", helper.library_path_for(library)
     assert_equal "/recordings/root-1/library?key=campaign", helper.library_path_for(parent, key: :campaign)
@@ -142,5 +87,12 @@ class LibraryViewsTest < Minitest::Test
       { "lib-1" => { pickerUrl: "/picker/lib-1", uploadUrl: "/upload/lib-1" } },
       helper.library_picker_switcher_payload([library])
     )
+  end
+
+  def test_adapter_registers_for_attachments
+    source = File.read(File.expand_path("../lib/recording_studio_attachable.rb", __dir__))
+
+    assert_includes source, "RecordingStudioLibrary.register_adapter"
+    assert_includes source, "RecordingStudioAttachable::Adapters::Attachment"
   end
 end

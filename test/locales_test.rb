@@ -11,6 +11,8 @@ class LocalesTest < Minitest::Test
     "layout.title" => "Recording Studio Attachable",
     "layout.error" => "Error",
     "library.title" => "Library",
+    "library.image_type" => "Photo",
+    "library.file_type" => "File",
     "library.upload" => "Upload",
     "library.grid" => "Grid",
     "library.list" => "List",

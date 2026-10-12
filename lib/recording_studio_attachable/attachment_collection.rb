@@ -8,7 +8,7 @@ module RecordingStudioAttachable
     GONE = "One of these is gone. Reload the page and try again."
     SORTABLE_MISSING = "sortable: true needs the parent to respond to recording_studio_orderable_reorder!. This parent does not."
     ORDERABLE_ALLOWS = "The parent must allow RecordingStudioAttachable::Attachment in Orderable allows, or omit allows."
-    ORDERABLE_PLACEMENTS = "The parent must allow RecordingStudioAttachable::Placement in Orderable allows, or omit allows."
+    ORDERABLE_PLACEMENTS = "The parent must allow RecordingStudioLibrary::Placement in Orderable allows, or omit allows."
     EMPTY_MESSAGES = {
       images: "No images yet.",
       files: "No files yet.",

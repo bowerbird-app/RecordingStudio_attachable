@@ -3,6 +3,7 @@ Rails.application.routes.draw do
 
   get "/recording_studio", to: redirect("/"), as: nil
   mount RecordingStudio::Engine, at: "/recording_studio"
+  mount RecordingStudioLibrary::Engine, at: "/recording_studio_library"
   mount RecordingStudioAttachable::Engine, at: "/recording_studio_attachable"
 
   get "setup", to: "docs#setup", as: :setup_docs

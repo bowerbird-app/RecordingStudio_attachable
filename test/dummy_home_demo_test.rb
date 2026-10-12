@@ -148,8 +148,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes recording_studio_initializer, '"ChatThread"'
     assert_includes recording_studio_initializer, '"ChatMessage"'
     assert_includes recording_studio_initializer, '"Gallery"'
-    assert_includes recording_studio_initializer, '"RecordingStudioAttachable::Library"'
-    assert_includes recording_studio_initializer, '"RecordingStudioAttachable::Placement"'
+    assert_includes recording_studio_initializer, '"RecordingStudioLibrary::Library"'
+    assert_includes recording_studio_initializer, '"RecordingStudioLibrary::Placement"'
     assert_includes seeds, "user = User.find_or_initialize_by(email: admin_email)"
     assert_includes seeds, "unless user.persisted? && user.valid_password?(admin_password)"
     assert_includes seeds, 'page = Page.find_or_create_by!(title: "Home page")'
@@ -196,11 +196,10 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes schema, 't.integer "position", null: false'
     assert_includes schema, 't.text "body"'
     assert_includes schema, 'create_table "recording_studio_attachable_attachments"'
-    assert_includes schema, 'create_table "recording_studio_attachable_libraries"'
-    assert_includes schema, 't.string "key", default: "default", null: false'
-    refute_includes schema, 't.string "name", default: "Library", null: false'
-    refute_includes schema, 't.boolean "default", default: false, null: false'
-    assert_includes schema, 'create_table "recording_studio_attachable_placements"'
+    assert_includes schema, 'create_table "recording_studio_libraries"'
+    assert_includes schema, 'create_table "recording_studio_library_placements"'
+    refute_includes schema, 'create_table "recording_studio_attachable_libraries"'
+    refute_includes schema, 'create_table "recording_studio_attachable_placements"'
     assert_includes schema, 'create_table "galleries"'
     assert_includes schema, "recording_studio_orderable_position"
     assert_includes schema, 't.string "title"'

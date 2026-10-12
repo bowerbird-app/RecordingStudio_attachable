@@ -120,14 +120,17 @@ module RecordingStudioAttachable
                   :layout,
                   :auth_roles,
                   :classify_attachment_kind,
-                  :authorize_with,
                   :google_drive,
-                  :direct_url_host,
-                  :placement_place_label,
-                  :placement_picker_libraries,
-                  :library_label
+                  :direct_url_host
 
-    attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode
+    attr_reader :placement_place_label,
+                :placement_picker_libraries,
+                :library_label,
+                :authorize_with,
+                :image_variants,
+                :upload_providers,
+                :storage_limit,
+                :url_mode
 
     def initialize
       assign_defaults
@@ -259,6 +262,35 @@ module RecordingStudioAttachable
       @storage_limit = normalized.presence
     end
 
+    def placement_picker_libraries=(resolver)
+      @placement_picker_libraries = resolver
+      sync_library_configuration!
+    end
+
+    def library_label=(resolver)
+      @library_label = resolver
+      sync_library_configuration!
+    end
+
+    def placement_place_label=(resolver)
+      @placement_place_label = resolver
+      sync_library_configuration!
+    end
+
+    def authorize_with=(adapter)
+      @authorize_with = adapter
+      sync_library_configuration!
+    end
+
+    def sync_library_configuration!
+      return unless defined?(RecordingStudioLibrary)
+
+      RecordingStudioLibrary.configuration.picker_libraries = placement_picker_libraries
+      RecordingStudioLibrary.configuration.library_label = library_label
+      RecordingStudioLibrary.configuration.place_label = placement_place_label
+      RecordingStudioLibrary.configuration.authorize_with = authorize_with
+    end
+
     def to_h
       {
         allowed_content_types: allowed_content_types,
@@ -316,8 +348,7 @@ module RecordingStudioAttachable
 
     def default_placement_picker_libraries
       lambda { |parent_recording|
-        holder = RecordingStudioAttachable::Services::LibraryQuery.image_library_parent_for(parent_recording)
-        [RecordingStudioAttachable.library_for(holder)]
+        Array(RecordingStudioAttachable.find_library(parent_recording)).compact
       }
     end
 
@@ -325,7 +356,10 @@ module RecordingStudioAttachable
       lambda { |key|
         I18n.t(
           "recording_studio_attachable.libraries.keys.#{key}",
-          default: RecordingStudioAttachable::Services::LibraryQuery.humanized_key(key)
+          default: I18n.t(
+            "recording_studio.library.keys.#{key}",
+            default: key.to_s.tr("_", " ").capitalize
+          )
         )
       }
     end

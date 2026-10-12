@@ -38,19 +38,22 @@ module RecordingStudioAttachable
 
     def library_path_for(parent_or_library, key: :default, **options)
       if RecordingStudioAttachable::Placements.library_recording?(parent_or_library)
-        attachable_routes.library_path(parent_or_library, **options)
+        library_engine_routes.library_path(parent_or_library, **options)
       else
-        attachable_routes.recording_library_path(parent_or_library, key: key, **options)
+        library_engine_routes.recording_library_path(parent_or_library, { key: key }.merge(options))
       end
     end
 
+    def recording_library_path(parent_recording, key: :default, **options)
+      library_path_for(parent_recording, key: key, **options)
+    end
+
     def library_picker_path_for(parent_or_library, key: :default, **options)
-      library = if RecordingStudioAttachable::Placements.library_recording?(parent_or_library)
-                  parent_or_library
-                else
-                  RecordingStudioAttachable.library_for(parent_or_library, key: key)
-                end
-      attachable_routes.recording_attachment_picker_path(library, **options)
+      if RecordingStudioAttachable::Placements.library_recording?(parent_or_library)
+        attachable_routes.recording_attachment_picker_path(parent_or_library, **options)
+      else
+        library_engine_routes.recording_picker_path(parent_or_library, { key: key }.merge(options))
+      end
     end
 
     def library_title_for(library_recording)
@@ -73,6 +76,14 @@ module RecordingStudioAttachable
         recording_studio_attachable
       else
         RecordingStudioAttachable::Engine.routes.url_helpers
+      end
+    end
+
+    def library_engine_routes
+      if respond_to?(:recording_studio_library, true)
+        recording_studio_library
+      else
+        RecordingStudioLibrary::Engine.routes.url_helpers
       end
     end
   end

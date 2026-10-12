@@ -23,10 +23,15 @@ module RecordingStudioAttachable
         require_recording_studio!
         resolved_actor = resolve_actor(actor)
         capability_options = capability_options_for(parent_recording)
-        authorize!(action: :upload, actor: resolved_actor, recording: parent_recording, capability_options: capability_options)
-
         blob = signed_blob!(signed_blob_id, capability_options: capability_options)
         root_recording = root_recording_for(parent_recording)
+
+        if LibraryAttachment.library_recording?(parent_recording)
+          return record_into_library!(blob, root_recording, resolved_actor, capability_options)
+        end
+
+        authorize!(action: :upload, actor: resolved_actor, recording: parent_recording, capability_options: capability_options)
+
         incoming = RecordingStudioAttachable::StorageLimit::IncomingBytes.for(root_recording, [blob])
         event = RecordingStudioAttachable::StorageLimit.with_storage_capacity!(root_recording, incoming) do
           attachment = build_attachment!(
@@ -51,6 +56,28 @@ module RecordingStudioAttachable
         end
 
         success(event.recording)
+      end
+
+      def record_into_library!(blob, root_recording, resolved_actor, capability_options)
+        incoming = RecordingStudioAttachable::StorageLimit::IncomingBytes.for(root_recording, [blob])
+        recording = RecordingStudioAttachable::StorageLimit.with_storage_capacity!(root_recording, incoming) do
+          result = RecordingStudioLibrary::Services::RecordLibraryItem.call(
+            library_recording: parent_recording,
+            type: LibraryAttachment::ATTACHMENT_TYPE,
+            attrs: LibraryAttachment.attrs_for(
+              blob: blob,
+              name: name,
+              description: description,
+              root_recording: root_recording,
+              validation_options: capability_validation_options(capability_options)
+            ),
+            actor: resolved_actor
+          )
+          raise ArgumentError, result.error if result.failure?
+
+          result.value
+        end
+        success(recording)
       end
     end
   end

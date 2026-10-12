@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module RecordingStudioAttachable
-  class Engine < ::Rails::Engine
+  class Engine < ::Rails::Engine # rubocop:disable Metrics/ClassLength
     isolate_namespace RecordingStudioAttachable
 
     initializer "recording_studio_attachable.assets" do |app|
@@ -33,6 +33,28 @@ module RecordingStudioAttachable
     initializer "recording_studio_attachable.action_view_helpers" do
       ActiveSupport.on_load(:action_view) do
         include RecordingStudioAttachable::ApplicationHelper
+        include RecordingStudioAttachable::LibraryPathOverrides
+      end
+    end
+
+    initializer "recording_studio_attachable.prepend_library_path_overrides" do
+      config.to_prepare do
+        next unless defined?(RecordingStudioLibrary::ApplicationHelper)
+        next if RecordingStudioLibrary::ApplicationHelper.ancestors.include?(LibraryPathOverrides)
+
+        RecordingStudioLibrary::ApplicationHelper.prepend(LibraryPathOverrides)
+      end
+    end
+
+    initializer "recording_studio_attachable.sync_library_configuration" do |app|
+      app.config.after_initialize do
+        RecordingStudioAttachable.configuration.sync_library_configuration!
+      end
+    end
+
+    initializer "recording_studio_attachable.enable_library_attachments" do
+      config.to_prepare do
+        RecordingStudioAttachable::Engine.enable_library_attachments!
       end
     end
 
@@ -41,13 +63,12 @@ module RecordingStudioAttachable
 
       register_attachable_capabilities
       register_attachment_recordable_type
-      register_library_recordable_types
     end
 
     def self.register_attachable_capabilities
       register_one_capability(:attachable, RecordingStudio::Capabilities::Attachable, "RecordingStudioAttachable::Attachment")
-      register_one_capability(:image_library, RecordingStudio::Capabilities::ImageLibrary, "RecordingStudioAttachable::Library")
-      register_one_capability(:library_placement, RecordingStudio::Capabilities::LibraryPlacement, "RecordingStudioAttachable::Placement")
+      register_one_capability(:image_library, RecordingStudio::Capabilities::ImageLibrary, nil)
+      register_one_capability(:library_placement, RecordingStudio::Capabilities::LibraryPlacement, nil)
     end
 
     def self.register_one_capability(name, capability, child)
@@ -55,13 +76,32 @@ module RecordingStudioAttachable
         name,
         recording_methods: capability::RecordingMethods,
         source: "recording_studio_attachable",
-        child_recordables: [child]
+        child_recordables: Array(child)
       )
     end
 
-    def self.register_library_recordable_types
-      register_recordable_type_if_needed("RecordingStudioAttachable::Library") if image_library_parent_types_registered?
-      register_recordable_type_if_needed("RecordingStudioAttachable::Placement") if library_placement_parent_types_registered?
+    def self.enable_library_attachments!
+      return unless defined?(RecordingStudioLibrary::Library)
+      return unless defined?(RecordingStudio::Capabilities::Attachable)
+      return if library_accepts_attachments?
+
+      RecordingStudioLibrary::Library.include(
+        RecordingStudio::Capabilities::Attachable.to(
+          allowed_content_types: RecordingStudioAttachable.configuration.allowed_content_types,
+          enabled_attachment_kinds: RecordingStudioAttachable.configuration.enabled_attachment_kinds
+        )
+      )
+    end
+
+    def self.library_accepts_attachments?
+      return false unless defined?(RecordingStudio) && RecordingStudio.respond_to?(:configuration)
+
+      configuration = RecordingStudio.configuration
+      return false unless configuration.respond_to?(:capability_enabled?)
+
+      configuration.capability_enabled?(:attachable, for_type: "RecordingStudioLibrary::Library")
+    rescue StandardError
+      false
     end
 
     def self.register_attachment_recordable_type

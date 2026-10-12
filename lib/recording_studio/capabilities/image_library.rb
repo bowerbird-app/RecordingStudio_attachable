@@ -3,9 +3,31 @@
 module RecordingStudio
   module Capabilities
     module ImageLibrary
+      ATTACHMENT_TYPE = "RecordingStudioAttachable::Attachment"
+
       def self.to(**options)
-        RecordingStudio::Capabilities.include_for(:image_library, **options)
+        compose(
+          RecordingStudio::Capabilities::Library.to(**library_kwargs(options)),
+          RecordingStudio::Capabilities.include_for(:image_library, **options.except(:types, :keys))
+        )
       end
+
+      def self.library_kwargs(options)
+        kwargs = { types: Array(options[:types]).presence || [ATTACHMENT_TYPE] }
+        kwargs[:keys] = options[:keys] if options[:keys].present?
+        kwargs
+      end
+      private_class_method :library_kwargs
+
+      def self.compose(primary, extra)
+        Module.new do
+          define_singleton_method(:included) do |base|
+            base.include primary
+            base.include extra
+          end
+        end
+      end
+      private_class_method :compose
 
       module RecordingMethods
         include RecordingStudio::Capability if defined?(RecordingStudio::Capability)

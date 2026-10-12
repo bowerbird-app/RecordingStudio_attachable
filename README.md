@@ -7,7 +7,8 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - `include RecordingStudio::Capabilities::Attachable.to(...)` opt-in API for parent recordables
 - addon-owned `RecordingStudioAttachable::Attachment` recordable with `has_one_attached :file`
 - child recording identity with append-only recordable revisions
-- FlatPack-based grid/list library, search, bulk remove, upload, and picker UI slice
+- FlatPack-based grid/list listing, search, bulk remove, upload, picker, and image editor
+- Reusable photo libraries via RecordingStudio Library (`ImageLibrary.to` / `LibraryPlacement.to` aliases)
 - Stimulus + Active Storage direct upload flow
 - Accessible-backed authorization and Trashable-aware removal when available
 
@@ -20,6 +21,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
 - RecordingStudio Metrics `~> 0.2` (GitHub tag `v0.2.0`) for operations-API storage and upload metrics
+- RecordingStudio Library `>= 0.1.0` (GitHub tag `v0.1.0`) for reusable photo libraries and placements
 
 ## Quick start
 
@@ -38,6 +40,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 ```ruby
 # Gemfile
 gem "recording_studio_attachable"
+gem "recording_studio_library", github: "bowerbird-app/RecordingStudio_library", tag: "v0.1.0"
 ```
 
 ### 2. Declare host-app recordable hierarchy
@@ -60,7 +63,7 @@ Recording Studio 4 requires every configured host-app recordable to declare whet
 
 Do not enable `:attachable` on a shared root (`shared: true`). Attachments are capability-owned children, so enable the capability on domain recordables beneath that shared root instead.
 
-Reusable photos belong in host-mounted image libraries, not on the shared root. `RecordingStudioAttachable::Library` is a child of a parent that enables `ImageLibrary` — the root, or a brand / client / project. `library_for(parent)` find-or-creates one library per parent. Extra libraries use a host key, for example `library_for(parent, key: :campaign)`. People do not create or browse libraries. Host gems place those photos with `RecordingStudioAttachable::Placement`. See [Image libraries](docs/image-library.md).
+Reusable photos belong in host-mounted libraries, not on the shared root. Attachable depends on RecordingStudio Library for that. `ImageLibrary.to` is a thin alias over `Library.to(types: [Attachment])`. `library_for(parent)` find-or-creates one library per parent. Extra libraries use a host key, for example `library_for(parent, key: :campaign)`. People do not create or browse libraries. Host pages place photos with `LibraryPlacement.to`, a thin alias over `Placeable.to`. See [Image libraries](docs/image-library.md).
 
 `RecordingStudioAttachable::Attachment` is owned by this addon. The addon declares it as `root: false` and registers it as a child recordable of the `:attachable` capability, so host apps should not add host-specific `allowed_parent_types:` to the attachment model.
 
@@ -492,32 +495,40 @@ The most important per-recordable options are:
 
 ## Image libraries
 
-Photos that several pages reuse live once in a library the host mounts. A host page stores a placement, not a second file. Enable `ImageLibrary` on a root, brand, client, or project. People upload and edit photos. They do not create, title, or browse libraries.
+Photos that several pages reuse live once in a RecordingStudio Library. A host page stores a placement, not a second file. Attachable keeps the public helper names as thin wrappers so hosts barely change. Enable `ImageLibrary` on a root, brand, client, or project. People upload and edit photos. They do not create, title, or browse libraries.
+
+Call `library_for` (or `image_library`) before a library page or picker can find the library.
 
 ```ruby
 class Workspace < ApplicationRecord
   recording_studio_recordable label: "Workspace", root: true
-  include RecordingStudio::Capabilities::ImageLibrary.to
+  include RecordingStudio::Capabilities::ImageLibrary.to(
+    types: ["RecordingStudioAttachable::Attachment"],
+    keys: [:default, :campaign]
+  )
 end
 
 class Gallery < ApplicationRecord
   recording_studio_recordable label: "Gallery", root: false, allowed_parent_types: ["Workspace"]
-  include RecordingStudio::Capabilities::LibraryPlacement.to
-  include RecordingStudio::Capabilities::Orderable.to(allows: ["RecordingStudioAttachable::Placement"])
+  include RecordingStudio::Capabilities::LibraryPlacement.to(
+    types: ["RecordingStudioAttachable::Attachment"],
+    libraries: [:default, :campaign]
+  )
+  include RecordingStudio::Capabilities::Orderable.to(allows: ["RecordingStudioLibrary::Placement"])
 end
 
-library = root_recording.image_library(actor: current_user)
-campaign = root_recording.image_library(key: :campaign, actor: current_user)
+library = RecordingStudioAttachable.library_for(root_recording, actor: current_user)
+campaign = RecordingStudioAttachable.library_for(root_recording, key: :campaign, actor: current_user)
 gallery.place_library_image(attachment_recording: photo, actor: current_user)
 gallery.upload_to_library_and_place(signed_blob_id: blob.signed_id, library_recording: campaign, actor: current_user)
 gallery.library_placements
 ```
 
-`library_path_for(library)` or `library_path_for(parent, key: :campaign)` opens the existing listing. Put those paths in the host nav. `recording_placements_path(gallery)` mounts the existing list, slides, and grid editor for the resolved placements. Add from library, Upload, list reorder, and Remove from here sit on top of that editor. Editing caption, credit, or alt opens the library photo. The switcher shows only when the host passed more than one library. Set `config.placement_picker_libraries` to pass the list.
+Register `RecordingStudioLibrary::Library` and `RecordingStudioLibrary::Placement` in `config.recordable_types`. Mount Library's engine. `library_path_for(library)` opens Library's adapter-rendered listing. `recording_studio_library.recording_placements_path(gallery)` opens Library's placements editor and picker. Attachable keeps the upload page and the image editor (`attachments#show`) — Open on a photo goes there.
 
-Trashing a library or a photo that is in use warns how many places point at it. Resolve skips a trashed photo. Permanently deleting a library or a photo removes its placements. Removing a placement leaves the photo in the library.
+Trashing a photo that is in use warns how many places point at it (Library's usage list, shown on Attachable's editor). Resolve skips a trashed photo. Permanently deleting a photo removes its placements. Removing a placement leaves the photo in the library.
 
-Access follows the tree. Public pages render through `RecordingStudioAttachable::Placements.resolve`. Duplicating a host page copies placements, not files.
+Access follows the tree through Accessible. Public pages render through `RecordingStudioAttachable::Placements.resolve` (no nil-actor bypass). Duplicating a host page copies placements, not files.
 
 Full setup, trash rules, and a Presskits note: [docs/image-library.md](docs/image-library.md).
 

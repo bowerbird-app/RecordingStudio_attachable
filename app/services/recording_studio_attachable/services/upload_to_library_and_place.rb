@@ -18,21 +18,30 @@ module RecordingStudioAttachable
       def perform
         require_recording_studio!
         parent = require_parent!
-        assert_placement_enabled!(parent)
-        authorize_placement!(action: :upload, actor: resolve_actor(actor), recording: parent)
-
+        resolved_actor = resolve_actor(actor)
         library = library_for!(parent)
-        attachment = upload_to_library!(library)
-        PlaceLibraryImage.call(
-          parent_recording: parent,
-          attachment_recording: attachment,
-          actor: resolve_actor(actor),
-          impersonator: impersonator
-        ).then do |result|
-          raise ArgumentError, result.error if result.failure?
-
-          success(result.value)
+        blob = blob_for!(library)
+        root_recording = root_recording_for(parent)
+        incoming = RecordingStudioAttachable::StorageLimit::IncomingBytes.for(root_recording, [blob])
+        placement = RecordingStudioAttachable::StorageLimit.with_storage_capacity!(root_recording, incoming) do
+          RecordingStudioLibrary.place_new!(
+            parent,
+            library: library,
+            type: LibraryAttachment::ATTACHMENT_TYPE,
+            attrs: LibraryAttachment.attrs_for(
+              blob: blob,
+              name: upload[:name],
+              description: upload[:description],
+              caption: upload[:caption],
+              credit: upload[:credit],
+              alt_text: upload[:alt_text],
+              root_recording: root_recording,
+              validation_options: capability_validation_options(capability_options_for(library))
+            ),
+            actor: resolved_actor
+          )
         end
+        success(placement)
       end
 
       def require_parent!
@@ -43,67 +52,51 @@ module RecordingStudioAttachable
 
       def library_for!(parent)
         library = library_recording.presence || hosted_library_for(parent)
-        raise ArgumentError, I18n.t("recording_studio_attachable.placements.not_in_library") unless LibraryQuery.live?(library)
-        raise ArgumentError, I18n.t("recording_studio_attachable.placements.different_workspace") unless same_root?(parent, library)
-
+        assert_live_library!(library)
+        assert_same_root!(parent, library)
         library
       end
 
+      def assert_live_library!(library)
+        return if RecordingStudioLibrary::Services::LibraryQuery.live?(library)
+
+        raise ArgumentError, I18n.t("recording_studio_attachable.placements.not_in_library")
+      end
+
+      def assert_same_root!(parent, library)
+        return if same_root?(parent, library)
+
+        raise ArgumentError, I18n.t("recording_studio_attachable.placements.different_workspace")
+      end
+
       def hosted_library_for(parent)
-        result = FindOrCreateLibrary.call(
-          parent_recording: image_library_parent_for(parent),
+        RecordingStudioAttachable.library_for(
+          RecordingStudioLibrary::Services::LibraryQuery.library_parent_for(parent),
           actor: resolve_actor(actor)
         )
-        raise ArgumentError, result.error if result.failure?
-
-        result.value
       end
 
-      def image_library_parent_for(parent)
-        current = parent
-        while current
-          return current if image_library_enabled?(current)
-
-          next_parent = current.try(:parent_recording)
-          break if next_parent.blank? || next_parent == current
-
-          current = next_parent
-        end
-
-        root_recording_for(parent)
-      end
-
-      def image_library_enabled?(recording)
-        type = recording.try(:recordable_type)
-        return false if type.blank? || !defined?(RecordingStudio)
-
-        if RecordingStudio.respond_to?(:configuration) && RecordingStudio.configuration.respond_to?(:capability_enabled?)
-          RecordingStudio.configuration.capability_enabled?(:image_library, for_type: type)
+      def blob_for!(library)
+        if upload[:signed_blob_id].present?
+          signed_blob!(upload[:signed_blob_id], capability_options: capability_options_for(library))
+        elsif upload[:io].present?
+          blob = create_imported_blob!(
+            io: upload[:io],
+            filename: upload[:filename] || upload[:name],
+            content_type: upload[:content_type],
+            identify: upload.fetch(:identify, true)
+          )
+          validate_blob!(blob, capability_options: capability_options_for(library))
+          blob
         else
-          RecordingStudio.respond_to?(:capability_enabled?) &&
-            RecordingStudio.capability_enabled?(:image_library, for: type)
+          raise ArgumentError, "Upload a photo to add it"
         end
-      rescue StandardError
-        false
       end
 
-      def upload_to_library!(library)
-        raise ArgumentError, "Upload a photo to add it" unless upload[:signed_blob_id].present? || upload[:io].present?
-
-        upload_one(library)
-      end
-
-      def upload_one(library)
-        service = if upload[:io].present?
-                    ImportAttachment
-                  else
-                    RecordAttachmentUpload
-                  end
-
-        result = service.call(parent_recording: library, actor: resolve_actor(actor), impersonator: impersonator, **upload)
-        raise ArgumentError, result.error if result.failure?
-
-        result.value
+      def same_root?(left, right)
+        left_root = left.try(:root_recording_id).presence || left.try(:id)
+        right_root = right.try(:root_recording_id).presence || right.try(:id)
+        left_root.present? && left_root.to_s == right_root.to_s
       end
     end
   end

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-12
+
+### Changed
+
+- Reusable photo libraries now use RecordingStudio Library. Attachable drops its own `Library` and `Placement` recordables, library/placement services, duplicate screens, and the `recording_studio_attachable_libraries` / `recording_studio_attachable_placements` tables.
+- `ImageLibrary.to` and `LibraryPlacement.to` stay as thin aliases over `Library.to` / `Placeable.to`. Public helper names (`library_for`, `place_library_image`, `upload_to_library_and_place`, `library_placements`, `reorder_library_placements!`, `remove_library_placement`, `Placements.resolve`, `library_path_for`, `config.placement_picker_libraries`, `config.library_label`) delegate to Library.
+- Writes into a library go through Library's `RecordLibraryItem` / `place_new!`. Upload-and-place is transactional. Resolve uses Library's Accessible-checked path (no nil-actor bypass). Trash-in-use warning and delete cascade come from Library; Attachable's image editor shows that usage list.
+- Library listing, picker, and placements editor are Library's adapter-rendered screens. Attachable keeps the upload page and the image editor (`attachments#show`), which Open on a photo still uses.
+
+### Upgrade Notes
+
+- Bump to `0.15.0`. Pin `recording_studio_library` from GitHub tag `v0.1.0` (not RubyGems). Mount Library's engine and run its migrations plus this gem's drop migration.
+- Register `RecordingStudioLibrary::Library` and `RecordingStudioLibrary::Placement` in `config.recordable_types` instead of `RecordingStudioAttachable::Library` / `RecordingStudioAttachable::Placement`.
+- Orderable on a placement parent should `allows: ["RecordingStudioLibrary::Placement"]`.
+- Call `library_for` (or `image_library`) before a library page or picker can find the library.
+- No data migration. Presskits is unreleased; drop the old Attachable library/placement tables. Existing helper names stay so a later Presskits pin bump stays small.
+- Compatibility routes on Attachable still respond and redirect to Library.
+
 ## [0.14.1] - 2026-10-09
 
 ### Fixed

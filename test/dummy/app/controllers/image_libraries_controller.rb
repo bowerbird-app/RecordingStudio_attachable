@@ -8,9 +8,13 @@ class ImageLibrariesController < ApplicationController
     root_recording = RecordingStudio::Recording.unscoped.find_by(recordable: workspace, parent_recording_id: nil)
     return redirect_to root_path, alert: "Seed the workspace to open this library." if root_recording.blank?
 
-    redirect_to recording_studio_attachable.recording_library_path(
+    library = RecordingStudioAttachable.library_for(
       root_recording,
-      key: params[:key].presence || "default",
+      key: params[:key].presence || :default,
+      actor: Current.actor
+    )
+    redirect_to recording_studio_library.library_path(
+      library,
       redirect_mode: "return_to",
       return_to: root_path
     )

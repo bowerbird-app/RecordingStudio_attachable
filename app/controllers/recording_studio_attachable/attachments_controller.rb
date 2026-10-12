@@ -21,6 +21,7 @@ module RecordingStudioAttachable
                           else
                             []
                           end
+      @usage_confirm = library_usage_confirm_message(@placement_usages)
     end
 
     def update
@@ -92,6 +93,14 @@ module RecordingStudioAttachable
 
     def attachment_params
       params.expect(attachment: %i[name description caption credit alt_text signed_blob_id])
+    end
+
+    def library_usage_confirm_message(usages)
+      return if usages.blank?
+      return I18n.t("recording_studio.library.confirm.trash_in_use", places: usages.map(&:label).uniq.to_sentence) if
+        I18n.exists?("recording_studio.library.confirm.trash_in_use")
+
+      I18n.t("recording_studio_attachable.attachments.trash_in_use")
     end
 
     def send_attachment_data(attachment_recording, disposition:)

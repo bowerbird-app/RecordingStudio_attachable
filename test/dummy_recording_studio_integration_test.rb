@@ -11,8 +11,10 @@ class DummyRecordingStudioIntegrationTest < ActiveSupport::TestCase
     @original_declarations = RecordingStudio::RecordableDeclarations.declarations
 
     ensure_application_record!
+    register_library_and_attachable!
     load_dummy_recordables!
-    RecordingStudioAttachable::Engine.register_recording_studio_integration
+    register_library_and_attachable!
+    RecordingStudioAttachable::Engine.enable_library_attachments!
   end
 
   def teardown
@@ -43,11 +45,8 @@ class DummyRecordingStudioIntegrationTest < ActiveSupport::TestCase
     assert_not RecordingStudio.root_allowed?("Gallery")
     assert_equal ["Workspace"], RecordingStudio.declared_allowed_parent_types_for("Gallery")
 
-    assert_not RecordingStudio.root_allowed?("RecordingStudioAttachable::Library")
-    assert_equal [], RecordingStudio.declared_allowed_parent_types_for("RecordingStudioAttachable::Library")
-
-    assert_not RecordingStudio.root_allowed?("RecordingStudioAttachable::Placement")
-    assert_equal [], RecordingStudio.declared_allowed_parent_types_for("RecordingStudioAttachable::Placement")
+    assert_not RecordingStudio.root_allowed?("RecordingStudioLibrary::Library")
+    assert_not RecordingStudio.root_allowed?("RecordingStudioLibrary::Placement")
 
     assert_not RecordingStudio.root_allowed?("RecordingStudioAttachable::Attachment")
     assert_equal [], RecordingStudio.declared_allowed_parent_types_for("RecordingStudioAttachable::Attachment")
@@ -60,25 +59,24 @@ class DummyRecordingStudioIntegrationTest < ActiveSupport::TestCase
     assert_equal "recording_studio_attachable", registration.fetch(:source)
     assert_equal ["RecordingStudioAttachable::Attachment"], registration.fetch(:child_recordables)
     assert_equal ["RecordingStudioAttachable::Attachment"], RecordingStudio.capability_child_recordables_for(:attachable)
-    assert_equal(
-      ["Page", "RecordingStudioAttachable::Library", "Workspace"],
-      RecordingStudio.allowed_parent_types_for("RecordingStudioAttachable::Attachment")
-    )
+    assert_includes RecordingStudio.allowed_parent_types_for("RecordingStudioAttachable::Attachment"), "Page"
+    assert_includes RecordingStudio.allowed_parent_types_for("RecordingStudioAttachable::Attachment"), "Workspace"
   end
 
   def test_dummy_app_image_library_and_placement_capabilities
-    unload_stub_recordable!(:Library)
-    unload_stub_recordable!(:Placement)
     load File.expand_path("dummy/app/models/gallery.rb", __dir__)
-    load File.expand_path("../app/models/recording_studio_attachable/library.rb", __dir__)
-    load File.expand_path("../app/models/recording_studio_attachable/placement.rb", __dir__)
-    RecordingStudioAttachable::Engine.register_recording_studio_integration
+    load File.expand_path("dummy/app/models/workspace.rb", __dir__)
+    load_library_models!
+    register_library_and_attachable!
+    RecordingStudioAttachable::Engine.enable_library_attachments!
 
-    assert_equal ["RecordingStudioAttachable::Library"], RecordingStudio.capability_child_recordables_for(:image_library)
-    assert_equal ["RecordingStudioAttachable::Placement"], RecordingStudio.capability_child_recordables_for(:library_placement)
-    assert_includes RecordingStudio.allowed_parent_types_for("RecordingStudioAttachable::Library"), "Workspace"
-    assert_includes RecordingStudio.allowed_parent_types_for("RecordingStudioAttachable::Placement"), "Gallery"
-    assert_includes RecordingStudio.allowed_parent_types_for("RecordingStudioAttachable::Attachment"), "RecordingStudioAttachable::Library"
+    assert RecordingStudio.capability_enabled?(:library, for: "Workspace")
+    assert RecordingStudio.capability_enabled?(:image_library, for: "Workspace")
+    assert RecordingStudio.capability_enabled?(:placeable, for: "Gallery")
+    assert RecordingStudio.capability_enabled?(:library_placement, for: "Gallery")
+    assert_includes RecordingStudio.allowed_parent_types_for("RecordingStudioLibrary::Library"), "Workspace"
+    assert_includes RecordingStudio.allowed_parent_types_for("RecordingStudioLibrary::Placement"), "Gallery"
+    assert_includes RecordingStudio.allowed_parent_types_for("RecordingStudioAttachable::Attachment"), "RecordingStudioLibrary::Library"
   end
 
   def test_dummy_app_attachable_capability_options_are_available_for_parent_types
@@ -134,19 +132,20 @@ class DummyRecordingStudioIntegrationTest < ActiveSupport::TestCase
     load_user_recordable!
     load File.expand_path("dummy/app/models/chat_message.rb", __dir__)
     load File.expand_path("dummy/app/models/gallery.rb", __dir__)
-    unload_stub_recordable!(:Library)
-    unload_stub_recordable!(:Placement)
-    load File.expand_path("../app/models/recording_studio_attachable/library.rb", __dir__)
-    load File.expand_path("../app/models/recording_studio_attachable/placement.rb", __dir__)
+    load_library_models!
   end
 
-  def unload_stub_recordable!(const_name)
-    return unless RecordingStudioAttachable.const_defined?(const_name, false)
+  def load_library_models!
+    gem_root = Gem.loaded_specs.fetch("recording_studio_library").full_gem_path
+    load File.join(gem_root, "app/models/recording_studio_library/library.rb")
+    load File.join(gem_root, "app/models/recording_studio_library/placement.rb")
+    sample = File.join(gem_root, "app/models/recording_studio_library/sample_item.rb")
+    load sample if File.exist?(sample)
+  end
 
-    klass = RecordingStudioAttachable.const_get(const_name)
-    return if defined?(ApplicationRecord) && klass.is_a?(Class) && klass < ApplicationRecord
-
-    RecordingStudioAttachable.send(:remove_const, const_name)
+  def register_library_and_attachable!
+    RecordingStudioLibrary::Engine.register_library_capabilities
+    RecordingStudioAttachable::Engine.register_recording_studio_integration
   end
 
   def load_user_recordable!
@@ -170,8 +169,9 @@ class DummyRecordingStudioIntegrationTest < ActiveSupport::TestCase
       ChatMessage
       Gallery
       RecordingStudioAttachable::Attachment
-      RecordingStudioAttachable::Library
-      RecordingStudioAttachable::Placement
+      RecordingStudioLibrary::Library
+      RecordingStudioLibrary::Placement
+      RecordingStudioLibrary::SampleItem
     ]
   end
 

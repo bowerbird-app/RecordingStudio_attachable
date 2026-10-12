@@ -13,6 +13,12 @@ Dir[File.expand_path("../config/locales/*.yml", __dir__)].each do |path|
   expanded = File.expand_path(path)
   I18n.load_path << expanded unless I18n.load_path.map { |entry| File.expand_path(entry) }.include?(expanded)
 end
+if (library_spec = Gem.loaded_specs["recording_studio_library"])
+  Dir[File.join(library_spec.full_gem_path, "config/locales/*.yml")].each do |path|
+    expanded = File.expand_path(path)
+    I18n.load_path << expanded unless I18n.load_path.map { |entry| File.expand_path(entry) }.include?(expanded)
+  end
+end
 I18n.backend.load_translations
 
 Mime::Type.register "text/vnd.turbo-stream.html", :turbo_stream unless Mime::Type.lookup_by_extension(:turbo_stream)

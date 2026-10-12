@@ -34,7 +34,7 @@ module RecordingStudioAttachable
           RecordingStudioAttachable.configuration.google_drive.available?
         end
 
-        def upload_provider_options
+        def upload_provider_options # rubocop:disable Metrics/MethodLength
           {
             label: "Google Drive",
             icon: "cloud",

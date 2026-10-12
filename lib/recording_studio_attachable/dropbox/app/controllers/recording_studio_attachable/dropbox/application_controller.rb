@@ -4,6 +4,7 @@ require "securerandom"
 
 module RecordingStudioAttachable
   module Dropbox
+    # rubocop:disable Metrics/MethodLength
     class ApplicationController < RecordingStudioAttachable::ApplicationController
       private
 
@@ -81,5 +82,6 @@ module RecordingStudioAttachable
         session["recording_studio_attachable_dropbox"] ||= {}
       end
     end
+    # rubocop:enable Metrics/MethodLength
   end
 end

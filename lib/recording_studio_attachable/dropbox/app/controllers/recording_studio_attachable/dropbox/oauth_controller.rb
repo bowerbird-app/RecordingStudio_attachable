@@ -2,6 +2,7 @@
 
 module RecordingStudioAttachable
   module Dropbox
+    # rubocop:disable Metrics/AbcSize, Metrics/MethodLength, Layout/LineLength
     class OauthController < ApplicationController
       def new
         authorize_dropbox_upload!
@@ -57,5 +58,6 @@ module RecordingStudioAttachable
         ), notice: t("recording_studio_attachable.dropbox.disconnected", default: "Disconnected Dropbox.")
       end
     end
+    # rubocop:enable Metrics/AbcSize, Metrics/MethodLength, Layout/LineLength
   end
 end

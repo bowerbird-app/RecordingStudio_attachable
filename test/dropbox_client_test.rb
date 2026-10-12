@@ -64,6 +64,27 @@ class DropboxClientTest < Minitest::Test
     assert_equal "Dropbox imports require a file id from the Dropbox API", error.message
   end
 
+  def test_resolve_rejects_folders
+    response = FakeResponse.new(
+      body: { "id" => "id:folder-1", "name" => "Docs", ".tag" => "folder" }.to_json,
+      code: "200",
+      headers: {},
+      success: true
+    )
+
+    Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
+      http = Object.new
+      http.define_singleton_method(:request) { |_request| response }
+      block.call(http)
+    }) do
+      error = assert_raises(RecordingStudioAttachable::Dropbox::Client::Error) do
+        client.resolve("id" => "folder-1")
+      end
+
+      assert_equal "Dropbox folders cannot be imported", error.message
+    end
+  end
+
   def test_resolve_ignores_urls_when_an_id_is_present
     response = FakeResponse.new(
       body: { "id" => "id:file-1", "name" => "Brief.pdf", "size" => 12, ".tag" => "file" }.to_json,

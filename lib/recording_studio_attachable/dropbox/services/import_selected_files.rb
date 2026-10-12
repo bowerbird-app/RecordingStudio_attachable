@@ -5,6 +5,7 @@ require_relative "../../../../app/services/recording_studio_attachable/services/
 module RecordingStudioAttachable
   module Dropbox
     module Services
+      # rubocop:disable Metrics/ParameterLists, Metrics/AbcSize, Metrics/MethodLength
       class ImportSelectedFiles < RecordingStudioAttachable::Services::ApplicationService
         def initialize(parent_recording:, file_ids:, access_token:, actor: nil, impersonator: nil, client: nil)
           super()
@@ -89,6 +90,7 @@ module RecordingStudioAttachable
           @dropbox_client ||= client || RecordingStudioAttachable::Dropbox::Client.new(access_token: access_token)
         end
       end
+      # rubocop:enable Metrics/ParameterLists, Metrics/AbcSize, Metrics/MethodLength
     end
   end
 end

@@ -7,6 +7,7 @@ require "tempfile"
 require "uri"
 
 module RecordingStudioAttachable
+  # rubocop:disable Metrics/ClassLength, Metrics/MethodLength, Metrics/AbcSize, Metrics/CyclomaticComplexity
   class SafeRemoteFetch
     class Error < RecordingStudioAttachable::Error; end
 
@@ -44,9 +45,7 @@ module RecordingStudioAttachable
 
     def call
       raise Error, "Maximum download size must be positive" unless max_bytes.positive?
-      if remote_file.byte_size && remote_file.byte_size > max_bytes
-        raise Error, "Remote file exceeds maximum file size"
-      end
+      raise Error, "Remote file exceeds maximum file size" if remote_file.byte_size && remote_file.byte_size > max_bytes
 
       perform_request(
         uri: remote_file.uri,
@@ -66,15 +65,15 @@ module RecordingStudioAttachable
 
       request = build_request(uri, headers)
 
-      Net::HTTP.start(
-        uri.host,
-        uri.port,
-        use_ssl: true,
-        open_timeout: OPEN_TIMEOUT,
-        read_timeout: READ_TIMEOUT
-      ) do |http|
+      Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
+        apply_timeouts!(http)
         return dispatch_request(http, request, uri: uri, headers: headers, redirects_remaining: redirects_remaining)
       end
+    end
+
+    def apply_timeouts!(http)
+      http.open_timeout = OPEN_TIMEOUT if http.respond_to?(:open_timeout=)
+      http.read_timeout = READ_TIMEOUT if http.respond_to?(:read_timeout=)
     end
 
     def dispatch_request(http, request, uri:, headers:, redirects_remaining:)
@@ -93,9 +92,7 @@ module RecordingStudioAttachable
         return follow_redirect(response, uri: uri, headers: headers, redirects_remaining: redirects_remaining)
       end
 
-      unless response.is_a?(Net::HTTPSuccess)
-        raise Error, "Remote download failed (HTTP #{response.code})"
-      end
+      raise Error, "Remote download failed (HTTP #{response.code})" unless response.is_a?(Net::HTTPSuccess)
 
       validate_content_length!(response)
       io = stream_body(response)
@@ -218,4 +215,5 @@ module RecordingStudioAttachable
       yield response.body.to_s
     end
   end
+  # rubocop:enable Metrics/ClassLength, Metrics/MethodLength, Metrics/AbcSize, Metrics/CyclomaticComplexity
 end

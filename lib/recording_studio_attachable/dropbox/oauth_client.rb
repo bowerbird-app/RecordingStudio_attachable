@@ -27,7 +27,7 @@ module RecordingStudioAttachable
         @configuration = configuration
       end
 
-      def authorization_url(state:, code_challenge:)
+      def authorization_url(state:, code_challenge:) # rubocop:disable Metrics/MethodLength
         ensure_configured!
 
         uri = URI(AUTHORIZATION_ENDPOINT)

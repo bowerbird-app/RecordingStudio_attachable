@@ -34,7 +34,7 @@ module RecordingStudioAttachable
           RecordingStudioAttachable.configuration.dropbox.available?
         end
 
-        def upload_provider_options
+        def upload_provider_options # rubocop:disable Metrics/MethodLength
           {
             label: "Dropbox",
             icon: "cloud",

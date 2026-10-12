@@ -8,43 +8,42 @@ require_relative "../../lib/recording_studio_attachable/google_drive/services/im
 class GoogleDriveImportSelectedFilesTest < Minitest::Test
   FakeRecording = Struct.new(:id, :recordable_type, keyword_init: true)
 
-  def test_call_downloads_selected_files_and_delegates_to_import_attachments
+  def test_call_resolves_selected_files_and_delegates_to_import_attachments
+    captured_ids = []
+    files = method(:remote_file_for)
     client = Object.new
-    client.define_singleton_method(:fetch_file) do |file_id|
-      {
-        "id" => file_id,
-        "name" => "File #{file_id}",
-        "mimeType" => "application/pdf",
-        "webViewLink" => "https://drive.test/#{file_id}"
-      }
+    client.define_singleton_method(:resolve) do |selection|
+      captured_ids << selection.fetch("id")
+      files.call(selection.fetch("id"))
     end
-    client.define_singleton_method(:download_file) do |file|
-      {
-        io: StringIO.new("payload-for-#{file.fetch('id')}"),
-        filename: "#{file.fetch('name')}.pdf",
-        content_type: "application/pdf"
-      }
-    end
+    fetched = RecordingStudioAttachable::SafeRemoteFetch::Result.new(
+      io: StringIO.new("payload"),
+      content_type: "application/pdf",
+      byte_size: 7
+    )
     captured = nil
     expected_result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [:imported])
 
-    RecordingStudioAttachable::Services::ImportAttachments.stub(:call, lambda { |**kwargs|
-      captured = kwargs
-      expected_result
-    }) do
-      result = RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.call(
-        parent_recording: FakeRecording.new(id: "rec-1", recordable_type: "Workspace"),
-        file_ids: %w[file-1 file-2],
-        access_token: "access-token",
-        actor: :actor,
-        impersonator: :impersonator,
-        client: client
-      )
+    RecordingStudioAttachable::SafeRemoteFetch.stub(:call, fetched) do
+      RecordingStudioAttachable::Services::ImportAttachments.stub(:call, lambda { |**kwargs|
+        captured = kwargs
+        expected_result
+      }) do
+        result = RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.call(
+          parent_recording: FakeRecording.new(id: "rec-1", recordable_type: "Workspace"),
+          file_ids: %w[file-1 file-2],
+          access_token: "access-token",
+          actor: :actor,
+          impersonator: :impersonator,
+          client: client
+        )
 
-      assert result.success?
-      assert_equal [:imported], result.value
+        assert result.success?
+        assert_equal [:imported], result.value
+      end
     end
 
+    assert_equal %w[file-1 file-2], captured_ids
     assert_equal :actor, captured[:actor]
     assert_equal :impersonator, captured[:impersonator]
     assert_equal "google_drive", captured[:source]
@@ -70,71 +69,82 @@ class GoogleDriveImportSelectedFilesTest < Minitest::Test
 
   def test_call_builds_a_default_google_drive_client_when_one_is_not_injected
     client = Object.new
-    client.define_singleton_method(:fetch_file) do |_file_id|
-      { "id" => "file-1", "name" => "First", "mimeType" => "application/pdf" }
-    end
-    client.define_singleton_method(:download_file) do |_file|
-      { io: StringIO.new("payload"), filename: "first.pdf", content_type: "application/pdf" }
-    end
+    file = remote_file_for("file-1")
+    client.define_singleton_method(:resolve) { |_selection| file }
     built_with_token = nil
+    fetched = RecordingStudioAttachable::SafeRemoteFetch::Result.new(
+      io: StringIO.new("payload"),
+      content_type: "application/pdf",
+      byte_size: 7
+    )
     expected_result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [:imported])
 
     RecordingStudioAttachable::GoogleDrive::Client.stub(:new, lambda { |access_token:|
       built_with_token = access_token
       client
     }) do
-      RecordingStudioAttachable::Services::ImportAttachments.stub(:call, expected_result) do
-        result = RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.call(
-          parent_recording: FakeRecording.new(id: "rec-1", recordable_type: "Workspace"),
-          file_ids: ["file-1"],
-          access_token: "access-token"
-        )
+      RecordingStudioAttachable::SafeRemoteFetch.stub(:call, fetched) do
+        RecordingStudioAttachable::Services::ImportAttachments.stub(:call, expected_result) do
+          result = RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.call(
+            parent_recording: FakeRecording.new(id: "rec-1", recordable_type: "Workspace"),
+            file_ids: ["file-1"],
+            access_token: "access-token"
+          )
 
-        assert result.success?
+          assert result.success?
+        end
       end
     end
 
     assert_equal "access-token", built_with_token
   end
 
-  def test_call_passes_picker_resource_keys_through_to_the_google_drive_client
+  def test_call_passes_picker_resource_keys_through_to_resolve
     calls = []
+    files = method(:remote_file_for)
     client = Object.new
-    client.define_singleton_method(:fetch_file) do |file_id, resource_key: nil|
-      calls << { method: :fetch_file, file_id: file_id, resource_key: resource_key }
-      {
-        "id" => file_id,
-        "name" => "File #{file_id}",
-        "mimeType" => "image/png",
-        "resourceKey" => resource_key,
-        "webViewLink" => "https://drive.test/#{file_id}"
-      }
+    client.define_singleton_method(:resolve) do |selection|
+      calls << selection
+      files.call(selection.fetch("id"), resource_key: selection["resource_key"])
     end
-    client.define_singleton_method(:download_file) do |file|
-      calls << { method: :download_file, resource_key: file["resourceKey"] }
-      { io: StringIO.new("payload"), filename: "image.png", content_type: "image/png" }
-    end
+    fetched = RecordingStudioAttachable::SafeRemoteFetch::Result.new(
+      io: StringIO.new("payload"),
+      content_type: "image/png",
+      byte_size: 7
+    )
 
-    RecordingStudioAttachable::Services::ImportAttachments.stub(
-      :call,
-      RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [:imported])
-    ) do
-      result = RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.call(
-        parent_recording: FakeRecording.new(id: "rec-1", recordable_type: "Workspace"),
-        file_ids: [{ id: "file-1", resource_key: "resource-key-1" }],
-        access_token: "access-token",
-        client: client
-      )
+    RecordingStudioAttachable::SafeRemoteFetch.stub(:call, fetched) do
+      RecordingStudioAttachable::Services::ImportAttachments.stub(
+        :call,
+        RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [:imported])
+      ) do
+        result = RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.call(
+          parent_recording: FakeRecording.new(id: "rec-1", recordable_type: "Workspace"),
+          file_ids: [{ id: "file-1", resource_key: "resource-key-1" }],
+          access_token: "access-token",
+          client: client
+        )
 
-      assert result.success?
+        assert result.success?
+      end
     end
 
-    assert_equal(
-      [
-        { method: :fetch_file, file_id: "file-1", resource_key: "resource-key-1" },
-        { method: :download_file, resource_key: "resource-key-1" }
-      ],
-      calls
+    assert_equal "file-1", calls.first.fetch("id")
+    assert_equal "resource-key-1", calls.first.fetch("resource_key")
+  end
+
+  private
+
+  def remote_file_for(file_id, resource_key: nil)
+    RecordingStudioAttachable::RemoteFile.new(
+      uri: "https://www.googleapis.com/drive/v3/files/#{file_id}?alt=media",
+      allowed_hosts: ["www.googleapis.com"],
+      filename: "File #{file_id}.pdf",
+      content_type: "application/pdf",
+      external_id: file_id,
+      external_url: "https://drive.test/#{file_id}",
+      name: "File #{file_id}",
+      headers: resource_key ? { "X-Goog-Drive-Resource-Keys" => resource_key } : {}
     )
   end
 end

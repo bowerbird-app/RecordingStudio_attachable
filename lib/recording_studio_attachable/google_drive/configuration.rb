@@ -2,7 +2,6 @@
 
 module RecordingStudioAttachable
   module GoogleDrive
-    # rubocop:disable Metrics/MethodLength
     class Configuration
       PLACEHOLDER_PREFIXES = {
         client_id: ["dummy-google-drive-client-id"],
@@ -25,16 +24,8 @@ module RecordingStudioAttachable
 
       def initialize
         @enabled = false
-        @client_id = nil
-        @client_secret = nil
-        @api_key = nil
-        @app_id = nil
-        @redirect_uri = nil
-        @scopes = ["https://www.googleapis.com/auth/drive.readonly"]
-        @access_type = "offline"
-        @prompt = "consent"
-        @include_granted_scopes = true
-        @page_size = 25
+        reset_credentials
+        reset_oauth_defaults
       end
 
       def merge!(attributes)
@@ -67,12 +58,39 @@ module RecordingStudioAttachable
       end
 
       def to_h
+        credential_settings.merge(oauth_settings)
+      end
+
+      private
+
+      def reset_credentials
+        @client_id = nil
+        @client_secret = nil
+        @api_key = nil
+        @app_id = nil
+        @redirect_uri = nil
+      end
+
+      def reset_oauth_defaults
+        @scopes = ["https://www.googleapis.com/auth/drive.readonly"]
+        @access_type = "offline"
+        @prompt = "consent"
+        @include_granted_scopes = true
+        @page_size = 25
+      end
+
+      def credential_settings
         {
           enabled: enabled,
           client_id: client_id,
           client_secret: client_secret,
           api_key: api_key,
-          app_id: app_id,
+          app_id: app_id
+        }
+      end
+
+      def oauth_settings
+        {
           redirect_uri: redirect_uri,
           scopes: scopes,
           access_type: access_type,
@@ -82,8 +100,6 @@ module RecordingStudioAttachable
         }
       end
 
-      private
-
       def valid_google_drive_value?(value, field)
         normalized = value.to_s.strip
         return false if normalized.blank?
@@ -91,7 +107,6 @@ module RecordingStudioAttachable
         Array(PLACEHOLDER_PREFIXES[field]).exclude?(normalized)
       end
     end
-    # rubocop:enable Metrics/MethodLength
   end
 end
 

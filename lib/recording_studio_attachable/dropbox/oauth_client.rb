@@ -2,8 +2,6 @@
 
 require "base64"
 require "digest"
-require "json"
-require "net/http"
 require "securerandom"
 require "uri"
 
@@ -27,20 +25,11 @@ module RecordingStudioAttachable
         @configuration = configuration
       end
 
-      def authorization_url(state:, code_challenge:) # rubocop:disable Metrics/MethodLength
+      def authorization_url(state:, code_challenge:)
         ensure_configured!
 
         uri = URI(AUTHORIZATION_ENDPOINT)
-        uri.query = URI.encode_www_form(
-          client_id: configuration.client_id,
-          code_challenge: code_challenge,
-          code_challenge_method: "S256",
-          redirect_uri: configuration.redirect_uri,
-          response_type: "code",
-          scope: Array(configuration.scopes).join(" "),
-          state: state,
-          token_access_type: "offline"
-        )
+        uri.query = URI.encode_www_form(authorization_params(state:, code_challenge:))
         uri.to_s
       end
 
@@ -68,6 +57,24 @@ module RecordingStudioAttachable
 
       attr_reader :configuration
 
+      def authorization_params(state:, code_challenge:)
+        pkce_params(code_challenge).merge(client_params(state))
+      end
+
+      def pkce_params(code_challenge)
+        { code_challenge: code_challenge, code_challenge_method: "S256", token_access_type: "offline" }
+      end
+
+      def client_params(state)
+        {
+          client_id: configuration.client_id,
+          redirect_uri: configuration.redirect_uri,
+          response_type: "code",
+          scope: Array(configuration.scopes).join(" "),
+          state: state
+        }
+      end
+
       def ensure_configured!
         return if configuration.configured?
 
@@ -75,42 +82,12 @@ module RecordingStudioAttachable
               "Dropbox addon is missing client credentials or redirect URI"
       end
 
-      def post_form(attributes) # rubocop:disable Metrics/MethodLength
+      def post_form(attributes)
         ensure_configured!
+        response, body = Adapter::OauthHttp.post_form(TOKEN_ENDPOINT, attributes)
+        raise Error, Adapter::OauthHttp.error_message(body, "Dropbox authentication failed") unless response.is_a?(Net::HTTPSuccess)
 
-        uri = URI(TOKEN_ENDPOINT)
-        request = Net::HTTP::Post.new(uri)
-        request.set_form_data(attributes)
-
-        response = Net::HTTP.start(
-          uri.host,
-          uri.port,
-          **RecordingStudioAttachable::SafeRemoteFetch.tls_start_options
-        ) do |http|
-          http.request(request)
-        end
-
-        body = parse_json(response.body)
-        raise Error, response_error_message(body, "Dropbox authentication failed") unless response.is_a?(Net::HTTPSuccess)
-
-        normalize_token_response(body)
-      end
-
-      def normalize_token_response(body)
-        expires_in = body["expires_in"].to_i
-        return body unless expires_in.positive?
-
-        body.merge("expires_at" => Time.current.to_i + expires_in)
-      end
-
-      def parse_json(body)
-        JSON.parse(body.to_s)
-      rescue JSON::ParserError
-        {}
-      end
-
-      def response_error_message(body, default_message)
-        body["error_description"].presence || body["error"].presence || default_message
+        Adapter::OauthHttp.normalize_tokens(body)
       end
     end
   end

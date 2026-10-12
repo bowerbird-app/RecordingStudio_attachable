@@ -473,7 +473,11 @@ end
 
 People sign in to their own Dropbox via OAuth 2.0 with PKCE. The Chooser returns file ids only. The server loads metadata and content through the Dropbox API with the user token. Client-supplied download URLs are ignored.
 
+In the Dropbox app console, add this host to **Chooser / Saver domains** (for example `your-app.test`) so the Chooser can open.
+
 Hosts with a Content Security Policy must allow the Chooser script at `https://www.dropbox.com/static/api/2/dropins.js` (`script-src`). Inline launcher imports use a CSP nonce via `javascript_tag`.
+
+OAuth tokens stay in the Rails session. The default cookie store is about 4 KB; Drive plus Dropbox tokens plus pending OAuth state can overflow it. Use a server-side session store in production. If a callback still overflows, Attachable clears that provider's tokens and asks the person to disconnect the other provider and connect again.
 
 #### Adding another provider
 

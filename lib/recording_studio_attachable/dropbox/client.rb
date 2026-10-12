@@ -1,12 +1,10 @@
 # frozen_string_literal: true
 
-require "json"
 require "net/http"
 require "uri"
 
 module RecordingStudioAttachable
   module Dropbox
-    # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
     class Client
       class Error < RecordingStudioAttachable::Error; end
       class UnauthorizedError < Error; end
@@ -24,21 +22,7 @@ module RecordingStudioAttachable
         metadata = get_metadata(file_id)
         raise Error, "Dropbox folders cannot be imported" if metadata[".tag"] == "folder"
 
-        RecordingStudioAttachable::RemoteFile.new(
-          uri: URI("#{CONTENT_ROOT}/2/files/download"),
-          http_method: :post,
-          headers: {
-            "Authorization" => "Bearer #{access_token}",
-            "Dropbox-API-Arg" => { path: file_id }.to_json
-          },
-          filename: metadata.fetch("name"),
-          content_type: dropbox_content_type(metadata),
-          byte_size: metadata["size"],
-          external_id: metadata["id"] || file_id,
-          allowed_hosts: ALLOWED_HOSTS,
-          name: selection_value(selection, :name).presence || metadata.fetch("name"),
-          description: selection_value(selection, :description)
-        )
+        download_remote_file(file_id, metadata, selection)
       end
 
       private
@@ -49,14 +33,46 @@ module RecordingStudioAttachable
         post_json("/2/files/get_metadata", path: file_id)
       end
 
-      def dropbox_content_type(_metadata)
-        "application/octet-stream"
+      def download_remote_file(file_id, metadata, selection)
+        RecordingStudioAttachable::RemoteFile.new(**download_attributes(file_id, metadata, selection))
+      end
+
+      def download_attributes(file_id, metadata, selection)
+        download_location(file_id, metadata).merge(
+          name: Adapter::Selection.value(selection, :name).presence || metadata.fetch("name"),
+          description: Adapter::Selection.value(selection, :description)
+        )
+      end
+
+      def download_location(file_id, metadata)
+        {
+          uri: URI("#{CONTENT_ROOT}/2/files/download"),
+          http_method: :post,
+          headers: download_headers(file_id),
+          allowed_hosts: ALLOWED_HOSTS
+        }.merge(file_identity(file_id, metadata))
+      end
+
+      def file_identity(file_id, metadata)
+        {
+          filename: metadata.fetch("name"),
+          content_type: "application/octet-stream",
+          byte_size: metadata["size"],
+          external_id: metadata["id"] || file_id
+        }
+      end
+
+      def download_headers(file_id)
+        {
+          "Authorization" => "Bearer #{access_token}",
+          "Dropbox-API-Arg" => { path: file_id }.to_json
+        }
       end
 
       def normalized_file_id(selection)
         raise Error, "Dropbox imports require a file id from the Dropbox API" if client_supplied_url?(selection)
 
-        raw = selection_value(selection, :id).to_s.strip
+        raw = Adapter::Selection.value(selection, :id).to_s.strip
         raise Error, "Select a Dropbox file to import" if raw.blank?
         raise Error, "Dropbox imports require a file id from the Dropbox API" if raw.match?(/\Ahttps?:/i)
 
@@ -64,40 +80,27 @@ module RecordingStudioAttachable
       end
 
       def client_supplied_url?(selection)
-        %w[url link download_url downloadUrl href].any? { |key| selection_value(selection, key).present? } &&
-          selection_value(selection, :id).blank?
-      end
-
-      def selection_value(selection, *keys)
-        hash = selection.respond_to?(:to_h) ? selection.to_h : {}
-        keys.lazy.map { |key| hash[key.to_s] || hash[key] }.find(&:present?)
+        %w[url link download_url downloadUrl href].any? { |key| Adapter::Selection.value(selection, key).present? } &&
+          Adapter::Selection.value(selection, :id).blank?
       end
 
       def post_json(path, payload)
         uri = URI("#{API_ROOT}#{path}")
-        request = Net::HTTP::Post.new(uri)
-        request["Authorization"] = "Bearer #{access_token}"
-        request["Content-Type"] = "application/json"
-        request.body = payload.to_json
-
-        response = Net::HTTP.start(
-          uri.host,
-          uri.port,
-          **RecordingStudioAttachable::SafeRemoteFetch.tls_start_options
-        ) do |http|
-          http.request(request)
-        end
-
-        body = parse_json(response.body)
+        response = start_json_post(uri, payload)
+        body = RecordingStudioAttachable::JsonBody.parse(response.body)
         raise request_error(response, body) unless response.is_a?(Net::HTTPSuccess)
 
         body
       end
 
-      def parse_json(body)
-        JSON.parse(body.to_s)
-      rescue JSON::ParserError
-        {}
+      def start_json_post(uri, payload)
+        request = Net::HTTP::Post.new(uri)
+        request["Authorization"] = "Bearer #{access_token}"
+        request["Content-Type"] = "application/json"
+        request.body = payload.to_json
+        Net::HTTP.start(uri.host, uri.port, **RecordingStudioAttachable::SafeRemoteFetch.tls_start_options) do |http|
+          http.request(request)
+        end
       end
 
       def request_error(response, body)
@@ -115,6 +118,5 @@ module RecordingStudioAttachable
         "Dropbox request failed (HTTP #{status}): #{details}"
       end
     end
-    # rubocop:enable Metrics/MethodLength, Metrics/AbcSize
   end
 end

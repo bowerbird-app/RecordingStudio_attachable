@@ -29,10 +29,13 @@ module RecordingStudioAttachable
       type = mime_type
       return if type.blank?
 
-      english = TYPE_LABELS[type]
-      return Copy.type_label(type, english: english) if english
+      TYPE_LABELS[type] || subtype_label(type)
+    end
 
-      subtype_label(type)
+    # MIME type used at render sites to translate {#type_label} without changing
+    # this object's English return value.
+    def content_type_key
+      mime_type
     end
 
     def dimensions_label

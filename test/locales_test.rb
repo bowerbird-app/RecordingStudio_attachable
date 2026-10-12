@@ -116,15 +116,17 @@ class LocalesTest < Minitest::Test
   def setup
     @previous_load_path = I18n.load_path.dup
     @previous_backend = I18n.backend
+    @previous_locale = I18n.locale
     I18n.backend = I18n::Backend::Simple.new
-    I18n.load_path = Dir[File.join(engine_locales_dir, "*.yml")]
-    I18n.backend.load_translations
+    I18n.backend.load_translations(*Dir[File.join(engine_locales_dir, "*.yml")])
     I18n.locale = :en
   end
 
   def teardown
-    I18n.load_path = @previous_load_path
     I18n.backend = @previous_backend
+    I18n.locale = @previous_locale
+    assert_equal @previous_load_path, I18n.load_path,
+                 "locales tests must not mutate I18n.load_path"
   end
 
   def test_engine_ships_only_english_locale_files
@@ -265,10 +267,10 @@ class LocalesTest < Minitest::Test
     previous_backend = I18n.backend
     previous_load_path = I18n.load_path.dup
     I18n.backend = I18n::Backend::Simple.new
-    I18n.load_path = []
     yield
   ensure
-    I18n.load_path = previous_load_path
     I18n.backend = previous_backend
+    assert_equal previous_load_path, I18n.load_path,
+                 "with_isolated_backend must not mutate I18n.load_path"
   end
 end

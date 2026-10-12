@@ -57,15 +57,17 @@ class AttachmentValidationI18nTest < Minitest::Test
   def setup
     @previous_backend = I18n.backend
     @previous_load_path = I18n.load_path.dup
+    @previous_locale = I18n.locale
     I18n.backend = I18n::Backend::Simple.new
-    I18n.load_path = [File.expand_path("../config/locales/en.yml", __dir__)]
-    I18n.backend.load_translations
+    I18n.backend.load_translations(File.expand_path("../config/locales/en.yml", __dir__))
     I18n.locale = :en
   end
 
   def teardown
-    I18n.load_path = @previous_load_path
     I18n.backend = @previous_backend
+    I18n.locale = @previous_locale
+    assert_equal @previous_load_path, I18n.load_path,
+                 "validation i18n tests must not mutate I18n.load_path"
   end
 
   def test_english_error_details_match_main_string_types
@@ -129,12 +131,9 @@ class AttachmentValidationI18nTest < Minitest::Test
 
   def test_host_override_wins_for_validation_string_types
     host = File.expand_path("dummy/test/locales/attachable_host_override.en.yml", __dir__)
-    I18n.load_path = @previous_load_path + [
-      File.expand_path("../config/locales/en.yml", __dir__),
-      host
-    ]
+    gem_locale = File.expand_path("../config/locales/en.yml", __dir__)
     I18n.backend = I18n::Backend::Simple.new
-    I18n.backend.load_translations
+    I18n.backend.load_translations(gem_locale, host)
 
     attachment = FakeAttachment.new(
       content_type: "application/zip",
@@ -148,8 +147,8 @@ class AttachmentValidationI18nTest < Minitest::Test
     refute attachment.valid?
     assert_equal [{ error: "HOST is not allowed" }], attachment.errors.details[:content_type]
     assert_equal [{ error: "HOST is not enabled" }], attachment.errors.details[:attachment_kind]
+    assert_equal @previous_load_path, I18n.load_path
   ensure
-    I18n.load_path = @previous_load_path
     I18n.backend = @previous_backend
   end
 end

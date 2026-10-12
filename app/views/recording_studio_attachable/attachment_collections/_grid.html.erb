@@ -71,7 +71,7 @@
               <p class="text-sm text-(--surface-muted-content-color)" data-save-status role="status" hidden></p>
             </div>
             <%= render FlatPack::Button::Component.new(
-                  text: collection.remove_label,
+                  text: RecordingStudioAttachable::Copy.remove_label(placement: collection.placement?),
                   icon: "trash",
                   icon_only: true,
                   style: :danger,

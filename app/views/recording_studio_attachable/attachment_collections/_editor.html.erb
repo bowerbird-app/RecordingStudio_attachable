@@ -1,5 +1,14 @@
 <% if collection.rows.empty? %>
-  <p class="text-sm text-(--surface-muted-content-color)"><%= collection.empty_message %></p>
+  <p class="text-sm text-(--surface-muted-content-color)"><%=
+    if collection.empty_message_overridden?
+      collection.empty_message
+    else
+      RecordingStudioAttachable::Copy.empty_message_for(
+        collection.association,
+        english: collection.empty_message
+      )
+    end
+  %></p>
 <% else %>
   <% carousel = collection.displays.include?(:carousel) %>
   <% list = collection.displays.include?(:list) %>
@@ -136,7 +145,7 @@
                         <p class="text-sm text-(--surface-muted-content-color)" data-save-status role="status" hidden></p>
                       </div>
                       <%= render FlatPack::Button::Component.new(
-                            text: collection.remove_label,
+                            text: RecordingStudioAttachable::Copy.remove_label(placement: collection.placement?),
                             icon: "trash",
                             icon_only: true,
                             style: :danger,
@@ -221,7 +230,7 @@
                             show_order: collection.sortable? %>
                       <div class="inline-flex">
                         <%= render FlatPack::Button::Component.new(
-                              text: collection.remove_label,
+                              text: RecordingStudioAttachable::Copy.remove_label(placement: collection.placement?),
                               icon: "trash",
                               style: :danger,
                               size: :md,

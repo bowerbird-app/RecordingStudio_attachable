@@ -12,14 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - English Rails I18n keys for non-view copy under `recording_studio.attachable` (controller flashes, validation messages, collection empty/remove labels, field labels at render, file-fact type labels, Google Drive user-facing errors, and JS string blobs).
-- Host English override coverage: test-only fixture `test/dummy/test/locales/attachable_host_override.en.yml` plus an integration test that appends that file last to `I18n.load_path`, asserts a nested key wins on a real page, then restores load path and backend.
-- Always-loaded boot-order guard `test/dummy/config/locales/recording_studio_attachable_host.en.yml` for a rarely shown flash key.
+- Host English override coverage: test-only fixture `test/dummy/test/locales/attachable_host_override.en.yml` loaded via `I18n.backend.load_translations` (no `I18n.load_path` mutation) plus a real-page assert.
+- Always-loaded boot-order guard `test/dummy/config/locales/recording_studio_attachable_host.en.yml` for a rarely shown flash key, with a render assert on the not-found redirect.
 - Locale regression: every `lib/**/*.rb` file must not mention `i18n.load_path` / `I18n.load_path`.
 - Render-level asserts for library empty title and upload page English.
 
 ### Changed
 
-- Controller flashes, collection `empty_message` / `remove_label`, field labels at render, `AttachmentFileFacts#type_label`, placement `title`, and Google Drive user-facing errors resolve through `Copy.t` / `Copy.legacy_t` with English `default:`.
+- Controller flashes, validation messages, Google Drive user-facing errors, and JS string blobs resolve through `Copy.t` / `Copy.legacy_t` with English `default:`.
+- Public model/helper return values stay main's literal English (`Placement#title`, `AttachmentFileFacts#type_label`, collection `empty_message` / `remove_label`, STALE_FORM / GONE raises). Views translate at the render call site with those English values as `default:`.
 - Validation `errors.add` for former English-string types passes the translated string as the String type (ActiveModel 8.1 ignores `message:` for Strings). In non-English locales, `errors.details` carries the translated string for those former String types.
 - JS upload, picker, and collection-display controllers read copy from a data-attribute JSON blob with English fallbacks in JS (picker keeps the pre-existing `Select one or more` wording).
 
@@ -27,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Bump to `0.15.0`. No migration.
 - English hosts need no change. Copy new `recording_studio.attachable.flashes.*`, `errors.*`, `collection.*`, `file_facts.*`, `google_drive.*`, `js.*`, and related keys into host locale files when translating.
-- Hosts override by defining the same nested keys in their own `config/locales`. Public constants (`FIELDS`, `EMPTY_MESSAGES`, `TYPE_LABELS`, `AttachmentCollectionDisplay::LABELS`, STALE_FORM / GONE) remain; displayed copy follows the locale with those constants as `default:`.
+- Hosts override by defining the same nested keys in their own `config/locales`. Public constants and public English-returning methods stay byte-identical to main; translate only at render.
 - `AttachmentCollectionDisplay::LABELS` stays English at the constant (public API); views already translate display pills via nested keys.
 - Metrics DSL titles stay English (captured at registration).
 

@@ -113,9 +113,17 @@ module RecordingStudioAttachable
       parent_return_to = AttachmentFileButton.return_to_from(attachment_redirect_params)
       notice =
         if parent_return_to.present?
-          I18n.t("recording_studio_attachable.attachment_file_buttons.updated", default: "File updated")
+          Copy.legacy_t(
+            "attachment_file_buttons.updated",
+            "flashes.file_updated",
+            default: "File updated"
+          )
         else
-          "Imported #{result.value.size} attachment(s)."
+          Copy.t(
+            "flashes.imported_count",
+            count: result.value.size,
+            default: "Imported #{result.value.size} attachment(s)."
+          )
         end
 
       respond_to do |format|

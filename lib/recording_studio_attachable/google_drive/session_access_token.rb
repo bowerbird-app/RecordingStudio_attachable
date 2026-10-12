@@ -26,11 +26,17 @@ module RecordingStudioAttachable
       attr_reader :session, :configuration
 
       def current_access_token
-        tokens["access_token"].presence || raise(RecordingStudioAttachable::Error, "Connect Google Drive before importing files")
+        tokens["access_token"].presence || raise(
+          RecordingStudioAttachable::Error,
+          Copy.t("google_drive.connect_before_import", default: "Connect Google Drive before importing files")
+        )
       end
 
       def current_refresh_token
-        tokens["refresh_token"].presence || raise(RecordingStudioAttachable::Error, "Reconnect Google Drive to continue")
+        tokens["refresh_token"].presence || raise(
+          RecordingStudioAttachable::Error,
+          Copy.t("google_drive.reconnect_to_continue", default: "Reconnect Google Drive to continue")
+        )
       end
 
       def refreshed_access_token(refresh_token)

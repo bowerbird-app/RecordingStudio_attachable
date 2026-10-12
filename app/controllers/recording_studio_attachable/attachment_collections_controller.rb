@@ -27,7 +27,7 @@ module RecordingStudioAttachable
     end
 
     def collection_flash(result)
-      return { status: :see_other, notice: "Saved." } if result.success?
+      return { status: :see_other, notice: Copy.t("flashes.saved", default: "Saved.") } if result.success?
 
       { status: :see_other, alert: result.error }
     end
@@ -42,7 +42,10 @@ module RecordingStudioAttachable
         return
       end
 
-      render json: { saved: false, error: result.error.presence || "Could not save." }, status: :unprocessable_entity
+      render json: {
+        saved: false,
+        error: result.error.presence || Copy.t("flashes.could_not_save", default: "Could not save.")
+      }, status: :unprocessable_entity
     end
   end
 end

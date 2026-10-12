@@ -10,6 +10,7 @@ const PROVIDER_EVENT_CHANNEL_NAME = `${PROVIDER_EVENT_STORAGE_KEY}:channel`
 export default class extends Controller {
   static targets = ["dropzone", "input", "queue", "progressTemplate"]
   static values = {
+    i18n: Object,
     directUploadUrl: String,
     finalizeUrl: String,
     maxFileSize: Number,
@@ -20,6 +21,21 @@ export default class extends Controller {
     imageProcessingQuality: Number,
     removeButtonTemplate: String,
     allowedContentTypes: String
+  }
+
+
+  i18nText(key, fallback) {
+    const bag = this.hasI18nValue ? this.i18nValue : null
+    const value = bag && typeof bag === "object" ? bag[key] : null
+    return (typeof value === "string" && value.length) ? value : fallback
+  }
+
+  i18nFormat(key, fallback, replacements = {}) {
+    let text = this.i18nText(key, fallback)
+    Object.entries(replacements).forEach(([name, value]) => {
+      text = text.replaceAll(`%{${name}}`, String(value))
+    })
+    return text
   }
 
   connect() {
@@ -93,7 +109,7 @@ export default class extends Controller {
     const launcherName = button.dataset.providerLauncher
     const launcher = getUploadProviderLauncher(launcherName)
     if (!launcher) {
-      this.setProviderStatus("This upload provider is not available on this page.", "error")
+      this.setProviderStatus(this.i18nText("js.provider_unavailable", "This upload provider is not available on this page."), "error")
       return
     }
 
@@ -108,7 +124,7 @@ export default class extends Controller {
         importUrl: button.dataset.providerImportUrl
       })
     } catch (error) {
-      this.setProviderStatus(error?.message || "Could not open the provider picker.", "error")
+      this.setProviderStatus(error?.message || this.i18nText("js.could_not_open_picker", "Could not open the provider picker."), "error")
     }
   }
 
@@ -164,7 +180,7 @@ export default class extends Controller {
         readyEntries.forEach((entry) => {
           this.clearRemoteStageTimer(entry.id)
           entry.status = "failed"
-          entry.error = errorsByBlobId.get(entry.signedBlobId) || error?.error || error?.message || "Finalization failed"
+          entry.error = errorsByBlobId.get(entry.signedBlobId) || error?.error || error?.message || this.i18nText("js.finalization_failed", "Finalization failed")
           this.renderEntry(entry)
         })
       })
@@ -262,7 +278,7 @@ export default class extends Controller {
       const entry = {
         id: crypto.randomUUID(),
         file: null,
-        name: selection.name || selection.id || "Remote file",
+        name: selection.name || selection.id || this.i18nText("js.remote_file", "Remote file"),
         description: selection.description || "",
         previewUrl: null,
         progress: 0,
@@ -320,7 +336,7 @@ export default class extends Controller {
       })
     } catch (error) {
       entry.status = "failed"
-      entry.error = error?.message || "Could not prepare file for upload"
+      entry.error = error?.message || this.i18nText("js.could_not_prepare_file", "Could not prepare file for upload")
       this.renderEntry(entry)
     }
   }
@@ -339,9 +355,9 @@ export default class extends Controller {
   }
 
   validationError(file) {
-    if (this.maxFileSizeValue && file.size > this.maxFileSizeValue) return "File exceeds the maximum allowed size"
+    if (this.maxFileSizeValue && file.size > this.maxFileSizeValue) return this.i18nText("js.file_exceeds_max_size", "File exceeds the maximum allowed size")
     if (!this.contentTypeAllowed(file)) {
-      return `${file.type || "Unknown type"} is not allowed. Allowed types: ${this.allowedContentTypePatterns().join(", ")}`
+      return this.i18nFormat("js.type_not_allowed", "%{type} is not allowed. Allowed types: %{types}", { type: file.type || this.i18nText("js.unknown_type", "Unknown type"), types: this.allowedContentTypePatterns().join(", ") })
     }
 
     return null
@@ -351,7 +367,7 @@ export default class extends Controller {
     if (this.deferSizeValidationUntilAfterProcessing(file)) {
       return this.contentTypeAllowed(file)
         ? null
-        : `${file.type || "Unknown type"} is not allowed. Allowed types: ${this.allowedContentTypePatterns().join(", ")}`
+        : this.i18nFormat("js.type_not_allowed", "%{type} is not allowed. Allowed types: %{types}", { type: file.type || this.i18nText("js.unknown_type", "Unknown type"), types: this.allowedContentTypePatterns().join(", ") })
     }
 
     return this.validationError(file)
@@ -367,8 +383,14 @@ export default class extends Controller {
   }
 
   maxFilesError() {
-    const noun = this.maxFilesCountValue === 1 ? "file" : "files"
-    return `You can upload up to ${this.maxFilesCountValue} ${noun} at a time`
+    const noun = this.maxFilesCountValue === 1
+      ? this.i18nText("js.file_noun.one", "file")
+      : this.i18nText("js.file_noun.other", "files")
+    return this.i18nFormat(
+      "js.max_files_up_to",
+      "You can upload up to %{count} %{noun} at a time",
+      { count: this.maxFilesCountValue, noun }
+    )
   }
 
   matchesContentType(pattern, contentType) {
@@ -453,7 +475,7 @@ export default class extends Controller {
     }
 
     if (payload.type === "provider-auth-error") {
-      this.setProviderStatus(payload.error || "Authentication failed.", "error")
+      this.setProviderStatus(payload.error || this.i18nText("js.authentication_failed", "Authentication failed."), "error")
       return
     }
 
@@ -504,7 +526,7 @@ export default class extends Controller {
       }
     })
     const payload = await response.json()
-    if (!response.ok) throw new Error(payload.error || "Could not load provider bootstrap data.")
+    if (!response.ok) throw new Error(payload.error || this.i18nText("js.could_not_load_bootstrap", "Could not load provider bootstrap data."))
 
     return payload
   }
@@ -595,21 +617,21 @@ export default class extends Controller {
       ? `<img src="${this.escapeAttribute(entry.previewUrl)}" alt="" class="h-12 w-12 rounded object-cover" />`
       : `<div class="flex h-12 w-12 items-center justify-center rounded bg-(--surface-muted-background-color) px-1 text-[10px] font-medium uppercase tracking-wide">${this.escapeHtml(this.entryBadge(entry))}</div>`
     const progress = entry.status === "processing"
-      ? `<p class="text-xs text-(--surface-muted-content-color)">Optimizing image before upload…</p>`
+      ? `<p class="text-xs text-(--surface-muted-content-color)">${this.escapeHtml(this.i18nText("js.optimizing_before_upload", "Optimizing image before upload…"))}</p>`
       : this.remoteProgressVisible(entry)
         ? this.indeterminateProgressTemplate(entry)
       : entry.status === "uploading" || entry.progress > 0
         ? this.progressTemplateHtml({
             value: entry.progress,
-            label: `Uploading ${this.entryName(entry)}`
+            label: this.i18nFormat("js.uploading_name", "Uploading %{name}", { name: this.entryName(entry) })
           })
         : ""
     const error = entry.error ? `<p class="text-xs text-red-600">${this.escapeHtml(entry.error)}</p>` : ""
-    const retry = entry.status === "failed" ? `<button type="button" data-action="recording-studio-attachable--upload#retry" data-id="${entry.id}" class="text-xs underline">Retry</button>` : ""
+    const retry = entry.status === "failed" ? `<button type="button" data-action="recording-studio-attachable--upload#retry" data-id="${entry.id}" class="text-xs underline">${this.escapeHtml(this.i18nText("js.retry", "Retry"))}</button>` : ""
     const remove = this.removeButtonTemplateValue
       .replace("__ENTRY_ID__", this.escapeAttribute(entry.id))
-      .replace("__REMOVE_LABEL__", this.escapeAttribute(`Remove ${this.entryName(entry)} from upload queue`))
-      .replace("__REMOVE_TITLE__", this.escapeAttribute("Remove from upload queue"))
+      .replace("__REMOVE_LABEL__", this.escapeAttribute(this.i18nFormat("js.remove_name_from_queue", "Remove %{name} from upload queue", { name: this.entryName(entry) })))
+      .replace("__REMOVE_TITLE__", this.escapeAttribute(this.i18nText("js.remove_from_queue", "Remove from upload queue")))
 
     return `
       <div data-entry-id="${entry.id}" class="relative rounded-lg border border-(--surface-border-color) p-4 pr-12">
@@ -661,7 +683,7 @@ export default class extends Controller {
   }
 
   entryName(entry) {
-    return entry.file?.name || entry.name || entry.providerPayload?.id || "Remote file"
+    return entry.file?.name || entry.name || entry.providerPayload?.id || this.i18nText("js.remote_file", "Remote file")
   }
 
   entryMeta(entry) {
@@ -675,12 +697,12 @@ export default class extends Controller {
     }
 
     const size = Number(entry.byteSize)
-    const sizeLabel = Number.isFinite(size) && size > 0 ? `${Math.round(size / 1024)} KB` : "Cloud import"
+    const sizeLabel = Number.isFinite(size) && size > 0 ? `${Math.round(size / 1024)} KB` : this.i18nText("js.cloud_import", "Cloud import")
     return `${sizeLabel} · ${status}`
   }
 
   entryBadge(entry) {
-    if (!entry.providerPayload) return "FILE"
+    if (!entry.providerPayload) return this.i18nText("js.file_badge", "FILE")
 
     return this.providerBadge(entry.providerKey)
   }
@@ -689,11 +711,11 @@ export default class extends Controller {
     const words = this.providerDisplayName(providerKey).split(/\s+/).filter(Boolean)
     if (words.length > 1) return words[words.length - 1].slice(0, 5).toUpperCase()
 
-    return (words[0] || "Cloud").slice(0, 5).toUpperCase()
+    return (words[0] || this.i18nText("js.cloud", "Cloud")).slice(0, 5).toUpperCase()
   }
 
   providerDisplayName(providerKey) {
-    return String(providerKey || "Cloud")
+    return String(providerKey || this.i18nText("js.cloud", "Cloud"))
       .split(/[_-]+/)
       .filter(Boolean)
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -707,17 +729,21 @@ export default class extends Controller {
   remoteStatusLabel(entry) {
     switch (entry.status) {
       case "selected":
-        return "Import queued"
+        return this.i18nText("js.import_queued", "Import queued")
       case "importing":
-        return `Importing from ${this.providerDisplayName(entry.providerKey)}`
+        return this.i18nFormat(
+          "js.importing_from",
+          "Importing from %{provider}",
+          { provider: this.providerDisplayName(entry.providerKey) }
+        )
       case "attaching":
-        return "Creating attachment"
+        return this.i18nText("js.creating_attachment", "Creating attachment")
       case "attached":
-        return "Import complete"
+        return this.i18nText("js.import_complete", "Import complete")
       case "failed":
-        return "Import failed"
+        return this.i18nText("js.import_failed", "Import failed")
       default:
-        return "Ready to import"
+        return this.i18nText("js.ready_to_import", "Ready to import")
     }
   }
 
@@ -745,7 +771,7 @@ export default class extends Controller {
     }
   }
 
-  progressTemplateHtml({ value = 0, max = 100, label = "Progress" } = {}) {
+  progressTemplateHtml({ value = 0, max = 100, label = this.i18nText("js.progress", "Progress") } = {}) {
     if (!this.hasProgressTemplateTarget) return ""
 
     const template = this.progressTemplateTarget.content.firstElementChild

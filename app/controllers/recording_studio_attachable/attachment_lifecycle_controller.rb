@@ -15,7 +15,13 @@ module RecordingStudioAttachable
       )
 
       redirect_to recording_attachments_path(recording, listing_redirect_params),
-                  result.success? ? { notice: "Removed #{result.value.size} attachment(s)." } : { alert: result.error }
+                  result.success? ? {
+                    notice: Copy.t(
+                      "flashes.removed_count",
+                      count: result.value.size,
+                      default: "Removed #{result.value.size} attachment(s)."
+                    )
+                  } : { alert: result.error }
     end
 
     def destroy
@@ -29,8 +35,13 @@ module RecordingStudioAttachable
       )
 
       redirect_to destroy_destination(attachment_recording),
-                  result.success? ? { notice: t("recording_studio_attachable.attachment_lifecycle.removed",
-                                                default: "Attachment removed.") } : { alert: result.error }
+                  result.success? ? {
+                    notice: Copy.legacy_t(
+                      "attachment_lifecycle.removed",
+                      "flashes.attachment_removed",
+                      default: "Attachment removed."
+                    )
+                  } : { alert: result.error }
     end
 
     def restore
@@ -44,8 +55,13 @@ module RecordingStudioAttachable
       )
 
       redirect_to attachment_path(attachment_recording),
-                  result.success? ? { notice: t("recording_studio_attachable.attachment_lifecycle.restored",
-                                                default: "Attachment restored.") } : { alert: result.error }
+                  result.success? ? {
+                    notice: Copy.legacy_t(
+                      "attachment_lifecycle.restored",
+                      "flashes.attachment_restored",
+                      default: "Attachment restored."
+                    )
+                  } : { alert: result.error }
     end
 
     private

@@ -4,7 +4,7 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.14.1", RecordingStudioAttachable::VERSION
+    assert_equal "0.15.0", RecordingStudioAttachable::VERSION
   end
 
   def test_recording_studio_dependency_is_4_2_or_newer
@@ -107,8 +107,9 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes upload_controller_source, "scheduleRemoteAttachStage(entry)"
     assert_includes upload_controller_source, 'entry.status = entry.providerPayload ? "importing" : "finalizing"'
     assert_includes upload_controller_source, "remoteStatusLabel(entry)"
-    assert_includes upload_controller_source, "Importing from ${this.providerDisplayName(entry.providerKey)}"
-    assert_includes upload_controller_source, 'return "Creating attachment"'
+    assert_includes upload_controller_source, '"js.importing_from"'
+    assert_includes upload_controller_source, "Importing from %{provider}"
+    assert_includes upload_controller_source, 'this.i18nText("js.creating_attachment", "Creating attachment")'
     assert_includes upload_controller_source, "indeterminateProgressTemplate(entry)"
     assert_includes upload_controller_source, "progressTemplateHtml({"
     assert_includes upload_controller_source, "remoteProgressValue(entry)"
@@ -308,7 +309,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes controller_source, "listForm.userEdited === false"
     assert_includes controller_source, "siblingForms"
     assert_includes controller_source, "changes.userEdited === false"
-    assert_includes controller_source, 'this.showStatus(form, "Saved", false)'
+    assert_includes controller_source, 'this.i18nText("collection.saved", "Saved")'
     refute_includes controller_source, "row.hidden = slides"
     assert_includes controller_source, "this.carouselTarget.hidden = !slides"
     refute_includes controller_source, "element.hidden = slides"

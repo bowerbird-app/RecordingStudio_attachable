@@ -1,0 +1,12 @@
+# Test-only host override fixture (not under config/locales). Appended last in
+# host-override integration tests so last-file-wins can be asserted safely.
+en:
+  recording_studio:
+    attachable:
+      flashes:
+        attachment_resource_not_found: "HOST Attachment resource not found"
+      library:
+        empty_title: "HOST Nothing uplaoded yet"
+      errors:
+        content_type_not_allowed: "HOST is not allowed"
+        attachment_kind_not_enabled: "HOST is not enabled"

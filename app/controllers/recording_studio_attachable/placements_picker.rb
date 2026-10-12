@@ -31,9 +31,23 @@ module RecordingStudioAttachable
 
     def collection_flash(result)
       return { alert: result.error } unless result.success?
-      return { notice: t("recording_studio_attachable.placements.reordered") } if result.value == :reordered
+      if result.value == :reordered
+        return {
+          notice: Copy.legacy_t(
+            "placements.reordered",
+            "placements.reordered",
+            default: "Photos reordered."
+          )
+        }
+      end
 
-      { notice: t("recording_studio_attachable.attachments.updated") }
+      {
+        notice: Copy.legacy_t(
+          "attachments.updated",
+          "flashes.saved_short",
+          default: "Saved"
+        )
+      }
     end
 
     def stay_on_slide?
@@ -46,7 +60,10 @@ module RecordingStudioAttachable
         return
       end
 
-      render json: { saved: false, error: result.error.presence || "Could not save." }, status: :unprocessable_entity
+      render json: {
+        saved: false,
+        error: result.error.presence || Copy.t("flashes.could_not_save", default: "Could not save.")
+      }, status: :unprocessable_entity
     end
 
     def authorize_placement_action!(action, recording)

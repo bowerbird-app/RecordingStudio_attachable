@@ -1,0 +1,7 @@
+# Host override for a rarely shown Attachable flash key (record-not-found alert).
+# Kept out of the default happy-path UI so other dummy tests still see gem English.
+en:
+  recording_studio:
+    attachable:
+      flashes:
+        attachment_resource_not_found: "HOST Attachment resource not found"

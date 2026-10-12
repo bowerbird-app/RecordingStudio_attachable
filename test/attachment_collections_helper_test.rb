@@ -621,8 +621,10 @@ class AttachmentCollectionsHelperTest < Minitest::Test
   def load_flat_pack_components!
     root = Gem.loaded_specs.fetch("flat_pack").full_gem_path
     locale = File.join(root, "config/locales/flatpack.en.yml")
-    unless I18n.load_path.include?(locale)
-      I18n.load_path << locale
+    gem_locales = Dir[File.expand_path("../config/locales/*.yml", __dir__)]
+    missing = ([locale] + gem_locales).reject { |path| I18n.load_path.include?(path) }
+    if missing.any?
+      I18n.load_path.concat(missing)
       I18n.backend.load_translations
     end
     %w[

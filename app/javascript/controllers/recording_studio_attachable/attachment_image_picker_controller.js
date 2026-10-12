@@ -26,6 +26,7 @@ export default class extends Controller {
   ]
 
   static values = {
+    i18n: Object,
     pickerUrl: String,
     uploadUrl: String,
     directUploadUrl: String,
@@ -37,6 +38,21 @@ export default class extends Controller {
     imageProcessingMaxHeight: Number,
     imageProcessingQuality: Number,
     searchDelay: { type: Number, default: 250 }
+  }
+
+
+  i18nText(key, fallback) {
+    const bag = this.hasI18nValue ? this.i18nValue : null
+    const value = bag && typeof bag === "object" ? bag[key] : null
+    return (typeof value === "string" && value.length) ? value : fallback
+  }
+
+  i18nFormat(key, fallback, replacements = {}) {
+    let text = this.i18nText(key, fallback)
+    Object.entries(replacements).forEach(([name, value]) => {
+      text = text.replaceAll(`%{${name}}`, String(value))
+    })
+    return text
   }
 
   connect() {
@@ -223,7 +239,7 @@ export default class extends Controller {
       })
 
       if (!response.ok) {
-        throw new Error("Unable to load image library")
+        throw new Error(this.i18nText("picker.unable_to_load_library", "Unable to load image library"))
       }
 
       const payload = await response.json()
@@ -235,7 +251,7 @@ export default class extends Controller {
     } catch (error) {
       this.renderGallery([], { append: false })
       this.updatePagination({ current_page: 1, total_pages: 1, previous_page: false, next_page: false })
-      this.showStatus(error.message || "Unable to load image library")
+      this.showStatus(error.message || this.i18nText("picker.unable_to_load_library", "Unable to load image library"))
       this.isLoading = false
     } finally {
       this.searchTimeoutId = null
@@ -347,7 +363,7 @@ export default class extends Controller {
           entry.processingComplete = processed.transformed
           this.renderUploadEntry(entry)
         }
-        const statusPrefix = files.length > 1 ? `Uploading ${index + 1} of ${files.length}` : "Uploading"
+        const statusPrefix = files.length > 1 ? this.i18nFormat("picker.uploading_of", "Uploading %{index} of %{total}", { index: index + 1, total: files.length }) : this.i18nText("picker.uploading", "Uploading")
         this.showStatus(
           processed.transformed ? `Optimizing complete. ${statusPrefix}: ${uploadFile.name}…` : `${statusPrefix}: ${uploadFile.name}…`
         )
@@ -379,10 +395,10 @@ export default class extends Controller {
       const failedEntry = this.uploadEntries.find((entry) => ["processing", "uploading"].includes(entry.status))
       if (failedEntry) {
         failedEntry.status = "failed"
-        failedEntry.error = uploadError.message || "Unable to add image"
+        failedEntry.error = uploadError.message || this.i18nText("picker.unable_to_add_image", "Unable to add image")
         this.renderUploadEntry(failedEntry)
       }
-      this.showStatus(uploadError.message || "Unable to add image")
+      this.showStatus(uploadError.message || this.i18nText("picker.unable_to_add_image", "Unable to add image"))
     } finally {
       this.fileInputTarget.value = ""
     }
@@ -425,12 +441,12 @@ export default class extends Controller {
       this.uploadEntries.forEach((entry) => {
         if (entry.status === "uploading") {
           entry.status = "failed"
-          entry.error = uploadError.message || "Unable to add image"
+          entry.error = uploadError.message || this.i18nText("picker.unable_to_add_image", "Unable to add image")
           this.renderUploadEntry(entry)
         }
       })
 
-      this.showStatus(uploadError.message || "Unable to add image")
+      this.showStatus(uploadError.message || this.i18nText("picker.unable_to_add_image", "Unable to add image"))
     }
   }
 
@@ -479,12 +495,12 @@ export default class extends Controller {
 
     const payload = await response.json()
     if (!response.ok) {
-      throw new Error(payload.error || "Unable to add image")
+      throw new Error(payload.error || this.i18nText("picker.unable_to_add_image", "Unable to add image"))
     }
 
     const createdAttachments = payload.attachments || []
     if (createdAttachments.length === 0) {
-      throw new Error("Upload completed without an attachment payload")
+      throw new Error(this.i18nText("picker.upload_completed_without_attachment", "Upload completed without an attachment payload"))
     }
 
     return createdAttachments
@@ -541,7 +557,7 @@ export default class extends Controller {
       }
     }).then(async (response) => {
       const payload = await response.json()
-      if (!response.ok) throw new Error(payload.error || "Could not load provider bootstrap data.")
+      if (!response.ok) throw new Error(payload.error || this.i18nText("js.could_not_load_bootstrap", "Could not load provider bootstrap data."))
 
       return payload
     })
@@ -607,7 +623,7 @@ export default class extends Controller {
       const button = document.createElement("button")
       button.type = "button"
       button.className = this.galleryButtonClass(this.attachmentSelectedForMultiMode(attachment.id))
-      button.setAttribute("aria-label", attachment.name || "Untitled image")
+      button.setAttribute("aria-label", attachment.name || this.i18nText("picker.untitled_image", "Untitled image"))
       button.setAttribute("aria-pressed", this.attachmentSelectedForMultiMode(attachment.id) ? "true" : "false")
       button.dataset.attachmentId = attachment.id
       button.addEventListener("click", () => this.selectAttachment(attachment))
@@ -764,13 +780,13 @@ export default class extends Controller {
     const progress = entry.status === "processing"
       ? this.progressTemplateHtml({
           value: 0,
-          label: `Uploading ${this.entryName(entry)}`,
+          label: this.i18nFormat("js.uploading_name", "Uploading %{name}", { name: this.entryName(entry) }),
           hideLabel: true
         })
       : entry.status === "uploading" || entry.progress > 0
         ? this.progressTemplateHtml({
             value: entry.progress,
-            label: `Uploading ${this.entryName(entry)}`,
+            label: this.i18nFormat("js.uploading_name", "Uploading %{name}", { name: this.entryName(entry) }),
             hideLabel: true
           })
         : entry.status === "uploaded"
@@ -908,7 +924,7 @@ export default class extends Controller {
 
     if (this.hasSelectionCountTarget) {
       const count = this.selectedAttachments.size
-      this.selectionCountTarget.textContent = count > 0 ? `${count} selected` : "Select one or more"
+      this.selectionCountTarget.textContent = count > 0 ? this.i18nFormat(count === 1 ? "picker.selected.one" : "picker.selected.other", "%{count} selected", { count }) : this.i18nText("picker.select_one_or_more", "Select one or more")
     }
 
     if (this.hasConfirmButtonTarget) {

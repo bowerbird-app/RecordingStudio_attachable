@@ -40,7 +40,8 @@
   data-recording-studio-attachable--upload-image-processing-max-height-value="<%= @image_processing_max_height %>"
   data-recording-studio-attachable--upload-image-processing-quality-value="<%= @image_processing_quality %>"
       data-recording-studio-attachable--upload-remove-button-template-value="<%= remove_button_template %>"
-     data-recording-studio-attachable--upload-allowed-content-types-value="<%= @allowed_content_types.join(',') %>">
+     data-recording-studio-attachable--upload-allowed-content-types-value="<%= @allowed_content_types.join(',') %>"
+     data-recording-studio-attachable--upload-i18n-value="<%= ERB::Util.html_escape(attachable_upload_js_i18n.to_json) %>">
   <%= render FlatPack::PageNav::Component.new(
     back_icon: "arrow-left",
     back_label: t("recording_studio.attachable.navigation.back"),

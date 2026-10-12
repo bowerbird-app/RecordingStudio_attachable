@@ -3,6 +3,8 @@ en:
     attachment_lifecycle:
       removed: "Attachment removed."
       restored: "Attachment restored."
+    attachment_file_buttons:
+      updated: "File updated"
     attachments:
       updated: "Saved"
       used_in:

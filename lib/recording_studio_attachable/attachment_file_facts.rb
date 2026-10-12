@@ -29,7 +29,10 @@ module RecordingStudioAttachable
       type = mime_type
       return if type.blank?
 
-      TYPE_LABELS[type] || subtype_label(type)
+      english = TYPE_LABELS[type]
+      return Copy.type_label(type, english: english) if english
+
+      subtype_label(type)
     end
 
     def dimensions_label

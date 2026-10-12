@@ -17,7 +17,7 @@ module RecordingStudioAttachable
     validates :attachment_recording_id, presence: true
 
     def title
-      "Image"
+      RecordingStudioAttachable::Copy.t("type_labels.placement.title", default: "Image")
     end
   end
 end

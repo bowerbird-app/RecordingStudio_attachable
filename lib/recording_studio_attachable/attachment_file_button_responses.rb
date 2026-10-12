@@ -7,13 +7,21 @@ module RecordingStudioAttachable
     private
 
     def attachment_file_updated_notice
-      I18n.t("recording_studio_attachable.attachment_file_buttons.updated", default: "File updated")
+      Copy.legacy_t(
+        "attachment_file_buttons.updated",
+        "flashes.file_updated",
+        default: "File updated"
+      )
     end
 
     def success_notice_for(file_replacement, parent_return_to)
       return attachment_file_updated_notice if file_replacement && parent_return_to.present?
 
-      I18n.t("recording_studio_attachable.attachments.updated", default: "Saved")
+      Copy.legacy_t(
+        "attachments.updated",
+        "flashes.saved_short",
+        default: "Saved"
+      )
     end
 
     def success_path_for(updated_recording, file_replacement, parent_return_to, redirect_params)

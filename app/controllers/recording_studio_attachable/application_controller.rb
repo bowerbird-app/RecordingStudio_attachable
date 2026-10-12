@@ -75,9 +75,14 @@ module RecordingStudioAttachable
     def handle_record_not_found
       respond_to do |format|
         format.html do
-          redirect_back_or_to(main_app.root_path, alert: "Attachment resource not found")
+          redirect_back_or_to(
+            main_app.root_path,
+            alert: Copy.t("flashes.attachment_resource_not_found", default: "Attachment resource not found")
+          )
         end
-        format.json { render json: { error: "Not found" }, status: :not_found }
+        format.json do
+          render json: { error: Copy.t("flashes.not_found", default: "Not found") }, status: :not_found
+        end
       end
     end
 
@@ -269,7 +274,7 @@ module RecordingStudioAttachable
                 #{close_window_script}
               })();
             </script>
-            <p>Returning to the upload page…</p>
+            <p>#{ERB::Util.html_escape(Copy.t("flashes.returning_to_upload", default: "Returning to the upload page…"))}</p>
           </body>
         </html>
       HTML

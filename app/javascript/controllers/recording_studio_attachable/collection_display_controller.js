@@ -4,9 +4,17 @@ export default class extends Controller {
   static targets = ["carousel", "list", "pill", "slideForm", "grid", "gridForm", "card", "slideMedia", "preview", "previewHome"]
 
   static values = {
+    i18n: Object,
     display: String,
     activeClasses: String,
     inactiveClasses: String
+  }
+
+
+  i18nText(key, fallback) {
+    const bag = this.hasI18nValue ? this.i18nValue : null
+    const value = bag && typeof bag === "object" ? bag[key] : null
+    return (typeof value === "string" && value.length) ? value : fallback
   }
 
   connect() {
@@ -53,15 +61,15 @@ export default class extends Controller {
     try {
       const saved = await this.postSlide(form)
       if (!saved.ok) {
-        this.showStatus(form, saved.error || "Could not save.", true)
+        this.showStatus(form, saved.error || this.i18nText("flashes.could_not_save", "Could not save."), true)
         return
       }
 
       this.copySavedRow(form)
       this.markSaved(form)
-      this.showStatus(form, "Saved", false)
+      this.showStatus(form, this.i18nText("collection.saved", "Saved"), false)
     } catch (_error) {
-      this.showStatus(form, "Could not save.", true)
+      this.showStatus(form, this.i18nText("flashes.could_not_save", "Could not save."), true)
     } finally {
       delete form.dataset.saving
       if (button) button.disabled = false

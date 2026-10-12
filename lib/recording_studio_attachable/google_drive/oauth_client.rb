@@ -60,7 +60,10 @@ module RecordingStudioAttachable
         return if configuration.configured?
 
         raise RecordingStudioAttachable::DependencyUnavailableError,
-              "Google Drive addon is missing client credentials or redirect URI"
+              Copy.t(
+                "google_drive.missing_credentials",
+                default: "Google Drive addon is missing client credentials or redirect URI"
+              )
       end
 
       def post_form(attributes)

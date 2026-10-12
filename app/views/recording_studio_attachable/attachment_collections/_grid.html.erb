@@ -7,7 +7,7 @@
        preview_path: preview_path,
        file_path: preview_path.present? ? authorized_attachment_file_path(row.recording) : nil,
        file_extension: File.extname(attachment.original_filename.to_s).delete(".").upcase.presence || t("recording_studio.attachable.collection.file_fallback"),
-       edit_name: attachment.name.to_s.presence || "image",
+       edit_name: attachment.name.to_s.presence || RecordingStudioAttachable::Copy.image_name_fallback,
        modal_id: "#{collection.form_id}-edit-#{row.member.id}",
        form_id: "#{collection.form_id}-grid-#{row.member.id}"
      }

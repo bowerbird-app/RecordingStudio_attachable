@@ -19,8 +19,11 @@ module RecordingStudioAttachable
       rescue RecordingStudioAttachable::GoogleDrive::Client::UnauthorizedError
         clear_google_drive_tokens!
         redirect_to google_drive.recording_imports_path(@recording, upload_flow_params),
-                    alert: t("recording_studio_attachable.google_drive.session_expired",
-                             default: "Google Drive session expired. Reconnect to continue.")
+                    alert: Copy.legacy_t(
+                      "google_drive.session_expired",
+                      "google_drive.session_expired",
+                      default: "Google Drive session expired. Reconnect to continue."
+                    )
       rescue RecordingStudioAttachable::GoogleDrive::Client::Error => e
         @query = params[:query].to_s.strip
         @files = []
@@ -59,7 +62,11 @@ module RecordingStudioAttachable
                 )
               else
                 redirect_to resolved_attachment_redirect_path(@recording),
-                            notice: "Imported #{result.value.size} Google Drive file(s)."
+                            notice: Copy.t(
+                              "google_drive.imported_count",
+                              count: result.value.size,
+                              default: "Imported #{result.value.size} Google Drive file(s)."
+                            )
               end
             end
           else
@@ -79,8 +86,9 @@ module RecordingStudioAttachable
         end
       rescue RecordingStudioAttachable::GoogleDrive::Client::UnauthorizedError
         clear_google_drive_tokens!
-        session_expired_message = t(
-          "recording_studio_attachable.google_drive.session_expired",
+        session_expired_message = Copy.legacy_t(
+          "google_drive.session_expired",
+          "google_drive.session_expired",
           default: "Google Drive session expired. Reconnect to continue."
         )
         respond_to do |format|

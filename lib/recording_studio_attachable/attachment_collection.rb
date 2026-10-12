@@ -110,7 +110,10 @@ module RecordingStudioAttachable
 
   module AttachmentCollectionSheet
     def empty_message
-      @empty_message.presence || AttachmentCollection::EMPTY_MESSAGES.fetch(association)
+      return @empty_message if @empty_message.presence
+
+      english = AttachmentCollection::EMPTY_MESSAGES.fetch(association)
+      Copy.empty_message_for(association, english: english)
     end
 
     def rows
@@ -136,7 +139,9 @@ module RecordingStudioAttachable
 
     def placement? = association == :placements
 
-    def remove_label = placement? ? "Remove from here" : "Trash"
+    def remove_label
+      Copy.remove_label(placement: placement?)
+    end
 
     private
 
@@ -226,7 +231,7 @@ module RecordingStudioAttachable
       known = display_items.map { |item| item.member.id.to_s }
       return if @submitted_rows.all? { |row| row[:recording_id].blank? || known.include?(row[:recording_id].to_s) }
 
-      raise ArgumentError, AttachmentCollection::GONE
+      raise ArgumentError, Copy.t("collection.gone", default: AttachmentCollection::GONE)
     end
   end
 
@@ -414,11 +419,11 @@ module RecordingStudioAttachable
 
       def read(token, recording)
         data = payload_hash(verifier.verify(token))
-        raise ArgumentError, AttachmentCollection::STALE_FORM unless data[:parent_id].to_s == recording.id.to_s
+        raise ArgumentError, stale_form_message unless data[:parent_id].to_s == recording.id.to_s
 
         choices(data)
       rescue ActiveSupport::MessageVerifier::InvalidSignature
-        raise ArgumentError, AttachmentCollection::STALE_FORM
+        raise ArgumentError, stale_form_message
       end
 
       private
@@ -441,9 +446,13 @@ module RecordingStudioAttachable
       end
 
       def payload_hash(payload)
-        raise ArgumentError, AttachmentCollection::STALE_FORM unless payload.is_a?(Hash)
+        raise ArgumentError, stale_form_message unless payload.is_a?(Hash)
 
         payload.with_indifferent_access
+      end
+
+      def stale_form_message
+        Copy.t("collection.stale_form", default: AttachmentCollection::STALE_FORM)
       end
 
       def verifier
@@ -563,7 +572,9 @@ module RecordingStudioAttachable
     end
 
     def find!(recording_id)
-      @by_id.fetch(recording_id.to_s) { raise ArgumentError, AttachmentCollection::GONE }
+      @by_id.fetch(recording_id.to_s) do
+        raise ArgumentError, Copy.t("collection.gone", default: AttachmentCollection::GONE)
+      end
     end
 
     def changes_for(attachment, row)
@@ -634,7 +645,9 @@ module RecordingStudioAttachable
     def assert_permutation!(submitted)
       left = submitted.map { |row| row[:recording_id].to_s }.tally
       right = @recordings.map { |item| item.id.to_s }.tally
-      raise ArgumentError, AttachmentCollection::GONE unless left == right
+      return if left == right
+
+      raise ArgumentError, Copy.t("collection.gone", default: AttachmentCollection::GONE)
     end
 
     def canonical_ids(submitted)

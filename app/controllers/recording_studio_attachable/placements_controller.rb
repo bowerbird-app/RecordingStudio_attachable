@@ -31,7 +31,13 @@ module RecordingStudioAttachable
 
       result = create_placement(recording)
       redirect_to recording_placements_path(recording, attachment_navigation_params),
-                  result.success? ? { notice: t("recording_studio_attachable.placements.added") } : { alert: result.error }
+                  result.success? ? {
+                    notice: Copy.legacy_t(
+                      "placements.added",
+                      "placements.added",
+                      default: "Photo added."
+                    )
+                  } : { alert: result.error }
     end
 
     def update
@@ -63,7 +69,13 @@ module RecordingStudioAttachable
       end
 
       redirect_to recording_placements_path(recording, attachment_navigation_params),
-                  result.success? ? { notice: t("recording_studio_attachable.placements.reordered") } : { alert: result.error }
+                  result.success? ? {
+                    notice: Copy.legacy_t(
+                      "placements.reordered",
+                      "placements.reordered",
+                      default: "Photos reordered."
+                    )
+                  } : { alert: result.error }
     end
 
     def destroy
@@ -79,7 +91,13 @@ module RecordingStudioAttachable
       )
 
       redirect_to recording_placements_path(parent, attachment_navigation_params),
-                  result.success? ? { notice: t("recording_studio_attachable.placements.removed") } : { alert: result.error }
+                  result.success? ? {
+                    notice: Copy.legacy_t(
+                      "placements.removed",
+                      "placements.removed",
+                      default: "Photo removed from this page."
+                    )
+                  } : { alert: result.error }
     end
 
     private

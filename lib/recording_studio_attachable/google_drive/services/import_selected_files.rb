@@ -22,7 +22,12 @@ module RecordingStudioAttachable
 
         def perform
           selections = normalized_file_selections
-          raise ArgumentError, "Select at least one Google Drive file to import" if selections.blank?
+          if selections.blank?
+            raise ArgumentError, Copy.t(
+              "google_drive.select_at_least_one",
+              default: "Select at least one Google Drive file to import"
+            )
+          end
 
           attachments = selections.map do |selection|
             fetch_options = {}
@@ -33,7 +38,10 @@ module RecordingStudioAttachable
 
             downloaded.merge(
               name: selection["name"].presence || file.fetch("name"),
-              description: selection["description"].presence || "Imported from Google Drive",
+              description: selection["description"].presence || Copy.t(
+                "google_drive.imported_from",
+                default: "Imported from Google Drive"
+              ),
               metadata: {
                 provider: "google_drive",
                 external_id: file.fetch("id"),

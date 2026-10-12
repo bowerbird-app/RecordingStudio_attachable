@@ -4,7 +4,7 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.16.0", RecordingStudioAttachable::VERSION
+    assert_equal "0.17.0", RecordingStudioAttachable::VERSION
   end
 
   def test_recording_studio_dependency_is_4_2_or_newer
@@ -73,8 +73,9 @@ class RecordingStudioAttachableTest < Minitest::Test
   end
 
   def test_upload_view_uses_flatpack_components
-    view_path = File.expand_path("../app/views/recording_studio_attachable/attachment_uploads/new.html.erb", __dir__)
-    view_source = File.read(view_path)
+    view_source = %w[new _uploader].map do |name|
+      File.read(File.expand_path("../app/views/recording_studio_attachable/attachment_uploads/#{name}.html.erb", __dir__))
+    end.join("\n")
     blank_layout_source = File.read(
       File.expand_path("../app/views/layouts/recording_studio_attachable/blank.html.erb", __dir__)
     )
@@ -556,7 +557,7 @@ class RecordingStudioAttachableTest < Minitest::Test
       )
     )
     upload_view = File.read(
-      File.expand_path("../app/views/recording_studio_attachable/attachment_uploads/new.html.erb", __dir__)
+      File.expand_path("../app/views/recording_studio_attachable/attachment_uploads/_uploader.html.erb", __dir__)
     )
 
     assert_includes library_source, "recording_studio_attachable/*/engine.rb"
@@ -601,7 +602,7 @@ class RecordingStudioAttachableTest < Minitest::Test
       File.expand_path("../app/helpers/recording_studio_attachable/attachment_file_buttons_helper.rb", __dir__)
     )
 
-    assert_includes helper_source, "def render_attachment_file_button(recording, return_to:, target: nil)"
+    assert_includes helper_source, "def render_attachment_file_button(recording, return_to:, target: nil, presentation: nil)"
     assert_includes helper_source, "def attachment_preview_url(recording, variant: :square_med)"
     assert_includes button_source, "recording-studio-attachable--attachment-revision-upload"
     assert_includes button_source, "recording-studio-attachable--attachment-revision-upload#browse"

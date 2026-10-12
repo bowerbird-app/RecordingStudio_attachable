@@ -48,6 +48,10 @@ RecordingStudioAttachable.configure do |config|
 
   # Use the gem's blank layout by default, or set a host app layout like "application".
   config.layout = :blank
+
+  # How Add buttons open the standard upload page: :page (navigate) or :modal
+  # (a FlatPack modal on the current page). Buttons and editors can override it.
+  config.upload_presentation = :page
   config.auth_roles = {
     view: :view,
     upload: :edit,

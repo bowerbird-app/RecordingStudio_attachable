@@ -651,9 +651,53 @@ Host owns Turbo frames and Avatar. Attachable supplies the file button and a pre
 <% end %>
 ```
 
-Optional `target:` sets `data-turbo-frame` on the form (host frame id, or `"_top"`). Default inherits the enclosing frame.
+Optional `target:` sets `data-turbo-frame` on the form (host frame id, or `"_top"`). Default inherits the enclosing frame. Optional `presentation:` is `:page` or `:modal`. Leave it out and the button uses `config.upload_presentation`.
 
 Replace never navigates to the attachment details screen. Keep `attachments#show` for gallery/library cases where the attachment itself is the record.
+
+### Upload in a modal
+
+The standard upload page (multi-file queue, drag and drop, per-file progress, upload providers) can open in a FlatPack modal instead of navigating away. The full page stays the default.
+
+```ruby
+# config/initializers/recording_studio_attachable.rb
+config.upload_presentation = :modal # default :page
+```
+
+Override it per button or per collection editor:
+
+```erb
+<%= render_attachment_file_button(@recording, return_to: page_path(@page), presentation: :modal) %>
+
+<%= attachment_collection_editor(
+      @section,
+      association: :images,
+      fields: [:caption, :credit, :alt_text],
+      upload_button: { presentation: :modal, label: "Add images", target: "section-images" }
+    ) %>
+```
+
+`AttachmentFileButton.locals(..., presentation: :modal)` takes the same option when a host renders the button partial itself.
+
+- Only Add uses the modal. Change (replacing one file on a single-file parent) stays the inline file button.
+- The modal body is a lazy turbo frame. The first open loads `attachments/upload?embed=upload_modal&frame_id=...` without a layout, page nav, or title. The page and the modal render `attachment_uploads/_uploader`. Hosts need Turbo (`@hotwired/turbo-rails`) on the page.
+- After a successful upload the uploader dispatches a bubbling `attachable:uploaded` event (`event.detail.attachments`, `event.detail.redirectPath`) instead of redirecting. It clears its queue and closes the modal. The button then reloads `target:` when that id is a turbo frame on the page. Otherwise it re-visits the current page with Turbo, or reloads it when Turbo is missing.
+- The standalone page still redirects to `return_to` after upload.
+- Providers with `strategy: :modal_page` are left out of the modal, because that modal page cannot open inside the upload modal. Link providers open at the top level (`data-turbo-frame="_top"`). Client pickers such as Google Drive and Dropbox stay on the uploader.
+- `upload_button:` takes `true` or a hash with `presentation:`, `label:`, and `target:`. Leave it out and the editor renders no Add button. The collection button always adds.
+
+Wrap the editor in a turbo frame and pass that frame's id as `target:` when the list should refresh in place:
+
+```erb
+<%= turbo_frame_tag "section-images" do %>
+  <%= attachment_collection_editor(
+        @section,
+        association: :images,
+        fields: [:caption, :credit, :alt_text],
+        upload_button: { presentation: :modal, target: "section-images" }
+      ) %>
+<% end %>
+```
 
 ### Edit many images
 

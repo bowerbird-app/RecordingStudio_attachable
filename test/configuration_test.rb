@@ -372,6 +372,7 @@ class ConfigurationTest < Minitest::Test
         default_listing_scope: :direct,
         default_kind_filter: :all,
         layout: :application,
+        upload_presentation: :page,
         auth_roles: @configuration.auth_roles,
         google_drive: @configuration.google_drive.to_h,
         dropbox: @configuration.dropbox.to_h

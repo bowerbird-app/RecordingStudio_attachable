@@ -32,6 +32,7 @@ module RecordingStudioAttachable
         )
 
         assert_nil locals[:attachment_recording]
+        assert_equal :page, locals[:presentation]
         assert_equal "page-avatar-attachment", locals[:turbo_frame_target]
         assert_equal "Add", locals[:add_label]
         assert_equal "Change", locals[:change_label]

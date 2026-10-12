@@ -1,3 +1,10 @@
+<% if local_assigns[:presentation] == :modal && attachment_recording.blank? %>
+  <%= render "recording_studio_attachable/attachment_file_buttons/upload_modal",
+             recording: recording,
+             add_label: add_label,
+             return_to: return_to,
+             turbo_frame_target: turbo_frame_target %>
+<% else %>
 <% pick_button_text = attachment_recording.present? ? change_label : add_label %>
 <% form_url = attachment_recording.present? ? attachable_attachment_path(attachment_recording, **redirect_params) : attachable_attachment_imports_path(recording, **redirect_params) %>
 <% form_method = attachment_recording.present? ? :patch : :post %>
@@ -51,4 +58,5 @@
     data: { action: "recording-studio-attachable--attachment-revision-upload#browse" }
   ) %>
   <p class="hidden text-sm text-(--surface-muted-content-color)" data-recording-studio-attachable--attachment-revision-upload-target="status"></p>
+<% end %>
 <% end %>

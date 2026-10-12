@@ -17,6 +17,9 @@ module RecordingStudioAttachable
       @image_processing_quality = configured_attachable_option(@recording, :image_processing_quality)
       @upload_providers = configured_upload_providers(@recording)
       @create_path = recording_attachment_imports_path(@recording, @upload_redirect_params)
+      @upload_modal = upload_modal_request?
+      @upload_frame_id = upload_modal_frame_id if @upload_modal
+      render layout: false if @upload_modal
     end
 
     def create
@@ -58,6 +61,19 @@ module RecordingStudioAttachable
     end
 
     private
+
+    # The upload modal loads this action into a lazy turbo frame. That request
+    # only needs the uploader, wrapped in the frame that asked for it.
+    def upload_modal_request?
+      params[:embed].to_s == RecordingStudioAttachable::AttachmentFileButton::UPLOAD_MODAL_EMBED
+    end
+
+    def upload_modal_frame_id
+      frame_id = params[:frame_id].to_s
+      return frame_id if frame_id.match?(/\A[A-Za-z][\w-]{0,127}\z/)
+
+      RecordingStudioAttachable::AttachmentFileButton.upload_modal_frame_id(@recording)
+    end
 
     def attachment_payloads
       permitted = params.permit(

@@ -53,7 +53,9 @@ module RecordingStudioAttachable
     end
 
     def install_adapter_configuration(key, configuration)
-      @adapter_configurations[key.to_sym] = configuration
+      adapter_key = key.to_sym
+      @adapter_configurations[adapter_key] = configuration
+      define_singleton_method(adapter_key) { @adapter_configurations.fetch(adapter_key) }
     end
 
     def adapter_configuration(key)
@@ -204,16 +206,6 @@ module RecordingStudioAttachable
         layout: layout,
         auth_roles: auth_roles
       }.merge(adapter_configurations_hash)
-    end
-
-    def method_missing(name, *args, &)
-      return @adapter_configurations.fetch(name) if @adapter_configurations.key?(name)
-
-      super
-    end
-
-    def respond_to_missing?(name, include_private = false)
-      @adapter_configurations.key?(name) || super
     end
 
     private

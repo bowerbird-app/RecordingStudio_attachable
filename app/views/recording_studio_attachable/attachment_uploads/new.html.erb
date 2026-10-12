@@ -42,7 +42,7 @@
       data-recording-studio-attachable--upload-remove-button-template-value="<%= remove_button_template %>"
      data-recording-studio-attachable--upload-allowed-content-types-value="<%= @allowed_content_types.join(',') %>">
   <% upload_provider_launcher_modules(@upload_providers).each do |module_path| %>
-    <script type="module">import "<%= module_path %>"</script>
+    <%= javascript_tag(nonce: true, type: "module") { %(import "#{module_path}") } %>
   <% end %>
   <%= render FlatPack::PageNav::Component.new(
     back_icon: "arrow-left",

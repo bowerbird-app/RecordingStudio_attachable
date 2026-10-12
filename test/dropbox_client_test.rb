@@ -22,7 +22,7 @@ class DropboxClientTest < Minitest::Test
       success: true
     )
 
-    Net::HTTP.stub(:start, lambda { |host, _port, use_ssl:, &block|
+    Net::HTTP.stub(:start, lambda { |host, _port, **options, &block|
       captured[:host] = host
       http = Object.new
       http.define_singleton_method(:request) do |request|
@@ -72,7 +72,7 @@ class DropboxClientTest < Minitest::Test
       success: true
     )
 
-    Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
+    Net::HTTP.stub(:start, lambda { |_host, _port, **options, &block|
       http = Object.new
       http.define_singleton_method(:request) { |_request| response }
       block.call(http)
@@ -93,7 +93,7 @@ class DropboxClientTest < Minitest::Test
       success: true
     )
 
-    Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
+    Net::HTTP.stub(:start, lambda { |_host, _port, **options, &block|
       http = Object.new
       http.define_singleton_method(:request) { |_request| response }
       block.call(http)

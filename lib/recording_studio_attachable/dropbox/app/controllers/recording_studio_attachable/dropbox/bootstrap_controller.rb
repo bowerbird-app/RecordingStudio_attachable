@@ -22,7 +22,7 @@ module RecordingStudioAttachable
           import_url: recording_studio_attachable.recording_attachment_imports_path(@recording, format: :json, **attachment_redirect_params)
         }
 
-        payload[:access_token] = current_dropbox_access_token
+        current_dropbox_access_token
         payload
       rescue RecordingStudioAttachable::Error
         state, code_verifier = store_dropbox_state!(

@@ -75,14 +75,18 @@ module RecordingStudioAttachable
               "Dropbox addon is missing client credentials or redirect URI"
       end
 
-      def post_form(attributes)
+      def post_form(attributes) # rubocop:disable Metrics/MethodLength
         ensure_configured!
 
         uri = URI(TOKEN_ENDPOINT)
         request = Net::HTTP::Post.new(uri)
         request.set_form_data(attributes)
 
-        response = Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
+        response = Net::HTTP.start(
+          uri.host,
+          uri.port,
+          **RecordingStudioAttachable::SafeRemoteFetch.tls_start_options
+        ) do |http|
           http.request(request)
         end
 

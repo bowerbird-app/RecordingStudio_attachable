@@ -2,6 +2,7 @@
 
 require "test_helper"
 
+# rubocop:disable Metrics/ParameterLists
 class SafeRemoteFetchTest < Minitest::Test
   FakeResponse = Struct.new(:body, :code, :headers, :success, keyword_init: true) do
     delegate :[], to: :headers
@@ -10,6 +11,11 @@ class SafeRemoteFetchTest < Minitest::Test
       return success if klass == Net::HTTPSuccess
 
       super
+    end
+
+    def read_body
+      yield body.to_s if block_given?
+      body
     end
   end
 
@@ -20,6 +26,11 @@ class SafeRemoteFetchTest < Minitest::Test
       return true if klass == Net::HTTPRedirection
 
       super
+    end
+
+    def read_body
+      yield body.to_s if block_given?
+      body
     end
   end
 
@@ -50,7 +61,7 @@ class SafeRemoteFetchTest < Minitest::Test
     end
   end
 
-  def test_cross_host_redirect_drops_authorization
+  def test_cross_host_redirect_drops_authorization_case_insensitively
     requests = []
     redirect = FakeRedirectResponse.new(
       body: "",
@@ -66,7 +77,7 @@ class SafeRemoteFetchTest < Minitest::Test
       }) do
         result = fetch(
           uri: "https://api.example.test/files/1",
-          headers: { "Authorization" => "Bearer secret" },
+          headers: { "authorization" => "Bearer secret" },
           allowed_hosts: ["api.example.test", "cdn.example.test"]
         )
 
@@ -76,6 +87,49 @@ class SafeRemoteFetchTest < Minitest::Test
 
     assert_equal "Bearer secret", requests.first.fetch(:authorization)
     assert_nil requests.second.fetch(:authorization)
+  end
+
+  def test_redirect_to_disallowed_host_is_refused
+    redirect = FakeRedirectResponse.new(
+      body: "",
+      code: "302",
+      headers: { "location" => "https://evil.example.test/file" }
+    )
+
+    with_public_dns do
+      stub_http(->(_host, _request) { redirect }) do
+        error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
+          fetch(uri: "https://api.example.test/file", allowed_hosts: ["api.example.test"])
+        end
+
+        assert_equal "Remote download host is not allowed", error.message
+      end
+    end
+  end
+
+  def test_redirect_to_host_resolving_to_private_ip_is_refused
+    redirect = FakeRedirectResponse.new(
+      body: "",
+      code: "302",
+      headers: { "location" => "https://cdn.example.test/file" }
+    )
+    addresses = {
+      "api.example.test" => ["8.8.8.8"],
+      "cdn.example.test" => ["127.0.0.1"]
+    }
+
+    Resolv.stub(:getaddresses, ->(host) { addresses.fetch(host) }) do
+      stub_http(->(_host, _request) { redirect }) do
+        error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
+          fetch(
+            uri: "https://api.example.test/file",
+            allowed_hosts: ["api.example.test", "cdn.example.test"]
+          )
+        end
+
+        assert_equal "Remote download host resolves to a private address", error.message
+      end
+    end
   end
 
   def test_disallowed_host_is_refused
@@ -88,6 +142,16 @@ class SafeRemoteFetchTest < Minitest::Test
 
   def test_private_ip_is_refused
     Resolv.stub(:getaddresses, ->(_host) { ["127.0.0.1"] }) do
+      error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
+        fetch(uri: "https://api.example.test/file", allowed_hosts: ["api.example.test"])
+      end
+
+      assert_equal "Remote download host resolves to a private address", error.message
+    end
+  end
+
+  def test_cgnat_address_is_refused
+    Resolv.stub(:getaddresses, ->(_host) { ["100.64.0.1"] }) do
       error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
         fetch(uri: "https://api.example.test/file", allowed_hosts: ["api.example.test"])
       end
@@ -177,16 +241,105 @@ class SafeRemoteFetchTest < Minitest::Test
     end
   end
 
+  def test_start_passes_timeouts_and_validated_ip_before_connect
+    captured = {}
+    success = FakeResponse.new(body: "bytes", code: "200", headers: {}, success: true)
+
+    with_public_dns do
+      stub_http(->(_host, _request) { success }, captured_start: captured) do
+        fetch(uri: "https://api.example.test/file", allowed_hosts: ["api.example.test"])
+      end
+    end
+
+    assert_equal true, captured[:use_ssl]
+    assert_equal RecordingStudioAttachable::SafeRemoteFetch::OPEN_TIMEOUT, captured[:open_timeout]
+    assert_equal RecordingStudioAttachable::SafeRemoteFetch::READ_TIMEOUT, captured[:read_timeout]
+    assert_equal RecordingStudioAttachable::SafeRemoteFetch::SSL_TIMEOUT, captured[:ssl_timeout]
+    assert_equal RecordingStudioAttachable::SafeRemoteFetch::WRITE_TIMEOUT, captured[:write_timeout]
+    assert_equal "8.8.8.8", captured[:ipaddr]
+  end
+
+  def test_overall_deadline_stops_a_trickling_download
+    ticks = [0.0, 0.1, 61.0]
+    response = StreamingResponse.new(chunks: %w[aaaa bbbb], content_type: "text/plain")
+
+    with_public_dns do
+      stub_http(->(_host, _request) { response }) do
+        Process.stub(:clock_gettime, ->(*) { ticks.shift || 61.0 }) do
+          error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
+            fetch(uri: "https://api.example.test/file", allowed_hosts: ["api.example.test"])
+          end
+
+          assert_equal "Remote download timed out", error.message
+        end
+      end
+    end
+  end
+
+  def test_post_redirect_302_follows_as_get_without_body
+    requests = []
+    redirect = FakeRedirectResponse.new(
+      body: "",
+      code: "302",
+      headers: { "location" => "https://api.example.test/download" }
+    )
+    success = FakeResponse.new(body: "bytes", code: "200", headers: {}, success: true)
+
+    with_public_dns do
+      stub_http(lambda { |_host, request|
+        requests << { method: request.method, body: request.body }
+        request.path.include?("/start") ? redirect : success
+      }) do
+        fetch(
+          uri: "https://api.example.test/start",
+          allowed_hosts: ["api.example.test"],
+          http_method: :post,
+          body: "dropbox-arg"
+        )
+      end
+    end
+
+    assert_equal "POST", requests.first.fetch(:method)
+    assert_equal "dropbox-arg", requests.first.fetch(:body)
+    assert_equal "GET", requests.second.fetch(:method)
+    assert_nil requests.second.fetch(:body)
+  end
+
+  def test_post_redirect_307_is_refused
+    redirect = FakeRedirectResponse.new(
+      body: "",
+      code: "307",
+      headers: { "location" => "https://api.example.test/download" }
+    )
+
+    with_public_dns do
+      stub_http(->(_host, _request) { redirect }) do
+        error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
+          fetch(
+            uri: "https://api.example.test/start",
+            allowed_hosts: ["api.example.test"],
+            http_method: :post,
+            body: "dropbox-arg"
+          )
+        end
+
+        assert_equal "Remote download redirected a write request", error.message
+      end
+    end
+  end
+
   private
 
-  def fetch(uri:, allowed_hosts:, headers: {}, max_bytes: 100, byte_size: nil)
+  def fetch(uri:, allowed_hosts:, headers: {}, max_bytes: 100, byte_size: nil, http_method: :get, body: nil)
     remote_file = RecordingStudioAttachable::RemoteFile.new(
       uri: uri,
       allowed_hosts: allowed_hosts,
       headers: headers,
       filename: "file.pdf",
       content_type: "application/pdf",
-      byte_size: byte_size
+      byte_size: byte_size,
+      http_method: http_method,
+      body: body
     )
     RecordingStudioAttachable::SafeRemoteFetch.call(remote_file, max_bytes: max_bytes)
   end
@@ -195,9 +348,10 @@ class SafeRemoteFetchTest < Minitest::Test
     Resolv.stub(:getaddresses, ->(_host) { ["8.8.8.8"] }, &)
   end
 
-  def stub_http(responder, &)
-    Net::HTTP.stub(:start, lambda { |host, _port, use_ssl:, &http_block|
-      assert_equal true, use_ssl
+  def stub_http(responder, captured_start: nil, &)
+    Net::HTTP.stub(:start, lambda { |host, _port, **options, &http_block|
+      captured_start&.replace(options)
+      assert_equal true, options[:use_ssl]
       http = Object.new
       http.define_singleton_method(:request) do |request, &request_block|
         response = responder.call(host, request)
@@ -207,3 +361,4 @@ class SafeRemoteFetchTest < Minitest::Test
     }, &)
   end
 end
+# rubocop:enable Metrics/ParameterLists

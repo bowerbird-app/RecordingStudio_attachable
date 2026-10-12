@@ -57,7 +57,7 @@ class DropboxBootstrapControllerTest < ActionController::TestCase
 
     assert_response :success
     payload = JSON.parse(@response.body)
-    assert_equal "token-1", payload.fetch("access_token")
+    assert_not payload.key?("access_token")
     assert_equal "client-id", payload.fetch("client_id")
     assert_equal "dropbox", payload.fetch("provider_key")
   end

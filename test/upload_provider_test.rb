@@ -112,6 +112,19 @@ class UploadProviderTest < Minitest::Test
 
     assert provider.supports_remote_imports?
     assert_same importer, provider.remote_importer
+    assert_nil provider.launcher_module
+  end
+
+  def test_launcher_module_is_only_present_when_set_explicitly
+    provider = RecordingStudioAttachable::UploadProvider.new(
+      key: :custom,
+      label: "Custom",
+      url: "/bootstrap/custom",
+      strategy: :client_picker,
+      launcher: "custom"
+    )
+
+    assert_nil provider.launcher_module
   end
 
   def test_initialize_rejects_non_callable_remote_importers

@@ -209,7 +209,8 @@ class LocalesTest < Minitest::Test
     assert_equal "Images", tree.dig("libraries", "keys", "default")
     assert_equal "Add from library", tree.dig("placements", "add")
     assert_equal "Saved", tree.dig("attachments", "updated")
-    assert_equal "File updated", tree.dig("attachment_file_buttons", "updated")
+    refute tree.key?("attachment_file_buttons")
+    assert_equal "File updated", I18n.t("recording_studio.attachable.flashes.file_updated")
   end
 
   def test_copy_legacy_t_prefers_legacy_override

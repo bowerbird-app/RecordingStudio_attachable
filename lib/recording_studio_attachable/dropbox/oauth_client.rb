@@ -8,6 +8,8 @@ require "uri"
 module RecordingStudioAttachable
   module Dropbox
     class OAuthClient
+      include RecordingStudioAttachable::Adapter::OauthClient
+
       class Error < RecordingStudioAttachable::Error; end
 
       AUTHORIZATION_ENDPOINT = "https://www.dropbox.com/oauth2/authorize"
@@ -75,19 +77,12 @@ module RecordingStudioAttachable
         }
       end
 
-      def ensure_configured!
-        return if configuration.configured?
-
-        raise RecordingStudioAttachable::DependencyUnavailableError,
-              "Dropbox addon is missing client credentials or redirect URI"
+      def missing_credentials_message
+        "Dropbox addon is missing client credentials or redirect URI"
       end
 
-      def post_form(attributes)
-        ensure_configured!
-        response, body = Adapter::OauthHttp.post_form(TOKEN_ENDPOINT, attributes)
-        raise Error, Adapter::OauthHttp.error_message(body, "Dropbox authentication failed") unless response.is_a?(Net::HTTPSuccess)
-
-        Adapter::OauthHttp.normalize_tokens(body)
+      def authentication_failed_message
+        "Dropbox authentication failed"
       end
     end
   end

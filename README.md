@@ -477,7 +477,7 @@ In the Dropbox app console, add this host to **Chooser / Saver domains** (for ex
 
 Hosts with a Content Security Policy must allow the Chooser script at `https://www.dropbox.com/static/api/2/dropins.js` (`script-src`). Inline launcher imports use a CSP nonce via `javascript_tag`.
 
-OAuth tokens stay in the Rails session. The default cookie store is about 4 KB; Drive plus Dropbox tokens plus pending OAuth state can overflow it. Use a server-side session store in production. If a callback still overflows, Attachable clears that provider's tokens and asks the person to disconnect the other provider and connect again.
+OAuth tokens stay in the Rails session. Hosts that enable both Drive and Dropbox should use a server-side session store (Redis, cache, or Active Record) so the browser’s 4 KB cookie limit is not hit.
 
 #### Adding another provider
 

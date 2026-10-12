@@ -2,7 +2,6 @@
 
 require "test_helper"
 
-# rubocop:disable Metrics/ParameterLists
 class SafeRemoteFetchTest < Minitest::Test
   FakeResponse = Struct.new(:body, :code, :headers, :success, keyword_init: true) do
     delegate :[], to: :headers
@@ -359,16 +358,17 @@ class SafeRemoteFetchTest < Minitest::Test
 
   private
 
-  def fetch(uri:, allowed_hosts:, headers: {}, max_bytes: 100, byte_size: nil, http_method: :get, body: nil)
+  def fetch(**attributes)
+    max_bytes = attributes.key?(:max_bytes) ? attributes[:max_bytes] : 100
     remote_file = RecordingStudioAttachable::RemoteFile.new(
-      uri: uri,
-      allowed_hosts: allowed_hosts,
-      headers: headers,
+      uri: attributes.fetch(:uri),
+      allowed_hosts: attributes.fetch(:allowed_hosts),
+      headers: attributes.fetch(:headers, {}),
       filename: "file.pdf",
       content_type: "application/pdf",
-      byte_size: byte_size,
-      http_method: http_method,
-      body: body
+      byte_size: attributes[:byte_size],
+      http_method: attributes.fetch(:http_method, :get),
+      body: attributes[:body]
     )
     RecordingStudioAttachable::SafeRemoteFetch.call(remote_file, max_bytes: max_bytes)
   end
@@ -390,4 +390,3 @@ class SafeRemoteFetchTest < Minitest::Test
     }, &)
   end
 end
-# rubocop:enable Metrics/ParameterLists

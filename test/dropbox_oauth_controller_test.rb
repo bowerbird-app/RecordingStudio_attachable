@@ -94,42 +94,6 @@ class DropboxOauthControllerTest < ActionController::TestCase
     assert_equal "token-1", @request.session.dig("recording_studio_attachable_dropbox", "tokens", "access_token")
   end
 
-  def test_callback_clears_tokens_when_the_cookie_store_overflows
-    oauth_client = Object.new
-    oauth_client.define_singleton_method(:exchange_code) do |**_kwargs|
-      { "access_token" => "token-1", "refresh_token" => "refresh-1", "expires_at" => Time.current.to_i + 3600 }
-    end
-    route_proxy = Object.new
-    route_proxy.define_singleton_method(:recording_attachment_upload_path) do |recording_id, **_kwargs|
-      "/recordings/#{recording_id}/attachments/upload"
-    end
-    @controller.define_singleton_method(:recording_studio_attachable) { route_proxy }
-    @request.session["recording_studio_attachable_dropbox"] = {
-      "oauth_state" => { "value" => "known-state", "recording_id" => "rec-1", "code_verifier" => "verifier-1" }
-    }
-
-    with_routing do |set|
-      set.draw do
-        get "/dropbox/oauth/callback",
-            to: "recording_studio_attachable/dropbox/oauth#callback"
-      end
-
-      @routes = set
-
-      RecordingStudioAttachable::Adapter::SessionCookie.stub(:raise_if_overflow!, lambda { |_session|
-        raise ActionDispatch::Cookies::CookieOverflow
-      }) do
-        @controller.stub(:oauth_client, oauth_client) do
-          get :callback, params: { state: "known-state", code: "auth-code" }
-        end
-      end
-    end
-
-    assert_redirected_to "/recordings/rec-1/attachments/upload"
-    assert_equal RecordingStudioAttachable::Adapter::SessionCookie.overflow_message, flash[:alert]
-    assert_nil @request.session.dig("recording_studio_attachable_dropbox", "tokens")
-  end
-
   def test_callback_rejects_mismatched_state
     route_proxy = Object.new
     route_proxy.define_singleton_method(:recording_attachment_upload_path) do |recording_id, **_kwargs|

@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "erb"
-require "json"
 require "net/http"
 require "uri"
 
@@ -55,29 +54,16 @@ module RecordingStudioAttachable
 
       def resolve(selection)
         metadata = fetch_file(
-          selection_value(selection, :id),
-          resource_key: selection_value(selection, :resource_key, :resourceKey)
+          Adapter::Selection.value(selection, :id),
+          resource_key: Adapter::Selection.value(selection, :resource_key, :resourceKey)
         )
         remote_file_for(
           metadata.merge(
-            "name" => selection_value(selection, :name).presence || metadata.fetch("name"),
-            "description" => selection_value(selection, :description),
-            "resourceKey" => metadata["resourceKey"] || selection_value(selection, :resource_key, :resourceKey)
+            "name" => Adapter::Selection.value(selection, :name).presence || metadata.fetch("name"),
+            "description" => Adapter::Selection.value(selection, :description),
+            "resourceKey" => metadata["resourceKey"] || Adapter::Selection.value(selection, :resource_key, :resourceKey)
           )
         )
-      end
-
-      def download_file(file)
-        remote_file = remote_file_for(file.stringify_keys)
-        fetched = RecordingStudioAttachable::SafeRemoteFetch.call(
-          remote_file,
-          max_bytes: RecordingStudioAttachable.configuration.max_file_size
-        )
-        {
-          io: fetched.io,
-          filename: remote_file.filename,
-          content_type: fetched.content_type || remote_file.content_type
-        }
       end
 
       def remote_file_for(metadata)
@@ -124,21 +110,13 @@ module RecordingStudioAttachable
         filename.end_with?(extension) ? filename : "#{filename}#{extension}"
       end
 
-      def normalized_content_type(value)
-        value.to_s.split(";").first.presence
-      end
-
       def file_resource_path(file_id)
         "/files/#{ERB::Util.url_encode(file_id.to_s)}"
       end
 
-      def selection_value(selection, *keys)
-        Adapter::Selection.value(selection, *keys)
-      end
-
       def get_json(path, params = {})
         response = perform_request(path, params: params)
-        body = parse_json(response.body)
+        body = RecordingStudioAttachable::JsonBody.parse(response.body)
         raise request_error(response, body) unless response.is_a?(Net::HTTPSuccess)
 
         body
@@ -179,10 +157,6 @@ module RecordingStudioAttachable
 
       def json_host_allowed?(host)
         %w[www.googleapis.com googleapis.com].include?(host.to_s.downcase)
-      end
-
-      def parse_json(body)
-        RecordingStudioAttachable::JsonBody.parse(body)
       end
 
       def request_error(response, body)

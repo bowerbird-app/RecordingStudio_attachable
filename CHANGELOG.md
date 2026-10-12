@@ -20,13 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Google Drive downloads use the shared fetch. Cross-host redirects no longer reuse the Bearer token. File ids in Drive API paths are URL-encoded. Adapter launcher modules load through `javascript_tag` with a CSP nonce.
 - Drive and Dropbox share core adapter helpers (`SessionAccessToken`, client-picker registration, selection normalizing, JSON parse, OAuth form posts, import-selected-files).
 - `SafeRemoteFetch` treats `max_file_size` `nil` as no byte cap. Deadlines and connect/read timeouts still apply.
-- OAuth callbacks rescue cookie overflow, drop that provider's tokens, and tell the person to disconnect the other provider or switch the host to a server-side session store.
+- Drive and Dropbox bootstrap JSON returns `403` when the actor cannot upload (was `422` on Drive). Disabled adapters still return `422`.
 
 ### Upgrade Notes
 
 - Google Drive stays off by default. Hosts that already set `config.google_drive.enabled = true` plus OAuth and Picker credentials keep the Drive button. `config.google_drive.*` is unchanged.
 - Dropbox is off until you set `config.dropbox.enabled = true` and credentials. Create a Dropbox app with redirect URI `/recording_studio_attachable/dropbox/oauth/callback` and scopes `files.metadata.read` and `files.content.read`. Add this host to Chooser/Saver domains in the Dropbox app.
-- Adapter OAuth tokens stay in the Rails session. The default cookie store can overflow when Drive and Dropbox are both connected. Prefer a server-side session store in production.
+- Adapter OAuth tokens stay in the Rails session. Hosts that enable both Drive and Dropbox should use a server-side session store (Redis, cache, or Active Record) so the browser’s 4 KB cookie limit is not hit.
 - Custom `register_upload_provider` callers are unchanged. Optional `allowed_payload_keys` strips remote import payloads; omit it to keep the previous pass-through.
 
 ## [0.15.0] - 2026-10-12

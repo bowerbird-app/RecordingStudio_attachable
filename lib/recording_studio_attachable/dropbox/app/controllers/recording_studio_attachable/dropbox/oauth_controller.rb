@@ -14,8 +14,6 @@ module RecordingStudioAttachable
       def callback
         ensure_dropbox_enabled!
         complete_callback
-      rescue ActionDispatch::Cookies::CookieOverflow
-        handle_cookie_overflow
       rescue RecordingStudioAttachable::Error, RecordingStudioAttachable::Dropbox::OAuthClient::Error => e
         handle_oauth_failure(e)
       end
@@ -62,11 +60,6 @@ module RecordingStudioAttachable
           modal_id: state["provider_modal_id"],
           close_window: true
         )
-      end
-
-      def handle_cookie_overflow
-        clear_dropbox_tokens!
-        redirect_oauth_alert(RecordingStudioAttachable::Adapter::SessionCookie.overflow_message)
       end
 
       def handle_oauth_failure(error)

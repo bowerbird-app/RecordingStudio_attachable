@@ -13,6 +13,7 @@ class LibraryViewsTest < Minitest::Test
     assert_includes source, "placement_usages"
     assert_includes source, "used_in"
     assert_includes source, "trash_in_use"
+    assert_includes source, '].compact_blank.join(". ")'
   end
 
   def test_attachable_no_longer_ships_a_placements_index

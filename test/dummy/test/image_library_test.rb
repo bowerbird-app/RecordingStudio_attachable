@@ -33,6 +33,7 @@ class ImageLibraryTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Search"
     assert_includes response.body, "Photo"
     assert_includes response.body, "Back"
+    assert_includes response.body, recording_studio_attachable.recording_attachment_upload_path(library)
   end
 
   test "host campaign path opens the campaign keyed library listing" do

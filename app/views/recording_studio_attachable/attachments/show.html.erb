@@ -19,7 +19,7 @@
       description: [
         @placement_usages.map(&:label).to_sentence,
         t("recording_studio_attachable.attachments.trash_in_use")
-      ].compact_blank.join(" "),
+      ].compact_blank.join(". "),
       style: :warning
     ) %>
   <% end %>

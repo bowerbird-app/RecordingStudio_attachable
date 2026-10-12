@@ -560,8 +560,12 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes engine_routes_source, 'get "bootstrap", to: "bootstrap#show", as: :bootstrap'
     assert_includes engine_routes_source, 'get "connect", to: "oauth#new", as: :connect'
     assert_includes engine_routes_source, 'delete "connect", to: "oauth#destroy", as: :disconnect'
-    assert_includes engine_source, "strategy: :client_picker"
+    picker_source = File.read(
+      File.expand_path("../lib/recording_studio_attachable/adapter/client_picker.rb", __dir__)
+    )
+    assert_includes engine_source, "Adapter::ClientPicker.provider_options"
     assert_includes engine_source, 'launcher: "google_drive"'
+    assert_includes picker_source, "strategy: :client_picker"
     assert_includes launcher_source, 'registerUploadProviderLauncher("google_drive"'
     assert_includes launcher_source, "https://apis.google.com/js/api.js"
     assert_includes initializer_template, "strategy: :client_picker"

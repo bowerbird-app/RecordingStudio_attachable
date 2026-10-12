@@ -108,7 +108,9 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes upload_controller_source, 'entry.status = entry.providerPayload ? "importing" : "finalizing"'
     assert_includes upload_controller_source, "remoteStatusLabel(entry)"
     assert_includes upload_controller_source, '"js.importing_from"'
+    # rubocop:disable Style/FormatStringToken -- asserts JS I18n %{provider} token byte-identical to main
     assert_includes upload_controller_source, "Importing from %{provider}"
+    # rubocop:enable Style/FormatStringToken
     assert_includes upload_controller_source, 'this.i18nText("js.creating_attachment", "Creating attachment")'
     assert_includes upload_controller_source, "indeterminateProgressTemplate(entry)"
     assert_includes upload_controller_source, "progressTemplateHtml({"

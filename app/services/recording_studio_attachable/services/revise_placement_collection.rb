@@ -17,9 +17,7 @@ module RecordingStudioAttachable
 
       def perform
         sheet = AttachmentCollection.from_params(recording: recording, params: AttachmentCollection.permit(params))
-        unless sheet.placement?
-          raise ArgumentError, Copy.t("collection.stale_form", default: AttachmentCollection::STALE_FORM)
-        end
+        raise ArgumentError, Copy.t("collection.stale_form", default: AttachmentCollection::STALE_FORM) unless sheet.placement?
 
         resolved_actor = resolve_actor(actor)
         apply_revisions(sheet, resolved_actor)

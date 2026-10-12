@@ -4,6 +4,7 @@ require_relative "attachment_file_buttons_helper"
 require_relative "attachment_collections_helper"
 
 module RecordingStudioAttachable
+  # rubocop:disable Metrics/ModuleLength -- helpers include JS i18n payloads for upload/picker
   module ApplicationHelper
     include AttachmentFileButtonsHelper
     include AttachmentCollectionsHelper
@@ -72,6 +73,7 @@ module RecordingStudioAttachable
       end
     end
 
+    # rubocop:disable Metrics/MethodLength, Style/FormatStringToken -- I18n/JS tokens match en.yml %{name} form
     def attachable_upload_js_i18n
       attachable_js_i18n(
         "js.provider_unavailable" => "This upload provider is not available on this page.",
@@ -122,6 +124,7 @@ module RecordingStudioAttachable
         "js.uploading_name" => "Uploading %{name}"
       )
     end
+    # rubocop:enable Metrics/MethodLength, Style/FormatStringToken
 
     def attachable_collection_js_i18n
       attachable_js_i18n(
@@ -140,4 +143,5 @@ module RecordingStudioAttachable
       end
     end
   end
+  # rubocop:enable Metrics/ModuleLength
 end

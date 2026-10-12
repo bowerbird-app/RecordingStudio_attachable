@@ -3,6 +3,7 @@
 require_relative "placements_picker"
 
 module RecordingStudioAttachable
+  # rubocop:disable Metrics/ClassLength -- placement index/create/update/reorder stay in one controller
   class PlacementsController < ApplicationController
     include PlacementsPicker
 
@@ -138,4 +139,5 @@ module RecordingStudioAttachable
                 end
     end
   end
+  # rubocop:enable Metrics/ClassLength
 end

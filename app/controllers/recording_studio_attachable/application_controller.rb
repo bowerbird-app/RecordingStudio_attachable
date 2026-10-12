@@ -274,7 +274,7 @@ module RecordingStudioAttachable
                 #{close_window_script}
               })();
             </script>
-            <p>#{ERB::Util.html_escape(Copy.t("flashes.returning_to_upload", default: "Returning to the upload page…"))}</p>
+            <p>#{ERB::Util.html_escape(Copy.t('flashes.returning_to_upload', default: 'Returning to the upload page…'))}</p>
           </body>
         </html>
       HTML

@@ -6,6 +6,7 @@ require "uri"
 
 module RecordingStudioAttachable
   module Dropbox
+    # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
     class Client
       class Error < RecordingStudioAttachable::Error; end
       class UnauthorizedError < Error; end
@@ -110,5 +111,6 @@ module RecordingStudioAttachable
         "Dropbox request failed (HTTP #{status}): #{details}"
       end
     end
+    # rubocop:enable Metrics/MethodLength, Metrics/AbcSize
   end
 end

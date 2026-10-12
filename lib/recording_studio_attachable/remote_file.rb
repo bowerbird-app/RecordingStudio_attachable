@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module RecordingStudioAttachable
+  # rubocop:disable Metrics/MethodLength, Metrics/ParameterLists
   class RemoteFile
     attr_reader :uri, :headers, :http_method, :body, :filename, :content_type, :byte_size,
                 :external_id, :external_url, :allowed_hosts, :name, :description
@@ -22,4 +23,5 @@ module RecordingStudioAttachable
       @description = description
     end
   end
+  # rubocop:enable Metrics/MethodLength, Metrics/ParameterLists
 end

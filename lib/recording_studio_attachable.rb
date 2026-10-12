@@ -69,7 +69,7 @@ require "recording_studio_attachable/placements"
 require "recording_studio_attachable/services/base_service"
 require "recording_studio/capabilities/image_library"
 require "recording_studio/capabilities/library_placement"
-Dir[File.expand_path("recording_studio_attachable/*/engine.rb", __dir__)].sort.each do |path|
+Dir[File.expand_path("recording_studio_attachable/*/engine.rb", __dir__)].each do |path|
   require path
 end
 require "recording_studio_attachable/engine"

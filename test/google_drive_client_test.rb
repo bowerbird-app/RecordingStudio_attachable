@@ -75,22 +75,22 @@ class GoogleDriveClientTest < Minitest::Test
     response = FakeResponse.new(body: "pdf-binary", code: "200", headers: {}, success: true)
 
     with_public_dns do
-    Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
-      assert_equal true, use_ssl
+      Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
+        assert_equal true, use_ssl
 
-      http = stub_http(captured: captured, response: response)
-      block.call(http)
-    }) do
-      result = client.download_file(
-        "id" => "doc-1",
-        "name" => "Project brief",
-        "mimeType" => "application/vnd.google-apps.document"
-      )
+        http = stub_http(captured: captured, response: response)
+        block.call(http)
+      }) do
+        result = client.download_file(
+          "id" => "doc-1",
+          "name" => "Project brief",
+          "mimeType" => "application/vnd.google-apps.document"
+        )
 
-      assert_equal "Project brief.pdf", result.fetch(:filename)
-      assert_equal "application/pdf", result.fetch(:content_type)
-      assert_equal "pdf-binary", result.fetch(:io).read
-    end
+        assert_equal "Project brief.pdf", result.fetch(:filename)
+        assert_equal "application/pdf", result.fetch(:content_type)
+        assert_equal "pdf-binary", result.fetch(:io).read
+      end
     end
 
     path, query = captured.fetch(:path).split("?", 2)
@@ -105,21 +105,21 @@ class GoogleDriveClientTest < Minitest::Test
     response = FakeResponse.new(body: "csv-data", code: "200", headers: {}, success: true)
 
     with_public_dns do
-    Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
-      assert_equal true, use_ssl
+      Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
+        assert_equal true, use_ssl
 
-      http = stub_http(response: response)
-      block.call(http)
-    }) do
-      result = client.download_file(
-        "id" => "sheet-1",
-        "name" => "Report.csv",
-        "mimeType" => "application/vnd.google-apps.spreadsheet"
-      )
+        http = stub_http(response: response)
+        block.call(http)
+      }) do
+        result = client.download_file(
+          "id" => "sheet-1",
+          "name" => "Report.csv",
+          "mimeType" => "application/vnd.google-apps.spreadsheet"
+        )
 
-      assert_equal "Report.csv", result.fetch(:filename)
-      assert_equal "text/csv", result.fetch(:content_type)
-    end
+        assert_equal "Report.csv", result.fetch(:filename)
+        assert_equal "text/csv", result.fetch(:content_type)
+      end
     end
   end
 
@@ -133,22 +133,22 @@ class GoogleDriveClientTest < Minitest::Test
     )
 
     with_public_dns do
-    Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
-      assert_equal true, use_ssl
+      Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
+        assert_equal true, use_ssl
 
-      http = stub_http(captured: captured, response: response)
-      block.call(http)
-    }) do
-      result = client.download_file(
-        "id" => "file-1",
-        "name" => "Preview",
-        "mimeType" => "application/octet-stream"
-      )
+        http = stub_http(captured: captured, response: response)
+        block.call(http)
+      }) do
+        result = client.download_file(
+          "id" => "file-1",
+          "name" => "Preview",
+          "mimeType" => "application/octet-stream"
+        )
 
-      assert_equal "Preview", result.fetch(:filename)
-      assert_equal "image/png", result.fetch(:content_type)
-      assert_equal "image-bytes", result.fetch(:io).read
-    end
+        assert_equal "Preview", result.fetch(:filename)
+        assert_equal "image/png", result.fetch(:content_type)
+        assert_equal "image-bytes", result.fetch(:io).read
+      end
     end
 
     path, query = captured.fetch(:path).split("?", 2)
@@ -440,8 +440,8 @@ class GoogleDriveClientTest < Minitest::Test
     @client ||= RecordingStudioAttachable::GoogleDrive::Client.new(access_token: "access-token")
   end
 
-  def with_public_dns(&block)
-    Resolv.stub(:getaddresses, ->(_host) { ["8.8.8.8"] }, &block)
+  def with_public_dns(&)
+    Resolv.stub(:getaddresses, ->(_host) { ["8.8.8.8"] }, &)
   end
 
   def stub_http(response:, captured: nil)

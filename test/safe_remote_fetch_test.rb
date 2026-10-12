@@ -45,8 +45,8 @@ class SafeRemoteFetchTest < Minitest::Test
       "200"
     end
 
-    def read_body
-      @chunks.each { |chunk| yield chunk }
+    def read_body(&)
+      @chunks.each(&)
     end
   end
 
@@ -96,6 +96,22 @@ class SafeRemoteFetchTest < Minitest::Test
     end
   end
 
+  def test_localhost_is_refused
+    error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
+      fetch(uri: "https://localhost/file", allowed_hosts: ["localhost"])
+    end
+
+    assert_equal "Remote download host is not allowed", error.message
+  end
+
+  def test_non_443_port_is_refused
+    error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
+      fetch(uri: "https://api.example.test:8443/file", allowed_hosts: ["api.example.test"])
+    end
+
+    assert_equal "Remote download must use port 443", error.message
+  end
+
   def test_http_is_refused
     error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
       fetch(uri: "http://api.example.test/file", allowed_hosts: ["api.example.test"])
@@ -110,7 +126,10 @@ class SafeRemoteFetchTest < Minitest::Test
     response.define_singleton_method(:is_a?) { |klass| klass == Net::HTTPSuccess }
     response.define_singleton_method(:[]) { |header| header == "content-length" ? "50" : nil }
     response.define_singleton_method(:code) { "200" }
-    response.define_singleton_method(:read_body) { read = true; yield "x" * 50 }
+    response.define_singleton_method(:read_body) do |&block|
+      read = true
+      block.call("x" * 50)
+    end
 
     with_public_dns do
       stub_http(->(_host, _request) { response }) do
@@ -145,7 +164,7 @@ class SafeRemoteFetchTest < Minitest::Test
   end
 
   def test_byte_cap_stops_a_streaming_download
-    response = StreamingResponse.new(chunks: ["aaaa", "bbbb", "cccc"], content_type: "text/plain")
+    response = StreamingResponse.new(chunks: %w[aaaa bbbb cccc], content_type: "text/plain")
 
     with_public_dns do
       stub_http(->(_host, _request) { response }) do
@@ -172,11 +191,11 @@ class SafeRemoteFetchTest < Minitest::Test
     RecordingStudioAttachable::SafeRemoteFetch.call(remote_file, max_bytes: max_bytes)
   end
 
-  def with_public_dns(&block)
-    Resolv.stub(:getaddresses, ->(_host) { ["8.8.8.8"] }, &block)
+  def with_public_dns(&)
+    Resolv.stub(:getaddresses, ->(_host) { ["8.8.8.8"] }, &)
   end
 
-  def stub_http(responder, &block)
+  def stub_http(responder, &)
     Net::HTTP.stub(:start, lambda { |host, _port, use_ssl:, &http_block|
       assert_equal true, use_ssl
       http = Object.new
@@ -185,6 +204,6 @@ class SafeRemoteFetchTest < Minitest::Test
         request_block ? request_block.call(response) : response
       end
       http_block.call(http)
-    }, &block)
+    }, &)
   end
 end

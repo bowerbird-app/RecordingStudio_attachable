@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require_relative "../../app/services/recording_studio_attachable/services/application_service"
+require_relative "../../app/services/recording_studio_attachable/services/import_attachments"
+require_relative "../../lib/recording_studio_attachable/dropbox/services/import_selected_files"
 
 class DropboxImportSelectedFilesTest < Minitest::Test
   FakeRecording = Struct.new(:id, :recordable_type, keyword_init: true)

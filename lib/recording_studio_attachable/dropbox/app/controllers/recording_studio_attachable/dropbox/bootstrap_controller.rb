@@ -14,7 +14,7 @@ module RecordingStudioAttachable
 
       private
 
-      def bootstrap_payload
+      def bootstrap_payload # rubocop:disable Metrics/MethodLength
         payload = {
           provider_key: "dropbox",
           launcher: "dropbox",

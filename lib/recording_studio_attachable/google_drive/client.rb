@@ -172,9 +172,7 @@ module RecordingStudioAttachable
           return response if location.blank?
 
           redirected_uri = URI.join(uri.to_s, location)
-          if redirected_uri.host.to_s.downcase != uri.host.to_s.downcase
-            raise Error, "Google Drive request refused a cross-host redirect"
-          end
+          raise Error, "Google Drive request refused a cross-host redirect" if redirected_uri.host.to_s.downcase != uri.host.to_s.downcase
 
           perform_get_request(redirected_uri, redirects_remaining: redirects_remaining - 1)
         end

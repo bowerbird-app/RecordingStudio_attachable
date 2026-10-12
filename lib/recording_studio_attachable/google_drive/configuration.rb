@@ -2,6 +2,7 @@
 
 module RecordingStudioAttachable
   module GoogleDrive
+    # rubocop:disable Metrics/MethodLength
     class Configuration
       PLACEHOLDER_PREFIXES = {
         client_id: ["dummy-google-drive-client-id"],
@@ -90,6 +91,7 @@ module RecordingStudioAttachable
         Array(PLACEHOLDER_PREFIXES[field]).exclude?(normalized)
       end
     end
+    # rubocop:enable Metrics/MethodLength
   end
 end
 

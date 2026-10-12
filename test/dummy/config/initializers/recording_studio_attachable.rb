@@ -12,6 +12,18 @@ else
   "http://127.0.0.1:3000/recording_studio_attachable/dropbox/oauth/callback"
 end
 
+# Lookup order for adapter credentials: ENV, then encrypted credentials
+# (config/credentials.yml.enc, needs config/master.key or RAILS_MASTER_KEY),
+# then a placeholder so CI and keyless checkouts still boot.
+dummy_credential = lambda do |provider, key, default|
+  value = begin
+    Rails.application.credentials.dig(provider, key)
+  rescue ActiveSupport::EncryptedFile::MissingKeyError, ActiveSupport::MessageEncryptor::InvalidMessage
+    nil
+  end
+  value.to_s.presence || default
+end
+
 RecordingStudioAttachable.configure do |config|
   config.max_file_size = 25.megabytes
   config.image_processing_enabled = true
@@ -28,19 +40,25 @@ RecordingStudioAttachable.configure do |config|
   }
   config.google_drive.enabled = true
   config.google_drive.client_id = ENV["DUMMY_GOOGLE_OAUTH_CLIENT_ID"].presence ||
-                                  ENV.fetch("DUMMY_GOOGLE_DRIVE_CLIENT_ID", "dummy-google-drive-client-id")
+                                  ENV["DUMMY_GOOGLE_DRIVE_CLIENT_ID"].presence ||
+                                  dummy_credential.call(:google_drive, :client_id, "dummy-google-drive-client-id")
   config.google_drive.client_secret = ENV["DUMMY_GOOGLE_CLIENT_SECRET"].presence ||
-                                      ENV.fetch("DUMMY_GOOGLE_DRIVE_CLIENT_SECRET", "dummy-google-drive-client-secret")
+                                      ENV["DUMMY_GOOGLE_DRIVE_CLIENT_SECRET"].presence ||
+                                      dummy_credential.call(:google_drive, :client_secret, "dummy-google-drive-client-secret")
   config.google_drive.api_key = ENV["DUMMY_GOOGLE_PICKER_API_KEY"].presence ||
-                                ENV.fetch("DUMMY_GOOGLE_DRIVE_API_KEY", "dummy-google-drive-api-key")
+                                ENV["DUMMY_GOOGLE_DRIVE_API_KEY"].presence ||
+                                dummy_credential.call(:google_drive, :api_key, "dummy-google-drive-api-key")
   config.google_drive.app_id = ENV["DUMMY_GOOGLE_CLOUD_PROJECT_NUMBER"].presence ||
-                               ENV.fetch("DUMMY_GOOGLE_DRIVE_APP_ID", "dummy-google-drive-app-id")
+                               ENV["DUMMY_GOOGLE_DRIVE_APP_ID"].presence ||
+                               dummy_credential.call(:google_drive, :app_id, "dummy-google-drive-app-id")
   config.google_drive.redirect_uri = ENV["DUMMY_GOOGLE_REDIRECT_URI"].presence ||
                                      ENV.fetch("DUMMY_GOOGLE_DRIVE_REDIRECT_URI", codespaces_redirect_uri)
 
   config.dropbox.enabled = true
-  config.dropbox.client_id = ENV.fetch("DUMMY_DROPBOX_CLIENT_ID", "dummy-dropbox-client-id")
-  config.dropbox.client_secret = ENV.fetch("DUMMY_DROPBOX_CLIENT_SECRET", "dummy-dropbox-client-secret")
+  config.dropbox.client_id = ENV["DUMMY_DROPBOX_CLIENT_ID"].presence ||
+                             dummy_credential.call(:dropbox, :client_id, "dummy-dropbox-client-id")
+  config.dropbox.client_secret = ENV["DUMMY_DROPBOX_CLIENT_SECRET"].presence ||
+                                 dummy_credential.call(:dropbox, :client_secret, "dummy-dropbox-client-secret")
   config.dropbox.redirect_uri = ENV.fetch("DUMMY_DROPBOX_REDIRECT_URI", codespaces_dropbox_redirect_uri)
 
   config.placement_picker_libraries = lambda { |parent_recording|

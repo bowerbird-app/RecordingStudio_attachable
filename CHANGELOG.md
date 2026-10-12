@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Cloud upload adapters: Google Drive and Dropbox are self-contained adapters on the existing upload-provider registry. Each has an explicit `enabled` switch and is registered only when enabled and fully configured.
+- Dropbox adapter: OAuth 2.0 with PKCE, Chooser, server-side resolve via `files/get_metadata` and `files/download`. Copy into Active Storage only.
+- Shared `RecordingStudioAttachable::SafeRemoteFetch` for adapter downloads: HTTPS only, per-adapter hosts, drop `Authorization` on cross-host redirects, block private/loopback addresses, refuse oversize before a full download, stream to a Tempfile with a byte cap.
+- Adapters register their own config objects. Hosts set `config.google_drive.*` and `config.dropbox.*` as before for Drive.
+
+### Changed
+
+- Google Drive no longer has special cases in core configuration, routes, requires, or Stimulus controllers. It mounts and registers itself through the adapter hooks.
+- Google Drive downloads use the shared fetch. Cross-host redirects no longer reuse the Bearer token. File ids in Drive API paths are URL-encoded.
+
+### Upgrade Notes
+
+- Google Drive stays off by default. Hosts that already set `config.google_drive.enabled = true` plus OAuth and Picker credentials keep the Drive button. `config.google_drive.*` is unchanged.
+- Dropbox is off until you set `config.dropbox.enabled = true` and credentials. Create a Dropbox app with redirect URI `/recording_studio_attachable/dropbox/oauth/callback` and scopes `files.metadata.read` and `files.content.read`.
+- Custom `register_upload_provider` callers are unchanged. Optional `allowed_payload_keys` strips remote import payloads; omit it to keep the previous pass-through.
+
 ## [0.15.0] - 2026-10-12
 
 ### Added
@@ -389,5 +407,6 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 [0.2.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/releases/tag/v0.1.1
 [0.1.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/releases/tag/v0.1.0
+[0.15.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.14.1...v0.15.0
 [0.14.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.13.0...v0.14.0

@@ -371,9 +371,66 @@ class ConfigurationTest < Minitest::Test
         default_kind_filter: :all,
         layout: :application,
         auth_roles: @configuration.auth_roles,
-        google_drive: @configuration.google_drive.to_h
+        google_drive: @configuration.google_drive.to_h,
+        dropbox: @configuration.dropbox.to_h
       },
       @configuration.to_h
     )
+  end
+
+  def test_dropbox_defaults_are_disabled_and_unconfigured
+    assert_not @configuration.dropbox.enabled?
+    assert_not @configuration.dropbox.configured?
+    assert_equal %w[files.metadata.read files.content.read], @configuration.dropbox.scopes
+  end
+
+  def test_merge_updates_dropbox_configuration
+    @configuration[:dropbox] = {
+      enabled: true,
+      client_id: "dropbox-client-id",
+      client_secret: "dropbox-client-secret",
+      redirect_uri: "https://example.test/recording_studio_attachable/dropbox/oauth/callback"
+    }
+
+    assert @configuration.dropbox.enabled?
+    assert @configuration.dropbox.configured?
+    assert @configuration.dropbox.available?
+  end
+
+  def test_dropbox_configuration_rejects_dummy_placeholder_values
+    @configuration[:dropbox] = {
+      enabled: true,
+      client_id: "dummy-dropbox-client-id",
+      client_secret: "dummy-dropbox-client-secret",
+      redirect_uri: "https://example.test/recording_studio_attachable/dropbox/oauth/callback"
+    }
+
+    assert_not @configuration.dropbox.configured?
+    assert_not @configuration.dropbox.available?
+  end
+
+  def test_adapters_can_be_enabled_independently
+    @configuration[:google_drive] = {
+      enabled: true,
+      client_id: "client-id",
+      client_secret: "client-secret",
+      redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
+      api_key: "api-key",
+      app_id: "app-id"
+    }
+
+    assert @configuration.google_drive.available?
+    assert_not @configuration.dropbox.available?
+
+    @configuration[:dropbox] = {
+      enabled: true,
+      client_id: "dropbox-client-id",
+      client_secret: "dropbox-client-secret",
+      redirect_uri: "https://example.test/recording_studio_attachable/dropbox/oauth/callback"
+    }
+    @configuration.google_drive.enabled = false
+
+    assert_not @configuration.google_drive.available?
+    assert @configuration.dropbox.available?
   end
 end

@@ -29,7 +29,7 @@ class GoogleDriveOAuthClientTest < Minitest::Test
   end
 
   def test_authorization_url_requires_a_configured_google_drive_client
-    unconfigured = RecordingStudioAttachable::Configuration::GoogleDriveConfiguration.new
+    unconfigured = RecordingStudioAttachable::GoogleDrive::Configuration.new
     oauth_client = RecordingStudioAttachable::GoogleDrive::OAuthClient.new(configuration: unconfigured)
 
     error = assert_raises(RecordingStudioAttachable::DependencyUnavailableError) do
@@ -165,7 +165,7 @@ class GoogleDriveOAuthClientTest < Minitest::Test
   end
 
   def configured_google_drive
-    @configured_google_drive ||= RecordingStudioAttachable::Configuration::GoogleDriveConfiguration.new.tap do |configuration|
+    @configured_google_drive ||= RecordingStudioAttachable::GoogleDrive::Configuration.new.tap do |configuration|
       configuration.merge!(
         client_id: "client-id",
         client_secret: "client-secret",

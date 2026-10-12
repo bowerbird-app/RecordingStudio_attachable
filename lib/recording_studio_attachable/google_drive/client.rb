@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
+require "erb"
 require "json"
 require "net/http"
-require "stringio"
 require "uri"
 
 module RecordingStudioAttachable
@@ -20,6 +20,12 @@ module RecordingStudioAttachable
       }.freeze
 
       API_ROOT = "https://www.googleapis.com/drive/v3"
+      ALLOWED_HOSTS = [
+        "www.googleapis.com",
+        "googleapis.com",
+        "googleusercontent.com",
+        "*.googleusercontent.com"
+      ].freeze
       MAX_REDIRECTS = 5
 
       def initialize(access_token:)
@@ -40,40 +46,68 @@ module RecordingStudioAttachable
 
       def fetch_file(file_id, resource_key: nil)
         get_json(
-          "/files/#{file_id}",
-          fields: "id,name,mimeType,resourceKey,webViewLink",
+          file_resource_path(file_id),
+          fields: "id,name,mimeType,resourceKey,webViewLink,size",
           resourceKey: resource_key,
           supportsAllDrives: true
         )
       end
 
+      def resolve(selection)
+        metadata = fetch_file(
+          selection_value(selection, :id),
+          resource_key: selection_value(selection, :resource_key, :resourceKey)
+        )
+        remote_file_for(
+          metadata.merge(
+            "name" => selection_value(selection, :name).presence || metadata.fetch("name"),
+            "description" => selection_value(selection, :description),
+            "resourceKey" => metadata["resourceKey"] || selection_value(selection, :resource_key, :resourceKey)
+          )
+        )
+      end
+
       def download_file(file)
-        metadata = file.stringify_keys
+        remote_file = remote_file_for(file.stringify_keys)
+        fetched = RecordingStudioAttachable::SafeRemoteFetch.call(
+          remote_file,
+          max_bytes: RecordingStudioAttachable.configuration.max_file_size
+        )
+        {
+          io: fetched.io,
+          filename: remote_file.filename,
+          content_type: fetched.content_type || remote_file.content_type
+        }
+      end
+
+      def remote_file_for(metadata)
         export = EXPORT_MIME_TYPES[metadata.fetch("mimeType")]
-        request_params = {
+        filename = export ? append_extension(metadata.fetch("name"), export.fetch(:extension)) : metadata.fetch("name")
+        content_type = export ? export.fetch(:content_type) : metadata.fetch("mimeType")
+        path = if export
+                 "#{file_resource_path(metadata.fetch('id'))}/export"
+               else
+                 file_resource_path(metadata.fetch("id"))
+               end
+        params = {
           resourceKey: metadata["resourceKey"],
           supportsAllDrives: true
         }
+        params[:mimeType] = export.fetch(:content_type) if export
+        params[:alt] = "media" unless export
 
-        if export
-          body = get_body(
-            "/files/#{metadata.fetch('id')}/export",
-            mimeType: export.fetch(:content_type),
-            **request_params
-          )
-          return {
-            io: StringIO.new(body),
-            filename: append_extension(metadata.fetch("name"), export.fetch(:extension)),
-            content_type: export.fetch(:content_type)
-          }
-        end
-
-        body, content_type = get_binary("/files/#{metadata.fetch('id')}", alt: "media", **request_params)
-        {
-          io: StringIO.new(body),
-          filename: metadata.fetch("name"),
-          content_type: normalized_content_type(content_type) || metadata.fetch("mimeType")
-        }
+        RecordingStudioAttachable::RemoteFile.new(
+          uri: request_uri(path, params),
+          headers: { "Authorization" => "Bearer #{access_token}" },
+          filename: filename,
+          content_type: content_type,
+          byte_size: metadata["size"],
+          external_id: metadata.fetch("id"),
+          external_url: metadata["webViewLink"],
+          allowed_hosts: ALLOWED_HOSTS,
+          name: metadata["name"],
+          description: metadata["description"]
+        )
       end
 
       private
@@ -94,6 +128,15 @@ module RecordingStudioAttachable
         value.to_s.split(";").first.presence
       end
 
+      def file_resource_path(file_id)
+        "/files/#{ERB::Util.url_encode(file_id.to_s)}"
+      end
+
+      def selection_value(selection, *keys)
+        hash = selection.respond_to?(:to_h) ? selection.to_h : {}
+        keys.lazy.map { |key| hash[key.to_s] || hash[key] }.find(&:present?)
+      end
+
       def get_json(path, params = {})
         response = perform_request(path, params: params)
         body = parse_json(response.body)
@@ -102,30 +145,21 @@ module RecordingStudioAttachable
         body
       end
 
-      def get_body(path, params = {})
-        response = perform_request(path, params: params)
-        raise request_error(response, parse_json(response.body)) unless response.is_a?(Net::HTTPSuccess)
-
-        response.body.to_s
-      end
-
-      def get_binary(path, params = {})
-        response = perform_request(path, params: params)
-        raise request_error(response, parse_json(response.body)) unless response.is_a?(Net::HTTPSuccess)
-
-        [response.body.to_s, response["content-type"]]
-      end
-
       def perform_request(path, params: {})
+        perform_get_request(request_uri(path, params), redirects_remaining: MAX_REDIRECTS)
+      end
+
+      def request_uri(path, params)
         uri = URI.join("#{API_ROOT}/", path.to_s.sub(%r{\A/+}, ""))
         compact_params = params.compact
         uri.query = URI.encode_www_form(compact_params) if compact_params.any?
-
-        perform_get_request(uri, redirects_remaining: MAX_REDIRECTS)
+        uri
       end
 
       def perform_get_request(uri, redirects_remaining:)
         raise Error, "Google Drive request redirected too many times" if redirects_remaining.negative?
+        raise Error, "Google Drive request must use HTTPS" unless uri.is_a?(URI::HTTPS)
+        raise Error, "Google Drive request host is not allowed" unless json_host_allowed?(uri.host)
 
         request = Net::HTTP::Get.new(uri)
         request["Authorization"] = "Bearer #{access_token}"
@@ -138,8 +172,16 @@ module RecordingStudioAttachable
           return response if location.blank?
 
           redirected_uri = URI.join(uri.to_s, location)
+          if redirected_uri.host.to_s.downcase != uri.host.to_s.downcase
+            raise Error, "Google Drive request refused a cross-host redirect"
+          end
+
           perform_get_request(redirected_uri, redirects_remaining: redirects_remaining - 1)
         end
+      end
+
+      def json_host_allowed?(host)
+        %w[www.googleapis.com googleapis.com].include?(host.to_s.downcase)
       end
 
       def parse_json(body)

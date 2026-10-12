@@ -81,7 +81,10 @@ RecordingStudioAttachable.configure do |config|
   #   end
   # )
   #
-  # Built-in Google Drive addon:
+  # Built-in cloud adapters are off until you enable them and supply credentials.
+  # An adapter is registered and shown only when enabled AND fully configured.
+  #
+  # Google Drive:
   # config.google_drive.enabled = true
   # config.google_drive.client_id = ENV["GOOGLE_DRIVE_CLIENT_ID"]
   # config.google_drive.client_secret = ENV["GOOGLE_DRIVE_CLIENT_SECRET"]
@@ -89,12 +92,15 @@ RecordingStudioAttachable.configure do |config|
   # config.google_drive.app_id = ENV["GOOGLE_DRIVE_APP_ID"]   # Google Cloud project number
   # config.google_drive.redirect_uri = "https://your-app.test/recording_studio_attachable/google_drive/oauth/callback"
   #
-  # The engine mounts the Google Drive routes under:
-  # /recording_studio_attachable/google_drive
+  # Dropbox (OAuth redirect URI and scopes files.metadata.read + files.content.read):
+  # config.dropbox.enabled = true
+  # config.dropbox.client_id = ENV["DROPBOX_CLIENT_ID"]
+  # config.dropbox.client_secret = ENV["DROPBOX_CLIENT_SECRET"]
+  # config.dropbox.redirect_uri = "https://your-app.test/recording_studio_attachable/dropbox/oauth/callback"
   #
-  # The Google Drive provider button is only registered when the addon is enabled
-  # and the OAuth + Picker credentials above are present. The built-in button
-  # opens Google auth and the Google Picker directly from the upload page.
+  # Adapter routes live under the engine mount, for example:
+  # /recording_studio_attachable/google_drive
+  # /recording_studio_attachable/dropbox
   #
   # Then, inside your provider controller or service, call:
   # RecordingStudioAttachable::Services::ImportAttachment.call(

@@ -90,9 +90,15 @@ module RecordingStudioAttachable
     def normalized_provider_payload(provider_payload, provider_key: nil)
       return nil if provider_payload.blank?
       return nil if provider_key.blank?
-      raise ArgumentError, "Unknown upload provider" if registered_provider(provider_key).blank?
 
-      provider_payload.to_h.compact_blank
+      provider = registered_provider(provider_key)
+      raise ArgumentError, "Unknown upload provider" if provider.blank?
+
+      payload = provider_payload.to_h.compact_blank
+      allowed_keys = provider.allowed_payload_keys
+      return payload if allowed_keys.blank?
+
+      payload.stringify_keys.slice(*allowed_keys)
     end
 
     def registered_provider(provider_key)

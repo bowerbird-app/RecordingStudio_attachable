@@ -6,19 +6,9 @@
     <% if facts.filename %>
       <p class="truncate text-xs text-(--surface-muted-content-color)"><%= facts.filename %></p>
     <% end %>
-    <% display_labels = [] %>
-    <% if (english_type = facts.type_label) %>
-      <% mime = facts.content_type_key %>
-      <% display_labels << if mime.present?
-           RecordingStudioAttachable::Copy.type_label(mime, english: english_type)
-         else
-           english_type
-         end %>
-    <% end %>
-    <% display_labels.concat([facts.dimensions_label, facts.size_label].compact) %>
-    <% if display_labels.any? %>
+    <% if facts.labels.any? %>
       <div class="flex flex-wrap gap-3">
-        <% display_labels.each do |label| %>
+        <% facts.labels.each do |label| %>
           <%= render FlatPack::Badge::Component.new(text: label, style: :default, size: :sm) %>
         <% end %>
       </div>

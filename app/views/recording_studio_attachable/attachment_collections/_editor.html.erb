@@ -1,14 +1,5 @@
 <% if collection.rows.empty? %>
-  <p class="text-sm text-(--surface-muted-content-color)"><%=
-    if collection.empty_message_overridden?
-      collection.empty_message
-    else
-      RecordingStudioAttachable::Copy.empty_message_for(
-        collection.association,
-        english: collection.empty_message
-      )
-    end
-  %></p>
+  <p class="text-sm text-(--surface-muted-content-color)"><%= collection.empty_message %></p>
 <% else %>
   <% carousel = collection.displays.include?(:carousel) %>
   <% list = collection.displays.include?(:list) %>

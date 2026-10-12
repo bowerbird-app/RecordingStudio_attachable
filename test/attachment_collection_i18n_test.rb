@@ -33,7 +33,6 @@ class AttachmentCollectionI18nTest < Minitest::Test
     collection.instance_variable_set(:@empty_message, nil)
 
     assert_equal "No images yet.", collection.empty_message
-    refute collection.empty_message_overridden?
 
     I18n.backend.store_translations(
       :fr,
@@ -95,12 +94,12 @@ class AttachmentCollectionI18nTest < Minitest::Test
       assert_equal "JPEG", facts.type_label
       assert_equal(
         "JPEG-FR",
-        RecordingStudioAttachable::Copy.type_label(facts.content_type_key, english: facts.type_label)
+        RecordingStudioAttachable::Copy.type_label("image/jpeg", english: facts.type_label)
       )
     end
   end
 
-  def test_placement_title_returns_main_literal_english_at_method_and_render_key
+  def test_placement_title_returns_main_literal_english_at_method
     source = File.read(File.expand_path("../app/models/recording_studio_attachable/placement.rb", __dir__))
     assert_includes source, "def title"
     assert_includes source, '"Image"'
@@ -110,22 +109,11 @@ class AttachmentCollectionI18nTest < Minitest::Test
     listing = File.read(
       File.expand_path("../app/views/recording_studio_attachable/recording_attachments/index.html.erb", __dir__)
     )
-    assert_includes listing, "t("
-    assert_includes listing, "type_labels.placement.title"
-
-    I18n.backend.store_translations(
-      :fr,
-      { recording_studio: { attachable: { type_labels: { placement: { title: "Image-FR" } } } } }
-    )
-    I18n.with_locale(:fr) do
-      assert_equal(
-        "Image-FR",
-        I18n.t("recording_studio.attachable.type_labels.placement.title", default: "Image")
-      )
-    end
+    assert_includes listing, "parent_recordable.respond_to?(:title) && parent_recordable.title.present?"
+    refute_includes listing, "is_a?(RecordingStudioAttachable::Placement)"
   end
 
-  def test_collection_views_translate_at_render_call_sites
+  def test_collection_views_keep_main_structure_and_translate_at_value_sites
     editor = File.read(
       File.expand_path(
         "../app/views/recording_studio_attachable/attachment_collections/_editor.html.erb",
@@ -145,10 +133,14 @@ class AttachmentCollectionI18nTest < Minitest::Test
       )
     )
 
-    assert_includes editor, "Copy.empty_message_for"
+    assert_includes editor, "<%= collection.empty_message %>"
+    refute_includes editor, "empty_message_overridden?"
     assert_includes editor, "Copy.remove_label(placement: collection.placement?)"
     assert_includes grid, "Copy.remove_label(placement: collection.placement?)"
-    assert_includes facts, "Copy.type_label"
-    assert_includes facts, "facts.type_label"
+    assert_includes grid, "Copy.image_name_fallback"
+    assert_includes facts, "facts.labels.any?"
+    assert_includes facts, "facts.labels.each"
+    refute_includes facts, "display_labels"
+    refute_includes facts, "content_type_key"
   end
 end

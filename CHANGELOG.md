@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Controller flashes, validation messages, Google Drive user-facing errors, and JS string blobs resolve through `Copy.t` / `Copy.legacy_t` with English `default:`.
-- Public model/helper return values stay main's literal English (`Placement#title`, `AttachmentFileFacts#type_label`, collection `empty_message` / `remove_label`, STALE_FORM / GONE raises). Views translate at the render call site with those English values as `default:`.
+- Public model/helper return values stay main's literal English (`Placement#title`, `AttachmentFileFacts#type_label`, collection `empty_message` / `remove_label`, STALE_FORM / GONE raises). Views keep main's conditional structure and swap only gem literals (or value expressions) to `t`/`Copy` with English `default:` — no new presence checks or branches.
 - Validation `errors.add` for former English-string types passes the translated string as the String type (ActiveModel 8.1 ignores `message:` for Strings). In non-English locales, `errors.details` carries the translated string for those former String types.
 - JS upload, picker, and collection-display controllers read copy from a data-attribute JSON blob with English fallbacks in JS (picker keeps the pre-existing `Select one or more` wording).
 

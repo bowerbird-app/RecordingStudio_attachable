@@ -32,12 +32,6 @@ module RecordingStudioAttachable
       TYPE_LABELS[type] || subtype_label(type)
     end
 
-    # MIME type used at render sites to translate {#type_label} without changing
-    # this object's English return value.
-    def content_type_key
-      mime_type
-    end
-
     def dimensions_label
       width, height = pixel_size
       return if width.nil? || height.nil?

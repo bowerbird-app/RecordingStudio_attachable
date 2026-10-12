@@ -19,12 +19,7 @@
        data-recording-studio-attachable--view-mode-inactive-classes-value="<%= pill_inactive_classes %>">
     <% parent_recordable = @recording.recordable %>
     <% parent_recordable_name =
-         if parent_recordable.is_a?(RecordingStudioAttachable::Placement)
-           t(
-             "recording_studio.attachable.type_labels.placement.title",
-             default: parent_recordable.title
-           )
-         elsif parent_recordable.respond_to?(:title) && parent_recordable.title.present?
+         if parent_recordable.respond_to?(:title) && parent_recordable.title.present?
            parent_recordable.title
          elsif parent_recordable.respond_to?(:name) && parent_recordable.name.present?
            parent_recordable.name

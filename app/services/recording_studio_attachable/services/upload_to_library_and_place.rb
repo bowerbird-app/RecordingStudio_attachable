@@ -43,20 +43,19 @@ module RecordingStudioAttachable
 
       def library_for!(parent)
         library = library_recording.presence || hosted_library_for(parent)
-        unless LibraryQuery.live?(library)
-          raise ArgumentError, Copy.legacy_t(
-            "placements.not_in_library",
-            "placements.not_in_library",
-            default: "That photo is not in a library in this workspace."
-          )
-        end
-        unless same_root?(parent, library)
-          raise ArgumentError, Copy.legacy_t(
-            "placements.different_workspace",
-            "placements.different_workspace",
-            default: "That photo belongs to another workspace."
-          )
-        end
+        not_in_library = Copy.legacy_t(
+          "placements.not_in_library",
+          "placements.not_in_library",
+          default: "That photo is not in a library in this workspace."
+        )
+        raise ArgumentError, not_in_library unless LibraryQuery.live?(library)
+
+        different_workspace = Copy.legacy_t(
+          "placements.different_workspace",
+          "placements.different_workspace",
+          default: "That photo belongs to another workspace."
+        )
+        raise ArgumentError, different_workspace unless same_root?(parent, library)
 
         library
       end

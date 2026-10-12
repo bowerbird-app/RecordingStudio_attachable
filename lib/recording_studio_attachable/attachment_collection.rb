@@ -113,11 +113,6 @@ module RecordingStudioAttachable
       @empty_message.presence || AttachmentCollection::EMPTY_MESSAGES.fetch(association)
     end
 
-    # True when the caller passed empty_message: (already localized at that site).
-    def empty_message_overridden?
-      @empty_message.present?
-    end
-
     def rows
       @rows ||= display_items.each_with_index.map { |item, index| build_row(item, index) }
     end
@@ -141,9 +136,7 @@ module RecordingStudioAttachable
 
     def placement? = association == :placements
 
-    def remove_label
-      placement? ? "Remove from here" : "Trash"
-    end
+    def remove_label = placement? ? "Remove from here" : "Trash"
 
     private
 

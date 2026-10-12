@@ -22,12 +22,11 @@ module RecordingStudioAttachable
 
         def perform
           selections = normalized_file_selections
-          if selections.blank?
-            raise ArgumentError, Copy.t(
-              "google_drive.select_at_least_one",
-              default: "Select at least one Google Drive file to import"
-            )
-          end
+          select_one = Copy.t(
+            "google_drive.select_at_least_one",
+            default: "Select at least one Google Drive file to import"
+          )
+          raise ArgumentError, select_one if selections.blank?
 
           attachments = selections.map do |selection|
             fetch_options = {}

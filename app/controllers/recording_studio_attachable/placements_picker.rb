@@ -32,15 +32,12 @@ module RecordingStudioAttachable
     def collection_flash(result)
       return { alert: result.error } unless result.success?
 
-      if result.value == :reordered
-        return {
-          notice: Copy.legacy_t(
-            "placements.reordered",
-            "placements.reordered",
-            default: "Photos reordered."
-          )
-        }
-      end
+      reordered_notice = Copy.legacy_t(
+        "placements.reordered",
+        "placements.reordered",
+        default: "Photos reordered."
+      )
+      return { notice: reordered_notice } if result.value == :reordered
 
       {
         notice: Copy.legacy_t(

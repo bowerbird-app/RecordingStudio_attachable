@@ -13,7 +13,8 @@ class DropboxPickerLauncherTest < Minitest::Test
 
     assert_includes launcher_source, "prefetch({ controller, bootstrapUrl, button })"
     assert_includes launcher_source, "canOpenNow(session)"
-    assert_includes launcher_source, "Choose from Dropbox"
+    refute_includes launcher_source, "Choose from Dropbox"
+    refute_includes launcher_source, "showProviderContinueButton"
     assert_includes launcher_source, "if (gesture && canOpenNow(session))"
     assert_includes launcher_source, "return openWithGesture(controller, providerKey, session.bootstrap)"
     assert_includes launcher_source, "forget(bootstrapUrl)"
@@ -41,12 +42,13 @@ class DropboxPickerLauncherTest < Minitest::Test
     result = JSON.parse(stdout)
     assert_equal true, result.fetch("chooseOnReadyClick")
     assert_equal 0, result.fetch("chooseOnColdClick")
-    assert_equal "Choose from Dropbox", result.fetch("continueLabel")
-    assert_equal true, result.fetch("chooseAfterContinueClick")
+    assert_equal 0, result.fetch("continueButtonsAfterCold")
+    assert_equal true, result.fetch("chooseAfterNextClick")
     assert_equal true, result.fetch("popupOnReadyAuthClick")
+    assert_equal 0, result.fetch("chooseAfterConnectWithoutClick")
+    assert_equal 0, result.fetch("continueButtonsAfterConnect")
     assert_equal true, result.fetch("chooseAfterConnectOnSamePage")
     assert_equal 0, result.fetch("popupAfterConnectOnSamePage")
-    assert_equal "Choose from Dropbox", result.fetch("chooseAfterConnectLabel")
     assert_equal true, result.fetch("continueClearedOnDirectOpen")
     assert_equal 2, result.fetch("bootstrapsAfterRelaunch")
     assert_equal true, result.fetch("forbiddenPrefetchHandled")
@@ -228,8 +230,7 @@ class DropboxPickerLauncherTest < Minitest::Test
       resolveBootstrap()
       await coldLaunch
       await new Promise((resolve) => queueMicrotask(resolve))
-      const continueButton = coldController.element._continueRegion?.children?.[0]
-      const continueLabel = continueButton?.textContent
+      const continueButtonsAfterCold = coldController.element._continueRegion?.children?.length || 0
       chooseCalls.length = 0
       await launcher.launch({
         controller: coldController,
@@ -239,7 +240,7 @@ class DropboxPickerLauncherTest < Minitest::Test
         gesture: true
       })
       const continueClearedOnDirectOpen = (coldController.element._continueRegion?.children?.length || 0) === 0 && chooseCalls.length === 1
-      const chooseAfterContinueClick = chooseCalls.length === 1
+      const chooseAfterNextClick = chooseCalls.length === 1
 
       const authController = controller()
       authController.fetchProviderBootstrap = async () => ({
@@ -291,11 +292,17 @@ class DropboxPickerLauncherTest < Minitest::Test
         relaunchUploadProvider(connectThenChooseController, "dropbox")
       ])
       await new Promise((resolve) => queueMicrotask(resolve))
-      const chooseAfterConnectButton = connectThenChooseController.element._continueRegion?.children?.[0]
-      const chooseAfterConnectLabel = chooseAfterConnectButton?.textContent
+      const continueButtonsAfterConnect = connectThenChooseController.element._continueRegion?.children?.length || 0
+      const chooseAfterConnectWithoutClick = chooseCalls.length
       const popupAfterConnectOnSamePage = popupCalls.length
       const bootstrapsAfterRelaunch = connectThenChooseBootstraps
-      chooseAfterConnectButton?._click?.({ preventDefault() {} })
+      await launcher.launch({
+        controller: connectThenChooseController,
+        providerKey: "dropbox",
+        bootstrapUrl: "/dropbox/connect-then-choose",
+        button: connectThenChooseButton,
+        gesture: true
+      })
       const chooseAfterConnectOnSamePage = chooseCalls.length === 1
 
       const forbiddenButton = element("button")
@@ -328,12 +335,13 @@ class DropboxPickerLauncherTest < Minitest::Test
       process.stdout.write(JSON.stringify({
         chooseOnReadyClick,
         chooseOnColdClick,
-        continueLabel,
-        chooseAfterContinueClick,
+        continueButtonsAfterCold,
+        chooseAfterNextClick,
         popupOnReadyAuthClick,
+        chooseAfterConnectWithoutClick,
+        continueButtonsAfterConnect,
         chooseAfterConnectOnSamePage,
         popupAfterConnectOnSamePage,
-        chooseAfterConnectLabel,
         continueClearedOnDirectOpen,
         bootstrapsAfterRelaunch,
         forbiddenPrefetchHandled,

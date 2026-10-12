@@ -1,4 +1,4 @@
-import { hideProviderContinueButton, registerUploadProviderLauncher, showProviderContinueButton } from "controllers/recording_studio_attachable/provider_launchers"
+import { hideProviderContinueButton, registerUploadProviderLauncher } from "controllers/recording_studio_attachable/provider_launchers"
 
 let dropboxChooserPromise
 const sessions = new Map()
@@ -137,13 +137,6 @@ function openWithGesture(controller, providerKey, bootstrap) {
   return openChooser().then((selections) => applySelections(controller, providerKey, selections))
 }
 
-function promptToChoose(controller, sourceButton, providerKey, bootstrap) {
-  const label = needsAuth(bootstrap) ? "Continue with Dropbox" : "Choose from Dropbox"
-  showProviderContinueButton(controller, sourceButton, label, () => {
-    openWithGesture(controller, providerKey, bootstrap)
-  })
-}
-
 registerUploadProviderLauncher("dropbox", {
   forget(bootstrapUrl) {
     forgetSession(bootstrapUrl)
@@ -159,6 +152,7 @@ registerUploadProviderLauncher("dropbox", {
   },
 
   async launch({ controller, providerKey, bootstrapUrl, button, gesture = false }) {
+    hideProviderContinueButton(controller)
     const session = sessionFor(controller, bootstrapUrl)
     if (gesture && canOpenNow(session)) {
       return openWithGesture(controller, providerKey, session.bootstrap)
@@ -174,6 +168,6 @@ registerUploadProviderLauncher("dropbox", {
     }
     if (session.error) throw session.error
 
-    promptToChoose(controller, button, providerKey, session.bootstrap)
+    controller.clearProviderStatus()
   }
 })

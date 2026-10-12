@@ -14,6 +14,8 @@ class GoogleDrivePickerLauncherTest < Minitest::Test
     assert_includes launcher_source, "prefetch({ controller, bootstrapUrl, button })"
     assert_includes launcher_source, "forget(bootstrapUrl)"
     assert_includes launcher_source, "accessTokenNearExpiry"
+    refute_includes launcher_source, "Choose from Google Drive"
+    refute_includes launcher_source, "showProviderContinueButton"
     assert_includes launcher_source, "if (gesture && canOpenNow(session))"
     assert_includes upload_source, "relaunchUploadProvider"
     assert_includes upload_source, "delete button.dataset.providerPrefetchBound"
@@ -28,9 +30,9 @@ class GoogleDrivePickerLauncherTest < Minitest::Test
     assert_equal true, result.fetch("chooseOnReadyClick")
     assert_equal true, result.fetch("popupOnReadyAuthClick")
     assert_equal true, result.fetch("chooseAfterConnectOnSamePage")
+    assert_equal 0, result.fetch("continueButtonsAfterConnect")
     assert_equal 2, result.fetch("bootstrapsAfterRelaunch")
     assert_equal 0, result.fetch("popupAfterConnectOnSamePage")
-    assert_equal "Choose from Google Drive", result.fetch("chooseAfterConnectLabel")
     assert_equal true, result.fetch("refetchedNearExpiry")
     assert_equal true, result.fetch("forbiddenPrefetchHandled")
     assert_equal true, result.fetch("forbiddenButtonDisabled")
@@ -281,12 +283,10 @@ class GoogleDrivePickerLauncherTest < Minitest::Test
         relaunchUploadProvider(connectThenChooseController, "google_drive"),
         relaunchUploadProvider(connectThenChooseController, "google_drive")
       ])
-      await new Promise((resolve) => queueMicrotask(resolve))
-      const chooseAfterConnectButton = connectThenChooseController.element._continueRegion?.children?.[0]
-      const chooseAfterConnectLabel = chooseAfterConnectButton?.textContent
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      const continueButtonsAfterConnect = connectThenChooseController.element._continueRegion?.children?.length || 0
       const popupAfterConnectOnSamePage = popupCalls.length
       const bootstrapsAfterRelaunch = connectThenChooseBootstraps
-      chooseAfterConnectButton?._click?.({ preventDefault() {} })
       const chooseAfterConnectOnSamePage = pickerCalls.length === 1
 
       let expiryFetches = 0
@@ -337,9 +337,9 @@ class GoogleDrivePickerLauncherTest < Minitest::Test
         chooseOnReadyClick,
         popupOnReadyAuthClick,
         chooseAfterConnectOnSamePage,
+        continueButtonsAfterConnect,
         popupAfterConnectOnSamePage,
         bootstrapsAfterRelaunch,
-        chooseAfterConnectLabel,
         refetchedNearExpiry,
         forbiddenPrefetchHandled,
         forbiddenButtonDisabled,

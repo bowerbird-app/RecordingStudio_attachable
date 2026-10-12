@@ -1,4 +1,4 @@
-import { hideProviderContinueButton, registerUploadProviderLauncher, showProviderContinueButton } from "controllers/recording_studio_attachable/provider_launchers"
+import { hideProviderContinueButton, registerUploadProviderLauncher } from "controllers/recording_studio_attachable/provider_launchers"
 
 let googlePickerPromise
 const sessions = new Map()
@@ -147,6 +147,12 @@ async function applySelections(controller, providerKey, selections) {
   controller.addProviderSelections(providerKey, selections)
 }
 
+function openPickerNow(controller, providerKey, bootstrap) {
+  hideProviderContinueButton(controller)
+  controller.setProviderStatus("Opening Google Drive picker…")
+  return openPicker(bootstrap).then((selections) => applySelections(controller, providerKey, selections))
+}
+
 function openWithGesture(controller, providerKey, bootstrap) {
   hideProviderContinueButton(controller)
   const authUrl = bootstrap.connect_url || bootstrap.auth_url
@@ -159,15 +165,7 @@ function openWithGesture(controller, providerKey, bootstrap) {
     return
   }
 
-  controller.setProviderStatus("Opening Google Drive picker…")
-  return openPicker(bootstrap).then((selections) => applySelections(controller, providerKey, selections))
-}
-
-function promptToChoose(controller, sourceButton, providerKey, bootstrap) {
-  const label = needsAuth(bootstrap) ? "Continue with Google Drive" : "Choose from Google Drive"
-  showProviderContinueButton(controller, sourceButton, label, () => {
-    openWithGesture(controller, providerKey, bootstrap)
-  })
+  return openPickerNow(controller, providerKey, bootstrap)
 }
 
 registerUploadProviderLauncher("google_drive", {
@@ -185,6 +183,7 @@ registerUploadProviderLauncher("google_drive", {
   },
 
   async launch({ controller, providerKey, bootstrapUrl, button, gesture = false }) {
+    hideProviderContinueButton(controller)
     const session = sessionFor(controller, bootstrapUrl)
     if (gesture && canOpenNow(session)) {
       return openWithGesture(controller, providerKey, session.bootstrap)
@@ -200,6 +199,11 @@ registerUploadProviderLauncher("google_drive", {
     }
     if (session.error) throw session.error
 
-    promptToChoose(controller, button, providerKey, session.bootstrap)
+    if (needsAuth(session.bootstrap)) {
+      controller.clearProviderStatus()
+      return
+    }
+
+    return openPickerNow(controller, providerKey, session.bootstrap)
   }
 })

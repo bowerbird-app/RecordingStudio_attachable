@@ -338,7 +338,7 @@ For modal-page providers, the shared browser contract is:
 - addon screens can complete auth in a popup and post a `provider-auth-complete` message back to the upload page
 - addon screens can post a `provider-import-complete` message with a `redirectPath` when the import succeeds
 
-For `:client_picker`, the upload page stays in place and calls a registered browser launcher. Prefetch loads picker config only and does not write OAuth state, so Dropbox and Drive can warm up together without clobbering a cookie session. A click opens the local connect URL (which creates OAuth state) or the vendor picker. After OAuth completes, the cached bootstrap is dropped and fetched again so the same page opens the Chooser or Picker. Drive also refetches when the picker `access_token` is within 30 seconds of expiry. A `403` or `422` bootstrap disables the provider button after a click; prefetch failures stay quiet.
+For `:client_picker`, the upload page stays in place and calls a registered browser launcher. Prefetch loads picker config only and does not write OAuth state, so Dropbox and Drive can warm up together without clobbering a cookie session. A click opens the local connect URL (which creates OAuth state) or the vendor picker. After OAuth completes, the cached bootstrap is dropped and fetched again. Drive then opens the Picker on its own. Dropbox waits for the next click on the same Dropbox button so `choose()` stays inside a user gesture. Neither flow adds a second Choose from… button. Drive also refetches when the picker `access_token` is within 30 seconds of expiry. A `403` or `422` bootstrap disables the provider button after a click; prefetch failures stay quiet.
 
 Client-picker launchers are registered in JavaScript:
 

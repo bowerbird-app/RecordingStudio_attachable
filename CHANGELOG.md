@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OAuth popup completion pages emit the postMessage payload as a JavaScript object literal so the script can run and close the window.
 - Dropbox Chooser (`Dropbox.choose`) and OAuth popups run inside a user click. Bootstrap and `dropins.js` preload on connect/hover; if they are not ready yet, a Choose from Dropbox button appears. Drive uses the same gesture-safe open for its auth popup.
 - After OAuth completes, the cached picker bootstrap is dropped and fetched again so the same page opens the Chooser or Picker instead of a second sign-in. Drive also refetches when the picker `access_token` is within 30 seconds of expiry. A `403` or `422` bootstrap disables the provider button instead of leaving an uncaught rejection. Turbo-cached reconnect rebinds prefetch listeners.
+- Dropbox import URLs use `recording_studio_attachable.recording_attachment_imports_path` so host pages that render the gallery modal do not 500.
+- Disconnected bootstrap returns a local `connect_url` and does not write OAuth state, so parallel Dropbox and Drive prefetch cannot clobber a cookie session. State is created on the connect click.
 
 ### Upgrade Notes
 

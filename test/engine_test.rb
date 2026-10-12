@@ -334,12 +334,14 @@ class EngineTest < Minitest::Test
 
     dropbox_proxy = Object.new
     dropbox_proxy.define_singleton_method(:recording_bootstrap_path) { |recording, format:| "/dropbox/recordings/#{recording.id}/bootstrap.#{format}" }
+    attachable_proxy = Object.new
+    attachable_proxy.define_singleton_method(:recording_attachment_imports_path) { |recording, format:| "/recordings/#{recording.id}/attachments/imports.#{format}" }
     route_helpers = Object.new
     route_helpers.define_singleton_method(:dropbox) { dropbox_proxy }
-    route_helpers.define_singleton_method(:recording_attachment_imports_path) { |recording, format:| "/recordings/#{recording.id}/attachments/imports.#{format}" }
+    route_helpers.define_singleton_method(:recording_studio_attachable) { attachable_proxy }
     view_context = Struct.new(:main_app) do
       delegate :dropbox, to: :main_app
-      delegate :recording_attachment_imports_path, to: :main_app
+      delegate :recording_studio_attachable, to: :main_app
     end.new(route_helpers)
     recording = Struct.new(:id).new("rec-1")
     options = provider.button_options(view_context: view_context, recording: recording)

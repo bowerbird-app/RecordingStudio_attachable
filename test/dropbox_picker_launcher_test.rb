@@ -25,11 +25,14 @@ class DropboxPickerLauncherTest < Minitest::Test
     assert_includes upload_source, "launchClientPicker(button, { gesture: true })"
     assert_includes upload_source, "delete button.dataset.providerPrefetchBound"
     assert_includes upload_source, "handleProviderBootstrapError"
-    assert_includes upload_source, "?.forget?.("
+    assert_includes upload_source, "relaunchUploadProvider"
     assert_includes picker_source, "prefetchClientPickers()"
     assert_includes picker_source, "launchClientPicker(button, { gesture: true })"
     assert_includes picker_source, "delete button.dataset.providerPrefetchBound"
-    assert_includes picker_source, "?.forget?.("
+    assert_includes picker_source, "relaunchUploadProvider"
+    assert_includes File.read(provider_launchers_path), "?.forget?.("
+    assert_includes File.read(provider_launchers_path), "hideProviderContinueButton"
+    assert_includes File.read(provider_launchers_path), "relaunchUploadProvider"
 
     skip "node is not available" unless node_available?
 
@@ -44,8 +47,11 @@ class DropboxPickerLauncherTest < Minitest::Test
     assert_equal true, result.fetch("chooseAfterConnectOnSamePage")
     assert_equal 0, result.fetch("popupAfterConnectOnSamePage")
     assert_equal "Choose from Dropbox", result.fetch("chooseAfterConnectLabel")
+    assert_equal true, result.fetch("continueClearedOnDirectOpen")
+    assert_equal 2, result.fetch("bootstrapsAfterRelaunch")
     assert_equal true, result.fetch("forbiddenPrefetchHandled")
     assert_equal true, result.fetch("forbiddenButtonDisabled")
+    assert_equal false, result.fetch("forbiddenPrefetchAnnounced")
     assert_equal 0, result.fetch("unhandledRejections")
   end
 
@@ -166,20 +172,31 @@ class DropboxPickerLauncherTest < Minitest::Test
       }
       globalThis.window = globalThis
 
-      const { getUploadProviderLauncher } = await import("./provider_launchers.js")
+      const { getUploadProviderLauncher, relaunchUploadProvider } = await import("./provider_launchers.js")
       await import("./dropbox_picker_launcher.js")
       const launcher = getUploadProviderLauncher("dropbox")
 
       function controller() {
         const root = element()
-        return {
+        const instance = {
           element: root,
+          providerButtonsByKey: new Map(),
           fetchProviderBootstrap: async () => ({ client_id: "app-key", provider_key: "dropbox" }),
           openPopup: (url) => { popupCalls.push(url); return { focus() {} } },
           setProviderStatus() {},
           clearProviderStatus() {},
-          addProviderSelections() {}
+          addProviderSelections() {},
+          launchClientPicker(button, { gesture = false } = {}) {
+            return launcher.launch({
+              controller: instance,
+              providerKey: button.dataset.providerKey,
+              bootstrapUrl: button.dataset.providerBootstrapUrl,
+              button,
+              gesture
+            })
+          }
         }
+        return instance
       }
 
       const readyController = controller()
@@ -213,13 +230,21 @@ class DropboxPickerLauncherTest < Minitest::Test
       await new Promise((resolve) => queueMicrotask(resolve))
       const continueButton = coldController.element._continueRegion?.children?.[0]
       const continueLabel = continueButton?.textContent
-      continueButton?._click?.({ preventDefault() {} })
+      chooseCalls.length = 0
+      await launcher.launch({
+        controller: coldController,
+        providerKey: "dropbox",
+        bootstrapUrl: "/dropbox/cold",
+        button: element("button"),
+        gesture: true
+      })
+      const continueClearedOnDirectOpen = (coldController.element._continueRegion?.children?.length || 0) === 0 && chooseCalls.length === 1
       const chooseAfterContinueClick = chooseCalls.length === 1
 
       const authController = controller()
       authController.fetchProviderBootstrap = async () => ({
         client_id: "app-key",
-        auth_url: "https://www.dropbox.com/oauth"
+        connect_url: "/dropbox/recordings/rec-1/connect?popup=1"
       })
       await launcher.prefetch({ controller: authController, bootstrapUrl: "/dropbox/auth" })
       popupCalls.length = 0
@@ -229,15 +254,19 @@ class DropboxPickerLauncherTest < Minitest::Test
         bootstrapUrl: "/dropbox/auth",
         gesture: true
       })
-      const popupOnReadyAuthClick = popupCalls.length === 1
+      const popupOnReadyAuthClick = popupCalls[0]?.includes("/dropbox/recordings/rec-1/connect")
 
       const connectThenChooseController = controller()
       const connectThenChooseButton = element("button")
+      connectThenChooseButton.dataset.providerKey = "dropbox"
+      connectThenChooseButton.dataset.providerLauncher = "dropbox"
+      connectThenChooseButton.dataset.providerBootstrapUrl = "/dropbox/connect-then-choose"
+      connectThenChooseController.providerButtonsByKey.set("dropbox", connectThenChooseButton)
       let connectThenChooseBootstraps = 0
       connectThenChooseController.fetchProviderBootstrap = async () => {
         connectThenChooseBootstraps += 1
         if (connectThenChooseBootstraps === 1) {
-          return { client_id: "app-key", auth_url: "https://www.dropbox.com/oauth" }
+          return { client_id: "app-key", connect_url: "/dropbox/recordings/rec-1/connect?popup=1" }
         }
         return { client_id: "app-key", provider_key: "dropbox" }
       }
@@ -255,29 +284,27 @@ class DropboxPickerLauncherTest < Minitest::Test
         button: connectThenChooseButton,
         gesture: true
       })
-      launcher.forget("/dropbox/connect-then-choose")
       popupCalls.length = 0
       chooseCalls.length = 0
-      await launcher.launch({
-        controller: connectThenChooseController,
-        providerKey: "dropbox",
-        bootstrapUrl: "/dropbox/connect-then-choose",
-        button: connectThenChooseButton,
-        gesture: false
-      })
+      await Promise.all([
+        relaunchUploadProvider(connectThenChooseController, "dropbox"),
+        relaunchUploadProvider(connectThenChooseController, "dropbox")
+      ])
       await new Promise((resolve) => queueMicrotask(resolve))
       const chooseAfterConnectButton = connectThenChooseController.element._continueRegion?.children?.[0]
       const chooseAfterConnectLabel = chooseAfterConnectButton?.textContent
       const popupAfterConnectOnSamePage = popupCalls.length
+      const bootstrapsAfterRelaunch = connectThenChooseBootstraps
       chooseAfterConnectButton?._click?.({ preventDefault() {} })
       const chooseAfterConnectOnSamePage = chooseCalls.length === 1
 
       const forbiddenButton = element("button")
       forbiddenButton.disabled = false
       const forbiddenController = controller()
-      forbiddenController.handleProviderBootstrapError = (error, button) => {
+      forbiddenController.handleProviderBootstrapError = (error, button, { announce = true } = {}) => {
         if (button && error?.status === 403) button.disabled = true
         forbiddenController._bootstrapError = error
+        forbiddenController._announced = announce
       }
       forbiddenController.fetchProviderBootstrap = async () => {
         const error = new Error("Forbidden")
@@ -296,6 +323,7 @@ class DropboxPickerLauncherTest < Minitest::Test
       process.off("unhandledRejection", onUnhandled)
       const forbiddenPrefetchHandled = forbiddenController._bootstrapError?.status === 403
       const forbiddenButtonDisabled = forbiddenButton.disabled === true
+      const forbiddenPrefetchAnnounced = forbiddenController._announced
 
       process.stdout.write(JSON.stringify({
         chooseOnReadyClick,
@@ -306,8 +334,11 @@ class DropboxPickerLauncherTest < Minitest::Test
         chooseAfterConnectOnSamePage,
         popupAfterConnectOnSamePage,
         chooseAfterConnectLabel,
+        continueClearedOnDirectOpen,
+        bootstrapsAfterRelaunch,
         forbiddenPrefetchHandled,
         forbiddenButtonDisabled,
+        forbiddenPrefetchAnnounced,
         unhandledRejections: unhandled.length
       }))
     JS

@@ -17,6 +17,25 @@ export function getUploadProviderLauncher(name) {
   return uploadProviderLaunchers.get(String(name))
 }
 
+export function hideProviderContinueButton(controller) {
+  const region = controller?.element?.querySelector("[data-provider-continue-region]")
+  if (region) region.replaceChildren()
+}
+
+export function relaunchUploadProvider(controller, providerKey) {
+  const button = controller?.providerButtonsByKey?.get(providerKey)
+  if (!button) return
+
+  controller.providerRelaunchInFlight ||= new Set()
+  if (controller.providerRelaunchInFlight.has(providerKey)) return
+
+  controller.providerRelaunchInFlight.add(providerKey)
+  getUploadProviderLauncher(button.dataset.providerLauncher)?.forget?.(button.dataset.providerBootstrapUrl)
+  return Promise.resolve(controller.launchClientPicker(button, { gesture: false })).finally(() => {
+    controller.providerRelaunchInFlight.delete(providerKey)
+  })
+}
+
 export function showProviderContinueButton(controller, sourceButton, label, onClick) {
   if (!controller?.element) return
 

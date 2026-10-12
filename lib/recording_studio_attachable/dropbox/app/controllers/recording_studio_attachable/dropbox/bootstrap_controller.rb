@@ -18,7 +18,7 @@ module RecordingStudioAttachable
         current_dropbox_access_token
         payload
       rescue RecordingStudioAttachable::Error
-        payload.merge(auth_url: popup_auth_url)
+        payload.merge(connect_url: popup_connect_url)
       end
 
       def chooser_payload
@@ -38,16 +38,12 @@ module RecordingStudioAttachable
         )
       end
 
-      def popup_auth_url
-        state, verifier = store_dropbox_state!(
-          recording_id: @recording.id,
-          popup: true,
+      def popup_connect_url
+        recording_connect_path(
+          @recording,
+          popup: 1,
           provider_key: "dropbox",
-          redirect_params: attachment_redirect_params
-        )
-        oauth_client.authorization_url(
-          state: state,
-          code_challenge: RecordingStudioAttachable::Dropbox::OAuthClient.code_challenge(verifier)
+          **attachment_redirect_params
         )
       end
     end

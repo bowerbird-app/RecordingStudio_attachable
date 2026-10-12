@@ -62,20 +62,17 @@ class DropboxBootstrapControllerTest < ActionController::TestCase
     assert_equal "dropbox", payload.fetch("provider_key")
   end
 
-  def test_show_returns_auth_url_when_not_connected
+  def test_show_returns_connect_url_without_writing_oauth_state_when_not_connected
     recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
     route_proxy = Object.new
     route_proxy.define_singleton_method(:recording_attachment_imports_path) do |record, **_kwargs|
       "/recordings/#{record.id}/attachments/imports.json"
     end
     @controller.define_singleton_method(:recording_studio_attachable) { route_proxy }
-    oauth_client = Object.new
-    oauth_client.define_singleton_method(:authorization_url) do |**kwargs|
-      raise "missing oauth state" if kwargs[:state].blank? || kwargs[:code_challenge].blank?
-
-      "https://www.dropbox.test/auth"
+    @controller.define_singleton_method(:recording_connect_path) do |record, **kwargs|
+      query = kwargs.compact.to_query
+      "/dropbox/recordings/#{record.id}/connect#{"?#{query}" if query.present?}"
     end
-    @controller.define_singleton_method(:oauth_client) { oauth_client }
 
     with_routing do |set|
       set.draw do
@@ -92,8 +89,11 @@ class DropboxBootstrapControllerTest < ActionController::TestCase
 
     assert_response :success
     payload = JSON.parse(@response.body)
-    assert_equal "https://www.dropbox.test/auth", payload.fetch("auth_url")
+    assert_includes payload.fetch("connect_url"), "/dropbox/recordings/rec-1/connect"
+    assert_includes payload.fetch("connect_url"), "popup=1"
+    assert_not payload.key?("auth_url")
     assert_not payload.key?("access_token")
+    assert_nil @request.session.dig("recording_studio_attachable_dropbox", "oauth_state")
   end
 
   def test_show_returns_forbidden_when_upload_is_denied

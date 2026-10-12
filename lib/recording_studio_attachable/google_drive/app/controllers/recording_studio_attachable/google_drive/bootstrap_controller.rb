@@ -31,11 +31,15 @@ module RecordingStudioAttachable
         payload[:expires_at] = expires_at if expires_at.positive?
         payload
       rescue RecordingStudioAttachable::Error
-        payload.merge(
-          auth_url: oauth_client.authorization_url(
-            state: store_google_drive_state!(recording_id: @recording.id, popup: true, provider_key: "google_drive",
-                                             redirect_params: attachment_redirect_params)
-          )
+        payload.merge(connect_url: popup_connect_url)
+      end
+
+      def popup_connect_url
+        recording_connect_path(
+          @recording,
+          popup: 1,
+          provider_key: "google_drive",
+          **attachment_redirect_params
         )
       end
     end

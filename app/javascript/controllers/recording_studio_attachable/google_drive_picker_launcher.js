@@ -1,4 +1,4 @@
-import { registerUploadProviderLauncher, showProviderContinueButton } from "controllers/recording_studio_attachable/provider_launchers"
+import { hideProviderContinueButton, registerUploadProviderLauncher, showProviderContinueButton } from "controllers/recording_studio_attachable/provider_launchers"
 
 let googlePickerPromise
 const sessions = new Map()
@@ -114,7 +114,7 @@ function sessionFor(controller, bootstrapUrl) {
   session.promise = controller.fetchProviderBootstrap(bootstrapUrl).then(async (bootstrap) => {
     session.bootstrap = bootstrap
     const picker = ensureGooglePickerLoaded()
-    if (!bootstrap.auth_url) await picker
+    if (!needsAuth(bootstrap)) await picker
     session.ready = true
     return session
   }).catch((error) => {
@@ -126,9 +126,13 @@ function sessionFor(controller, bootstrapUrl) {
   return session
 }
 
+function needsAuth(bootstrap) {
+  return Boolean(bootstrap?.connect_url || bootstrap?.auth_url)
+}
+
 function canOpenNow(session) {
   if (!session?.ready || session.error || !session.bootstrap) return false
-  if (session.bootstrap.auth_url) return true
+  if (needsAuth(session.bootstrap)) return true
 
   return Boolean(window.google?.picker)
 }
@@ -144,8 +148,10 @@ async function applySelections(controller, providerKey, selections) {
 }
 
 function openWithGesture(controller, providerKey, bootstrap) {
-  if (bootstrap.auth_url) {
-    const popup = controller.openPopup(bootstrap.auth_url, `${providerKey}-auth`)
+  hideProviderContinueButton(controller)
+  const authUrl = bootstrap.connect_url || bootstrap.auth_url
+  if (authUrl) {
+    const popup = controller.openPopup(authUrl, `${providerKey}-auth`)
     if (!popup) {
       throw new Error("The sign-in popup was blocked. Allow popups and try again.")
     }
@@ -158,7 +164,7 @@ function openWithGesture(controller, providerKey, bootstrap) {
 }
 
 function promptToChoose(controller, sourceButton, providerKey, bootstrap) {
-  const label = bootstrap.auth_url ? "Continue with Google Drive" : "Choose from Google Drive"
+  const label = needsAuth(bootstrap) ? "Continue with Google Drive" : "Choose from Google Drive"
   showProviderContinueButton(controller, sourceButton, label, () => {
     openWithGesture(controller, providerKey, bootstrap)
   })
@@ -174,7 +180,7 @@ registerUploadProviderLauncher("google_drive", {
 
     return sessionFor(controller, bootstrapUrl).promise.catch((error) => {
       forgetSession(bootstrapUrl)
-      controller.handleProviderBootstrapError?.(error, button)
+      controller.handleProviderBootstrapError?.(error, button, { announce: false })
     })
   },
 

@@ -47,7 +47,7 @@ module RecordingStudioAttachable
         end
 
         def import_path(route_helpers:, recording:)
-          route_helpers.recording_attachment_imports_path(recording, format: :json)
+          route_helpers.recording_studio_attachable.recording_attachment_imports_path(recording, format: :json)
         end
 
         def remote_importer(parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil)

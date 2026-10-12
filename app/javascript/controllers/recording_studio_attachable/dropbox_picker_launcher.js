@@ -1,4 +1,4 @@
-import { registerUploadProviderLauncher, showProviderContinueButton } from "controllers/recording_studio_attachable/provider_launchers"
+import { hideProviderContinueButton, registerUploadProviderLauncher, showProviderContinueButton } from "controllers/recording_studio_attachable/provider_launchers"
 
 let dropboxChooserPromise
 const sessions = new Map()
@@ -87,7 +87,7 @@ function sessionFor(controller, bootstrapUrl) {
     session.bootstrap = bootstrap
     if (bootstrap.client_id) {
       const chooser = ensureDropboxChooserLoaded(bootstrap.client_id)
-      if (!bootstrap.auth_url) await chooser
+      if (!needsAuth(bootstrap)) await chooser
     }
     session.ready = true
     return session
@@ -100,9 +100,13 @@ function sessionFor(controller, bootstrapUrl) {
   return session
 }
 
+function needsAuth(bootstrap) {
+  return Boolean(bootstrap?.connect_url || bootstrap?.auth_url)
+}
+
 function canOpenNow(session) {
   if (!session?.ready || session.error || !session.bootstrap) return false
-  if (session.bootstrap.auth_url) return true
+  if (needsAuth(session.bootstrap)) return true
 
   return Boolean(window.Dropbox?.choose)
 }
@@ -118,8 +122,10 @@ async function applySelections(controller, providerKey, selections) {
 }
 
 function openWithGesture(controller, providerKey, bootstrap) {
-  if (bootstrap.auth_url) {
-    const popup = controller.openPopup(bootstrap.auth_url, `${providerKey}-auth`)
+  hideProviderContinueButton(controller)
+  const authUrl = bootstrap.connect_url || bootstrap.auth_url
+  if (authUrl) {
+    const popup = controller.openPopup(authUrl, `${providerKey}-auth`)
     if (!popup) {
       throw new Error("The sign-in popup was blocked. Allow popups and try again.")
     }
@@ -132,7 +138,7 @@ function openWithGesture(controller, providerKey, bootstrap) {
 }
 
 function promptToChoose(controller, sourceButton, providerKey, bootstrap) {
-  const label = bootstrap.auth_url ? "Continue with Dropbox" : "Choose from Dropbox"
+  const label = needsAuth(bootstrap) ? "Continue with Dropbox" : "Choose from Dropbox"
   showProviderContinueButton(controller, sourceButton, label, () => {
     openWithGesture(controller, providerKey, bootstrap)
   })
@@ -148,7 +154,7 @@ registerUploadProviderLauncher("dropbox", {
 
     return sessionFor(controller, bootstrapUrl).promise.catch((error) => {
       forgetSession(bootstrapUrl)
-      controller.handleProviderBootstrapError?.(error, button)
+      controller.handleProviderBootstrapError?.(error, button, { announce: false })
     })
   },
 

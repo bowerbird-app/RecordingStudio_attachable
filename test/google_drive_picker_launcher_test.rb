@@ -15,9 +15,9 @@ class GoogleDrivePickerLauncherTest < Minitest::Test
     assert_includes launcher_source, "forget(bootstrapUrl)"
     assert_includes launcher_source, "accessTokenNearExpiry"
     assert_includes launcher_source, "if (gesture && canOpenNow(session))"
-    assert_includes upload_source, "?.forget?.("
+    assert_includes upload_source, "relaunchUploadProvider"
     assert_includes upload_source, "delete button.dataset.providerPrefetchBound"
-    assert_includes picker_source, "?.forget?.("
+    assert_includes picker_source, "relaunchUploadProvider"
     assert_includes picker_source, "delete button.dataset.providerPrefetchBound"
 
     skip "node is not available" unless node_available?
@@ -28,11 +28,13 @@ class GoogleDrivePickerLauncherTest < Minitest::Test
     assert_equal true, result.fetch("chooseOnReadyClick")
     assert_equal true, result.fetch("popupOnReadyAuthClick")
     assert_equal true, result.fetch("chooseAfterConnectOnSamePage")
+    assert_equal 2, result.fetch("bootstrapsAfterRelaunch")
     assert_equal 0, result.fetch("popupAfterConnectOnSamePage")
     assert_equal "Choose from Google Drive", result.fetch("chooseAfterConnectLabel")
     assert_equal true, result.fetch("refetchedNearExpiry")
     assert_equal true, result.fetch("forbiddenPrefetchHandled")
     assert_equal true, result.fetch("forbiddenButtonDisabled")
+    assert_equal false, result.fetch("forbiddenPrefetchAnnounced")
     assert_equal 0, result.fetch("unhandledRejections")
   end
 
@@ -183,14 +185,15 @@ class GoogleDrivePickerLauncherTest < Minitest::Test
       globalThis.window = globalThis
       globalThis.window.location = { origin: "https://example.test" }
 
-      const { getUploadProviderLauncher } = await import("./provider_launchers.js")
+      const { getUploadProviderLauncher, relaunchUploadProvider } = await import("./provider_launchers.js")
       await import("./google_drive_picker_launcher.js")
       const launcher = getUploadProviderLauncher("google_drive")
 
       function controller() {
         const root = element()
-        return {
+        const instance = {
           element: root,
+          providerButtonsByKey: new Map(),
           fetchProviderBootstrap: async () => ({
             access_token: "token-1",
             expires_at: Math.floor(Date.now() / 1000) + 3600,
@@ -200,8 +203,18 @@ class GoogleDrivePickerLauncherTest < Minitest::Test
           openPopup: (url) => { popupCalls.push(url); return { focus() {} } },
           setProviderStatus() {},
           clearProviderStatus() {},
-          addProviderSelections() {}
+          addProviderSelections() {},
+          launchClientPicker(button, { gesture = false } = {}) {
+            return launcher.launch({
+              controller: instance,
+              providerKey: button.dataset.providerKey,
+              bootstrapUrl: button.dataset.providerBootstrapUrl,
+              button,
+              gesture
+            })
+          }
         }
+        return instance
       }
 
       const readyController = controller()
@@ -219,7 +232,7 @@ class GoogleDrivePickerLauncherTest < Minitest::Test
       const authController = controller()
       authController.fetchProviderBootstrap = async () => ({
         client_id: "client-id",
-        auth_url: "https://accounts.google.test/auth"
+        connect_url: "/google_drive/recordings/rec-1/connect?popup=1"
       })
       await launcher.prefetch({ controller: authController, bootstrapUrl: "/drive/auth" })
       popupCalls.length = 0
@@ -229,15 +242,19 @@ class GoogleDrivePickerLauncherTest < Minitest::Test
         bootstrapUrl: "/drive/auth",
         gesture: true
       })
-      const popupOnReadyAuthClick = popupCalls.length === 1
+      const popupOnReadyAuthClick = popupCalls[0]?.includes("/google_drive/recordings/rec-1/connect")
 
       const connectThenChooseController = controller()
       const connectThenChooseButton = element("button")
+      connectThenChooseButton.dataset.providerKey = "google_drive"
+      connectThenChooseButton.dataset.providerLauncher = "google_drive"
+      connectThenChooseButton.dataset.providerBootstrapUrl = "/drive/connect-then-choose"
+      connectThenChooseController.providerButtonsByKey.set("google_drive", connectThenChooseButton)
       let connectThenChooseBootstraps = 0
       connectThenChooseController.fetchProviderBootstrap = async () => {
         connectThenChooseBootstraps += 1
         if (connectThenChooseBootstraps === 1) {
-          return { client_id: "client-id", auth_url: "https://accounts.google.test/auth" }
+          return { client_id: "client-id", connect_url: "/google_drive/recordings/rec-1/connect?popup=1" }
         }
         return {
           access_token: "token-2",
@@ -258,20 +275,17 @@ class GoogleDrivePickerLauncherTest < Minitest::Test
         button: connectThenChooseButton,
         gesture: true
       })
-      launcher.forget("/drive/connect-then-choose")
       popupCalls.length = 0
       pickerCalls.length = 0
-      await launcher.launch({
-        controller: connectThenChooseController,
-        providerKey: "google_drive",
-        bootstrapUrl: "/drive/connect-then-choose",
-        button: connectThenChooseButton,
-        gesture: false
-      })
+      await Promise.all([
+        relaunchUploadProvider(connectThenChooseController, "google_drive"),
+        relaunchUploadProvider(connectThenChooseController, "google_drive")
+      ])
       await new Promise((resolve) => queueMicrotask(resolve))
       const chooseAfterConnectButton = connectThenChooseController.element._continueRegion?.children?.[0]
       const chooseAfterConnectLabel = chooseAfterConnectButton?.textContent
       const popupAfterConnectOnSamePage = popupCalls.length
+      const bootstrapsAfterRelaunch = connectThenChooseBootstraps
       chooseAfterConnectButton?._click?.({ preventDefault() {} })
       const chooseAfterConnectOnSamePage = pickerCalls.length === 1
 
@@ -295,9 +309,10 @@ class GoogleDrivePickerLauncherTest < Minitest::Test
       const forbiddenButton = element("button")
       forbiddenButton.disabled = false
       const forbiddenController = controller()
-      forbiddenController.handleProviderBootstrapError = (error, button) => {
+      forbiddenController.handleProviderBootstrapError = (error, button, { announce = true } = {}) => {
         if (button && error?.status === 403) button.disabled = true
         forbiddenController._bootstrapError = error
+        forbiddenController._announced = announce
       }
       forbiddenController.fetchProviderBootstrap = async () => {
         const error = new Error("Forbidden")
@@ -316,16 +331,19 @@ class GoogleDrivePickerLauncherTest < Minitest::Test
       process.off("unhandledRejection", onUnhandled)
       const forbiddenPrefetchHandled = forbiddenController._bootstrapError?.status === 403
       const forbiddenButtonDisabled = forbiddenButton.disabled === true
+      const forbiddenPrefetchAnnounced = forbiddenController._announced
 
       process.stdout.write(JSON.stringify({
         chooseOnReadyClick,
         popupOnReadyAuthClick,
         chooseAfterConnectOnSamePage,
         popupAfterConnectOnSamePage,
+        bootstrapsAfterRelaunch,
         chooseAfterConnectLabel,
         refetchedNearExpiry,
         forbiddenPrefetchHandled,
         forbiddenButtonDisabled,
+        forbiddenPrefetchAnnounced,
         unhandledRejections: unhandled.length
       }))
     JS

@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 import { DirectUpload } from "@rails/activestorage"
-import { getUploadProviderLauncher, onUploadProviderLaunchersChanged } from "controllers/recording_studio_attachable/provider_launchers"
+import { getUploadProviderLauncher, onUploadProviderLaunchersChanged, relaunchUploadProvider } from "controllers/recording_studio_attachable/provider_launchers"
 import { preprocessImageFile, shouldPreprocessImageFile } from "controllers/recording_studio_attachable/image_preprocessing"
 
 const PROVIDER_EVENT_STORAGE_KEY = "recording-studio-attachable:provider-event"
@@ -543,11 +543,7 @@ export default class extends Controller {
   }
 
   relaunchProvider(providerKey) {
-    const button = this.providerButtonsByKey.get(providerKey)
-    if (!button) return
-
-    getUploadProviderLauncher(button.dataset.providerLauncher)?.forget?.(button.dataset.providerBootstrapUrl)
-    this.launchClientPicker(button, { gesture: false })
+    return relaunchUploadProvider(this, providerKey)
   }
 
   reloadProviderFrame(payload) {
@@ -593,10 +589,12 @@ export default class extends Controller {
     return payload
   }
 
-  handleProviderBootstrapError(error, button) {
+  handleProviderBootstrapError(error, button, { announce = true } = {}) {
     if (button && (error?.status === 403 || error?.status === 422)) {
       button.disabled = true
     }
+
+    if (!announce) return
 
     this.setProviderStatus(
       error?.message || this.i18nText("js.could_not_load_bootstrap", "Could not load provider bootstrap data."),

@@ -39,14 +39,15 @@ class ParallelProviderPrefetchTest < Minitest::Test
   end
 
   def write_module(dir, name, source_path)
-    File.write(
-      File.join(dir, name),
-      "const window = globalThis;\nconst document = globalThis.document;\n" +
-        File.read(source_path).sub(
-          'from "controllers/recording_studio_attachable/provider_launchers"',
-          'from "./provider_launchers.js"'
-        )
+    rewritten = File.read(source_path).sub(
+      'from "controllers/recording_studio_attachable/provider_launchers"',
+      'from "./provider_launchers.js"'
     )
+    File.write(File.join(dir, name), "#{browser_globals_prefix}#{rewritten}")
+  end
+
+  def browser_globals_prefix
+    "const window = globalThis;\nconst document = globalThis.document;\n"
   end
 
   def provider_launchers_path

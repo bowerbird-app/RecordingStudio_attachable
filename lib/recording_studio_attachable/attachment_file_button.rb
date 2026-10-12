@@ -4,6 +4,7 @@ module RecordingStudioAttachable
   module AttachmentFileButton
     DEFAULT_ADD_LABEL = "Add"
     DEFAULT_CHANGE_LABEL = "Change"
+    UPLOAD_MODAL_EMBED = "upload_modal"
 
     module_function
 
@@ -20,8 +21,8 @@ module RecordingStudioAttachable
       redirect_params[:return_to]
     end
 
-    def locals(recording:, return_to:, target: nil,
-               add_label: DEFAULT_ADD_LABEL, change_label: DEFAULT_CHANGE_LABEL)
+    def locals(recording:, return_to:, target: nil, # rubocop:disable Metrics/ParameterLists
+               add_label: DEFAULT_ADD_LABEL, change_label: DEFAULT_CHANGE_LABEL, presentation: nil)
       configuration_locals(recording).merge(
         recording: recording,
         attachment_recording: attachment_recording_for(recording),
@@ -29,8 +30,29 @@ module RecordingStudioAttachable
         redirect_params: redirect_params(return_to:),
         turbo_frame_target: target,
         add_label: add_label,
-        change_label: change_label
+        change_label: change_label,
+        presentation: presentation_for(presentation)
       )
+    end
+
+    # nil uses config.upload_presentation. Anything else must be :page or :modal.
+    def presentation_for(value)
+      configuration = RecordingStudioAttachable.configuration
+      return configuration.upload_presentation if value.nil?
+
+      configuration.normalize_upload_presentation(value)
+    end
+
+    def upload_modal_id(recording)
+      "attachable-upload-modal-#{recording.id}"
+    end
+
+    def upload_modal_frame_id(recording)
+      "#{upload_modal_id(recording)}-frame"
+    end
+
+    def upload_modal_params(recording, return_to:)
+      redirect_params(return_to:).merge(embed: UPLOAD_MODAL_EMBED, frame_id: upload_modal_frame_id(recording))
     end
 
     def configuration_locals(recording)

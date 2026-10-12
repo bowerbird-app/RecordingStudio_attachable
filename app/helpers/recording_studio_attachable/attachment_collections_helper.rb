@@ -19,14 +19,35 @@ module RecordingStudioAttachable
       items: nil,
       empty_message: nil,
       url: nil,
-      return_to: nil
+      return_to: nil,
+      upload_button: nil
     )
       collection = AttachmentCollection.for(
         recording:, association:, fields:, sortable:, preview:, displays:, default_display:,
         side_preview:, items_per_view:, return_to:, items:, empty_message:
       )
-      render partial: "recording_studio_attachable/attachment_collections/editor",
-             locals: editor_locals(collection, recording, url, return_to)
+      editor = render partial: "recording_studio_attachable/attachment_collections/editor",
+                      locals: editor_locals(collection, recording, url, return_to)
+      with_attachment_collection_upload_button(editor, recording, upload_button, return_to:)
+    end
+
+    # upload_button: true, or { presentation: :page|:modal, label: "Add", target: "frame-id" }.
+    # Collections hold many files, so the button always adds and never switches to Change.
+    def with_attachment_collection_upload_button(editor, recording, upload_button, return_to:)
+      button = attachment_collection_upload_button(recording, upload_button, return_to:)
+      return editor if button.blank?
+
+      tag.div(class: "flex w-full flex-col gap-4") do
+        safe_join([tag.div(button, class: "flex flex-wrap items-center gap-3"), editor])
+      end
+    end
+
+    def attachment_collection_upload_button(recording, options, return_to:)
+      return if options.blank?
+
+      options = options == true ? {} : options.to_h.symbolize_keys
+      render partial: "recording_studio_attachable/attachment_file_buttons/button",
+             locals: collection_upload_button_locals(recording, options, return_to)
     end
 
     def attachable_attachment_collection_path(recording, **options)
@@ -62,6 +83,16 @@ module RecordingStudioAttachable
     end
 
     private
+
+    def collection_upload_button_locals(recording, options, return_to)
+      AttachmentFileButton.locals(
+        recording:,
+        return_to: return_to.presence || request&.fullpath,
+        target: options[:target],
+        add_label: options.fetch(:label, AttachmentFileButton::DEFAULT_ADD_LABEL),
+        presentation: options[:presentation]
+      ).merge(attachment_recording: nil)
+    end
 
     def editor_locals(collection, recording, url, return_to)
       {

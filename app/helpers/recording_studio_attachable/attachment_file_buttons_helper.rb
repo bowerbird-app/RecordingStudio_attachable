@@ -4,9 +4,9 @@ require "recording_studio_attachable/attachment_file_button"
 
 module RecordingStudioAttachable
   module AttachmentFileButtonsHelper
-    def render_attachment_file_button(recording, return_to:, target: nil)
+    def render_attachment_file_button(recording, return_to:, target: nil, presentation: nil)
       render partial: "recording_studio_attachable/attachment_file_buttons/button",
-             locals: AttachmentFileButton.locals(recording:, return_to:, target:)
+             locals: AttachmentFileButton.locals(recording:, return_to:, target:, presentation:)
     end
 
     def attachment_preview_url(recording, variant: :square_med)

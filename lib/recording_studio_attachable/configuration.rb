@@ -20,6 +20,7 @@ module RecordingStudioAttachable
     }.freeze
 
     URL_MODES = %i[rails direct].freeze
+    UPLOAD_PRESENTATIONS = %i[page modal].freeze
     DEFAULT_PREPROCESSED_VARIANTS = %i[small med large].freeze
 
     attr_accessor :allowed_content_types,
@@ -41,7 +42,7 @@ module RecordingStudioAttachable
                   :placement_picker_libraries,
                   :library_label
 
-    attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode
+    attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode, :upload_presentation
 
     def initialize
       assign_defaults
@@ -181,6 +182,21 @@ module RecordingStudioAttachable
       image_variants.keys.reject { |name| DEFAULT_IMAGE_VARIANTS.key?(name) }
     end
 
+    # How an Add button opens the standard upload page. :page navigates to it.
+    # :modal opens it in a FlatPack modal on the current page.
+    def upload_presentation=(value)
+      @upload_presentation = normalize_upload_presentation(value)
+    end
+
+    def normalize_upload_presentation(value)
+      return :page if value.blank?
+
+      normalized = value.to_s.strip.downcase.to_sym
+      return normalized if UPLOAD_PRESENTATIONS.include?(normalized)
+
+      raise ArgumentError, "Unknown upload presentation: #{value.inspect}. Use :page or :modal."
+    end
+
     def storage_limit=(value)
       normalized = value.is_a?(String) ? value.strip : value
       @storage_limit = normalized.presence
@@ -204,6 +220,7 @@ module RecordingStudioAttachable
         default_listing_scope: default_listing_scope,
         default_kind_filter: default_kind_filter,
         layout: layout,
+        upload_presentation: upload_presentation,
         auth_roles: auth_roles
       }.merge(adapter_configurations_hash)
     end
@@ -221,6 +238,7 @@ module RecordingStudioAttachable
       @image_processing_quality = 0.82
       @image_variants = default_image_variants
       @url_mode = :rails
+      @upload_presentation = :page
       @direct_url_host = nil
       @preprocessed_variants_explicit = false
       @preprocessed_variants = nil

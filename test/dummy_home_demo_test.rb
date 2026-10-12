@@ -637,7 +637,7 @@ class DummyHomeDemoTest < Minitest::Test
   end
 
   def test_upload_page_supports_optional_registered_upload_providers
-    upload_view = File.read(File.expand_path("../app/views/recording_studio_attachable/attachment_uploads/new.html.erb", __dir__))
+    upload_view = File.read(File.expand_path("../app/views/recording_studio_attachable/attachment_uploads/_uploader.html.erb", __dir__))
     initializer_template = File.read(
       File.expand_path(
         "../lib/generators/recording_studio_attachable/install/templates/recording_studio_attachable_initializer.rb",
@@ -645,7 +645,7 @@ class DummyHomeDemoTest < Minitest::Test
       )
     )
 
-    assert_includes upload_view, "@upload_providers.any?"
+    assert_includes upload_view, "upload_providers.any?"
     assert_includes upload_view, "max-w-sm flex-col items-stretch gap-3"
     assert_includes upload_view, "full_width: true"
     assert_includes upload_view, "reverse_merge(full_width: true)"

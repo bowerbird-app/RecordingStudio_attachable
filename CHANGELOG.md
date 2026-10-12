@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-10-12
+
+### Added
+
+- Opt-in modal presentation for the standard upload page. `config.upload_presentation = :page | :modal` (default `:page`). `presentation:` on `render_attachment_file_button` and `AttachmentFileButton.locals`. `upload_button: { presentation:, label:, target: }` on `attachment_collection_editor`.
+- In modal mode the Add button opens a FlatPack modal. A lazy turbo frame loads `attachments/upload?embed=upload_modal` without a layout. Change (replacing one file) stays the inline file button.
+- `upload_modal_controller.js` sets the frame source on open. After upload it reloads the `target:` turbo frame, or the current page when no frame is named.
+- `upload_controller.js` `successBehavior` (`redirect` or `event`). `event` dispatches a bubbling `attachable:uploaded` event, clears the queue, and closes the enclosing FlatPack modal.
+- Unit, integration, and system tests. The dummy app's test group adds `capybara` and `selenium-webdriver`.
+
+### Changed
+
+- The upload page body moved into `attachment_uploads/_uploader.html.erb`. The page and the modal share it, including multi-file choose, drag and drop, and per-file progress.
+- `upload_controller.js` looks up provider frames and modals inside its own element, so a page and a modal uploader can share one document. `provider-import-complete` messages for another uploader's modal are ignored. The CSRF token falls back to a value rendered on the uploader when the page has no `csrf-token` meta tag.
+- In modal mode the uploader does not navigate the whole page after upload, and it leaves out `modal_page` providers.
+
+### Upgrade Notes
+
+- Bump to `0.17.0`. No migration. The default stays `:page`, so existing screens are unchanged.
+- Hosts that open the uploader in a modal need Turbo on the page. Pass `target:` as a turbo frame id to refresh a list in place.
+- Google Drive's picker inside the upload modal still needs a manual check. `modal_page` providers are omitted so a provider modal is not opened inside this one.
+
 ## [0.16.0] - 2026-10-12
 
 ### Added

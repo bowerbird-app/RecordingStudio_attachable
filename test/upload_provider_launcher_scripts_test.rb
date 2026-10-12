@@ -8,7 +8,7 @@ class UploadProviderLauncherScriptsTest < Minitest::Test
   LAUNCHER_TAG = 'javascript_tag(%(import #{module_path.to_json}), type: "module", nonce: true)'
   LAUNCHER_MODULE = "controllers/recording_studio_attachable/google_drive_picker_launcher"
   VIEW_PATHS = [
-    File.expand_path("../app/views/recording_studio_attachable/attachment_uploads/new.html.erb", __dir__),
+    File.expand_path("../app/views/recording_studio_attachable/attachment_uploads/_uploader.html.erb", __dir__),
     File.expand_path("../app/views/recording_studio_attachable/attachment_image_pickers/_modal.html.erb", __dir__)
   ].freeze
 

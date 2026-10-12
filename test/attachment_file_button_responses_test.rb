@@ -12,7 +12,7 @@ module RecordingStudioAttachable
         File.expand_path("../app/helpers/recording_studio_attachable/attachment_file_buttons_helper.rb", __dir__)
       )
 
-      assert_includes helper_source, "def render_attachment_file_button(recording, return_to:, target: nil)"
+      assert_includes helper_source, "def render_attachment_file_button(recording, return_to:, target: nil, presentation: nil)"
       assert_includes helper_source, "def attachment_preview_url(recording, variant: :square_med)"
       assert_not_includes helper_source, "render_attachment_image_slot"
       assert_not_includes helper_source, "render_parent_attachment"

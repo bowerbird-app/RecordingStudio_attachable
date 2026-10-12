@@ -48,6 +48,7 @@ en:
         progress: "Progress"
         close: "Close"
         remove: "X"
+        loading: "Loading uploader…"
       collection:
         save: "Save"
         saved: "Saved"

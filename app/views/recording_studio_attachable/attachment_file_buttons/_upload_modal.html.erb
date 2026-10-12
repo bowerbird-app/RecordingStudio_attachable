@@ -1,0 +1,39 @@
+<%# Add opens the standard upload page in a FlatPack modal. Change stays inline. %>
+<% modal_id = RecordingStudioAttachable::AttachmentFileButton.upload_modal_id(recording) %>
+<% frame_id = RecordingStudioAttachable::AttachmentFileButton.upload_modal_frame_id(recording) %>
+<% frame_src = attachable_recording_attachment_upload_path(
+  recording,
+  **RecordingStudioAttachable::AttachmentFileButton.upload_modal_params(recording, return_to: return_to)
+) %>
+<% placeholder_html = tag.p(t("recording_studio.attachable.upload.loading"), class: "p-6 text-sm text-(--surface-muted-content-color)") %>
+<div class="inline-flex"
+     data-controller="recording-studio-attachable--upload-modal"
+     data-recording-studio-attachable--upload-modal-src-value="<%= frame_src %>"
+     data-recording-studio-attachable--upload-modal-refresh-frame-value="<%= turbo_frame_target %>"
+     data-action="attachable:uploaded->recording-studio-attachable--upload-modal#uploaded">
+  <%= render FlatPack::Button::Component.new(
+    text: add_label,
+    icon: "upload",
+    style: :secondary,
+    size: :md,
+    type: "button",
+    data: {
+      modal_id: modal_id,
+      action: "recording-studio-attachable--upload-modal#load"
+    }
+  ) %>
+
+  <%= render FlatPack::Modal::Component.new(
+    id: modal_id,
+    title: t("recording_studio.attachable.upload.title"),
+    size: :xl,
+    scroll: :body
+  ) do |modal| %>
+    <% modal.body do %>
+      <turbo-frame id="<%= frame_id %>"
+                   loading="lazy"
+                   data-recording-studio-attachable--upload-modal-target="frame"
+                   data-placeholder-html="<%= placeholder_html %>"><%= placeholder_html %></turbo-frame>
+    <% end %>
+  <% end %>
+</div>

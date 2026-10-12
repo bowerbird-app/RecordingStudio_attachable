@@ -37,6 +37,14 @@ module RecordingStudioAttachable
       attachable_routes.recording_attachment_imports_path(recording, **options)
     end
 
+    def attachable_recording_attachment_upload_path(recording, **options)
+      attachable_routes.recording_attachment_upload_path(recording, **options)
+    end
+
+    def attachable_upload_type_labels(content_types)
+      Array(content_types).map { |content_type| attachable_upload_type_label(content_type) }
+    end
+
     def library_path_for(parent_or_library, key: :default, **options)
       if RecordingStudioAttachable::Placements.library_recording?(parent_or_library)
         attachable_routes.library_path(parent_or_library, **options)
@@ -138,6 +146,15 @@ module RecordingStudioAttachable
     end
 
     private
+
+    def attachable_upload_type_label(content_type)
+      case content_type
+      when "image/*" then t("recording_studio.attachable.upload.type_images")
+      when "application/pdf" then t("recording_studio.attachable.upload.type_pdfs")
+      when "text/plain" then t("recording_studio.attachable.upload.type_text_files")
+      else content_type
+      end
+    end
 
     def attachable_routes
       if respond_to?(:recording_studio_attachable, true)

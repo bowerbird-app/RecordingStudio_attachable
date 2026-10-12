@@ -33,7 +33,9 @@ export default class extends Controller {
     imageProcessingMaxHeight: Number,
     imageProcessingQuality: Number,
     removeButtonTemplate: String,
-    allowedContentTypes: String
+    allowedContentTypes: String,
+    successBehavior: { type: String, default: "redirect" },
+    csrfToken: String
   }
 
 
@@ -115,7 +117,7 @@ export default class extends Controller {
     const modalId = button.dataset.providerModalId || button.dataset.modalId
     if (!frameUrl || !modalId) return
 
-    const frame = document.querySelector(`[data-provider-modal-frame][data-provider-modal-id='${modalId}']`)
+    const frame = this.findProviderFrame(modalId)
     if (!frame) return
 
     if (!frame.dataset.sourceUrl) {
@@ -206,7 +208,7 @@ export default class extends Controller {
       credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
-        "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.content || "",
+        "X-CSRF-Token": this.csrfToken(),
         "X-Requested-With": "XMLHttpRequest",
         Accept: "application/json"
       },
@@ -225,7 +227,10 @@ export default class extends Controller {
           entry.status = "attached"
           this.renderEntry(entry)
         })
-        window.location.href = payload.redirect_path || this.finalizeUrlValue
+        this.finishUpload({
+          attachments: payload.attachments || [],
+          redirectPath: payload.redirect_path || this.finalizeUrlValue
+        })
       })
       .catch((error) => {
         const errorsByBlobId = new Map(
@@ -535,9 +540,13 @@ export default class extends Controller {
     }
 
     if (payload.type === "provider-import-complete") {
+      // Other uploaders on the page hear the same message. Ignore one that
+      // belongs to a provider modal this uploader did not render.
+      if (payload.modalId && !this.findProviderFrame(payload.modalId)) return
+
       this.closeProviderModal(payload.modalId)
-      if (payload.redirectPath) {
-        window.location.href = payload.redirectPath
+      if (payload.redirectPath || this.eventSuccessBehavior()) {
+        this.finishUpload({ attachments: payload.attachments || [], redirectPath: payload.redirectPath })
       }
     }
   }
@@ -547,7 +556,7 @@ export default class extends Controller {
   }
 
   reloadProviderFrame(payload) {
-    const frame = document.querySelector(`[data-provider-modal-frame][data-provider-modal-id='${payload.modalId}']`)
+    const frame = this.findProviderFrame(payload.modalId)
     if (!frame) return
 
     const nextUrl = payload.reloadUrl || frame.dataset.sourceUrl || frame.getAttribute("src")
@@ -560,13 +569,65 @@ export default class extends Controller {
   closeProviderModal(modalId) {
     if (!modalId) return
 
-    const modal = document.getElementById(modalId)
+    const modal = this.element.querySelector(`#${this.cssEscape(modalId)}`)
     if (!modal) return
 
     const controller = this.application.getControllerForElementAndIdentifier(modal, "flat-pack--modal")
     if (controller) {
       controller.close()
     }
+  }
+
+  // Lookups stay inside this uploader so a page and a modal can share one document.
+  findProviderFrame(modalId) {
+    if (!modalId) return null
+
+    return this.element.querySelector(
+      `[data-provider-modal-frame][data-provider-modal-id='${this.cssEscape(modalId)}']`
+    )
+  }
+
+  cssEscape(value) {
+    const text = String(value)
+    return window.CSS?.escape ? window.CSS.escape(text) : text.replace(/[^\w-]/g, "\\$&")
+  }
+
+  csrfToken() {
+    return document.querySelector("meta[name='csrf-token']")?.content || this.csrfTokenValue || ""
+  }
+
+  eventSuccessBehavior() {
+    return this.successBehaviorValue === "event"
+  }
+
+  // redirect: leave the page, as the standalone upload screen always has.
+  // event: stay put, announce attachable:uploaded, and close the host modal.
+  finishUpload({ attachments = [], redirectPath = null } = {}) {
+    if (!this.eventSuccessBehavior()) {
+      if (redirectPath) window.location.href = redirectPath
+      return
+    }
+
+    this.element.dispatchEvent(new CustomEvent("attachable:uploaded", {
+      bubbles: true,
+      detail: { attachments, redirectPath }
+    }))
+    this.resetQueue()
+    this.closeHostModal()
+  }
+
+  resetQueue() {
+    this.clearAllRemoteStageTimers()
+    this.files.forEach((entry) => this.revokePreview(entry))
+    this.files = []
+    this.renderQueue()
+  }
+
+  closeHostModal() {
+    const modal = this.element.closest("[data-controller~='flat-pack--modal']")
+    if (!modal) return
+
+    this.application.getControllerForElementAndIdentifier(modal, "flat-pack--modal")?.close()
   }
 
   async fetchProviderBootstrap(bootstrapUrl) {

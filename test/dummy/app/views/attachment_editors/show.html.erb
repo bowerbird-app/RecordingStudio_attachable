@@ -1,15 +1,18 @@
 <div class="flex w-full flex-col gap-6">
   <%= render FlatPack::PageTitle::Component.new(title: "Edit images", variant: :h1) %>
 
-  <%= attachment_collection_editor(
-        @recording,
-        association: :images,
-        fields: [:caption, :credit, :alt_text],
-        sortable: false,
-        displays: [:list, :carousel, :grid],
-        default_display: :list,
-        side_preview: true,
-        items_per_view: { mobile: 1, tablet: 1, desktop: 2 },
-        return_to: @return_to
-      ) %>
+  <%= turbo_frame_tag "attachment-editor-images" do %>
+    <%= attachment_collection_editor(
+          @recording,
+          association: :images,
+          fields: [:caption, :credit, :alt_text],
+          sortable: false,
+          displays: [:list, :carousel, :grid],
+          default_display: :list,
+          side_preview: true,
+          items_per_view: { mobile: 1, tablet: 1, desktop: 2 },
+          return_to: @return_to,
+          upload_button: { presentation: :modal, label: "Add files", target: "attachment-editor-images" }
+        ) %>
+  <% end %>
 </div>

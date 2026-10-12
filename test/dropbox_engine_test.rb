@@ -37,4 +37,36 @@ class DropboxEngineTest < Minitest::Test
     assert_equal "Brief", captured[:file_ids].first.fetch("name")
     assert_not captured[:file_ids].first.key?("metadata")
   end
+
+  def test_remote_importer_keeps_description_and_non_provider_metadata
+    captured = nil
+    context = FakeContext.new({})
+
+    RecordingStudioAttachable::Dropbox::SessionAccessToken.stub(:fetch, "tok") do
+      RecordingStudioAttachable::Dropbox::Services::ImportSelectedFiles.stub(:call, lambda { |**kwargs|
+        captured = kwargs
+        :imported
+      }) do
+        RecordingStudioAttachable::Dropbox::Engine.send(
+          :remote_importer,
+          parent_recording: :recording,
+          attachments: [
+            {
+              provider_payload: { id: "file-2" },
+              name: "Sheet",
+              description: "Quarterly",
+              metadata: { "provider" => "dropbox", "folder" => "finance" }
+            }
+          ],
+          context: context
+        )
+      end
+    end
+
+    selection = captured[:file_ids].first
+    assert_equal "file-2", selection.fetch("id")
+    assert_equal "Sheet", selection.fetch("name")
+    assert_equal "Quarterly", selection.fetch("description")
+    assert_equal({ "folder" => "finance" }, selection.fetch("metadata"))
+  end
 end

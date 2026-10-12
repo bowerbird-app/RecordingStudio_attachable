@@ -183,6 +183,8 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes page_edit_view_source, 'render "recording_studio_attachable/attachment_image_pickers/modal"'
     assert_includes picker_modal_partial_source, 'data-recording-studio-attachable--attachment-image-picker-target="progressTemplate"'
     assert_includes picker_modal_partial_source, 'data-recording-studio-attachable--attachment-image-picker-target="uploadQueue"'
+    assert_includes picker_modal_partial_source, 'javascript_tag(%(import #{module_path.to_json}), type: "module", nonce: true)'
+    assert_not_includes picker_modal_partial_source, "javascript_tag(nonce: true, type: \"module\") {"
   end
 
   def test_attachment_show_view_uses_flatpack_breadcrumb_above_title
@@ -585,7 +587,8 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, "recording-studio-attachable--provider-modal-frame#openPopup"
     assert_includes view_source, 'hidden_field_tag :embed, "modal" if embedded_upload_provider_request?'
     assert_includes upload_view, "upload_provider_launcher_modules"
-    assert_includes upload_view, "javascript_tag(nonce: true, type: \"module\")"
+    assert_includes upload_view, 'javascript_tag(%(import #{module_path.to_json}), type: "module", nonce: true)'
+    assert_not_includes upload_view, "javascript_tag(nonce: true, type: \"module\") {"
   end
 
   def test_attachment_file_button_uses_file_only_replace_controls

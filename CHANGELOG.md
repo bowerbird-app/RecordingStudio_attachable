@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Google Drive no longer has special cases in core configuration, routes, requires, or Stimulus controllers. It mounts and registers itself through the adapter hooks.
-- Google Drive downloads use the shared fetch. Cross-host redirects no longer reuse the Bearer token. File ids in Drive API paths are URL-encoded. Adapter launcher modules load through `javascript_tag` with a CSP nonce.
+- Google Drive downloads use the shared fetch. Cross-host redirects no longer reuse the Bearer token. File ids in Drive API paths are URL-encoded. Adapter launcher modules load through the string-argument `javascript_tag(..., nonce: true)` form so `import "..."` is not HTML-escaped.
 - Drive and Dropbox share core adapter helpers (`SessionAccessToken`, client-picker registration, selection normalizing, JSON parse, OAuth form posts, import-selected-files).
 - `SafeRemoteFetch` treats `max_file_size` `nil` as no byte cap. Deadlines and connect/read timeouts still apply.
 - Drive and Dropbox bootstrap JSON returns `403` when the actor cannot upload (was `422` on Drive). Disabled adapters still return `422`.

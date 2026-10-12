@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrade Notes
 
-- Bump to `0.15.0`. Pin `recording_studio_library` from GitHub branch `cursor/library-gem-v011-9b63` until Library `v0.1.1` is tagged, then move to `tag: "v0.1.1"`. Mount Library's engine and run its migrations plus this gem's drop migration.
+- Bump to `0.15.0`. Pin `recording_studio_library` from GitHub branch `cursor/library-gem-v011-9b63` until Library `v0.1.1` is tagged, then move to `tag: "v0.1.1"`. Dummy pins RecordingStudio `v4.5.0`. Mount Library's engine and run its migrations plus this gem's drop migration.
 - Register `RecordingStudioLibrary::Library` and `RecordingStudioLibrary::Placement` in `config.recordable_types` instead of `RecordingStudioAttachable::Library` / `RecordingStudioAttachable::Placement`.
 - Orderable on a placement parent should `allows: ["RecordingStudioLibrary::Placement"]`.
 - Call `library_for` (or `image_library`) before a library page or picker can find the library.

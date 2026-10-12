@@ -7,7 +7,7 @@ gemspec
 
 gem "flat_pack", github: "bowerbird-app/flatpack", tag: "v0.1.227"
 gem "puma"
-gem "recording_studio", github: "bowerbird-app/RecordingStudio", tag: "v4.4.0"
+gem "recording_studio", github: "bowerbird-app/RecordingStudio", tag: "v4.5.0"
 gem "recording_studio_accessible", github: "bowerbird-app/RecordingStudio_accessible", tag: "v0.14.0"
 gem "recording_studio_library", github: "bowerbird-app/RecordingStudio_library", branch: "cursor/library-gem-v011-9b63"
 gem "recording_studio_metrics",

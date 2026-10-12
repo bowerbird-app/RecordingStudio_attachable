@@ -1,9 +1,9 @@
 GIT
   remote: https://github.com/bowerbird-app/RecordingStudio.git
-  revision: 0508557979cdc057b31da75abe819a9c3f073331
-  tag: v4.4.0
+  revision: b34e59cbd4f56fbc76cf16965d4acda5aea60310
+  tag: v4.5.0
   specs:
-    recording_studio (4.4.0)
+    recording_studio (4.5.0)
       rails (>= 8.1.0)
 
 GIT
@@ -17,7 +17,7 @@ GIT
 
 GIT
   remote: https://github.com/bowerbird-app/RecordingStudio_library.git
-  revision: c9fe2eb86d1dfc775bdd139a45340f17d2c6d86f
+  revision: 010e2a031eef4ad7e33e86fc8bea0d2ba22bf8ee
   branch: cursor/library-gem-v011-9b63
   specs:
     recording_studio_library (0.1.1)
@@ -655,7 +655,7 @@ CHECKSUMS
   rake (13.4.2) sha256=cb825b2bd5f1f8e91ca37bddb4b9aaf345551b4731da62949be002fa89283701
   rbs (4.2.0) sha256=51f7b886dcc05bc09e10b901daa6a81829f6adc03101d6ca9ea4aac6103e0674
   rdoc (8.1.0) sha256=befc37880a5cfd36dcb176c748b5fd5ee39dd3536a75e81824e4972ce230f60a
-  recording_studio (4.4.0)
+  recording_studio (4.5.0)
   recording_studio_accessible (0.14.0)
   recording_studio_attachable (0.15.0)
   recording_studio_library (0.1.1)

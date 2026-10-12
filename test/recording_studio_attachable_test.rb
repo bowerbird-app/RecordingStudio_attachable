@@ -10,10 +10,21 @@ class RecordingStudioAttachableTest < Minitest::Test
   def test_recording_studio_dependency_is_4_2_or_newer
     spec = Gem.loaded_specs.fetch("recording_studio")
     gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
+    root_gemfile = File.read(File.expand_path("../Gemfile", __dir__))
+    dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
+    root_lock = File.read(File.expand_path("../Gemfile.lock", __dir__))
+    dummy_lock = File.read(File.expand_path("dummy/Gemfile.lock", __dir__))
+    pin = 'gem "recording_studio", github: "bowerbird-app/RecordingStudio", tag: "v4.5.0"'
 
     assert spec.version >= Gem::Version.new("4.2.0"),
            "expected recording_studio >= 4.2.0, got #{spec.version}"
     assert_includes gemspec, 'spec.add_dependency "recording_studio", "~> 4.2"'
+    assert_includes root_gemfile, pin
+    assert_includes dummy_gemfile, pin
+    assert_includes root_lock, "recording_studio (4.5.0)"
+    assert_includes root_lock, "tag: v4.5.0"
+    assert_includes dummy_lock, "recording_studio (4.5.0)"
+    assert_includes dummy_lock, "tag: v4.5.0"
   end
 
   def test_flat_pack_dependency_is_0_1_213_or_newer
@@ -52,10 +63,10 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes dummy_gemfile, pin
     assert_includes root_lock, "recording_studio_library (0.1.1)"
     assert_includes root_lock, "branch: cursor/library-gem-v011-9b63"
-    assert_includes root_lock, "revision: c9fe2eb86d1dfc775bdd139a45340f17d2c6d86f"
+    assert_includes root_lock, "revision: 010e2a031eef4ad7e33e86fc8bea0d2ba22bf8ee"
     assert_includes dummy_lock, "recording_studio_library (0.1.1)"
     assert_includes dummy_lock, "branch: cursor/library-gem-v011-9b63"
-    assert_includes dummy_lock, "revision: c9fe2eb86d1dfc775bdd139a45340f17d2c6d86f"
+    assert_includes dummy_lock, "revision: 010e2a031eef4ad7e33e86fc8bea0d2ba22bf8ee"
   end
 
   def test_engine_exists

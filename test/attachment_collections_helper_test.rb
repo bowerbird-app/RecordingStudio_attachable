@@ -487,6 +487,31 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     refute_includes html, ">Edit<"
   end
 
+  def test_placement_editor_saves_to_the_attachable_placements_path
+    photo = child("image-1", name: "Pier", caption: "Light", credit: "Ada")
+    placement = Child.new(id: "place-1", created_at: Time.utc(2026, 1, 1), recordable: photo.recordable)
+    resolved = RecordingStudioAttachable::Placements::Resolved.new(
+      placement_recording: placement,
+      attachment_recording: photo,
+      attachment: photo.recordable
+    )
+    parent = orderable_parent([placement])
+    html = render_editor(
+      [photo],
+      parent: parent,
+      fields: %i[caption credit alt_text],
+      sortable: true,
+      return_to: "/galleries/1/edit",
+      association: :placements,
+      items: [resolved],
+      url: nil
+    )
+
+    list_form = form_markup(html, "attachment-collection-parent-1")
+    assert_includes list_form, 'action="/recordings/parent-1/placements"'
+    refute_includes list_form, "/recording_studio_library/"
+  end
+
   def test_list_and_slides_keep_flatpack_field_borders_on_direct_images
     @displays = %i[list carousel]
     html = render_editor(
@@ -581,7 +606,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
         side_preview: @side_preview || false,
         items_per_view: @items_per_view || 1,
         items: options[:items],
-        url: "/save",
+        url: options.fetch(:url, "/save"),
         return_to: options.fetch(:return_to)
       )
     end
@@ -615,6 +640,14 @@ class AttachmentCollectionsHelperTest < Minitest::Test
       query = options.map { |key, value| "#{key}=#{CGI.escape(value.to_s)}" }.join("&")
       "/attachments/#{recording.id}?#{query}"
     end
+    routes = Object.new
+    routes.define_singleton_method(:recording_placements_path) do |recording, **|
+      "/recordings/#{recording.id}/placements"
+    end
+    routes.define_singleton_method(:recording_attachment_collection_path) do |recording, **|
+      "/recordings/#{recording.id}/attachment_collection"
+    end
+    view.define_singleton_method(:recording_studio_attachable) { routes }
     @editor_view = view
   end
 

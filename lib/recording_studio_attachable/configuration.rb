@@ -264,31 +264,36 @@ module RecordingStudioAttachable
 
     def placement_picker_libraries=(resolver)
       @placement_picker_libraries = resolver
+      @placement_picker_libraries_set = true
       sync_library_configuration!
     end
 
     def library_label=(resolver)
       @library_label = resolver
+      @library_label_set = true
       sync_library_configuration!
     end
 
     def placement_place_label=(resolver)
       @placement_place_label = resolver
+      @placement_place_label_set = true
       sync_library_configuration!
     end
 
     def authorize_with=(adapter)
       @authorize_with = adapter
+      @authorize_with_set = true
       sync_library_configuration!
     end
 
     def sync_library_configuration!
       return unless defined?(RecordingStudioLibrary)
 
-      RecordingStudioLibrary.configuration.picker_libraries = placement_picker_libraries
-      RecordingStudioLibrary.configuration.library_label = library_label
-      RecordingStudioLibrary.configuration.place_label = placement_place_label
-      RecordingStudioLibrary.configuration.authorize_with = authorize_with
+      library = RecordingStudioLibrary.configuration
+      library.picker_libraries = placement_picker_libraries if @placement_picker_libraries_set
+      library.library_label = library_label if @library_label_set
+      library.place_label = placement_place_label if @placement_place_label_set
+      library.authorize_with = authorize_with if @authorize_with_set
     end
 
     def to_h
@@ -337,9 +342,13 @@ module RecordingStudioAttachable
       @auth_roles = default_auth_roles
       @classify_attachment_kind = default_attachment_kind_classifier
       @authorize_with = nil
+      @authorize_with_set = false
       @placement_place_label = default_placement_place_label
+      @placement_place_label_set = false
       @placement_picker_libraries = default_placement_picker_libraries
+      @placement_picker_libraries_set = false
       @library_label = default_library_label
+      @library_label_set = false
     end
 
     def default_placement_place_label

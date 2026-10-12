@@ -20,6 +20,7 @@ module RecordingStudioAttachable
         parent = require_parent!
         resolved_actor = resolve_actor(actor)
         library = library_for!(parent)
+        authorize_upload!(parent, library, resolved_actor)
         blob = blob_for!(library)
         root_recording = root_recording_for(parent)
         incoming = RecordingStudioAttachable::StorageLimit::IncomingBytes.for(root_recording, [blob])
@@ -55,6 +56,19 @@ module RecordingStudioAttachable
         assert_live_library!(library)
         assert_same_root!(parent, library)
         library
+      end
+
+      def authorize_upload!(parent, library, resolved_actor)
+        RecordingStudioAttachable::Authorization.authorize_placement!(
+          action: :upload,
+          actor: resolved_actor,
+          recording: parent
+        )
+        RecordingStudioAttachable::Authorization.authorize_library!(
+          action: :upload,
+          actor: resolved_actor,
+          recording: library
+        )
       end
 
       def assert_live_library!(library)

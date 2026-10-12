@@ -340,6 +340,50 @@ class ConfigurationTest < Minitest::Test
     assert_equal "archive_bytes", @configuration.to_h[:storage_limit]
   end
 
+  def test_boot_sync_does_not_overwrite_host_set_library_configuration
+    host_adapter = ->(**) { :host }
+    host_label = ->(key) { "Host #{key}" }
+    host_picker = ->(_parent) { [:campaign] }
+    host_place = ->(_parent) { "Place here" }
+    library = RecordingStudioLibrary.configuration
+    original = snapshot_library_configuration(library)
+
+    library.authorize_with = host_adapter
+    library.library_label = host_label
+    library.picker_libraries = host_picker
+    library.place_label = host_place
+
+    RecordingStudioAttachable::Configuration.new.sync_library_configuration!
+
+    assert_same host_adapter, library.authorize_with
+    assert_same host_label, library.library_label
+    assert_same host_picker, library.picker_libraries
+    assert_same host_place, library.place_label
+  ensure
+    restore_library_configuration(library, original)
+  end
+
+  def test_explicit_attachable_library_settings_copy_to_library
+    adapter = ->(**) { :attachable }
+    label = ->(key) { "Attachable #{key}" }
+    picker = ->(_parent) { [:default] }
+    place = ->(_parent) { "Add photo" }
+    library = RecordingStudioLibrary.configuration
+    original = snapshot_library_configuration(library)
+
+    @configuration.authorize_with = adapter
+    @configuration.library_label = label
+    @configuration.placement_picker_libraries = picker
+    @configuration.placement_place_label = place
+
+    assert_same adapter, library.authorize_with
+    assert_same label, library.library_label
+    assert_same picker, library.picker_libraries
+    assert_same place, library.place_label
+  ensure
+    restore_library_configuration(library, original)
+  end
+
   def test_to_h_reflects_current_values
     @configuration.layout = :application
     @configuration.enabled_attachment_kinds = %i[file]
@@ -375,5 +419,25 @@ class ConfigurationTest < Minitest::Test
       },
       @configuration.to_h
     )
+  end
+
+  private
+
+  def snapshot_library_configuration(library)
+    {
+      authorize_with: library.authorize_with,
+      library_label: library.library_label,
+      picker_libraries: library.picker_libraries,
+      place_label: library.place_label
+    }
+  end
+
+  def restore_library_configuration(library, snapshot)
+    return if snapshot.blank?
+
+    library.authorize_with = snapshot[:authorize_with]
+    library.library_label = snapshot[:library_label]
+    library.picker_libraries = snapshot[:picker_libraries]
+    library.place_label = snapshot[:place_label]
   end
 end

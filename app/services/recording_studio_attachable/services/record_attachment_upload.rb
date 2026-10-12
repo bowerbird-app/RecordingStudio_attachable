@@ -23,14 +23,13 @@ module RecordingStudioAttachable
         require_recording_studio!
         resolved_actor = resolve_actor(actor)
         capability_options = capability_options_for(parent_recording)
+        authorize_upload!(parent_recording, resolved_actor, capability_options)
         blob = signed_blob!(signed_blob_id, capability_options: capability_options)
         root_recording = root_recording_for(parent_recording)
 
         if LibraryAttachment.library_recording?(parent_recording)
           return record_into_library!(blob, root_recording, resolved_actor, capability_options)
         end
-
-        authorize!(action: :upload, actor: resolved_actor, recording: parent_recording, capability_options: capability_options)
 
         incoming = RecordingStudioAttachable::StorageLimit::IncomingBytes.for(root_recording, [blob])
         event = RecordingStudioAttachable::StorageLimit.with_storage_capacity!(root_recording, incoming) do
@@ -56,6 +55,18 @@ module RecordingStudioAttachable
         end
 
         success(event.recording)
+      end
+
+      def authorize_upload!(parent, resolved_actor, capability_options)
+        if LibraryAttachment.library_recording?(parent)
+          RecordingStudioAttachable::Authorization.authorize_library!(
+            action: :upload,
+            actor: resolved_actor,
+            recording: parent
+          )
+        else
+          authorize!(action: :upload, actor: resolved_actor, recording: parent, capability_options: capability_options)
+        end
       end
 
       def record_into_library!(blob, root_recording, resolved_actor, capability_options)

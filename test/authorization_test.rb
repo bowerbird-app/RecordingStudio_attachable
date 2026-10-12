@@ -8,8 +8,10 @@ class AuthorizationTest < Minitest::Test
   def setup
     @original_configuration = RecordingStudioAttachable.instance_variable_get(:@configuration)
     @original_studio_configuration = RecordingStudio.method(:configuration)
+    @original_library_authorize_with = RecordingStudioLibrary.configuration.authorize_with
     RecordingStudioAttachable.instance_variable_set(:@configuration, RecordingStudioAttachable::Configuration.new)
     RecordingStudioAttachable.configuration.sync_library_configuration!
+    RecordingStudioLibrary.configuration.authorize_with = nil
     stub_recording_studio!
     stub_accessible!
   end
@@ -17,6 +19,7 @@ class AuthorizationTest < Minitest::Test
   def teardown
     RecordingStudioAttachable.instance_variable_set(:@configuration, @original_configuration)
     RecordingStudio.define_singleton_method(:configuration, @original_studio_configuration)
+    RecordingStudioLibrary.configuration.authorize_with = @original_library_authorize_with
   end
 
   def test_allowed_is_false_when_attachable_capability_is_not_enabled

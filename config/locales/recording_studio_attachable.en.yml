@@ -26,6 +26,7 @@ en:
       empty_title: "Nothing here yet"
       empty: "Pull one from a library or drop a new one in."
       added: "Photo added."
+      saved: "Saved."
       removed: "Photo removed from this page."
       reordered: "Photos reordered."
       remove: "Remove from here"

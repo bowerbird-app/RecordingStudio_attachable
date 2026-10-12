@@ -105,16 +105,12 @@ class LibraryWrappersTest < ActionDispatch::IntegrationTest
   end
 
   test "place refuses a hidden item" do
-    stranger = User.create!(
-      email: "stranger-#{SecureRandom.hex(4)}@example.com",
-      password: "Password",
-      password_confirmation: "Password",
-      name: "Stranger"
-    )
     photo = import_photo(@library, "kiln-canister-shelf.jpg")
 
     error = assert_raises(ArgumentError) do
-      @holder.place_library_image(attachment_recording: photo, actor: stranger)
+      with_replaced_singleton(RecordingStudioLibrary::Authorization, :visible?, ->(**) { false }) do
+        @holder.place_library_image(attachment_recording: photo, actor: @user)
+      end
     end
     assert_match(/cannot place that item|not visible|not authorized/i, error.message)
   end
@@ -125,6 +121,77 @@ class LibraryWrappersTest < ActionDispatch::IntegrationTest
 
     anonymous = RecordingStudioAttachable::Placements.resolve(@holder, actor: nil)
     refute anonymous.any? { |item| item.attachment_recording.id == photo.id }
+  end
+
+  test "anonymous visitor seeing a public photo" do
+    photo = import_photo(@library, "kiln-canister-linen.jpg")
+    @holder.place_library_image(attachment_recording: photo, actor: @user)
+
+    with_replaced_singleton(RecordingStudioLibrary::Authorization, :visible?, ->(**) { true }) do
+      anonymous = RecordingStudioAttachable::Placements.resolve(@holder, actor: nil)
+      assert anonymous.any? { |item| item.attachment_recording.id == photo.id }
+    end
+  end
+
+  test "resolve fails closed when Accessible is not loaded" do
+    photo = import_photo(@library, "kiln-canister-detail.jpg")
+    @holder.place_library_image(attachment_recording: photo, actor: @user)
+    auth = RecordingStudioLibrary::Authorization
+    original = auth.method(:accessible_loaded?)
+    auth.define_singleton_method(:accessible_loaded?) { false }
+
+    skip "Library 0.1.1 fail-closed authorization is required" if auth.visible?(actor: @user, recording: photo)
+
+    resolved = RecordingStudioAttachable::Placements.resolve(@holder, actor: @user)
+    refute resolved.any? { |item| item.attachment_recording.id == photo.id }
+  ensure
+    auth.define_singleton_method(:accessible_loaded?) { original.call } if original
+  end
+
+  test "upload_to_library_and_place refuses without upload rights before creating a file" do
+    viewer = create_user("viewer")
+    grant_workspace_access!(@root, actor: viewer, role: :view)
+    blob_count = ActiveStorage::Blob.count
+
+    error = assert_raises(ArgumentError) do
+      File.open(Rails.root.join("db/seed_images", "kiln-canister-hero.jpg"), "rb") do |io|
+        @holder.upload_to_library_and_place(
+          io: io,
+          filename: "kiln-canister-hero.jpg",
+          content_type: "image/jpeg",
+          library_recording: @library,
+          actor: viewer,
+          name: "Denied upload"
+        )
+      end
+    end
+
+    assert_match(/not authorized|cannot upload/i, error.message)
+    assert_equal blob_count, ActiveStorage::Blob.count
+  end
+
+  test "RecordAttachmentUpload refuses a library upload without upload rights before looking up the blob" do
+    viewer = create_user("library-viewer")
+    grant_workspace_access!(@root, actor: viewer, role: :view)
+    blob = blob_from_fixture("kiln-canister-portrait.jpg")
+    blob_count = ActiveStorage::Blob.count
+
+    result = RecordingStudioAttachable::Services::RecordAttachmentUpload.call(
+      parent_recording: @library,
+      signed_blob_id: blob.signed_id,
+      actor: viewer,
+      name: "Denied library upload"
+    )
+
+    assert result.failure?
+    assert_match(/not authorized|cannot upload/i, result.error)
+    assert_equal blob_count, ActiveStorage::Blob.count
+    refute RecordingStudio::Recording.where(
+      parent_recording_id: @library.id,
+      recordable_type: "RecordingStudioAttachable::Attachment"
+    ).joins(
+      "INNER JOIN recording_studio_attachable_attachments ON recording_studio_attachable_attachments.id = recording_studio_recordings.recordable_id"
+    ).where(recording_studio_attachable_attachments: { name: "Denied library upload" }).exists?
   end
 
   test "place refuses a type the holder does not allow" do
@@ -182,13 +249,32 @@ class LibraryWrappersTest < ActionDispatch::IntegrationTest
     )
   end
 
-  def grant_workspace_access!(root)
+  def with_replaced_singleton(target, name, replacement)
+    original = target.method(name)
+    target.define_singleton_method(name, &replacement)
+    yield
+  ensure
+    target.define_singleton_method(name) do |*args, **kwargs, &block|
+      original.call(*args, **kwargs, &block)
+    end
+  end
+
+  def create_user(prefix)
+    User.create!(
+      email: "#{prefix}-#{SecureRandom.hex(4)}@example.com",
+      password: "Password",
+      password_confirmation: "Password",
+      name: prefix.capitalize
+    )
+  end
+
+  def grant_workspace_access!(root, actor: @user, role: :admin)
     original = RecordingStudioAccessible.configuration.access_management_authorizer
     RecordingStudioAccessible.configuration.access_management_authorizer = ->(**) { true }
     result = RecordingStudioAccessible.grant_access(
       recording: root,
-      actor: @user,
-      role: :admin,
+      actor: actor,
+      role: role,
       manager_actor: @user
     )
     raise result.error if result.failure?

@@ -21,7 +21,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
 - RecordingStudio Metrics `~> 0.2` (GitHub tag `v0.2.0`) for operations-API storage and upload metrics
-- RecordingStudio Library `>= 0.1.0` (GitHub tag `v0.1.0`) for reusable photo libraries and placements
+- RecordingStudio Library `>= 0.1.0` (GitHub tag `v0.1.0`, moving to `v0.1.1` after that release) for reusable photo libraries and placements
 
 ## Quick start
 
@@ -41,6 +41,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 # Gemfile
 gem "recording_studio_attachable"
 gem "recording_studio_library", github: "bowerbird-app/RecordingStudio_library", tag: "v0.1.0"
+# After Library 0.1.1 is tagged, pin `tag: "v0.1.1"` instead.
 ```
 
 ### 2. Declare host-app recordable hierarchy

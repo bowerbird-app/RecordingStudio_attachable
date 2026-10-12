@@ -31,7 +31,7 @@ Rails.application.routes.draw do
   get "attachment_editor", to: "attachment_editors#show", as: :attachment_editor
   get "images", to: "image_libraries#show", defaults: { key: "default" }, as: :workspace_images
   get "campaign", to: "image_libraries#show", defaults: { key: "campaign" }, as: :campaign_images
-  resources :galleries, only: :show
+  resources :galleries, only: %i[show edit]
 
   root "home#index"
 end

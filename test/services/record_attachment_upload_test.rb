@@ -106,6 +106,79 @@ class RecordAttachmentUploadTest < Minitest::Test
     end
   end
 
+  def test_checks_upload_rights_before_looking_up_the_blob
+    parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: FakeRecording.new(id: "root-1"))
+    order = []
+
+    RecordingStudioAttachable::Authorization.stub(:authorize!, lambda { |**|
+      order << :authorize
+      true
+    }) do
+      ActiveStorage::Blob.stub(:find_signed!, lambda { |*|
+        order << :blob
+        raise "stop after blob"
+      }) do
+        error = assert_raises(RuntimeError) do
+          RecordingStudioAttachable::Services::RecordAttachmentUpload.call(
+            parent_recording: parent,
+            signed_blob_id: "signed-id",
+            actor: Object.new
+          )
+        end
+        assert_equal "stop after blob", error.message
+      end
+    end
+
+    assert_equal %i[authorize blob], order
+  end
+
+  def test_library_upload_checks_library_rights_before_looking_up_the_blob
+    parent = FakeRecording.new(id: "lib-1", recordable_type: "RecordingStudioLibrary::Library")
+    order = []
+
+    RecordingStudioAttachable::LibraryAttachment.stub(:library_recording?, true) do
+      RecordingStudioAttachable::Authorization.stub(:authorize_library!, lambda { |**|
+        order << :authorize
+        true
+      }) do
+        ActiveStorage::Blob.stub(:find_signed!, lambda { |*|
+          order << :blob
+          raise "stop after blob"
+        }) do
+          error = assert_raises(RuntimeError) do
+            RecordingStudioAttachable::Services::RecordAttachmentUpload.call(
+              parent_recording: parent,
+              signed_blob_id: "signed-id",
+              actor: Object.new
+            )
+          end
+          assert_equal "stop after blob", error.message
+        end
+      end
+    end
+
+    assert_equal %i[authorize blob], order
+  end
+
+  def test_refuses_upload_without_rights_before_looking_up_the_blob
+    parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: FakeRecording.new(id: "root-1"))
+
+    RecordingStudioAttachable::Authorization.stub(:authorize!, lambda { |**|
+      raise RecordingStudioAttachable::Authorization::NotAuthorizedError, "Not authorized to upload"
+    }) do
+      ActiveStorage::Blob.stub(:find_signed!, ->(*) { flunk "must not look up the blob" }) do
+        result = RecordingStudioAttachable::Services::RecordAttachmentUpload.call(
+          parent_recording: parent,
+          signed_blob_id: "signed-id",
+          actor: Object.new
+        )
+
+        assert result.failure?
+        assert_match(/not authorized/i, result.error)
+      end
+    end
+  end
+
   def test_rejects_pdf_and_text_uploads_for_page_recordings
     parent = FakeRecording.new(id: "parent-1", recordable_type: "Page", root_recording: FakeRecording.new(id: "root-1"))
     capability_options = { allowed_content_types: ["image/*"], enabled_attachment_kinds: %i[image], max_file_size: 2.megabytes }

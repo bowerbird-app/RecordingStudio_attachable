@@ -46,6 +46,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes home_view, 'text: "Images"'
     assert_includes home_view, 'text: "Campaign"'
     assert_includes home_view, 'text: "Gallery"'
+    assert_includes home_view, 'text: "Edit gallery images"'
     assert_includes home_view, 'title: "Chat demo"'
     assert_includes home_view, 'subtitle: "Try the reusable image picker inside a FlatPack chat composer."'
     assert_includes home_view, 'text: "Open chat demo"'
@@ -84,6 +85,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes home_controller, "@workspace_images_path = workspace_images_path"
     assert_includes home_controller, "@campaign_images_path = campaign_images_path"
     assert_includes home_controller, "@gallery = Gallery.first"
+    assert_includes home_controller, "@gallery_edit_path = edit_gallery_path(@gallery) if @gallery.present?"
   end
 
   def test_dummy_page_recordable_is_registered_seeded_and_migrated

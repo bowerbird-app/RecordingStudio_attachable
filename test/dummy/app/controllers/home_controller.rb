@@ -24,6 +24,7 @@ class HomeController < ApplicationController
     @campaign_images_path = campaign_images_path
     @gallery = Gallery.first
     @gallery_path = gallery_path(@gallery) if @gallery.present?
+    @gallery_edit_path = edit_gallery_path(@gallery) if @gallery.present?
   end
 
   private

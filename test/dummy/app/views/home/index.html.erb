@@ -68,6 +68,9 @@
             <% if @gallery_path.present? %>
               <%= render FlatPack::Button::Component.new(text: "Gallery", style: :secondary, size: :md, href: @gallery_path) %>
             <% end %>
+            <% if @gallery_edit_path.present? %>
+              <%= render FlatPack::Button::Component.new(text: "Edit gallery images", style: :secondary, size: :md, href: @gallery_edit_path) %>
+            <% end %>
           </div>
         </div>
       <% end %>

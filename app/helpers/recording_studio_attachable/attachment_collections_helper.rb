@@ -56,7 +56,7 @@ module RecordingStudioAttachable
 
     def attachment_collection_save_path(collection, recording, url)
       return url if url.present?
-      return library_collection_routes.recording_placements_path(recording) if collection.placement?
+      return attachable_routes.recording_placements_path(recording) if collection.placement?
 
       attachable_attachment_collection_path(recording)
     end

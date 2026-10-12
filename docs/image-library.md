@@ -38,6 +38,7 @@ Pin Library by GitHub tag, install its migrations, and mount its engine.
 ```ruby
 # Gemfile
 gem "recording_studio_library", github: "bowerbird-app/RecordingStudio_library", tag: "v0.1.0"
+# After Library 0.1.1 is tagged, pin `tag: "v0.1.1"` instead.
 ```
 
 ```ruby
@@ -85,7 +86,11 @@ Register the library types in `config.recordable_types`:
 "RecordingStudioAttachable::Attachment"
 ```
 
-Run Library's install/migrations and Attachable's migrations. Attachable's latest migration drops the old `recording_studio_attachable_libraries` and `recording_studio_attachable_placements` tables. Presskits is unreleased, so no data migration is required.
+Run Library's install/migrations and Attachable's migrations. Attachable's latest migration deletes leftover `RecordingStudioAttachable::Library` / `Placement` recordings and their events, then drops the old `recording_studio_attachable_libraries` and `recording_studio_attachable_placements` tables. That drop is irreversible. Presskits is unreleased, so no row-by-row data migration is required.
+
+The Images section editor (`attachment_collection_editor` with `association: :placements`) PATCHes Attachable's placements collection. That save writes caption, credit, and alt on the photo, then reorders through `RecordingStudioLibrary.reorder!`.
+
+Attachable copies `placement_picker_libraries`, `library_label`, `placement_place_label`, and `authorize_with` onto Library only when the host set those values. Host-set Library adapters, picker libraries, and labels stay put.
 
 ## Public helpers
 
@@ -142,7 +147,7 @@ en:
         campaign: "Campaign"
 ```
 
-Or set `config.library_label` when i18n is not enough. Attachable syncs that, `placement_picker_libraries`, and `placement_place_label` onto Library.
+Or set `config.library_label` when i18n is not enough. Attachable copies that, `placement_picker_libraries`, `placement_place_label`, and `authorize_with` onto Library only when the host set them.
 
 ## Trash, restore, and purge
 

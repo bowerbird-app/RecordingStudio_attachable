@@ -1,0 +1,19 @@
+<% recording_studio_page_nav(page_nav_anchor_url: root_path, page_nav_back_url: root_path) if respond_to?(:recording_studio_page_nav) %>
+
+<div class="flex w-full flex-col gap-6">
+  <%= render FlatPack::PageTitle::Component.new(
+    title: "Gallery images",
+    subtitle: "Caption, credit, and alt. Drag to reorder.",
+    variant: :h1
+  ) %>
+
+  <%= attachment_collection_editor(
+        @gallery_recording,
+        association: :placements,
+        fields: %i[caption credit alt_text],
+        sortable: true,
+        displays: %i[list carousel grid],
+        default_display: :list,
+        return_to: @return_to
+      ) %>
+</div>

@@ -331,6 +331,21 @@ class EngineTest < Minitest::Test
     assert_equal "controllers/recording_studio_attachable/dropbox_picker_launcher", provider.launcher_module
     assert_equal %w[id], provider.allowed_payload_keys
     assert_nil RecordingStudioAttachable.configuration.upload_provider(:google_drive)
+
+    dropbox_proxy = Object.new
+    dropbox_proxy.define_singleton_method(:recording_bootstrap_path) { |recording, format:| "/dropbox/recordings/#{recording.id}/bootstrap.#{format}" }
+    route_helpers = Object.new
+    route_helpers.define_singleton_method(:dropbox) { dropbox_proxy }
+    route_helpers.define_singleton_method(:recording_attachment_imports_path) { |recording, format:| "/recordings/#{recording.id}/attachments/imports.#{format}" }
+    view_context = Struct.new(:main_app) do
+      delegate :dropbox, to: :main_app
+      delegate :recording_attachment_imports_path, to: :main_app
+    end.new(route_helpers)
+    recording = Struct.new(:id).new("rec-1")
+    options = provider.button_options(view_context: view_context, recording: recording)
+
+    assert_equal "/dropbox/recordings/rec-1/bootstrap.json", options.dig(:data, :provider_bootstrap_url)
+    assert_equal "/recordings/rec-1/attachments/imports.json", options.dig(:data, :provider_import_url)
   end
 
   def test_dropbox_initializer_skips_provider_when_disabled

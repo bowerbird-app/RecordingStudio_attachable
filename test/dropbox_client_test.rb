@@ -85,6 +85,120 @@ class DropboxClientTest < Minitest::Test
     end
   end
 
+  def test_resolve_rejects_a_blank_file_id
+    error = assert_raises(RecordingStudioAttachable::Dropbox::Client::Error) do
+      client.resolve({})
+    end
+
+    assert_equal "Select a Dropbox file to import", error.message
+  end
+
+  def test_resolve_keeps_an_id_prefixed_path_and_selection_overrides
+    response = FakeResponse.new(
+      body: { "name" => "Brief.pdf", "size" => 12, ".tag" => "file" }.to_json,
+      code: "200",
+      headers: {},
+      success: true
+    )
+    captured = {}
+
+    Net::HTTP.stub(:start, lambda { |_host, _port, **_options, &block|
+      http = Object.new
+      http.define_singleton_method(:request) do |request|
+        captured[:body] = JSON.parse(request.body)
+        response
+      end
+      block.call(http)
+    }) do
+      remote_file = client.resolve(
+        "id" => "id:file-1",
+        "name" => "Override",
+        "description" => "From Dropbox"
+      )
+
+      assert_equal "Override", remote_file.name
+      assert_equal "From Dropbox", remote_file.description
+      assert_equal "id:file-1", remote_file.external_id
+      assert_equal "application/octet-stream", remote_file.content_type
+    end
+
+    assert_equal({ "path" => "id:file-1" }, captured.fetch(:body))
+  end
+
+  def test_resolve_raises_unauthorized_error_on_401
+    response = FakeResponse.new(
+      body: { "error_summary" => "expired_access_token/" }.to_json,
+      code: "401",
+      headers: {},
+      success: false
+    )
+
+    Net::HTTP.stub(:start, lambda { |_host, _port, **_options, &block|
+      http = Object.new
+      http.define_singleton_method(:request) { |_request| response }
+      block.call(http)
+    }) do
+      error = assert_raises(RecordingStudioAttachable::Dropbox::Client::UnauthorizedError) do
+        client.resolve("id" => "file-1")
+      end
+
+      assert_equal "expired_access_token/", error.message
+    end
+  end
+
+  def test_resolve_uses_dropbox_error_tag_for_api_failures
+    response = FakeResponse.new(
+      body: { "error" => { ".tag" => "path/not_found" } }.to_json,
+      code: "409",
+      headers: {},
+      success: false
+    )
+
+    Net::HTTP.stub(:start, lambda { |_host, _port, **_options, &block|
+      http = Object.new
+      http.define_singleton_method(:request) { |_request| response }
+      block.call(http)
+    }) do
+      error = assert_raises(RecordingStudioAttachable::Dropbox::Client::Error) do
+        client.resolve("id" => "file-1")
+      end
+
+      assert_equal "path/not_found", error.message
+    end
+  end
+
+  def test_resolve_uses_fallback_message_for_empty_non_json_failures
+    response = FakeResponse.new(body: "", code: "500", headers: {}, success: false)
+
+    Net::HTTP.stub(:start, lambda { |_host, _port, **_options, &block|
+      http = Object.new
+      http.define_singleton_method(:request) { |_request| response }
+      block.call(http)
+    }) do
+      error = assert_raises(RecordingStudioAttachable::Dropbox::Client::Error) do
+        client.resolve("id" => "file-1")
+      end
+
+      assert_equal "Dropbox request failed (HTTP 500): no response body", error.message
+    end
+  end
+
+  def test_resolve_uses_response_body_snippet_when_json_is_invalid
+    response = FakeResponse.new(body: "gateway timeout", code: "504", headers: {}, success: false)
+
+    Net::HTTP.stub(:start, lambda { |_host, _port, **_options, &block|
+      http = Object.new
+      http.define_singleton_method(:request) { |_request| response }
+      block.call(http)
+    }) do
+      error = assert_raises(RecordingStudioAttachable::Dropbox::Client::Error) do
+        client.resolve("id" => "file-1")
+      end
+
+      assert_equal "Dropbox request failed (HTTP 504): gateway timeout", error.message
+    end
+  end
+
   def test_resolve_ignores_urls_when_an_id_is_present
     response = FakeResponse.new(
       body: { "id" => "id:file-1", "name" => "Brief.pdf", "size" => 12, ".tag" => "file" }.to_json,

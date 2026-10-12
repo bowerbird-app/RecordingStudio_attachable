@@ -59,7 +59,7 @@ module RecordingStudioAttachable
       @modal_size = modal_size.to_sym
       @iframe_title = iframe_title
       @allowed_payload_keys = Array(allowed_payload_keys).map(&:to_s).uniq
-      @launcher_module = launcher_module.presence || default_launcher_module
+      @launcher_module = launcher_module.presence
       @system_arguments = system_arguments
 
       validate_strategy!
@@ -259,12 +259,6 @@ module RecordingStudioAttachable
       else
         @remote_importer.call
       end
-    end
-
-    def default_launcher_module
-      return if launcher.blank?
-
-      "controllers/recording_studio_attachable/#{launcher}_picker_launcher"
     end
 
     def resolve(value, view_context:, recording:)

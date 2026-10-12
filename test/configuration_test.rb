@@ -55,6 +55,8 @@ class ConfigurationTest < Minitest::Test
     assert_empty @configuration.upload_providers
     assert_equal :view, @configuration.auth_role_for(:view)
     assert_equal :edit, @configuration.auth_role_for(:upload)
+    assert @configuration.singleton_methods.include?(:google_drive)
+    assert @configuration.singleton_methods.include?(:dropbox)
     assert_not @configuration.google_drive.enabled?
     assert_not @configuration.google_drive.configured?
     assert_not @configuration.google_drive.picker_configured?

@@ -41,6 +41,7 @@ module RecordingStudioAttachable
             url: ->(route_helpers:, recording:) { bootstrap_path(route_helpers:, recording:) },
             strategy: :client_picker,
             launcher: "google_drive",
+            launcher_module: "controllers/recording_studio_attachable/google_drive_picker_launcher",
             bootstrap_url: ->(route_helpers:, recording:) { bootstrap_path(route_helpers:, recording:) },
             import_url: ->(route_helpers:, recording:) { import_path(route_helpers:, recording:) },
             remote_importer: method(:remote_importer),

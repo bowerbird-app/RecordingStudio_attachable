@@ -80,7 +80,11 @@ module RecordingStudioAttachable
         request["Content-Type"] = "application/json"
         request.body = payload.to_json
 
-        response = Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
+        response = Net::HTTP.start(
+          uri.host,
+          uri.port,
+          **RecordingStudioAttachable::SafeRemoteFetch.tls_start_options
+        ) do |http|
           http.request(request)
         end
 

@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "tempfile"
 require "test_helper"
 require_relative "../../app/services/recording_studio_attachable/services/application_service"
 require_relative "../../app/services/recording_studio_attachable/services/import_attachments"
@@ -19,8 +20,11 @@ class DropboxImportSelectedFilesTest < Minitest::Test
     )
     client = Object.new
     client.define_singleton_method(:resolve) { |_selection| remote_file }
+    tempfile = Tempfile.new("dropbox-import")
+    tempfile.write("pdf-bytes")
+    tempfile.rewind
     fetched = RecordingStudioAttachable::SafeRemoteFetch::Result.new(
-      io: StringIO.new("pdf-bytes"),
+      io: tempfile,
       content_type: "application/pdf",
       byte_size: 9
     )
@@ -45,6 +49,7 @@ class DropboxImportSelectedFilesTest < Minitest::Test
       end
     end
 
+    assert tempfile.closed?
     assert_equal "dropbox", captured[:source]
     assert_equal "Brief.pdf", captured[:attachments].first[:filename]
     assert_equal(

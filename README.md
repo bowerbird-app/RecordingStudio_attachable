@@ -473,6 +473,8 @@ end
 
 People sign in to their own Dropbox via OAuth 2.0 with PKCE. The Chooser returns file ids only. The server loads metadata and content through the Dropbox API with the user token. Client-supplied download URLs are ignored.
 
+Hosts with a Content Security Policy must allow the Chooser script at `https://www.dropbox.com/static/api/2/dropins.js` (`script-src`). Inline launcher imports use a CSP nonce via `javascript_tag`.
+
 #### Adding another provider
 
 1. Add a self-contained adapter directory (engine, routes, config object, OAuth, resolve, launcher JS).

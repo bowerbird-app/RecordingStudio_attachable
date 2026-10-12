@@ -43,10 +43,11 @@ class DropboxOAuthClientTest < Minitest::Test
       success: true
     )
 
-    Net::HTTP.stub(:start, lambda { |host, port, use_ssl:, &block|
+    Net::HTTP.stub(:start, lambda { |host, port, **options, &block|
       assert_equal "api.dropboxapi.com", host
       assert_equal 443, port
-      assert_equal true, use_ssl
+      assert_equal true, options[:use_ssl]
+      assert_equal RecordingStudioAttachable::SafeRemoteFetch::OPEN_TIMEOUT, options[:open_timeout]
 
       http = Object.new
       http.define_singleton_method(:request) do |request|

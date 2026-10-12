@@ -210,6 +210,7 @@ class EngineTest < Minitest::Test
     assert_equal :google_drive, provider.key
     assert_equal :client_picker, provider.strategy
     assert_equal "google_drive", provider.launcher
+    assert_equal "controllers/recording_studio_attachable/google_drive_picker_launcher", provider.launcher_module
     assert provider.supports_remote_imports?
   end
 
@@ -327,6 +328,7 @@ class EngineTest < Minitest::Test
     assert_equal "Dropbox", provider.label
     assert_equal :client_picker, provider.strategy
     assert_equal "dropbox", provider.launcher
+    assert_equal "controllers/recording_studio_attachable/dropbox_picker_launcher", provider.launcher_module
     assert_equal %w[id], provider.allowed_payload_keys
     assert_nil RecordingStudioAttachable.configuration.upload_provider(:google_drive)
   end

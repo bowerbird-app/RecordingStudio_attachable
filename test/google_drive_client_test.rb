@@ -14,6 +14,11 @@ class GoogleDriveClientTest < Minitest::Test
 
       super
     end
+
+    def read_body
+      yield body.to_s if block_given?
+      body
+    end
   end
 
   FakeRedirectResponse = Struct.new(:body, :code, :headers, keyword_init: true) do
@@ -23,6 +28,11 @@ class GoogleDriveClientTest < Minitest::Test
       return true if klass == Net::HTTPRedirection
 
       super
+    end
+
+    def read_body
+      yield body.to_s if block_given?
+      body
     end
   end
 
@@ -35,10 +45,10 @@ class GoogleDriveClientTest < Minitest::Test
       success: true
     )
 
-    Net::HTTP.stub(:start, lambda { |host, port, use_ssl:, &block|
+    Net::HTTP.stub(:start, lambda { |host, port, **options, &block|
       captured[:host] = host
       captured[:port] = port
-      captured[:use_ssl] = use_ssl
+      captured[:use_ssl] = options[:use_ssl]
 
       http = Object.new
       http.define_singleton_method(:request) do |request|
@@ -75,8 +85,8 @@ class GoogleDriveClientTest < Minitest::Test
     response = FakeResponse.new(body: "pdf-binary", code: "200", headers: {}, success: true)
 
     with_public_dns do
-      Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
-        assert_equal true, use_ssl
+      Net::HTTP.stub(:start, lambda { |_host, _port, **options, &block|
+        assert_equal true, options[:use_ssl]
 
         http = stub_http(captured: captured, response: response)
         block.call(http)
@@ -105,8 +115,8 @@ class GoogleDriveClientTest < Minitest::Test
     response = FakeResponse.new(body: "csv-data", code: "200", headers: {}, success: true)
 
     with_public_dns do
-      Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
-        assert_equal true, use_ssl
+      Net::HTTP.stub(:start, lambda { |_host, _port, **options, &block|
+        assert_equal true, options[:use_ssl]
 
         http = stub_http(response: response)
         block.call(http)
@@ -133,8 +143,8 @@ class GoogleDriveClientTest < Minitest::Test
     )
 
     with_public_dns do
-      Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
-        assert_equal true, use_ssl
+      Net::HTTP.stub(:start, lambda { |_host, _port, **options, &block|
+        assert_equal true, options[:use_ssl]
 
         http = stub_http(captured: captured, response: response)
         block.call(http)
@@ -174,8 +184,8 @@ class GoogleDriveClientTest < Minitest::Test
     )
 
     with_public_dns do
-      Net::HTTP.stub(:start, lambda { |host, _port, use_ssl:, &block|
-        assert_equal true, use_ssl
+      Net::HTTP.stub(:start, lambda { |host, _port, **options, &block|
+        assert_equal true, options[:use_ssl]
 
         http = Object.new
         http.define_singleton_method(:request) do |request, &request_block|
@@ -213,7 +223,7 @@ class GoogleDriveClientTest < Minitest::Test
       success: true
     )
 
-    Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
+    Net::HTTP.stub(:start, lambda { |_host, _port, **options, &block|
       http = Object.new
       http.define_singleton_method(:request) do |request|
         captured[:path] = request.path
@@ -237,8 +247,8 @@ class GoogleDriveClientTest < Minitest::Test
       success: true
     )
 
-    Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
-      assert_equal true, use_ssl
+    Net::HTTP.stub(:start, lambda { |_host, _port, **options, &block|
+      assert_equal true, options[:use_ssl]
 
       http = Object.new
       http.define_singleton_method(:request) do |request|
@@ -269,8 +279,8 @@ class GoogleDriveClientTest < Minitest::Test
       success: true
     )
 
-    Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
-      assert_equal true, use_ssl
+    Net::HTTP.stub(:start, lambda { |_host, _port, **options, &block|
+      assert_equal true, options[:use_ssl]
 
       http = Object.new
       http.define_singleton_method(:request) do |request|
@@ -291,8 +301,8 @@ class GoogleDriveClientTest < Minitest::Test
     response = FakeResponse.new(body: "payload", code: "200", headers: { "content-type" => nil }, success: true)
 
     with_public_dns do
-      Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
-        assert_equal true, use_ssl
+      Net::HTTP.stub(:start, lambda { |_host, _port, **options, &block|
+        assert_equal true, options[:use_ssl]
         block.call(stub_http(response: response))
       }) do
         result = client.download_file(
@@ -311,8 +321,8 @@ class GoogleDriveClientTest < Minitest::Test
     response = FakeResponse.new(body: "payload", code: "200", headers: { "content-type" => "image/png" }, success: true)
 
     with_public_dns do
-      Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
-        assert_equal true, use_ssl
+      Net::HTTP.stub(:start, lambda { |_host, _port, **options, &block|
+        assert_equal true, options[:use_ssl]
         block.call(stub_http(captured: captured, response: response))
       }) do
         client.download_file(
@@ -337,8 +347,8 @@ class GoogleDriveClientTest < Minitest::Test
       success: false
     )
 
-    Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
-      assert_equal true, use_ssl
+    Net::HTTP.stub(:start, lambda { |_host, _port, **options, &block|
+      assert_equal true, options[:use_ssl]
 
       http = Object.new
       http.define_singleton_method(:request) { |_request| response }
@@ -355,8 +365,8 @@ class GoogleDriveClientTest < Minitest::Test
   def test_fetch_file_raises_default_error_message_for_non_json_failures
     response = FakeResponse.new(body: "gateway error", code: "502", headers: {}, success: false)
 
-    Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
-      assert_equal true, use_ssl
+    Net::HTTP.stub(:start, lambda { |_host, _port, **options, &block|
+      assert_equal true, options[:use_ssl]
 
       http = Object.new
       http.define_singleton_method(:request) { |_request| response }
@@ -373,8 +383,8 @@ class GoogleDriveClientTest < Minitest::Test
   def test_fetch_file_truncates_long_non_json_failure_bodies
     response = FakeResponse.new(body: "x" * 250, code: "502", headers: {}, success: false)
 
-    Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
-      assert_equal true, use_ssl
+    Net::HTTP.stub(:start, lambda { |_host, _port, **options, &block|
+      assert_equal true, options[:use_ssl]
 
       http = Object.new
       http.define_singleton_method(:request) { |_request| response }
@@ -397,8 +407,8 @@ class GoogleDriveClientTest < Minitest::Test
       success: false
     )
 
-    Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
-      assert_equal true, use_ssl
+    Net::HTTP.stub(:start, lambda { |_host, _port, **options, &block|
+      assert_equal true, options[:use_ssl]
 
       http = Object.new
       http.define_singleton_method(:request) { |_request| response }
@@ -416,8 +426,8 @@ class GoogleDriveClientTest < Minitest::Test
     captured = {}
     response = FakeResponse.new(body: { "files" => [] }.to_json, code: "200", headers: {}, success: true)
 
-    Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
-      assert_equal true, use_ssl
+    Net::HTTP.stub(:start, lambda { |_host, _port, **options, &block|
+      assert_equal true, options[:use_ssl]
 
       http = Object.new
       http.define_singleton_method(:request) do |request|

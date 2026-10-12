@@ -25,12 +25,14 @@ module RecordingStudioAttachable
           selections = normalized_file_selections
           raise ArgumentError, "Select at least one Dropbox file to import" if selections.blank?
 
+          downloaded = []
           attachments = selections.map do |selection|
             remote_file = dropbox_client.resolve(selection)
             fetched = RecordingStudioAttachable::SafeRemoteFetch.call(
               remote_file,
               max_bytes: RecordingStudioAttachable.configuration.max_file_size
             )
+            downloaded << fetched.io
 
             {
               io: fetched.io,
@@ -52,6 +54,8 @@ module RecordingStudioAttachable
             impersonator: impersonator,
             source: "dropbox"
           )
+        ensure
+          downloaded&.each { |io| RecordingStudioAttachable::SafeRemoteFetch.close_io(io) }
         end
 
         def normalized_file_selections

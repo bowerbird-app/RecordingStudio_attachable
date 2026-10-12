@@ -11,13 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Cloud upload adapters: Google Drive and Dropbox are self-contained adapters on the existing upload-provider registry. Each has an explicit `enabled` switch and is registered only when enabled and fully configured.
 - Dropbox adapter: OAuth 2.0 with PKCE, Chooser, server-side resolve via `files/get_metadata` and `files/download`. Copy into Active Storage only.
-- Shared `RecordingStudioAttachable::SafeRemoteFetch` for adapter downloads: HTTPS only, per-adapter hosts, drop `Authorization` on cross-host redirects, block private/loopback addresses, refuse oversize before a full download, stream to a Tempfile with a byte cap.
+- Shared `RecordingStudioAttachable::SafeRemoteFetch` for adapter downloads: HTTPS only, per-adapter hosts, drop `Authorization` (case-insensitive) on cross-host redirects, pin the validated IP, block private/loopback/CGNAT/multicast addresses, refuse oversize before a full download, stream to a Tempfile with a byte cap, connect/read timeouts plus an overall deadline.
 - Adapters register their own config objects. Hosts set `config.google_drive.*` and `config.dropbox.*` as before for Drive.
 
 ### Changed
 
 - Google Drive no longer has special cases in core configuration, routes, requires, or Stimulus controllers. It mounts and registers itself through the adapter hooks.
-- Google Drive downloads use the shared fetch. Cross-host redirects no longer reuse the Bearer token. File ids in Drive API paths are URL-encoded.
+- Google Drive downloads use the shared fetch. Cross-host redirects no longer reuse the Bearer token. File ids in Drive API paths are URL-encoded. Adapter launcher modules load through `javascript_tag` with a CSP nonce.
+- Draft PRs #28 and #29 both currently say `0.15.0`. Whichever merges second must bump.
 
 ### Upgrade Notes
 

@@ -20,7 +20,7 @@ module RecordingStudioAttachable
 
         attr_reader :parent_recording, :file_ids, :access_token, :actor, :impersonator, :client
 
-        def perform
+        def perform # rubocop:disable Metrics/CyclomaticComplexity
           selections = normalized_file_selections
           select_one = Copy.t(
             "google_drive.select_at_least_one",
@@ -28,14 +28,16 @@ module RecordingStudioAttachable
           )
           raise ArgumentError, select_one if selections.blank?
 
+          downloaded = []
           attachments = selections.map do |selection|
             fetch_options = {}
             fetch_options[:resource_key] = selection["resource_key"] if selection["resource_key"].present?
 
             file = google_drive_client.fetch_file(selection.fetch("id"), **fetch_options)
-            downloaded = google_drive_client.download_file(file)
+            fetched = google_drive_client.download_file(file)
+            downloaded << fetched[:io]
 
-            downloaded.merge(
+            fetched.merge(
               name: selection["name"].presence || file.fetch("name"),
               description: selection["description"].presence || "Imported from Google Drive",
               metadata: {
@@ -54,6 +56,8 @@ module RecordingStudioAttachable
             impersonator: impersonator,
             source: "google_drive"
           )
+        ensure
+          downloaded&.each { |io| RecordingStudioAttachable::SafeRemoteFetch.close_io(io) }
         end
 
         def normalized_file_selections

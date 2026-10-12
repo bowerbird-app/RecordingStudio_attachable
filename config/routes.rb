@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 RecordingStudioAttachable::Engine.routes.draw do
-  mount RecordingStudioAttachable::GoogleDrive::Engine, at: "/google_drive", as: :google_drive
+  RecordingStudioAttachable.adapter_route_blocks.each do |route_block|
+    instance_eval(&route_block)
+  end
 
   resources :recordings, only: [] do
     resources :attachments, only: :index, controller: "recording_attachments"

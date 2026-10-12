@@ -430,9 +430,15 @@ If you are working in trusted internal app code and only want the created record
 - `recording.import_attachment(...)`
 - `recording.import_attachments(...)`
 
-### Built-in Google Drive addon
+### Cloud upload adapters
 
-This gem also ships with an optional Google Drive addon that uses the same provider discovery and import services described above. The addon stays dormant until you enable it and provide both OAuth and Google Picker credentials.
+Google Drive and Dropbox ship as optional adapters. Each adapter owns its config, OAuth, routes, launcher JS, and file resolve/download rules. Core owns the upload-provider registry, the generic `attachments/imports` endpoint, and a shared HTTPS fetch used by every adapter.
+
+Adapters are **off** until the host turns them on **and** supplies real credentials. Dummy placeholder values do not count. Hosts can enable Drive only, Dropbox only, both, or neither. When an adapter is off or incomplete, it is not registered, nothing from it appears on the upload page, and its endpoints refuse the request.
+
+Files are always **copied** into Active Storage. There are no linked attachments.
+
+#### Google Drive
 
 ```ruby
 RecordingStudioAttachable.configure do |config|
@@ -447,17 +453,36 @@ end
 
 `GOOGLE_DRIVE_API_KEY` must be a browser API key for the same Google Cloud project, and `GOOGLE_DRIVE_APP_ID` is the Google Cloud project number used by Google Picker.
 
-Once enabled, the upload page will automatically show a `Google Drive` provider button that opens Google auth and the Google Picker directly from the upload page. There is no provider-owned middle screen in the normal flow. The addon routes remain mounted inside the main engine at `/recording_studio_attachable/google_drive`.
+Once enabled, the upload page shows a Google Drive button: OAuth popup, Google Picker, then a server-side copy through `ImportAttachments`. Native Docs/Sheets/Slides export to PDF, PNG, or CSV as before. Routes live at `/recording_studio_attachable/google_drive`.
 
-The addon handles:
+#### Dropbox
 
-- Google OAuth browser handoff in a popup launched from the upload page
-- bootstrap JSON for the built-in Google Picker launcher
-- Google Picker selection directly from the upload page
-- downloading selected files from Drive
-- handing those files to `RecordingStudioAttachable::Services::ImportAttachments`
+Create a Dropbox app with scoped access:
 
-Imported files still go through the gem's normal authorization, blob identification, Active Storage validation, attachment creation, and recording creation flow. Native Google Docs formats are exported during import using Drive-compatible formats such as PDF, PNG, or CSV where supported.
+- Redirect URI: `https://your-app.test/recording_studio_attachable/dropbox/oauth/callback`
+- Scopes: `files.metadata.read`, `files.content.read`
+
+```ruby
+RecordingStudioAttachable.configure do |config|
+  config.dropbox.enabled = true
+  config.dropbox.client_id = ENV.fetch("DROPBOX_CLIENT_ID")
+  config.dropbox.client_secret = ENV.fetch("DROPBOX_CLIENT_SECRET")
+  config.dropbox.redirect_uri = "https://your-app.test/recording_studio_attachable/dropbox/oauth/callback"
+end
+```
+
+People sign in to their own Dropbox via OAuth 2.0 with PKCE. The Chooser returns file ids only. The server loads metadata and content through the Dropbox API with the user token. Client-supplied download URLs are ignored.
+
+#### Adding another provider
+
+1. Add a self-contained adapter directory (engine, routes, config object, OAuth, resolve, launcher JS).
+2. Register the config with `RecordingStudioAttachable.register_adapter_configuration(:your_key, Your::Configuration)`.
+3. Mount routes with `RecordingStudioAttachable.register_adapter_routes { mount Your::Engine, at: "/your_key", as: :your_key }`.
+4. When `enabled?` and `configured?`, `register_upload_provider` on the existing registry (`strategy: :client_picker`, `remote_importer`, `allowed_payload_keys`).
+5. Resolve a selection to a `RecordingStudioAttachable::RemoteFile` (HTTPS URI, allowed hosts, headers, filename, content type, size, external id). Fetch with `RecordingStudioAttachable::SafeRemoteFetch`, then `ImportAttachments`.
+6. Register a launcher with `registerUploadProviderLauncher("your_key", …)` in `your_key_picker_launcher.js`. The upload page imports that module only when the provider is shown.
+
+Do not add a second registry. Do not special-case the new provider in core config, routes, or JS.
 
 Each import payload supports:
 

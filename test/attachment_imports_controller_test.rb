@@ -112,6 +112,81 @@ module RecordingStudioAttachable
       tempfile.close!
     end
 
+    def test_attachment_payloads_strip_provider_payload_to_allowed_keys
+      @controller = AttachmentImportsController.new
+      provider = Struct.new(:key, :allowed_payload_keys).new(:dropbox, %w[id])
+
+      @controller.send(
+        :params=,
+        ActionController::Parameters.new(
+          attachment_import: {
+            provider_key: "dropbox",
+            attachments: [
+              {
+                provider_payload: {
+                  id: "file-1",
+                  url: "https://dl.dropboxusercontent.com/s/stolen",
+                  link: "https://evil.test"
+                }
+              }
+            ]
+          }
+        )
+      )
+
+      RecordingStudioAttachable.configuration.stub(:upload_provider, provider) do
+        payload = @controller.send(:attachment_payloads).first
+
+        assert_equal({ "id" => "file-1" }, payload[:provider_payload])
+      end
+    end
+
+    def test_create_authorizes_upload_before_adapter_imports
+      @controller = AttachmentImportsController.new
+      recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+      authorized = nil
+      provider = Struct.new(:key, :allowed_payload_keys).new(:dropbox, %w[id])
+      result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [])
+
+      with_routing do |set|
+        set.draw do
+          post "/recordings/:recording_id/attachments/imports",
+               to: "recording_studio_attachable/attachment_imports#create"
+        end
+
+        @routes = set
+
+        RecordingStudio::Recording.stub(:find, recording) do
+          @controller.stub(:authorize_attachment_action!, lambda { |action, record, capability_options: {}|
+            authorized = [action, record.id]
+            true
+          }) do
+            @controller.stub(:capability_options_for, {}) do
+              @controller.define_singleton_method(:recording_attachments_path) { |_recording| "/recordings/rec-1/attachments" }
+              RecordingStudioAttachable.configuration.stub(:upload_provider, provider) do
+                RecordingStudioAttachable::Services::ImportAttachmentPayloads.stub(:call, result) do
+                  @controller.stub(:protect_against_forgery?, false) do
+                    post :create,
+                         params: {
+                           recording_id: recording.id,
+                           attachment_import: {
+                             provider_key: "dropbox",
+                             attachments: [{ provider_payload: { id: "file-1" } }]
+                           }
+                         },
+                         as: :json
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+
+      assert_response :created
+      assert_equal [:upload, "rec-1"], authorized
+    end
+
     def test_create_rejects_unknown_provider_keys
       @controller = AttachmentImportsController.new
       recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")

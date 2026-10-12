@@ -41,6 +41,9 @@
   data-recording-studio-attachable--upload-image-processing-quality-value="<%= @image_processing_quality %>"
       data-recording-studio-attachable--upload-remove-button-template-value="<%= remove_button_template %>"
      data-recording-studio-attachable--upload-allowed-content-types-value="<%= @allowed_content_types.join(',') %>">
+  <% upload_provider_launcher_modules(@upload_providers).each do |module_path| %>
+    <script type="module">import "<%= module_path %>"</script>
+  <% end %>
   <%= render FlatPack::PageNav::Component.new(
     back_icon: "arrow-left",
     back_label: t("recording_studio.attachable.navigation.back"),

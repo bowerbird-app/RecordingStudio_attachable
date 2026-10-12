@@ -9,6 +9,9 @@
     <% cloud_upload_providers = RecordingStudioAttachable.configuration.upload_providers.select do |provider|
          provider.render?(view_context: self, recording: recording) && provider.client_picker?
        end %>
+    <% upload_provider_launcher_modules(cloud_upload_providers).each do |module_path| %>
+      <script type="module">import "<%= module_path %>"</script>
+    <% end %>
 
     <div class="flex h-full min-h-0 flex-col gap-4">
       <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">

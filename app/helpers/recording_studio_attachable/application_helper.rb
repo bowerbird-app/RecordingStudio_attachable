@@ -57,6 +57,10 @@ module RecordingStudioAttachable
       RecordingStudioAttachable::Placements.library_title(library_recording)
     end
 
+    def upload_provider_launcher_modules(providers)
+      Array(providers).select(&:client_picker?).filter_map(&:launcher_module).uniq
+    end
+
     def library_picker_switcher_payload(libraries)
       Array(libraries).each_with_object({}) do |library, payload|
         payload[library.id.to_s] = {

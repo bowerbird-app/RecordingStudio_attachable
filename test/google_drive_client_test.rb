@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "resolv"
+
 require "test_helper"
 require_relative "../lib/recording_studio_attachable/google_drive/client"
 
@@ -72,14 +74,11 @@ class GoogleDriveClientTest < Minitest::Test
     captured = {}
     response = FakeResponse.new(body: "pdf-binary", code: "200", headers: {}, success: true)
 
+    with_public_dns do
     Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
       assert_equal true, use_ssl
 
-      http = Object.new
-      http.define_singleton_method(:request) do |request|
-        captured[:path] = request.path
-        response
-      end
+      http = stub_http(captured: captured, response: response)
       block.call(http)
     }) do
       result = client.download_file(
@@ -91,6 +90,7 @@ class GoogleDriveClientTest < Minitest::Test
       assert_equal "Project brief.pdf", result.fetch(:filename)
       assert_equal "application/pdf", result.fetch(:content_type)
       assert_equal "pdf-binary", result.fetch(:io).read
+    end
     end
 
     path, query = captured.fetch(:path).split("?", 2)
@@ -104,11 +104,11 @@ class GoogleDriveClientTest < Minitest::Test
   def test_download_file_preserves_existing_export_extension
     response = FakeResponse.new(body: "csv-data", code: "200", headers: {}, success: true)
 
+    with_public_dns do
     Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
       assert_equal true, use_ssl
 
-      http = Object.new
-      http.define_singleton_method(:request) { |_request| response }
+      http = stub_http(response: response)
       block.call(http)
     }) do
       result = client.download_file(
@@ -119,6 +119,7 @@ class GoogleDriveClientTest < Minitest::Test
 
       assert_equal "Report.csv", result.fetch(:filename)
       assert_equal "text/csv", result.fetch(:content_type)
+    end
     end
   end
 
@@ -131,14 +132,11 @@ class GoogleDriveClientTest < Minitest::Test
       success: true
     )
 
+    with_public_dns do
     Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
       assert_equal true, use_ssl
 
-      http = Object.new
-      http.define_singleton_method(:request) do |request|
-        captured[:path] = request.path
-        response
-      end
+      http = stub_http(captured: captured, response: response)
       block.call(http)
     }) do
       result = client.download_file(
@@ -150,6 +148,7 @@ class GoogleDriveClientTest < Minitest::Test
       assert_equal "Preview", result.fetch(:filename)
       assert_equal "image/png", result.fetch(:content_type)
       assert_equal "image-bytes", result.fetch(:io).read
+    end
     end
 
     path, query = captured.fetch(:path).split("?", 2)
@@ -165,7 +164,7 @@ class GoogleDriveClientTest < Minitest::Test
     redirect_response = FakeRedirectResponse.new(
       body: "",
       code: "302",
-      headers: { "location" => "https://files.example.test/download/abc" }
+      headers: { "location" => "https://lh3.googleusercontent.com/download/abc" }
     )
     success_response = FakeResponse.new(
       body: "image-bytes",
@@ -174,30 +173,59 @@ class GoogleDriveClientTest < Minitest::Test
       success: true
     )
 
-    Net::HTTP.stub(:start, lambda { |host, _port, use_ssl:, &block|
-      assert_equal true, use_ssl
+    with_public_dns do
+      Net::HTTP.stub(:start, lambda { |host, _port, use_ssl:, &block|
+        assert_equal true, use_ssl
 
-      http = Object.new
-      http.define_singleton_method(:request) do |request|
-        requests << { host: host, path: request.path, authorization: request["Authorization"] }
-        host == "www.googleapis.com" ? redirect_response : success_response
+        http = Object.new
+        http.define_singleton_method(:request) do |request, &request_block|
+          requests << { host: host, path: request.path, authorization: request["Authorization"] }
+          response = host == "www.googleapis.com" ? redirect_response : success_response
+          request_block ? request_block.call(response) : response
+        end
+        block.call(http)
+      }) do
+        result = client.download_file(
+          "id" => "file-1",
+          "name" => "Preview",
+          "mimeType" => "application/octet-stream"
+        )
+
+        assert_equal "image-bytes", result.fetch(:io).read
+        assert_equal "image/png", result.fetch(:content_type)
       end
-      block.call(http)
-    }) do
-      result = client.download_file(
-        "id" => "file-1",
-        "name" => "Preview",
-        "mimeType" => "application/octet-stream"
-      )
-
-      assert_equal "image-bytes", result.fetch(:io).read
-      assert_equal "image/png", result.fetch(:content_type)
     end
 
     assert_equal "www.googleapis.com", requests.first.fetch(:host)
     assert_includes requests.first.fetch(:path), "/drive/v3/files/file-1?"
-    assert_equal "files.example.test", requests.second.fetch(:host)
+    assert_equal "Bearer access-token", requests.first.fetch(:authorization)
+    assert_equal "lh3.googleusercontent.com", requests.second.fetch(:host)
     assert_equal "/download/abc", requests.second.fetch(:path)
+    assert_nil requests.second.fetch(:authorization)
+  end
+
+  def test_fetch_file_encodes_file_ids_in_the_request_path
+    captured = {}
+    response = FakeResponse.new(
+      body: { "id" => "file/1", "name" => "Preview", "mimeType" => "image/png" }.to_json,
+      code: "200",
+      headers: {},
+      success: true
+    )
+
+    Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
+      http = Object.new
+      http.define_singleton_method(:request) do |request|
+        captured[:path] = request.path
+        response
+      end
+      block.call(http)
+    }) do
+      client.fetch_file("file/1")
+    end
+
+    path, _query = captured.fetch(:path).split("?", 2)
+    assert_equal "/drive/v3/files/file%2F1", path
   end
 
   def test_fetch_file_requests_support_for_all_drives
@@ -229,7 +257,7 @@ class GoogleDriveClientTest < Minitest::Test
 
     assert_equal "/drive/v3/files/file-1", path
     assert_equal "true", params.fetch("supportsAllDrives")
-    assert_equal "id,name,mimeType,resourceKey,webViewLink", params.fetch("fields")
+    assert_equal "id,name,mimeType,resourceKey,webViewLink,size", params.fetch("fields")
   end
 
   def test_fetch_file_includes_resource_key_when_picker_provides_one
@@ -262,20 +290,19 @@ class GoogleDriveClientTest < Minitest::Test
   def test_download_file_falls_back_to_metadata_content_type_when_response_header_is_blank
     response = FakeResponse.new(body: "payload", code: "200", headers: { "content-type" => nil }, success: true)
 
-    Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
-      assert_equal true, use_ssl
+    with_public_dns do
+      Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
+        assert_equal true, use_ssl
+        block.call(stub_http(response: response))
+      }) do
+        result = client.download_file(
+          "id" => "file-2",
+          "name" => "Raw export",
+          "mimeType" => "application/zip"
+        )
 
-      http = Object.new
-      http.define_singleton_method(:request) { |_request| response }
-      block.call(http)
-    }) do
-      result = client.download_file(
-        "id" => "file-2",
-        "name" => "Raw export",
-        "mimeType" => "application/zip"
-      )
-
-      assert_equal "application/zip", result.fetch(:content_type)
+        assert_equal "application/zip", result.fetch(:content_type)
+      end
     end
   end
 
@@ -283,22 +310,18 @@ class GoogleDriveClientTest < Minitest::Test
     captured = {}
     response = FakeResponse.new(body: "payload", code: "200", headers: { "content-type" => "image/png" }, success: true)
 
-    Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
-      assert_equal true, use_ssl
-
-      http = Object.new
-      http.define_singleton_method(:request) do |request|
-        captured[:path] = request.path
-        response
+    with_public_dns do
+      Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
+        assert_equal true, use_ssl
+        block.call(stub_http(captured: captured, response: response))
+      }) do
+        client.download_file(
+          "id" => "file-2",
+          "name" => "Shared image",
+          "mimeType" => "image/png",
+          "resourceKey" => "resource-key-2"
+        )
       end
-      block.call(http)
-    }) do
-      client.download_file(
-        "id" => "file-2",
-        "name" => "Shared image",
-        "mimeType" => "image/png",
-        "resourceKey" => "resource-key-2"
-      )
     end
 
     _path, query = captured.fetch(:path).split("?", 2)
@@ -415,5 +438,18 @@ class GoogleDriveClientTest < Minitest::Test
 
   def client
     @client ||= RecordingStudioAttachable::GoogleDrive::Client.new(access_token: "access-token")
+  end
+
+  def with_public_dns(&block)
+    Resolv.stub(:getaddresses, ->(_host) { ["8.8.8.8"] }, &block)
+  end
+
+  def stub_http(response:, captured: nil)
+    http = Object.new
+    http.define_singleton_method(:request) do |request, &request_block|
+      captured[:path] = request.path if captured
+      request_block ? request_block.call(response) : response
+    end
+    http
   end
 end

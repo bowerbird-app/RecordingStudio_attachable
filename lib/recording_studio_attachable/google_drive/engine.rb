@@ -1,6 +1,11 @@
 # frozen_string_literal: true
 
 require "pathname"
+require_relative "configuration"
+require_relative "oauth_client"
+require_relative "client"
+require_relative "session_access_token"
+require_relative "services/import_selected_files"
 
 module RecordingStudioAttachable
   module GoogleDrive
@@ -26,8 +31,7 @@ module RecordingStudioAttachable
         end
 
         def upload_provider_enabled?
-          configuration = RecordingStudioAttachable.configuration.google_drive
-          configuration.enabled? && configuration.picker_configured?
+          RecordingStudioAttachable.configuration.google_drive.available?
         end
 
         def upload_provider_options
@@ -39,7 +43,8 @@ module RecordingStudioAttachable
             launcher: "google_drive",
             bootstrap_url: ->(route_helpers:, recording:) { bootstrap_path(route_helpers:, recording:) },
             import_url: ->(route_helpers:, recording:) { import_path(route_helpers:, recording:) },
-            remote_importer: method(:remote_importer)
+            remote_importer: method(:remote_importer),
+            allowed_payload_keys: %w[id resource_key]
           }
         end
 
@@ -77,4 +82,8 @@ module RecordingStudioAttachable
       end
     end
   end
+end
+
+RecordingStudioAttachable.register_adapter_routes do
+  mount RecordingStudioAttachable::GoogleDrive::Engine, at: "/google_drive", as: :google_drive
 end

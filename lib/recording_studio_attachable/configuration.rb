@@ -12,91 +12,6 @@ module RecordingStudioAttachable
       xlarge: { resize_to_limit: [2400, 2400] }
     }.freeze
 
-    class GoogleDriveConfiguration
-      PLACEHOLDER_PREFIXES = {
-        client_id: ["dummy-google-drive-client-id"],
-        client_secret: ["dummy-google-drive-client-secret"],
-        api_key: ["dummy-google-drive-api-key"],
-        app_id: ["dummy-google-drive-app-id"]
-      }.freeze
-
-      attr_accessor :enabled,
-                    :client_id,
-                    :client_secret,
-                    :api_key,
-                    :app_id,
-                    :redirect_uri,
-                    :scopes,
-                    :access_type,
-                    :prompt,
-                    :include_granted_scopes,
-                    :page_size
-
-      def initialize
-        @enabled = false
-        @client_id = nil
-        @client_secret = nil
-        @api_key = nil
-        @app_id = nil
-        @redirect_uri = nil
-        @scopes = ["https://www.googleapis.com/auth/drive.readonly"]
-        @access_type = "offline"
-        @prompt = "consent"
-        @include_granted_scopes = true
-        @page_size = 25
-      end
-
-      def merge!(attributes)
-        return self unless attributes.respond_to?(:each)
-
-        attributes.each do |key, value|
-          setter = "#{key}="
-          public_send(setter, value) if respond_to?(setter)
-        end
-
-        self
-      end
-
-      def enabled?
-        !!enabled
-      end
-
-      def configured?
-        valid_google_drive_value?(client_id, :client_id) &&
-          valid_google_drive_value?(client_secret, :client_secret) &&
-          redirect_uri.present?
-      end
-
-      def picker_configured?
-        configured? && valid_google_drive_value?(api_key, :api_key) && valid_google_drive_value?(app_id, :app_id)
-      end
-
-      def to_h
-        {
-          enabled: enabled,
-          client_id: client_id,
-          client_secret: client_secret,
-          api_key: api_key,
-          app_id: app_id,
-          redirect_uri: redirect_uri,
-          scopes: scopes,
-          access_type: access_type,
-          prompt: prompt,
-          include_granted_scopes: include_granted_scopes,
-          page_size: page_size
-        }
-      end
-
-      private
-
-      def valid_google_drive_value?(value, field)
-        normalized = value.to_s.strip
-        return false if normalized.blank?
-
-        Array(PLACEHOLDER_PREFIXES[field]).exclude?(normalized)
-      end
-    end
-
     ROLE_ALIASES = {
       viewer: :view,
       editor: :edit,
@@ -121,7 +36,6 @@ module RecordingStudioAttachable
                   :auth_roles,
                   :classify_attachment_kind,
                   :authorize_with,
-                  :google_drive,
                   :direct_url_host,
                   :placement_place_label,
                   :placement_picker_libraries,
@@ -131,8 +45,19 @@ module RecordingStudioAttachable
 
     def initialize
       assign_defaults
-      @google_drive = GoogleDriveConfiguration.new
+      @adapter_configurations = {}
+      RecordingStudioAttachable::Adapter.registry.each do |key, configuration_class|
+        install_adapter_configuration(key, configuration_class.new)
+      end
       @upload_providers = []
+    end
+
+    def install_adapter_configuration(key, configuration)
+      @adapter_configurations[key.to_sym] = configuration
+    end
+
+    def adapter_configuration(key)
+      @adapter_configurations[key.to_sym]
     end
 
     def merge!(hash)
@@ -277,9 +202,18 @@ module RecordingStudioAttachable
         default_listing_scope: default_listing_scope,
         default_kind_filter: default_kind_filter,
         layout: layout,
-        auth_roles: auth_roles,
-        google_drive: google_drive.to_h
-      }
+        auth_roles: auth_roles
+      }.merge(adapter_configurations_hash)
+    end
+
+    def method_missing(name, *args, &)
+      return @adapter_configurations.fetch(name) if @adapter_configurations.key?(name)
+
+      super
+    end
+
+    def respond_to_missing?(name, include_private = false)
+      @adapter_configurations.key?(name) || super
     end
 
     private
@@ -346,13 +280,18 @@ module RecordingStudioAttachable
     end
 
     def merge_attribute!(key, value)
-      if key.to_sym == :google_drive
-        google_drive.merge!(value)
+      adapter_key = key.to_sym
+      if @adapter_configurations.key?(adapter_key)
+        @adapter_configurations[adapter_key].merge!(value)
         return
       end
 
       setter = merge_setter_for(key)
       public_send(setter, merge_value(key, value)) if respond_to?(setter)
+    end
+
+    def adapter_configurations_hash
+      @adapter_configurations.transform_values(&:to_h)
     end
 
     def merge_setter_for(key)

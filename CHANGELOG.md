@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The placements collection editor PATCHes Library's `recording_placements_path` with `items` and `ordered_recording_ids`. Caption, credit, and alt save through the Attachment adapter; order goes through `RecordingStudioLibrary.update_placements!`. Presskits' Images section editor posts here.
 - Attachable only copies library picker, label, place label, and `authorize_with` onto Library when the host actually set them, so a default `nil` adapter no longer wipes a host-set Library config.
-- The drop migration deletes leftover `RecordingStudioAttachable::Library` / `Placement` recordings and their events before dropping the tables. `down` raises `ActiveRecord::IrreversibleMigration`.
+- The drop migration deletes leftover `RecordingStudioAttachable::Library` / `Placement` recordings, their events, Accessible invitations, and access rows that point at those recordings, then drops the tables. `down` raises `ActiveRecord::IrreversibleMigration`.
 - Upload-and-place and `RecordAttachmentUpload` check upload rights before creating or looking up the file.
 
 ### Changed
@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Register `RecordingStudioLibrary::Library` and `RecordingStudioLibrary::Placement` in `config.recordable_types` instead of `RecordingStudioAttachable::Library` / `RecordingStudioAttachable::Placement`.
 - Orderable on a placement parent should `allows: ["RecordingStudioLibrary::Placement"]`.
 - Call `library_for` (or `image_library`) before a library page or picker can find the library.
-- No row-by-row data migration. Presskits is unreleased. The drop migration deletes leftover Attachable library/placement recordings and their events, then drops the old tables. That drop is irreversible. Existing helper names stay so a later Presskits pin bump stays small.
+- No row-by-row data migration. Presskits is unreleased. The drop migration deletes leftover Attachable library/placement recordings, their events, Accessible invitations, and access rows that point at those recordings, then drops the old tables. That drop is irreversible. Existing helper names stay so a later Presskits pin bump stays small.
 - Compatibility routes on Attachable still respond and redirect to Library. The placements collection editor PATCHes Library's `recording_placements_path`. Attachable's Attachment adapter supplies `item_path`, `new_item_path`, and `permitted_item_keys`.
 - Host-set Library `authorize_with`, picker libraries, and labels are left alone unless Attachable's matching config was actually set.
 

@@ -21,6 +21,7 @@ Layout/LineLength:
 Metrics/ClassLength:
   Exclude:
     - 'test/**/*'
+    - 'db/migrate/**/*'
     - 'app/controllers/recording_studio_attachable/application_controller.rb'
     - 'app/controllers/recording_studio_attachable/attachment_imports_controller.rb'
     - 'lib/recording_studio_attachable/configuration.rb'
@@ -31,6 +32,7 @@ Metrics/ClassLength:
 Metrics/MethodLength:
   Exclude:
     - 'test/**/*'
+    - 'db/migrate/**/*'
     - 'lib/generators/**/*'
     - 'app/javascript/**/*'
     - 'app/controllers/**/*'

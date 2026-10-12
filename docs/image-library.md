@@ -86,7 +86,7 @@ Register the library types in `config.recordable_types`:
 "RecordingStudioAttachable::Attachment"
 ```
 
-Run Library's install/migrations and Attachable's migrations. Attachable's latest migration deletes leftover `RecordingStudioAttachable::Library` / `Placement` recordings and their events, then drops the old `recording_studio_attachable_libraries` and `recording_studio_attachable_placements` tables. That drop is irreversible. Presskits is unreleased, so no row-by-row data migration is required.
+Run Library's install/migrations and Attachable's migrations. Attachable's latest migration deletes leftover `RecordingStudioAttachable::Library` / `Placement` recordings, their events, Accessible invitations, and access rows that point at those recordings, then drops the old `recording_studio_attachable_libraries` and `recording_studio_attachable_placements` tables. That drop is irreversible. Presskits is unreleased, so no row-by-row data migration is required.
 
 The Images section editor (`attachment_collection_editor` with `association: :placements`) PATCHes Library's `recording_placements_path` with `items` (caption, credit, alt) and `ordered_recording_ids`. Library's `update_placements!` revises those fields through the Attachment adapter, then reorders.
 

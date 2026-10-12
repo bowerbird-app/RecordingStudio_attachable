@@ -52,7 +52,41 @@ module RecordingStudioAttachable
         )
       end
 
+      def item_path(view, **options)
+        return if recording.blank?
+
+        attachable_routes(view).attachment_path(recording, **options)
+      end
+
+      def new_item_path(view, library_recording, **options)
+        return if library_recording.blank?
+
+        attachable_routes(view).recording_attachment_upload_path(library_recording, **options)
+      end
+
+      def permitted_item_keys
+        %i[caption credit alt_text name description]
+      end
+
+      def update_item!(attrs, actor: nil)
+        permitted = permit_item_attrs(attrs)
+        return recordable if permitted.blank? || recording.blank?
+
+        revise_attachment_metadata!(permitted, actor)
+      end
+
       private
+
+      def revise_attachment_metadata!(permitted, actor)
+        result = RecordingStudioAttachable::Services::ReviseAttachmentMetadata.call(
+          attachment_recording: recording,
+          actor: actor,
+          **permitted
+        )
+        raise ArgumentError, result.error.presence || "Could not update that item" if result.failure?
+
+        result.value
+      end
 
       def image?
         recordable.respond_to?(:image?) ? recordable.image? : attachment_kind == "image"
@@ -103,6 +137,14 @@ module RecordingStudioAttachable
         return attribute if object_name.blank?
 
         "#{object_name}[#{attribute}]"
+      end
+
+      def attachable_routes(view)
+        if view.respond_to?(:recording_studio_attachable, true)
+          view.recording_studio_attachable
+        else
+          RecordingStudioAttachable::Engine.routes.url_helpers
+        end
       end
     end
   end

@@ -33,11 +33,11 @@ Caption, credit, and alt live on the photo. A placement does not override them.
 
 ## Enable it
 
-Pin Library by GitHub tag, install its migrations, and mount its engine.
+Pin Library from GitHub (this branch uses `cursor/library-gem-v011-9b63` until `v0.1.1` is tagged), install its migrations, and mount its engine.
 
 ```ruby
 # Gemfile
-gem "recording_studio_library", github: "bowerbird-app/RecordingStudio_library", tag: "v0.1.0"
+gem "recording_studio_library", github: "bowerbird-app/RecordingStudio_library", branch: "cursor/library-gem-v011-9b63"
 # After Library 0.1.1 is tagged, pin `tag: "v0.1.1"` instead.
 ```
 
@@ -88,7 +88,7 @@ Register the library types in `config.recordable_types`:
 
 Run Library's install/migrations and Attachable's migrations. Attachable's latest migration deletes leftover `RecordingStudioAttachable::Library` / `Placement` recordings and their events, then drops the old `recording_studio_attachable_libraries` and `recording_studio_attachable_placements` tables. That drop is irreversible. Presskits is unreleased, so no row-by-row data migration is required.
 
-The Images section editor (`attachment_collection_editor` with `association: :placements`) PATCHes Attachable's placements collection. That save writes caption, credit, and alt on the photo, then reorders through `RecordingStudioLibrary.reorder!`.
+The Images section editor (`attachment_collection_editor` with `association: :placements`) PATCHes Library's `recording_placements_path` with `items` (caption, credit, alt) and `ordered_recording_ids`. Library's `update_placements!` revises those fields through the Attachment adapter, then reorders.
 
 Attachable copies `placement_picker_libraries`, `library_label`, `placement_place_label`, and `authorize_with` onto Library only when the host set those values. Host-set Library adapters, picker libraries, and labels stay put.
 
@@ -111,7 +111,7 @@ config.placement_picker_libraries
 config.library_label
 ```
 
-`Placements.resolve` wraps Library's resolved entries and still exposes `attachment_recording` / `attachment`. Resolve uses Library's Accessible-checked path. Anonymous visitors go through Accessible. There is no nil-actor bypass.
+`Placements.resolve` wraps Library's resolved entries and still exposes `attachment_recording` / `attachment`. Resolve uses Library's Accessible-checked path. Anonymous visitors go through Accessible. There is no nil-actor bypass. Trusted system jobs can pass `unfiltered: true` on that call.
 
 `upload_to_library_and_place` uses Library's transactional `place_new!`. If placing fails, the uploaded photo is not left behind.
 
@@ -119,7 +119,8 @@ config.library_label
 
 One UI. Library renders the library, picker, and placements editor through the Attachment adapter (thumbnail via an Active Storage variant, title, search text, label/icon). Attachable keeps the screens that are clearly better for images:
 
-- **Library listing / picker / placements** — Library's adapter-rendered screens.
+- **Library listing / picker / placements** — Library's adapter-rendered screens. Open uses the adapter's `item_path`; Upload uses `new_item_path`.
+- **Images collection editor** — Presskits' Images section (`attachment_collection_editor`, `association: :placements`) PATCHes Library's placements path.
 - **Upload** — Attachable's upload page (`recording_attachment_upload_path`). Library's Add button for an Attachment goes there.
 - **Image editor** — Attachable's `attachments#show` (caption, credit, alt, variants, trash). Opening a photo from the library listing goes there.
 

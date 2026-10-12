@@ -21,7 +21,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
 - RecordingStudio Metrics `~> 0.2` (GitHub tag `v0.2.0`) for operations-API storage and upload metrics
-- RecordingStudio Library `>= 0.1.0` (GitHub tag `v0.1.0`, moving to `v0.1.1` after that release) for reusable photo libraries and placements
+- RecordingStudio Library `>= 0.1.0` (GitHub branch `cursor/library-gem-v011-9b63` until tag `v0.1.1`) for reusable photo libraries and placements
 
 ## Quick start
 
@@ -40,7 +40,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 ```ruby
 # Gemfile
 gem "recording_studio_attachable"
-gem "recording_studio_library", github: "bowerbird-app/RecordingStudio_library", tag: "v0.1.0"
+gem "recording_studio_library", github: "bowerbird-app/RecordingStudio_library", branch: "cursor/library-gem-v011-9b63"
 # After Library 0.1.1 is tagged, pin `tag: "v0.1.1"` instead.
 ```
 
@@ -525,11 +525,11 @@ gallery.upload_to_library_and_place(signed_blob_id: blob.signed_id, library_reco
 gallery.library_placements
 ```
 
-Register `RecordingStudioLibrary::Library` and `RecordingStudioLibrary::Placement` in `config.recordable_types`. Mount Library's engine. `library_path_for(library)` opens Library's adapter-rendered listing. `recording_studio_library.recording_placements_path(gallery)` opens Library's placements editor and picker. Attachable keeps the upload page and the image editor (`attachments#show`) — Open on a photo goes there.
+Register `RecordingStudioLibrary::Library` and `RecordingStudioLibrary::Placement` in `config.recordable_types`. Mount Library's engine. `library_path_for(library)` opens Library's adapter-rendered listing. `recording_studio_library.recording_placements_path(gallery)` opens Library's placements editor and picker. The Images collection editor (`association: :placements`) PATCHes that same path with caption, credit, alt, and order. Attachable's adapter supplies `item_path`, `new_item_path`, and `permitted_item_keys`. Attachable keeps the upload page and the image editor (`attachments#show`) — Open on a photo goes there.
 
 Trashing a photo that is in use warns how many places point at it (Library's usage list, shown on Attachable's editor). Resolve skips a trashed photo. Permanently deleting a photo removes its placements. Removing a placement leaves the photo in the library.
 
-Access follows the tree through Accessible. Public pages render through `RecordingStudioAttachable::Placements.resolve` (no nil-actor bypass). Duplicating a host page copies placements, not files.
+Access follows the tree through Accessible. Public pages render through `RecordingStudioAttachable::Placements.resolve` (no nil-actor bypass). Trusted system jobs can pass `unfiltered: true` on that call. Duplicating a host page copies placements, not files.
 
 Full setup, trash rules, and a Presskits note: [docs/image-library.md](docs/image-library.md).
 
@@ -633,7 +633,7 @@ Replace never navigates to the attachment details screen. Keep `attachments#show
 
 ### Edit many images
 
-`attachment_collection_editor` edits the direct images, files, or attachments on a parent and saves the rows that changed. Pass `association: :placements` and `items:` (resolved placements) to render the same List, Slides, and Grid for a host page that points at library photos. Caption, credit, and alt use the same Flatpack fields. Saving a placement writes those on the library photo. Nothing is written onto the blob. `:name` edits the existing name. There is no title column. Remove from here drops the pointer.
+`attachment_collection_editor` edits the direct images, files, or attachments on a parent and saves the rows that changed. Pass `association: :placements` to render the same List, Slides, and Grid for a host page that points at library photos. Caption, credit, and alt use the same Flatpack fields. A placement editor PATCHes Library's `recording_placements_path` with `items` and `ordered_recording_ids`. Saving writes those fields on the library photo through the Attachment adapter. Nothing is written onto the blob. `:name` edits the existing name. There is no title column. Remove from here drops the pointer.
 
 ```ruby
 attachment_collection_editor(
@@ -680,7 +680,7 @@ Dummy credentials (`test/dummy/config/credentials.yml.enc`) are encrypted with t
 
 - the dummy app is a validation shell, not a production template
 - CI installs the dummy app bundle and runs dummy-app migrations before the root checks
-- the dummy app pins RecordingStudio `v4.4.0`, Recording Studio Accessible `v0.13.0`, and Recording Studio Orderable `v0.2.7`
+- the dummy app pins RecordingStudio `v4.4.0`, Recording Studio Accessible `v0.14.0`, Recording Studio Orderable `v0.2.8`, and RecordingStudio Library branch `cursor/library-gem-v011-9b63` (until tag `v0.1.1`)
 - make sure engine, Active Storage, and Recording Studio tables are migrated in the dummy app before validating upload flows locally
 - `bin/rails db:seed` attaches a twenty-shot Kiln canister press kit to the workspace. The shots mix portrait, square, and landscape frames. Edit images uses those files. Seeds also remove the colour-block stand-ins `window.jpg`, `dock.jpg`, and `pier.jpg` when they are still on the workspace.
 - set `DUMMY_ACTIVE_STORAGE_SERVICE=amazon` plus `DUMMY_AWS_ACCESS_KEY_ID`, `DUMMY_AWS_SECRET_ACCESS_KEY`, `DUMMY_AWS_REGION`, and `DUMMY_AWS_BUCKET` to exercise S3-backed uploads in the dummy app; `DUMMY_AWS_BUCKET` may be either the plain bucket name or a bucket ARN

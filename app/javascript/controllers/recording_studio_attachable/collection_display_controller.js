@@ -256,12 +256,17 @@ export default class extends Controller {
   editableField(field) {
     if (!field.name) return false
     if (field.name.endsWith("[recording_id]") || field.name.endsWith("[signed_editor]")) return false
+    if (field.name === "ordered_recording_ids[]") return false
 
     return field.name !== "redirect_mode" && field.name !== "return_to" && field.name !== "authenticity_token" && field.name !== "utf8" && field.name !== "_method"
   }
 
   recordingId(form) {
-    const input = [...form.querySelectorAll("input")].find((item) => item.name.endsWith("[recording_id]"))
+    const fields = [...form.querySelectorAll("input, textarea")]
+    const itemsMatch = fields.map((item) => item.name && item.name.match(/^items\[([^\]]+)\]/)).find(Boolean)
+    if (itemsMatch) return itemsMatch[1]
+
+    const input = fields.find((item) => item.name && item.name.endsWith("[recording_id]"))
     return input ? input.value : null
   }
 

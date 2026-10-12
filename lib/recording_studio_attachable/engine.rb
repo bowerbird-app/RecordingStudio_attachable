@@ -33,16 +33,6 @@ module RecordingStudioAttachable
     initializer "recording_studio_attachable.action_view_helpers" do
       ActiveSupport.on_load(:action_view) do
         include RecordingStudioAttachable::ApplicationHelper
-        include RecordingStudioAttachable::LibraryPathOverrides
-      end
-    end
-
-    initializer "recording_studio_attachable.prepend_library_path_overrides" do
-      config.to_prepare do
-        next unless defined?(RecordingStudioLibrary::ApplicationHelper)
-        next if RecordingStudioLibrary::ApplicationHelper.ancestors.include?(LibraryPathOverrides)
-
-        RecordingStudioLibrary::ApplicationHelper.prepend(LibraryPathOverrides)
       end
     end
 

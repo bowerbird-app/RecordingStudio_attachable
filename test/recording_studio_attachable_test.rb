@@ -41,13 +41,21 @@ class RecordingStudioAttachableTest < Minitest::Test
     gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
     root_gemfile = File.read(File.expand_path("../Gemfile", __dir__))
     dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
-    pin = 'gem "recording_studio_library", github: "bowerbird-app/RecordingStudio_library", tag: "v0.1.0"'
+    root_lock = File.read(File.expand_path("../Gemfile.lock", __dir__))
+    dummy_lock = File.read(File.expand_path("dummy/Gemfile.lock", __dir__))
+    pin = 'gem "recording_studio_library", github: "bowerbird-app/RecordingStudio_library", branch: "cursor/library-gem-v011-9b63"'
 
-    assert spec.version >= Gem::Version.new("0.1.0"),
-           "expected recording_studio_library >= 0.1.0, got #{spec.version}"
+    assert spec.version >= Gem::Version.new("0.1.1"),
+           "expected recording_studio_library >= 0.1.1, got #{spec.version}"
     assert_includes gemspec, 'spec.add_dependency "recording_studio_library", ">= 0.1.0"'
     assert_includes root_gemfile, pin
     assert_includes dummy_gemfile, pin
+    assert_includes root_lock, "recording_studio_library (0.1.1)"
+    assert_includes root_lock, "branch: cursor/library-gem-v011-9b63"
+    assert_includes root_lock, "revision: c9fe2eb86d1dfc775bdd139a45340f17d2c6d86f"
+    assert_includes dummy_lock, "recording_studio_library (0.1.1)"
+    assert_includes dummy_lock, "branch: cursor/library-gem-v011-9b63"
+    assert_includes dummy_lock, "revision: c9fe2eb86d1dfc775bdd139a45340f17d2c6d86f"
   end
 
   def test_engine_exists
@@ -316,6 +324,8 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes controller_source, "event.preventDefault()"
     assert_includes controller_source, 'display !== "list" && display !== "carousel" && display !== "grid"'
     assert_includes controller_source, 'body.append("stay", "slide")'
+    assert_includes controller_source, "ordered_recording_ids[]"
+    assert_includes controller_source, "items\\[([^\\]]+)\\]"
     assert_includes controller_source, 'Accept: "application/json"'
     assert_includes controller_source, '"X-Requested-With": "XMLHttpRequest"'
     assert_includes controller_source, "changes.captureBaseline()"

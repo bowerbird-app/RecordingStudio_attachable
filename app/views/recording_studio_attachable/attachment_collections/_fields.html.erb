@@ -1,16 +1,20 @@
-<%= hidden_field_tag collection.input_name(:recording_id), row.member.id, form: form_id %>
+<% if collection.placement? %>
+  <%= hidden_field_tag collection.item_input_name(row, :recording_id), row.member.id, form: form_id %>
+<% else %>
+  <%= hidden_field_tag collection.input_name(:recording_id), row.member.id, form: form_id %>
+<% end %>
 <% collection.fields.each do |field| %>
   <% if field.control == :area %>
     <div>
       <label class="mb-2 block text-sm font-medium"><%= field.label %></label>
-      <%= text_area_tag collection.input_name(field.key),
+      <%= text_area_tag collection.item_input_name(row, field.key),
                         row.values[field.key],
                         form: form_id,
                         class: "min-h-24 w-full rounded-lg border border-[var(--surface-border-color)] bg-transparent px-3 py-2" %>
     </div>
   <% else %>
     <%= render FlatPack::TextInput::Component.new(
-      name: collection.input_name(field.key),
+      name: collection.item_input_name(row, field.key),
       label: field.label,
       value: row.values[field.key],
       required: field.key == :name,
@@ -19,6 +23,11 @@
   <% end %>
 <% end %>
 <% if show_order %>
+  <% if collection.placement? %>
+    <%= hidden_field_tag collection.ordered_recording_ids_input_name,
+                          row.member.id,
+                          form: form_id %>
+  <% end %>
   <%= hidden_field_tag collection.input_name(:order),
                         row.order,
                         form: form_id,

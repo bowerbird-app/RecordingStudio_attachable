@@ -23,7 +23,7 @@ class PlacementCollectionRequestTest < ActionDispatch::IntegrationTest
     Current.actor = nil
   end
 
-  test "gallery images editor saves caption credit alt and reorder" do
+  test "gallery images editor saves caption credit alt and reorder through Library" do
     first = import_photo(@library, "kiln-canister-hero.jpg")
     second = import_photo(@library, "kiln-canister-portrait.jpg")
     left = @holder.place_library_image(attachment_recording: first, actor: @user)
@@ -35,44 +35,24 @@ class PlacementCollectionRequestTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Caption"
     assert_includes response.body, "Credit"
     assert_includes response.body, "Alt text"
-    assert_includes response.body, recording_studio_attachable.recording_placements_path(@holder)
-    refute_includes response.body, "action=\"#{recording_studio_library.recording_placements_path(@holder)}\""
+    assert_includes response.body, recording_studio_library.recording_placements_path(@holder)
+    assert_includes response.body, "name=\"items[#{left.id}][caption]\""
+    assert_includes response.body, "name=\"ordered_recording_ids[]\""
+    refute_includes response.body, "action=\"#{recording_studio_attachable.recording_placements_path(@holder)}\""
 
-    collection = RecordingStudioAttachable::AttachmentCollection.for(
-      recording: @holder,
-      association: :placements,
-      fields: %i[caption credit alt_text],
-      sortable: true
-    )
-
-    patch recording_studio_attachable.recording_placements_path(@holder), params: {
+    patch recording_studio_library.recording_placements_path(@holder), params: {
       redirect_mode: "return_to",
       return_to: edit_gallery_path(@gallery),
-      attachment_collection: {
-        signed_editor: collection.signed_editor,
-        rows: [
-          {
-            recording_id: right.id,
-            order: "1",
-            caption: "Portrait on the wall",
-            credit: "Bea",
-            alt_text: "Kiln canister portrait"
-          },
-          {
-            recording_id: left.id,
-            order: "2",
-            caption: "Hero shot",
-            credit: "Ada",
-            alt_text: "Kiln canister hero"
-          }
-        ]
-      }
+      items: {
+        left.id => { caption: "Hero shot", credit: "Ada", alt_text: "Kiln canister hero" },
+        right.id => { caption: "Portrait on the wall", credit: "Bea", alt_text: "Kiln canister portrait" }
+      },
+      ordered_recording_ids: [right.id, left.id]
     }
 
-    assert_equal "/galleries/#{@gallery.id}/edit", URI.parse(response.redirect_url).path
+    assert_response :redirect
     follow_redirect!
     assert_response :success
-    assert_equal "Saved.", flash[:notice]
 
     first.reload
     second.reload
@@ -85,6 +65,27 @@ class PlacementCollectionRequestTest < ActionDispatch::IntegrationTest
 
     ordered = @holder.library_placements(actor: @user).map { |item| item.attachment_recording.id }
     assert_equal [second.id, first.id], ordered.first(2)
+  end
+
+  test "gallery images editor JSON save returns ok through Library" do
+    photo = import_photo(@library, "kiln-canister-hero.jpg")
+    placement = @holder.place_library_image(attachment_recording: photo, actor: @user)
+
+    patch recording_studio_library.recording_placements_path(@holder),
+          params: {
+            items: {
+              placement.id => { caption: "Hero xhr", credit: "Ada", alt_text: "Kiln canister hero" }
+            }
+          },
+          as: :json,
+          headers: { "X-Requested-With" => "XMLHttpRequest" }
+
+    assert_response :success
+    assert_equal true, response.parsed_body["ok"]
+    photo.reload
+    assert_equal "Hero xhr", photo.recordable.caption
+    assert_equal "Ada", photo.recordable.credit
+    assert_equal "Kiln canister hero", photo.recordable.alt_text
   end
 
   private

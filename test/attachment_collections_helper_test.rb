@@ -460,9 +460,10 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, "Light"
     assert_includes html, ">Credit<"
     assert_includes html, "Ada"
-    assert_includes html, 'name="attachment_collection[rows][][caption]"'
-    assert_includes html, 'name="attachment_collection[rows][][credit]"'
-    assert_includes html, 'name="attachment_collection[rows][][alt_text]"'
+    assert_includes html, 'name="items[place-1][caption]"'
+    assert_includes html, 'name="items[place-1][credit]"'
+    assert_includes html, 'name="items[place-1][alt_text]"'
+    assert_includes html, 'name="ordered_recording_ids[]"'
     assert_includes html, "flat-pack-input"
     assert_includes html, "border-[var(--surface-border-color)]"
     assert_includes html, ">Remove from here<"
@@ -487,7 +488,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     refute_includes html, ">Edit<"
   end
 
-  def test_placement_editor_saves_to_the_attachable_placements_path
+  def test_placement_editor_saves_to_the_library_placements_path
     photo = child("image-1", name: "Pier", caption: "Light", credit: "Ada")
     placement = Child.new(id: "place-1", created_at: Time.utc(2026, 1, 1), recordable: photo.recordable)
     resolved = RecordingStudioAttachable::Placements::Resolved.new(
@@ -508,8 +509,14 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     )
 
     list_form = form_markup(html, "attachment-collection-parent-1")
-    assert_includes list_form, 'action="/recordings/parent-1/placements"'
-    refute_includes list_form, "/recording_studio_library/"
+    assert_includes list_form, 'action="/recording_studio_library/recordings/parent-1/placements"'
+    assert_includes list_form, 'name="items[place-1][caption]"'
+    assert_includes list_form, 'name="items[place-1][credit]"'
+    assert_includes list_form, 'name="items[place-1][alt_text]"'
+    assert_includes list_form, 'name="ordered_recording_ids[]"'
+    assert_includes list_form, 'value="place-1"'
+    refute_includes list_form, "attachment_collection[signed_editor]"
+    refute_includes list_form, 'action="/recordings/parent-1/placements"'
   end
 
   def test_list_and_slides_keep_flatpack_field_borders_on_direct_images
@@ -648,6 +655,11 @@ class AttachmentCollectionsHelperTest < Minitest::Test
       "/recordings/#{recording.id}/attachment_collection"
     end
     view.define_singleton_method(:recording_studio_attachable) { routes }
+    library_routes = Object.new
+    library_routes.define_singleton_method(:recording_placements_path) do |recording, **|
+      "/recording_studio_library/recordings/#{recording.id}/placements"
+    end
+    view.define_singleton_method(:recording_studio_library) { library_routes }
     @editor_view = view
   end
 

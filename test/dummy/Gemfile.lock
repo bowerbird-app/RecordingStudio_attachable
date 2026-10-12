@@ -17,10 +17,10 @@ GIT
 
 GIT
   remote: https://github.com/bowerbird-app/RecordingStudio_library.git
-  revision: a854ffac455fc870e3525ff760192f3a552cd14d
-  tag: v0.1.0
+  revision: c9fe2eb86d1dfc775bdd139a45340f17d2c6d86f
+  branch: cursor/library-gem-v011-9b63
   specs:
-    recording_studio_library (0.1.0)
+    recording_studio_library (0.1.1)
       flat_pack (>= 0.1.216)
       rails (~> 8.1.0)
       recording_studio (~> 4.2)
@@ -658,7 +658,7 @@ CHECKSUMS
   recording_studio (4.4.0)
   recording_studio_accessible (0.14.0)
   recording_studio_attachable (0.15.0)
-  recording_studio_library (0.1.0)
+  recording_studio_library (0.1.1)
   recording_studio_metrics (0.2.2)
   recording_studio_orderable (0.2.3)
   recording_studio_trashable (0.7.0)

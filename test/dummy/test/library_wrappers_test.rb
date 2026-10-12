@@ -123,6 +123,14 @@ class LibraryWrappersTest < ActionDispatch::IntegrationTest
     refute anonymous.any? { |item| item.attachment_recording.id == photo.id }
   end
 
+  test "resolve unfiltered skips Accessible for a trusted call" do
+    photo = import_photo(@library, "kiln-canister-side.jpg")
+    @holder.place_library_image(attachment_recording: photo, actor: @user)
+
+    visible = RecordingStudioAttachable::Placements.resolve(@holder, actor: nil, unfiltered: true)
+    assert visible.any? { |item| item.attachment_recording.id == photo.id }
+  end
+
   test "anonymous visitor seeing a public photo" do
     photo = import_photo(@library, "kiln-canister-linen.jpg")
     @holder.place_library_image(attachment_recording: photo, actor: @user)
@@ -139,8 +147,6 @@ class LibraryWrappersTest < ActionDispatch::IntegrationTest
     auth = RecordingStudioLibrary::Authorization
     original = auth.method(:accessible_loaded?)
     auth.define_singleton_method(:accessible_loaded?) { false }
-
-    skip "Library 0.1.1 fail-closed authorization is required" if auth.visible?(actor: @user, recording: photo)
 
     resolved = RecordingStudioAttachable::Placements.resolve(@holder, actor: @user)
     refute resolved.any? { |item| item.attachment_recording.id == photo.id }

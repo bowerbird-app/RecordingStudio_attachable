@@ -92,8 +92,20 @@ class LibraryViewsTest < Minitest::Test
 
   def test_adapter_registers_for_attachments
     source = File.read(File.expand_path("../lib/recording_studio_attachable.rb", __dir__))
+    adapter = File.read(File.expand_path("../lib/recording_studio_attachable/adapters/attachment.rb", __dir__))
+    engine = File.read(File.expand_path("../lib/recording_studio_attachable/engine.rb", __dir__))
 
     assert_includes source, "RecordingStudioLibrary.register_adapter"
     assert_includes source, "RecordingStudioAttachable::Adapters::Attachment"
+    assert_includes adapter, "def item_path(view, **options)"
+    assert_includes adapter, "def new_item_path(view, library_recording, **options)"
+    assert_includes adapter, "def permitted_item_keys"
+    refute File.exist?(File.expand_path("../lib/recording_studio_attachable/library_path_overrides.rb", __dir__))
+    refute_includes engine, "LibraryPathOverrides"
+  end
+
+  def test_library_engine_routes_is_public_for_library_adapters
+    assert_includes RecordingStudioAttachable::ApplicationHelper.instance_methods(false), :library_engine_routes
+    refute_includes RecordingStudioAttachable::ApplicationHelper.private_instance_methods(false), :library_engine_routes
   end
 end

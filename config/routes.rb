@@ -12,7 +12,6 @@ RecordingStudioAttachable::Engine.routes.draw do
     post "attachments/bulk_remove", to: "attachment_lifecycle#bulk_destroy", as: :bulk_remove_attachments
     patch "attachment_collection", to: "attachment_collections#update", as: :attachment_collection
     resources :placements, only: :index, controller: "placements"
-    patch "placements", to: "placements#update"
     resource :library, only: :show, controller: "libraries"
   end
 

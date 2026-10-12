@@ -97,6 +97,16 @@ module RecordingStudioAttachable
       "attachment_collection[rows][][#{key}]"
     end
 
+    def item_input_name(row, key)
+      return "items[#{row.member.id}][#{key}]" if placement?
+
+      input_name(key)
+    end
+
+    def ordered_recording_ids_input_name
+      "ordered_recording_ids[]"
+    end
+
     def revisions
       change_pairs.filter_map { |item, changes| Revision.new(recording: item, changes: changes) }
     end

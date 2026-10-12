@@ -37,6 +37,20 @@ class PlacementsTest < Minitest::Test
     end
 
     assert_equal false, captured.fetch(:include_trashed)
+    assert_equal false, captured.fetch(:unfiltered)
+    assert_nil captured.fetch(:actor)
+  end
+
+  def test_resolve_passes_unfiltered_through
+    captured = nil
+    RecordingStudioLibrary.stub(:resolve, lambda { |_holder, **kwargs|
+      captured = kwargs
+      []
+    }) do
+      RecordingStudioAttachable::Placements.resolve(:gallery, actor: nil, unfiltered: true)
+    end
+
+    assert_equal true, captured.fetch(:unfiltered)
     assert_nil captured.fetch(:actor)
   end
 

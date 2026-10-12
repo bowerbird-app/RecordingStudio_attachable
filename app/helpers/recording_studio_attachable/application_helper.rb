@@ -69,6 +69,14 @@ module RecordingStudioAttachable
       end
     end
 
+    def library_engine_routes
+      if respond_to?(:recording_studio_library, true)
+        recording_studio_library
+      else
+        RecordingStudioLibrary::Engine.routes.url_helpers
+      end
+    end
+
     private
 
     def attachable_routes
@@ -76,14 +84,6 @@ module RecordingStudioAttachable
         recording_studio_attachable
       else
         RecordingStudioAttachable::Engine.routes.url_helpers
-      end
-    end
-
-    def library_engine_routes
-      if respond_to?(:recording_studio_library, true)
-        recording_studio_library
-      else
-        RecordingStudioLibrary::Engine.routes.url_helpers
       end
     end
   end

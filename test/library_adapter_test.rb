@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require_relative "../app/services/recording_studio_attachable/services/application_service"
+require_relative "../app/services/recording_studio_attachable/services/revise_attachment_metadata"
 
 class LibraryAdapterTest < Minitest::Test
   FakeAttachment = Struct.new(:name, :caption, :credit, :alt_text, :description, :original_filename, :attachment_kind, :image, keyword_init: true) do
@@ -11,6 +13,14 @@ class LibraryAdapterTest < Minitest::Test
   FakeRecording = Struct.new(:recordable, :recordable_type, keyword_init: true)
 
   class FakeView
+    def initialize(routes: nil)
+      @routes = routes
+    end
+
+    def recording_studio_attachable
+      @routes
+    end
+
     def tag
       Tag.new
     end
@@ -128,5 +138,81 @@ class LibraryAdapterTest < Minitest::Test
     )
 
     assert_includes RecordingStudioAttachable::Adapters::Attachment.new(recording).full_view(FakeView.new), "/preview/large"
+  end
+
+  def test_item_path_opens_the_attachment_editor
+    photo = FakeRecording.new(
+      recordable: FakeAttachment.new(name: "Kiln hero", attachment_kind: "image", image: true),
+      recordable_type: "RecordingStudioAttachable::Attachment"
+    )
+    photo.define_singleton_method(:id) { "photo-1" }
+    routes = Object.new
+    routes.define_singleton_method(:attachment_path) { |item, **| "/attachments/#{item.id}" }
+    adapter = RecordingStudioAttachable::Adapters::Attachment.new(photo)
+
+    assert_equal "/attachments/photo-1", adapter.item_path(FakeView.new(routes: routes))
+  end
+
+  def test_new_item_path_opens_the_attachment_upload
+    library = FakeRecording.new(recordable: nil, recordable_type: "RecordingStudioLibrary::Library")
+    library.define_singleton_method(:id) { "lib-1" }
+    routes = Object.new
+    routes.define_singleton_method(:recording_attachment_upload_path) { |item, **| "/recordings/#{item.id}/upload" }
+    adapter = RecordingStudioAttachable::Adapters::Attachment.new(
+      FakeRecording.new(recordable: nil, recordable_type: "RecordingStudioAttachable::Attachment")
+    )
+
+    assert_equal "/recordings/lib-1/upload", adapter.new_item_path(FakeView.new(routes: routes), library)
+  end
+
+  def test_permitted_item_keys_cover_caption_credit_and_alt
+    adapter = RecordingStudioAttachable::Adapters::Attachment.new(
+      FakeRecording.new(recordable: nil, recordable_type: "RecordingStudioAttachable::Attachment")
+    )
+
+    assert_equal %i[caption credit alt_text name description], adapter.permitted_item_keys
+  end
+
+  def test_update_item_revises_attachment_metadata
+    photo = FakeRecording.new(
+      recordable: FakeAttachment.new(name: "Kiln hero", caption: "Warm glaze", attachment_kind: "image", image: true),
+      recordable_type: "RecordingStudioAttachable::Attachment"
+    )
+    adapter = RecordingStudioAttachable::Adapters::Attachment.new(photo)
+    captured = nil
+    stub_result = Object.new
+    stub_result.define_singleton_method(:failure?) { false }
+    stub_result.define_singleton_method(:value) { :revised }
+
+    RecordingStudioAttachable::Services::ReviseAttachmentMetadata.stub(:call, lambda { |**kwargs|
+      captured = kwargs
+      stub_result
+    }) do
+      assert_equal :revised, adapter.update_item!({ caption: "Warm glaze", extra: "ignored" }, actor: :ada)
+    end
+
+    assert_equal photo, captured[:attachment_recording]
+    assert_equal :ada, captured[:actor]
+    assert_equal "Warm glaze", captured[:caption]
+    refute captured.key?(:extra)
+  end
+
+  def test_update_item_raises_when_metadata_revision_fails
+    photo = FakeRecording.new(
+      recordable: FakeAttachment.new(name: "Kiln hero", attachment_kind: "image", image: true),
+      recordable_type: "RecordingStudioAttachable::Attachment"
+    )
+    adapter = RecordingStudioAttachable::Adapters::Attachment.new(photo)
+    stub_result = Object.new
+    stub_result.define_singleton_method(:failure?) { true }
+    stub_result.define_singleton_method(:error) { "Could not revise" }
+
+    error = assert_raises(ArgumentError) do
+      RecordingStudioAttachable::Services::ReviseAttachmentMetadata.stub(:call, stub_result) do
+        adapter.update_item!({ caption: "Warm glaze" }, actor: :ada)
+      end
+    end
+
+    assert_equal "Could not revise", error.message
   end
 end

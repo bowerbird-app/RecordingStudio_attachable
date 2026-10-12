@@ -37,7 +37,9 @@
                     action: "submit->recording-studio-attachable--collection-display#saveSlide",
                     recording_studio_attachable__collection_display_target: "gridForm"
                   } do %>
-      <%= hidden_field_tag "attachment_collection[signed_editor]", collection.signed_editor %>
+      <% unless collection.placement? %>
+        <%= hidden_field_tag "attachment_collection[signed_editor]", collection.signed_editor %>
+      <% end %>
       <% RecordingStudioAttachable::AttachmentFileButton.redirect_params(return_to: return_to).each do |key, value| %>
         <%= hidden_field_tag key, value %>
       <% end %>

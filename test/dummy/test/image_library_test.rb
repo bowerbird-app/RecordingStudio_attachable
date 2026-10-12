@@ -32,7 +32,7 @@ class ImageLibraryTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Library"
     assert_includes response.body, "Search"
     assert_includes response.body, "Photo"
-    assert_includes response.body, "Back"
+    assert_includes response.body, "Go back"
     assert_includes response.body, recording_studio_attachable.recording_attachment_upload_path(library)
   end
 
@@ -67,7 +67,7 @@ class ImageLibraryTest < ActionDispatch::IntegrationTest
 
     assert_includes path, "/placements"
     assert_includes response.body, "Add from library"
-    assert_includes response.body, "Back"
+    assert_includes response.body, "Go back"
     assert_equal gallery_recording.id.to_s, path.split("/")[3]
   end
 

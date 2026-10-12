@@ -21,7 +21,8 @@ module RecordingStudioAttachable
           RecordingStudioLibrary.resolve(
             parent_recording,
             include_trashed: include_trashed_images,
-            actor: actor_for_resolve(options)
+            actor: actor_for_resolve(options),
+            unfiltered: options.fetch(:unfiltered, false)
           )
         )
       end

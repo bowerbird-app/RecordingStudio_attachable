@@ -70,8 +70,16 @@ function openChooser() {
   })
 }
 
+function forgetSession(bootstrapUrl) {
+  if (bootstrapUrl) sessions.delete(bootstrapUrl)
+}
+
 function sessionFor(controller, bootstrapUrl) {
   let session = sessions.get(bootstrapUrl)
+  if (session?.error) {
+    forgetSession(bootstrapUrl)
+    session = null
+  }
   if (session) return session
 
   session = { ready: false, bootstrap: null, error: null, promise: null }
@@ -85,6 +93,7 @@ function sessionFor(controller, bootstrapUrl) {
     return session
   }).catch((error) => {
     session.error = error
+    forgetSession(bootstrapUrl)
     throw error
   })
   sessions.set(bootstrapUrl, session)
@@ -130,10 +139,17 @@ function promptToChoose(controller, sourceButton, providerKey, bootstrap) {
 }
 
 registerUploadProviderLauncher("dropbox", {
-  prefetch({ controller, bootstrapUrl }) {
-    if (!controller || !bootstrapUrl) return
+  forget(bootstrapUrl) {
+    forgetSession(bootstrapUrl)
+  },
 
-    return sessionFor(controller, bootstrapUrl)
+  prefetch({ controller, bootstrapUrl, button }) {
+    if (!controller || !bootstrapUrl) return Promise.resolve()
+
+    return sessionFor(controller, bootstrapUrl).promise.catch((error) => {
+      forgetSession(bootstrapUrl)
+      controller.handleProviderBootstrapError?.(error, button)
+    })
   },
 
   async launch({ controller, providerKey, bootstrapUrl, button, gesture = false }) {
@@ -143,7 +159,13 @@ registerUploadProviderLauncher("dropbox", {
     }
 
     controller.setProviderStatus("Dropbox is warming up…")
-    await session.promise
+    try {
+      await session.promise
+    } catch (error) {
+      forgetSession(bootstrapUrl)
+      controller.handleProviderBootstrapError?.(error, button)
+      throw error
+    }
     if (session.error) throw session.error
 
     promptToChoose(controller, button, providerKey, session.bootstrap)

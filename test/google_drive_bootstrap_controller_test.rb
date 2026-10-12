@@ -60,6 +60,7 @@ class GoogleDriveBootstrapControllerTest < ActionController::TestCase
     assert_response :success
     payload = JSON.parse(@response.body)
     assert_equal "token-1", payload.fetch("access_token")
+    assert_operator payload.fetch("expires_at"), :>, Time.current.to_i + 3000
     assert_equal "api-key", payload.fetch("api_key")
     assert_equal "app-id", payload.fetch("app_id")
     assert_equal "/google_drive/recordings/rec-1/imports.json", payload.fetch("import_url")

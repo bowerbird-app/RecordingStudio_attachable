@@ -573,7 +573,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes picker_source, "strategy: :client_picker"
     assert_includes launcher_source, 'registerUploadProviderLauncher("google_drive"'
     assert_includes launcher_source, "https://apis.google.com/js/api.js"
-    assert_includes launcher_source, "prefetch({ controller, bootstrapUrl })"
+    assert_includes launcher_source, "prefetch({ controller, bootstrapUrl, button })"
     assert_includes launcher_source, "if (gesture && canOpenNow(session))"
     assert_includes initializer_template, "strategy: :client_picker"
     assert_includes initializer_template, "remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|"

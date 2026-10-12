@@ -6,6 +6,20 @@ import { preprocessImageFile, shouldPreprocessImageFile } from "controllers/reco
 const PROVIDER_EVENT_STORAGE_KEY = "recording-studio-attachable:provider-event"
 const PROVIDER_EVENT_CHANNEL_NAME = `${PROVIDER_EVENT_STORAGE_KEY}:channel`
 
+async function readProviderBootstrapPayload(response) {
+  try {
+    return await response.json()
+  } catch (_error) {
+    return {}
+  }
+}
+
+function providerBootstrapError(payload, response, fallback) {
+  const error = new Error(payload.error || response.statusText || fallback || "Could not load provider bootstrap data.")
+  error.status = response.status
+  return error
+}
+
 export default class extends Controller {
   static targets = ["dropzone", "input", "queue", "progressTemplate"]
   static values = {
@@ -62,6 +76,9 @@ export default class extends Controller {
   disconnect() {
     this.files.forEach((entry) => this.revokePreview(entry))
     this.clearAllRemoteStageTimers()
+    this.clientPickerButtons().forEach((button) => {
+      delete button.dataset.providerPrefetchBound
+    })
     this.pickerPrefetchAbort?.abort()
     this.stopLauncherWatch?.()
     window.removeEventListener("message", this.handleProviderMessage)
@@ -154,6 +171,8 @@ export default class extends Controller {
   }
 
   prefetchClientPicker(button) {
+    if (button.disabled) return
+
     const launcher = getUploadProviderLauncher(button.dataset.providerLauncher)
     launcher?.prefetch?.({
       button,
@@ -527,6 +546,7 @@ export default class extends Controller {
     const button = this.providerButtonsByKey.get(providerKey)
     if (!button) return
 
+    getUploadProviderLauncher(button.dataset.providerLauncher)?.forget?.(button.dataset.providerBootstrapUrl)
     this.launchClientPicker(button, { gesture: false })
   }
 
@@ -561,10 +581,27 @@ export default class extends Controller {
         "X-Requested-With": "XMLHttpRequest"
       }
     })
-    const payload = await response.json()
-    if (!response.ok) throw new Error(payload.error || this.i18nText("js.could_not_load_bootstrap", "Could not load provider bootstrap data."))
+    const payload = await readProviderBootstrapPayload(response)
+    if (!response.ok) {
+      throw providerBootstrapError(
+        payload,
+        response,
+        this.i18nText("js.could_not_load_bootstrap", "Could not load provider bootstrap data.")
+      )
+    }
 
     return payload
+  }
+
+  handleProviderBootstrapError(error, button) {
+    if (button && (error?.status === 403 || error?.status === 422)) {
+      button.disabled = true
+    }
+
+    this.setProviderStatus(
+      error?.message || this.i18nText("js.could_not_load_bootstrap", "Could not load provider bootstrap data."),
+      "error"
+    )
   }
 
   openPopup(url, name = "recording-studio-attachable-provider-auth") {

@@ -27,6 +27,8 @@ module RecordingStudioAttachable
         }
 
         payload[:access_token] = current_google_drive_access_token
+        expires_at = google_drive_tokens["expires_at"].to_i
+        payload[:expires_at] = expires_at if expires_at.positive?
         payload
       rescue RecordingStudioAttachable::Error
         payload.merge(

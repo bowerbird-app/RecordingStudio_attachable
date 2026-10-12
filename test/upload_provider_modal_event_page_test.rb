@@ -3,6 +3,7 @@
 require "test_helper"
 require "json"
 require "open3"
+require "tmpdir"
 require_relative "../app/controllers/recording_studio_attachable/application_controller"
 
 class UploadProviderModalEventPageTest < Minitest::Test
@@ -34,7 +35,7 @@ class UploadProviderModalEventPageTest < Minitest::Test
     assert_equal "google_drive", parsed.fetch("providerKey")
     assert_equal "modal-1", parsed.fetch("modalId")
 
-    execute_payload_literal_with_node(literal, parsed) if node_available?
+    check_rendered_script_with_node(script) if node_available?
   end
 
   private
@@ -43,14 +44,12 @@ class UploadProviderModalEventPageTest < Minitest::Test
     system("node", "-v", out: File::NULL, err: File::NULL)
   end
 
-  def execute_payload_literal_with_node(literal, expected)
-    stdout, status = Open3.capture2(
-      "node",
-      "-e",
-      "const payload = #{literal}; process.stdout.write(JSON.stringify(payload));"
-    )
-
-    assert status.success?, "node rejected the payload object literal: #{stdout}"
-    assert_equal expected, JSON.parse(stdout)
+  def check_rendered_script_with_node(script)
+    Dir.mktmpdir("upload-provider-modal-event-page") do |dir|
+      path = File.join(dir, "modal_event_page.js")
+      File.write(path, script)
+      stdout, stderr, status = Open3.capture3("node", "--check", path)
+      assert status.success?, "node --check rejected the rendered popup script: #{stderr}\n#{stdout}\n#{script}"
+    end
   end
 end

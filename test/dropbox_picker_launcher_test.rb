@@ -11,18 +11,25 @@ class DropboxPickerLauncherTest < Minitest::Test
     upload_source = File.read(upload_controller_path)
     picker_source = File.read(image_picker_controller_path)
 
-    assert_includes launcher_source, "prefetch({ controller, bootstrapUrl })"
+    assert_includes launcher_source, "prefetch({ controller, bootstrapUrl, button })"
     assert_includes launcher_source, "canOpenNow(session)"
     assert_includes launcher_source, "Choose from Dropbox"
     assert_includes launcher_source, "if (gesture && canOpenNow(session))"
     assert_includes launcher_source, "return openWithGesture(controller, providerKey, session.bootstrap)"
+    assert_includes launcher_source, "forget(bootstrapUrl)"
+    assert_includes launcher_source, "forgetSession(bootstrapUrl)"
     refute_match(/await controller\.fetchProviderBootstrap\(bootstrapUrl\).*await ensureDropboxChooserLoaded/m, launcher_source)
 
     assert_includes upload_source, "prefetchClientPickers()"
     assert_includes upload_source, 'button.addEventListener("pointerenter"'
     assert_includes upload_source, "launchClientPicker(button, { gesture: true })"
+    assert_includes upload_source, "delete button.dataset.providerPrefetchBound"
+    assert_includes upload_source, "handleProviderBootstrapError"
+    assert_includes upload_source, "?.forget?.("
     assert_includes picker_source, "prefetchClientPickers()"
     assert_includes picker_source, "launchClientPicker(button, { gesture: true })"
+    assert_includes picker_source, "delete button.dataset.providerPrefetchBound"
+    assert_includes picker_source, "?.forget?.("
 
     skip "node is not available" unless node_available?
 
@@ -34,6 +41,12 @@ class DropboxPickerLauncherTest < Minitest::Test
     assert_equal "Choose from Dropbox", result.fetch("continueLabel")
     assert_equal true, result.fetch("chooseAfterContinueClick")
     assert_equal true, result.fetch("popupOnReadyAuthClick")
+    assert_equal true, result.fetch("chooseAfterConnectOnSamePage")
+    assert_equal 0, result.fetch("popupAfterConnectOnSamePage")
+    assert_equal "Choose from Dropbox", result.fetch("chooseAfterConnectLabel")
+    assert_equal true, result.fetch("forbiddenPrefetchHandled")
+    assert_equal true, result.fetch("forbiddenButtonDisabled")
+    assert_equal 0, result.fetch("unhandledRejections")
   end
 
   private
@@ -218,12 +231,84 @@ class DropboxPickerLauncherTest < Minitest::Test
       })
       const popupOnReadyAuthClick = popupCalls.length === 1
 
+      const connectThenChooseController = controller()
+      const connectThenChooseButton = element("button")
+      let connectThenChooseBootstraps = 0
+      connectThenChooseController.fetchProviderBootstrap = async () => {
+        connectThenChooseBootstraps += 1
+        if (connectThenChooseBootstraps === 1) {
+          return { client_id: "app-key", auth_url: "https://www.dropbox.com/oauth" }
+        }
+        return { client_id: "app-key", provider_key: "dropbox" }
+      }
+      await launcher.prefetch({
+        controller: connectThenChooseController,
+        bootstrapUrl: "/dropbox/connect-then-choose",
+        button: connectThenChooseButton
+      })
+      popupCalls.length = 0
+      chooseCalls.length = 0
+      await launcher.launch({
+        controller: connectThenChooseController,
+        providerKey: "dropbox",
+        bootstrapUrl: "/dropbox/connect-then-choose",
+        button: connectThenChooseButton,
+        gesture: true
+      })
+      launcher.forget("/dropbox/connect-then-choose")
+      popupCalls.length = 0
+      chooseCalls.length = 0
+      await launcher.launch({
+        controller: connectThenChooseController,
+        providerKey: "dropbox",
+        bootstrapUrl: "/dropbox/connect-then-choose",
+        button: connectThenChooseButton,
+        gesture: false
+      })
+      await new Promise((resolve) => queueMicrotask(resolve))
+      const chooseAfterConnectButton = connectThenChooseController.element._continueRegion?.children?.[0]
+      const chooseAfterConnectLabel = chooseAfterConnectButton?.textContent
+      const popupAfterConnectOnSamePage = popupCalls.length
+      chooseAfterConnectButton?._click?.({ preventDefault() {} })
+      const chooseAfterConnectOnSamePage = chooseCalls.length === 1
+
+      const forbiddenButton = element("button")
+      forbiddenButton.disabled = false
+      const forbiddenController = controller()
+      forbiddenController.handleProviderBootstrapError = (error, button) => {
+        if (button && error?.status === 403) button.disabled = true
+        forbiddenController._bootstrapError = error
+      }
+      forbiddenController.fetchProviderBootstrap = async () => {
+        const error = new Error("Forbidden")
+        error.status = 403
+        throw error
+      }
+      const unhandled = []
+      const onUnhandled = (reason) => unhandled.push(String(reason))
+      process.on("unhandledRejection", onUnhandled)
+      await launcher.prefetch({
+        controller: forbiddenController,
+        bootstrapUrl: "/dropbox/forbidden",
+        button: forbiddenButton
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      process.off("unhandledRejection", onUnhandled)
+      const forbiddenPrefetchHandled = forbiddenController._bootstrapError?.status === 403
+      const forbiddenButtonDisabled = forbiddenButton.disabled === true
+
       process.stdout.write(JSON.stringify({
         chooseOnReadyClick,
         chooseOnColdClick,
         continueLabel,
         chooseAfterContinueClick,
-        popupOnReadyAuthClick
+        popupOnReadyAuthClick,
+        chooseAfterConnectOnSamePage,
+        popupAfterConnectOnSamePage,
+        chooseAfterConnectLabel,
+        forbiddenPrefetchHandled,
+        forbiddenButtonDisabled,
+        unhandledRejections: unhandled.length
       }))
     JS
   end

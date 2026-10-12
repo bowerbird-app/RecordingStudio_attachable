@@ -338,7 +338,7 @@ For modal-page providers, the shared browser contract is:
 - addon screens can complete auth in a popup and post a `provider-auth-complete` message back to the upload page
 - addon screens can post a `provider-import-complete` message with a `redirectPath` when the import succeeds
 
-For `:client_picker`, the upload page stays in place and calls a registered browser launcher. The launcher fetches provider bootstrap JSON, can open auth in a popup, and then adds normalized provider selections into the shared upload queue.
+For `:client_picker`, the upload page stays in place and calls a registered browser launcher. The launcher prefetches provider bootstrap JSON (and the vendor picker script) so OAuth popups and `Dropbox.choose` / Google Picker can run inside a click. After OAuth completes, the cached bootstrap is dropped and fetched again so the same page opens the Chooser or Picker instead of a second sign-in. Drive also refetches when the picker `access_token` is within 30 seconds of expiry. A `403` or `422` bootstrap disables the provider button.
 
 Client-picker launchers are registered in JavaScript:
 
@@ -346,10 +346,15 @@ Client-picker launchers are registered in JavaScript:
 import { registerUploadProviderLauncher } from "controllers/recording_studio_attachable/provider_launchers"
 
 registerUploadProviderLauncher("google_drive", {
-  async launch({ controller, providerKey, bootstrapUrl }) {
+  forget(bootstrapUrl) {
+    // drop the cached bootstrap so relaunch after OAuth sees a connected session
+  },
+  prefetch({ controller, bootstrapUrl }) {
+    return controller.fetchProviderBootstrap(bootstrapUrl)
+  },
+  async launch({ controller, providerKey, bootstrapUrl, gesture }) {
     const bootstrap = await controller.fetchProviderBootstrap(bootstrapUrl)
-    // open auth popup if needed, then launch provider SDK picker
-    // finally add normalized provider selections to the shared queue
+    // open auth popup or vendor picker inside the click when gesture is true
     controller.addProviderSelections(providerKey, [{ id: "file-1", resource_key: "rk-1" }])
   }
 })
@@ -453,7 +458,7 @@ end
 
 `GOOGLE_DRIVE_API_KEY` must be a browser API key for the same Google Cloud project, and `GOOGLE_DRIVE_APP_ID` is the Google Cloud project number used by Google Picker.
 
-Once enabled, the upload page shows a Google Drive button: OAuth popup, Google Picker, then a server-side copy through `ImportAttachments`. Native Docs/Sheets/Slides export to PDF, PNG, or CSV as before. Routes live at `/recording_studio_attachable/google_drive`.
+Once enabled, the upload page shows a Google Drive button: OAuth popup, Google Picker, then a server-side copy through `ImportAttachments`. Bootstrap JSON includes `expires_at` so the browser can drop a near-expiry picker token. Native Docs/Sheets/Slides export to PDF, PNG, or CSV as before. Routes live at `/recording_studio_attachable/google_drive`.
 
 #### Dropbox
 

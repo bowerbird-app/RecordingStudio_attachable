@@ -87,8 +87,27 @@ function openPicker(bootstrap) {
   })
 }
 
+const ACCESS_TOKEN_REFRESH_SKEW_SECONDS = 30
+
+function forgetSession(bootstrapUrl) {
+  if (bootstrapUrl) sessions.delete(bootstrapUrl)
+}
+
+function accessTokenNearExpiry(bootstrap) {
+  if (!bootstrap?.access_token) return false
+
+  const expiresAt = Number(bootstrap.expires_at)
+  if (!Number.isFinite(expiresAt) || expiresAt <= 0) return false
+
+  return expiresAt <= (Date.now() / 1000) + ACCESS_TOKEN_REFRESH_SKEW_SECONDS
+}
+
 function sessionFor(controller, bootstrapUrl) {
   let session = sessions.get(bootstrapUrl)
+  if (session?.error || accessTokenNearExpiry(session?.bootstrap)) {
+    forgetSession(bootstrapUrl)
+    session = null
+  }
   if (session) return session
 
   session = { ready: false, bootstrap: null, error: null, promise: null }
@@ -100,6 +119,7 @@ function sessionFor(controller, bootstrapUrl) {
     return session
   }).catch((error) => {
     session.error = error
+    forgetSession(bootstrapUrl)
     throw error
   })
   sessions.set(bootstrapUrl, session)
@@ -145,10 +165,17 @@ function promptToChoose(controller, sourceButton, providerKey, bootstrap) {
 }
 
 registerUploadProviderLauncher("google_drive", {
-  prefetch({ controller, bootstrapUrl }) {
-    if (!controller || !bootstrapUrl) return
+  forget(bootstrapUrl) {
+    forgetSession(bootstrapUrl)
+  },
 
-    return sessionFor(controller, bootstrapUrl)
+  prefetch({ controller, bootstrapUrl, button }) {
+    if (!controller || !bootstrapUrl) return Promise.resolve()
+
+    return sessionFor(controller, bootstrapUrl).promise.catch((error) => {
+      forgetSession(bootstrapUrl)
+      controller.handleProviderBootstrapError?.(error, button)
+    })
   },
 
   async launch({ controller, providerKey, bootstrapUrl, button, gesture = false }) {
@@ -158,7 +185,13 @@ registerUploadProviderLauncher("google_drive", {
     }
 
     controller.setProviderStatus("Google Drive is warming up…")
-    await session.promise
+    try {
+      await session.promise
+    } catch (error) {
+      forgetSession(bootstrapUrl)
+      controller.handleProviderBootstrapError?.(error, button)
+      throw error
+    }
     if (session.error) throw session.error
 
     promptToChoose(controller, button, providerKey, session.bootstrap)

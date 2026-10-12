@@ -3,6 +3,8 @@
 module RecordingStudioAttachable
   module Dropbox
     class Configuration
+      include RecordingStudioAttachable::Adapter::Configurable
+
       PLACEHOLDER_PREFIXES = {
         client_id: ["dummy-dropbox-client-id"],
         client_secret: ["dummy-dropbox-client-secret"]
@@ -22,24 +24,9 @@ module RecordingStudioAttachable
         @scopes = %w[files.metadata.read files.content.read]
       end
 
-      def merge!(attributes)
-        return self unless attributes.respond_to?(:each)
-
-        attributes.each do |key, value|
-          setter = "#{key}="
-          public_send(setter, value) if respond_to?(setter)
-        end
-
-        self
-      end
-
-      def enabled?
-        !!enabled
-      end
-
       def configured?
-        valid_dropbox_value?(client_id, :client_id) &&
-          valid_dropbox_value?(client_secret, :client_secret) &&
+        valid_credential?(client_id, :client_id) &&
+          valid_credential?(client_secret, :client_secret) &&
           redirect_uri.present?
       end
 
@@ -55,15 +42,6 @@ module RecordingStudioAttachable
           redirect_uri: redirect_uri,
           scopes: scopes
         }
-      end
-
-      private
-
-      def valid_dropbox_value?(value, field)
-        normalized = value.to_s.strip
-        return false if normalized.blank?
-
-        Array(PLACEHOLDER_PREFIXES[field]).exclude?(normalized)
       end
     end
   end

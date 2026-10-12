@@ -17,7 +17,6 @@ module RecordingStudioAttachable
 
       def store_tokens!(incoming)
         storage["tokens"] = tokens.merge(incoming.compact.stringify_keys)
-        SessionCookie.raise_if_overflow!(session)
       end
 
       def clear_tokens!

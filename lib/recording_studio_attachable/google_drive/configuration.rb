@@ -3,6 +3,8 @@
 module RecordingStudioAttachable
   module GoogleDrive
     class Configuration
+      include RecordingStudioAttachable::Adapter::Configurable
+
       PLACEHOLDER_PREFIXES = {
         client_id: ["dummy-google-drive-client-id"],
         client_secret: ["dummy-google-drive-client-secret"],
@@ -28,29 +30,14 @@ module RecordingStudioAttachable
         reset_oauth_defaults
       end
 
-      def merge!(attributes)
-        return self unless attributes.respond_to?(:each)
-
-        attributes.each do |key, value|
-          setter = "#{key}="
-          public_send(setter, value) if respond_to?(setter)
-        end
-
-        self
-      end
-
-      def enabled?
-        !!enabled
-      end
-
       def configured?
-        valid_google_drive_value?(client_id, :client_id) &&
-          valid_google_drive_value?(client_secret, :client_secret) &&
+        valid_credential?(client_id, :client_id) &&
+          valid_credential?(client_secret, :client_secret) &&
           redirect_uri.present?
       end
 
       def picker_configured?
-        configured? && valid_google_drive_value?(api_key, :api_key) && valid_google_drive_value?(app_id, :app_id)
+        configured? && valid_credential?(api_key, :api_key) && valid_credential?(app_id, :app_id)
       end
 
       def available?
@@ -98,13 +85,6 @@ module RecordingStudioAttachable
           include_granted_scopes: include_granted_scopes,
           page_size: page_size
         }
-      end
-
-      def valid_google_drive_value?(value, field)
-        normalized = value.to_s.strip
-        return false if normalized.blank?
-
-        Array(PLACEHOLDER_PREFIXES[field]).exclude?(normalized)
       end
     end
   end

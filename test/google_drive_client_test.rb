@@ -91,7 +91,7 @@ class GoogleDriveClientTest < Minitest::Test
         http = stub_http(captured: captured, response: response)
         block.call(http)
       }) do
-        result = client.download_file(
+        result = downloaded(
           "id" => "doc-1",
           "name" => "Project brief",
           "mimeType" => "application/vnd.google-apps.document"
@@ -121,7 +121,7 @@ class GoogleDriveClientTest < Minitest::Test
         http = stub_http(response: response)
         block.call(http)
       }) do
-        result = client.download_file(
+        result = downloaded(
           "id" => "sheet-1",
           "name" => "Report.csv",
           "mimeType" => "application/vnd.google-apps.spreadsheet"
@@ -149,7 +149,7 @@ class GoogleDriveClientTest < Minitest::Test
         http = stub_http(captured: captured, response: response)
         block.call(http)
       }) do
-        result = client.download_file(
+        result = downloaded(
           "id" => "file-1",
           "name" => "Preview",
           "mimeType" => "application/octet-stream"
@@ -195,7 +195,7 @@ class GoogleDriveClientTest < Minitest::Test
         end
         block.call(http)
       }) do
-        result = client.download_file(
+        result = downloaded(
           "id" => "file-1",
           "name" => "Preview",
           "mimeType" => "application/octet-stream"
@@ -305,7 +305,7 @@ class GoogleDriveClientTest < Minitest::Test
         assert_equal true, options[:use_ssl]
         block.call(stub_http(response: response))
       }) do
-        result = client.download_file(
+        result = downloaded(
           "id" => "file-2",
           "name" => "Raw export",
           "mimeType" => "application/zip"
@@ -325,7 +325,7 @@ class GoogleDriveClientTest < Minitest::Test
         assert_equal true, options[:use_ssl]
         block.call(stub_http(captured: captured, response: response))
       }) do
-        client.download_file(
+        downloaded(
           "id" => "file-2",
           "name" => "Shared image",
           "mimeType" => "image/png",
@@ -586,6 +586,19 @@ class GoogleDriveClientTest < Minitest::Test
 
   def client
     @client ||= RecordingStudioAttachable::GoogleDrive::Client.new(access_token: "access-token")
+  end
+
+  def downloaded(file)
+    remote_file = client.remote_file_for(file.stringify_keys)
+    fetched = RecordingStudioAttachable::SafeRemoteFetch.call(
+      remote_file,
+      max_bytes: RecordingStudioAttachable.configuration.max_file_size
+    )
+    {
+      io: fetched.io,
+      filename: remote_file.filename,
+      content_type: fetched.content_type || remote_file.content_type
+    }
   end
 
   def with_public_dns(&)

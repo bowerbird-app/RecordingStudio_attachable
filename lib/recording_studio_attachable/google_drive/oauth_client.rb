@@ -5,6 +5,8 @@ require "uri"
 module RecordingStudioAttachable
   module GoogleDrive
     class OAuthClient
+      include RecordingStudioAttachable::Adapter::OauthClient
+
       class Error < RecordingStudioAttachable::Error; end
 
       AUTHORIZATION_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
@@ -54,19 +56,12 @@ module RecordingStudioAttachable
 
       attr_reader :configuration
 
-      def ensure_configured!
-        return if configuration.configured?
-
-        raise RecordingStudioAttachable::DependencyUnavailableError,
-              "Google Drive addon is missing client credentials or redirect URI"
+      def missing_credentials_message
+        "Google Drive addon is missing client credentials or redirect URI"
       end
 
-      def post_form(attributes)
-        ensure_configured!
-        response, body = Adapter::OauthHttp.post_form(TOKEN_ENDPOINT, attributes)
-        raise Error, Adapter::OauthHttp.error_message(body, "Google Drive authentication failed") unless response.is_a?(Net::HTTPSuccess)
-
-        Adapter::OauthHttp.normalize_tokens(body)
+      def authentication_failed_message
+        "Google Drive authentication failed"
       end
     end
   end

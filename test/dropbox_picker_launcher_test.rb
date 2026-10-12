@@ -14,6 +14,7 @@ class DropboxPickerLauncherTest < Minitest::Test
     assert_includes launcher_source, "prefetch({ controller, bootstrapUrl, button })"
     assert_includes launcher_source, "canOpenNow(session)"
     refute_includes launcher_source, "Choose from Dropbox"
+    assert_includes launcher_source, "name: file.name"
     refute_includes launcher_source, "showProviderContinueButton"
     assert_includes launcher_source, "if (gesture && canOpenNow(session))"
     assert_includes launcher_source, "return openWithGesture(controller, providerKey, session.bootstrap)"
@@ -41,6 +42,7 @@ class DropboxPickerLauncherTest < Minitest::Test
     assert status.success?, "#{stderr}\n#{stdout}"
     result = JSON.parse(stdout)
     assert_equal true, result.fetch("chooseOnReadyClick")
+    assert_equal true, result.fetch("chooserSendsFilename")
     assert_equal 0, result.fetch("chooseOnColdClick")
     assert_equal 0, result.fetch("continueButtonsAfterCold")
     assert_equal true, result.fetch("chooseAfterNextClick")
@@ -105,6 +107,7 @@ class DropboxPickerLauncherTest < Minitest::Test
     <<~JS
       const chooseCalls = []
       const popupCalls = []
+      const selectionNames = []
       const listeners = new Map()
 
       function element(tag = "div") {
@@ -150,7 +153,7 @@ class DropboxPickerLauncherTest < Minitest::Test
             globalThis.window.Dropbox = {
               choose(options) {
                 chooseCalls.push(options)
-                options.success([{ id: "id-1" }])
+                options.success([{ id: "id:fia-1", name: "kiln.jpg" }])
               }
             }
             script._load?.()
@@ -187,7 +190,7 @@ class DropboxPickerLauncherTest < Minitest::Test
           openPopup: (url) => { popupCalls.push(url); return { focus() {} } },
           setProviderStatus() {},
           clearProviderStatus() {},
-          addProviderSelections() {},
+          addProviderSelections(_key, selections) { selectionNames.push(...selections.map((item) => item.name)) },
           launchClientPicker(button, { gesture = false } = {}) {
             return launcher.launch({
               controller: instance,
@@ -212,6 +215,7 @@ class DropboxPickerLauncherTest < Minitest::Test
         gesture: true
       })
       const chooseOnReadyClick = chooseCalls.length === 1
+      const chooserSendsFilename = selectionNames.includes("kiln.jpg")
 
       let resolveBootstrap
       const coldController = controller()
@@ -334,6 +338,7 @@ class DropboxPickerLauncherTest < Minitest::Test
 
       process.stdout.write(JSON.stringify({
         chooseOnReadyClick,
+        chooserSendsFilename,
         chooseOnColdClick,
         continueButtonsAfterCold,
         chooseAfterNextClick,

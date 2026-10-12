@@ -62,6 +62,11 @@ module RecordingStudioAttachable
       payload.delete(:source)
       payload.delete(:service_name)
       payload[:provider_key] = payload[:provider_key].presence || default_provider_key
+      payload[:name] = payload[:name].presence
+      if payload.key?(:content_type)
+        payload[:content_type] = payload[:content_type].presence
+        payload.delete(:content_type) if payload[:content_type].blank?
+      end
       if payload[:provider_key].present? && registered_provider(payload[:provider_key]).blank?
         raise ArgumentError,
               "Unknown upload provider"

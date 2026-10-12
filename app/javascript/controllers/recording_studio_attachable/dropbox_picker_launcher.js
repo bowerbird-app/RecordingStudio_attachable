@@ -59,7 +59,10 @@ function openChooser() {
         resolve(
           (files || [])
             .filter((file) => file?.id)
-            .map((file) => ({ id: file.id }))
+            .map((file) => ({
+              id: file.id,
+              name: file.name
+            }))
         )
       },
       cancel: () => resolve([]),

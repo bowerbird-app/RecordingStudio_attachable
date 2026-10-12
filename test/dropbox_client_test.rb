@@ -38,6 +38,7 @@ class DropboxClientTest < Minitest::Test
       assert_equal URI("https://content.dropboxapi.com/2/files/download"), remote_file.uri
       assert_equal "POST", remote_file.http_method
       assert_equal "Brief.pdf", remote_file.filename
+      assert_equal "application/pdf", remote_file.content_type
       assert_equal "id:file-1", remote_file.external_id
       assert_equal({ "path" => "id:file-1" }.to_json, remote_file.headers.fetch("Dropbox-API-Arg"))
     end
@@ -119,7 +120,7 @@ class DropboxClientTest < Minitest::Test
       assert_equal "Override", remote_file.name
       assert_equal "From Dropbox", remote_file.description
       assert_equal "id:file-1", remote_file.external_id
-      assert_equal "application/octet-stream", remote_file.content_type
+      assert_equal "application/pdf", remote_file.content_type
     end
 
     assert_equal({ "path" => "id:file-1" }, captured.fetch(:body))

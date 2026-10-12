@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "marcel"
 require "net/http"
 require "uri"
 
@@ -54,12 +55,17 @@ module RecordingStudioAttachable
       end
 
       def file_identity(file_id, metadata)
+        filename = metadata.fetch("name")
         {
-          filename: metadata.fetch("name"),
-          content_type: "application/octet-stream",
+          filename: filename,
+          content_type: content_type_for(filename),
           byte_size: metadata["size"],
           external_id: metadata["id"] || file_id
         }
+      end
+
+      def content_type_for(filename)
+        Marcel::MimeType.for(name: filename)
       end
 
       def download_headers(file_id)

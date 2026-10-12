@@ -54,6 +54,50 @@ class HostCloudPickerModalTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "dropbox chooser selection imports through the host attachments endpoint" do
+    library = RecordingStudioAttachable.library_for(@root, actor: @user)
+    captured = nil
+    imported = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [])
+
+    importer = RecordingStudioAttachable::Dropbox::Services::ImportSelectedFiles
+    original_importer_call = importer.method(:call)
+    original_token_fetch = RecordingStudioAttachable::Dropbox::SessionAccessToken.method(:fetch)
+
+    RecordingStudioAttachable::Dropbox::SessionAccessToken.define_singleton_method(:fetch) { |**_| "dropbox-token" }
+    importer.define_singleton_method(:call) do |**kwargs|
+      captured = kwargs
+      imported
+    end
+
+    with_cloud_adapters_configured do
+      post recording_studio_attachable.recording_attachment_imports_path(library),
+           params: {
+             attachment_import: {
+               provider_key: "dropbox",
+               attachments: [
+                 {
+                   name: "kiln.jpg",
+                   description: "",
+                   provider_key: "dropbox",
+                   provider_payload: { id: "id:fia-lKYKs5AAAAAAAAAACw" },
+                   content_type: ""
+                 }
+               ]
+             }
+           },
+           as: :json
+    end
+  ensure
+    RecordingStudioAttachable::Dropbox::SessionAccessToken.define_singleton_method(:fetch, original_token_fetch)
+    importer.define_singleton_method(:call, original_importer_call)
+
+    assert_response :created
+    selection = captured.fetch(:file_ids).first
+    assert_equal "id:fia-lKYKs5AAAAAAAAAACw", selection.fetch("id")
+    assert_equal "kiln.jpg", selection.fetch("name")
+    assert_equal "dropbox-token", captured.fetch(:access_token)
+  end
+
   test "disconnected dropbox and drive bootstrap leave session state for connect" do
     library = RecordingStudioAttachable.library_for(@root, actor: @user)
 

@@ -898,7 +898,7 @@ export default class extends Controller {
         ...payload,
         provider_key: entry.providerKey,
         provider_payload: entry.providerPayload,
-        content_type: entry.contentType
+        content_type: entry.contentType || undefined
       }
     }
 

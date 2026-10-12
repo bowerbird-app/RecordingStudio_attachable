@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-10-12
+
+### Added
+
+- Cloud upload adapters: Google Drive and Dropbox are self-contained adapters on the existing upload-provider registry. Each has an explicit `enabled` switch and is registered only when enabled and fully configured.
+- Dropbox adapter: OAuth 2.0 with PKCE, Chooser, server-side resolve via `files/get_metadata` and `files/download`. Copy into Active Storage only.
+- Shared `RecordingStudioAttachable::SafeRemoteFetch` for adapter downloads: HTTPS only, per-adapter hosts, drop `Authorization` (case-insensitive) on cross-host redirects, pin the validated IP, block private/loopback/CGNAT/multicast addresses, refuse oversize before a full download, stream to a Tempfile with a byte cap, connect/read timeouts plus an overall deadline.
+- Adapters register their own config objects. Hosts set `config.google_drive.*` and `config.dropbox.*` as before for Drive.
+
+### Changed
+
+- Google Drive no longer has special cases in core configuration, routes, requires, or Stimulus controllers. It mounts and registers itself through the adapter hooks.
+- Google Drive downloads use the shared fetch. Cross-host redirects no longer reuse the Bearer token. File ids in Drive API paths are URL-encoded. Adapter launcher modules load through the string-argument `javascript_tag(..., nonce: true)` form so `import "..."` is not HTML-escaped.
+- Drive and Dropbox share core adapter helpers (`SessionAccessToken`, client-picker registration, selection normalizing, JSON parse, OAuth form posts, import-selected-files).
+- `SafeRemoteFetch` treats `max_file_size` `nil` as no byte cap. Deadlines and connect/read timeouts still apply.
+- Drive and Dropbox bootstrap JSON returns `403` when the actor cannot upload (was `422` on Drive). Disabled adapters still return `422`. Connected Drive bootstrap includes `expires_at` so the browser can drop a near-expiry picker token.
+
+### Fixed
+
+- OAuth popup completion pages emit the postMessage payload as a JavaScript object literal so the script can run and close the window.
+- Dropbox Chooser (`Dropbox.choose`) and OAuth popups run inside a user click. Bootstrap and `dropins.js` preload on connect/hover. After Drive OAuth, the Picker opens on its own (`setVisible` does not need a click). Dropbox does not auto-open Chooser after connect; the same Dropbox button opens `choose()` on the next click. Neither adapter adds a second Choose from… button.
+- After OAuth completes, the cached picker bootstrap is dropped and fetched again so the same page opens the Chooser or Picker instead of a second sign-in. Drive also refetches when the picker `access_token` is within 30 seconds of expiry. A `403` or `422` bootstrap disables the provider button instead of leaving an uncaught rejection. Turbo-cached reconnect rebinds prefetch listeners.
+- Dropbox import URLs use `recording_studio_attachable.recording_attachment_imports_path` so host pages that render the gallery modal do not 500.
+- Disconnected bootstrap returns a local `connect_url` and does not write OAuth state, so parallel Dropbox and Drive prefetch cannot clobber a cookie session. State is created on the connect click.
+- Dropbox Chooser selections send the real filename. Import infers MIME type from that name instead of `application/octet-stream`, which the shared imports endpoint rejected for image libraries.
+
+### Upgrade Notes
+
+- Bump to `0.16.0`. No migration.
+- Google Drive stays off by default. Hosts that already set `config.google_drive.enabled = true` plus OAuth and Picker credentials keep the Drive button. `config.google_drive.*` is unchanged.
+- Dropbox is off until you set `config.dropbox.enabled = true` and credentials. Create a Dropbox app with redirect URI `/recording_studio_attachable/dropbox/oauth/callback` and scopes `files.metadata.read` and `files.content.read`. Add this host to Chooser/Saver domains in the Dropbox app.
+- Adapter OAuth tokens stay in the Rails session. Hosts that enable both Drive and Dropbox should use a server-side session store (Redis, cache, or Active Record) so the browser’s 4 KB cookie limit is not hit.
+- Custom `register_upload_provider` callers are unchanged. Optional `allowed_payload_keys` strips remote import payloads; omit it to keep the previous pass-through.
+
 ## [0.15.0] - 2026-10-12
 
 ### Added
@@ -372,7 +406,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.14.1...v0.15.0
 [0.11.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.9.1...v0.10.0

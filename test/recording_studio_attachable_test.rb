@@ -4,7 +4,7 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.15.0", RecordingStudioAttachable::VERSION
+    assert_equal "0.16.0", RecordingStudioAttachable::VERSION
   end
 
   def test_recording_studio_dependency_is_4_2_or_newer
@@ -183,6 +183,8 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes page_edit_view_source, 'render "recording_studio_attachable/attachment_image_pickers/modal"'
     assert_includes picker_modal_partial_source, 'data-recording-studio-attachable--attachment-image-picker-target="progressTemplate"'
     assert_includes picker_modal_partial_source, 'data-recording-studio-attachable--attachment-image-picker-target="uploadQueue"'
+    assert_includes picker_modal_partial_source, 'javascript_tag(%(import #{module_path.to_json}), type: "module", nonce: true)'
+    assert_not_includes picker_modal_partial_source, "javascript_tag(nonce: true, type: \"module\") {"
   end
 
   def test_attachment_show_view_uses_flatpack_breadcrumb_above_title
@@ -515,6 +517,22 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_not_includes view_source, "Parent recording id"
   end
 
+  def test_core_has_no_provider_specific_references
+    core_files = [
+      File.expand_path("../lib/recording_studio_attachable.rb", __dir__),
+      File.expand_path("../lib/recording_studio_attachable/configuration.rb", __dir__),
+      File.expand_path("../lib/recording_studio_attachable/engine.rb", __dir__),
+      File.expand_path("../config/routes.rb", __dir__),
+      File.expand_path("../app/javascript/controllers/recording_studio_attachable/upload_controller.js", __dir__),
+      File.expand_path("../app/javascript/controllers/recording_studio_attachable/attachment_image_picker_controller.js", __dir__)
+    ]
+
+    core_files.each do |path|
+      source = File.read(path)
+      assert_no_match(/google_drive|dropbox/i, source, "#{path} should not name a cloud adapter")
+    end
+  end
+
   def test_google_drive_addon_files_are_wired_through_the_main_engine
     library_source = File.read(File.expand_path("../lib/recording_studio_attachable.rb", __dir__))
     routes_source = File.read(File.expand_path("../config/routes.rb", __dir__))
@@ -537,21 +555,32 @@ class RecordingStudioAttachableTest < Minitest::Test
         __dir__
       )
     )
+    upload_view = File.read(
+      File.expand_path("../app/views/recording_studio_attachable/attachment_uploads/new.html.erb", __dir__)
+    )
 
-    assert_includes library_source, 'require "recording_studio_attachable/google_drive/engine"'
-    assert_includes routes_source, 'mount RecordingStudioAttachable::GoogleDrive::Engine, at: "/google_drive", as: :google_drive'
+    assert_includes library_source, "recording_studio_attachable/*/engine.rb"
+    assert_includes routes_source, "adapter_route_blocks"
+    assert_includes engine_source, 'mount RecordingStudioAttachable::GoogleDrive::Engine, at: "/google_drive", as: :google_drive'
     assert_includes engine_routes_source, 'get "bootstrap", to: "bootstrap#show", as: :bootstrap'
     assert_includes engine_routes_source, 'get "connect", to: "oauth#new", as: :connect'
     assert_includes engine_routes_source, 'delete "connect", to: "oauth#destroy", as: :disconnect'
-    assert_includes engine_source, "strategy: :client_picker"
+    picker_source = File.read(
+      File.expand_path("../lib/recording_studio_attachable/adapter/client_picker.rb", __dir__)
+    )
+    assert_includes engine_source, "Adapter::ClientPicker.provider_options"
     assert_includes engine_source, 'launcher: "google_drive"'
+    assert_includes picker_source, "strategy: :client_picker"
     assert_includes launcher_source, 'registerUploadProviderLauncher("google_drive"'
     assert_includes launcher_source, "https://apis.google.com/js/api.js"
+    assert_includes launcher_source, "prefetch({ controller, bootstrapUrl, button })"
+    assert_includes launcher_source, "if (gesture && canOpenNow(session))"
     assert_includes initializer_template, "strategy: :client_picker"
     assert_includes initializer_template, "remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|"
     assert_includes initializer_template, "payload.fetch(:provider_payload)"
     assert_includes initializer_template, "GOOGLE_DRIVE_API_KEY"
     assert_includes initializer_template, "GOOGLE_DRIVE_APP_ID"
+    assert_includes initializer_template, "config.dropbox.enabled = true"
     assert_includes view_source, 'title: t("recording_studio.attachable.google_drive.title")'
     assert_includes view_source, 't("recording_studio.attachable.google_drive.connect")'
     assert_includes view_source, 't("recording_studio.attachable.google_drive.import_selected")'
@@ -559,6 +588,9 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, "recording_studio_attachable.recording_attachment_upload_path(@recording, redirect_params)"
     assert_includes view_source, "recording-studio-attachable--provider-modal-frame#openPopup"
     assert_includes view_source, 'hidden_field_tag :embed, "modal" if embedded_upload_provider_request?'
+    assert_includes upload_view, "upload_provider_launcher_modules"
+    assert_includes upload_view, 'javascript_tag(%(import #{module_path.to_json}), type: "module", nonce: true)'
+    assert_not_includes upload_view, "javascript_tag(nonce: true, type: \"module\") {"
   end
 
   def test_attachment_file_button_uses_file_only_replace_controls

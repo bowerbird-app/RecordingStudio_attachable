@@ -306,7 +306,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes picker_modal_partial, "recording-studio-attachable--attachment-image-picker#launchProvider"
     assert_includes picker_modal_partial, "recording-studio-attachable--attachment-image-picker#confirmSelection"
     assert_includes picker_modal_partial, "recording-studio-attachable--attachment-image-picker#clearSelection"
-    assert_includes picker_controller, 'import { getUploadProviderLauncher } from "controllers/recording_studio_attachable/provider_launchers"'
+    assert_includes picker_controller, 'import { getUploadProviderLauncher, onUploadProviderLaunchersChanged, relaunchUploadProvider } from "controllers/recording_studio_attachable/provider_launchers"'
     assert_includes picker_controller, "application.getControllerForElementAndIdentifier"
     assert_includes picker_controller, "openPickerFromToolbar(event)"
     assert_includes picker_controller, "async loadAttachments({ append = false, reset = false } = {}) {"
@@ -666,6 +666,9 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes initializer_template, "config.google_drive.enabled = true"
     assert_includes initializer_template, "GOOGLE_DRIVE_CLIENT_ID"
     assert_includes initializer_template, "/recording_studio_attachable/google_drive/oauth/callback"
+    assert_includes initializer_template, "config.dropbox.enabled = true"
+    assert_includes initializer_template, "DROPBOX_CLIENT_ID"
+    assert_includes initializer_template, "/recording_studio_attachable/dropbox/oauth/callback"
   end
 
   def test_dummy_home_demo_includes_registered_demo_cloud_provider
@@ -677,6 +680,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes initializer, "config.max_file_size = 25.megabytes"
     assert_includes initializer, "poster: { resize_to_limit: [1280, 720] }"
     assert_not_includes initializer, "config.preprocessed_variants ="
+    assert_includes initializer, "config.dropbox.enabled = true"
+    assert_includes initializer, "DUMMY_DROPBOX_CLIENT_ID"
     assert_includes initializer, ":demo_cloud"
     assert_includes initializer, 'label: "Demo cloud import"'
     assert_includes page_model, "max_file_size: 25.megabytes"

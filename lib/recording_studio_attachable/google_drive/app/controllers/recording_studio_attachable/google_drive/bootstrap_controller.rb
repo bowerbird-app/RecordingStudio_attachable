@@ -9,7 +9,7 @@ module RecordingStudioAttachable
         ensure_google_drive_picker_configured!
 
         render json: bootstrap_payload
-      rescue RecordingStudioAttachable::DependencyUnavailableError, RecordingStudioAttachable::Error => e
+      rescue RecordingStudioAttachable::DependencyUnavailableError => e
         render json: { error: e.message }, status: :unprocessable_content
       end
 
@@ -27,13 +27,19 @@ module RecordingStudioAttachable
         }
 
         payload[:access_token] = current_google_drive_access_token
+        expires_at = google_drive_tokens["expires_at"].to_i
+        payload[:expires_at] = expires_at if expires_at.positive?
         payload
       rescue RecordingStudioAttachable::Error
-        payload.merge(
-          auth_url: oauth_client.authorization_url(
-            state: store_google_drive_state!(recording_id: @recording.id, popup: true, provider_key: "google_drive",
-                                             redirect_params: attachment_redirect_params)
-          )
+        payload.merge(connect_url: popup_connect_url)
+      end
+
+      def popup_connect_url
+        recording_connect_path(
+          @recording,
+          popup: 1,
+          provider_key: "google_drive",
+          **attachment_redirect_params
         )
       end
     end

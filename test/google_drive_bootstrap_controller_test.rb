@@ -60,23 +60,22 @@ class GoogleDriveBootstrapControllerTest < ActionController::TestCase
     assert_response :success
     payload = JSON.parse(@response.body)
     assert_equal "token-1", payload.fetch("access_token")
+    assert_operator payload.fetch("expires_at"), :>, Time.current.to_i + 3000
     assert_equal "api-key", payload.fetch("api_key")
     assert_equal "app-id", payload.fetch("app_id")
     assert_equal "/google_drive/recordings/rec-1/imports.json", payload.fetch("import_url")
   end
 
-  def test_show_returns_auth_url_when_not_connected
+  def test_show_returns_connect_url_without_writing_oauth_state_when_not_connected
     recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
     route_proxy = Object.new
     route_proxy.define_singleton_method(:recording_imports_path) do |record, **_kwargs|
       "/google_drive/recordings/#{record.id}/imports.json"
     end
     @controller.define_singleton_method(:google_drive) { route_proxy }
-    oauth_client = Object.new
-    oauth_client.define_singleton_method(:authorization_url) do |**kwargs|
-      raise "missing oauth state" if kwargs[:state].blank?
-
-      "https://accounts.google.test/auth"
+    @controller.define_singleton_method(:recording_connect_path) do |record, **kwargs|
+      query = kwargs.compact.to_query
+      "/google_drive/recordings/#{record.id}/connect#{"?#{query}" if query.present?}"
     end
 
     with_routing do |set|
@@ -88,16 +87,61 @@ class GoogleDriveBootstrapControllerTest < ActionController::TestCase
       @routes = set
 
       RecordingStudio::Recording.stub(:find, recording) do
-        @controller.stub(:oauth_client, oauth_client) do
-          get :show, params: { recording_id: recording.id, format: :json }
-        end
+        get :show, params: { recording_id: recording.id, format: :json }
       end
     end
 
     assert_response :success
     payload = JSON.parse(@response.body)
-    assert_equal "https://accounts.google.test/auth", payload.fetch("auth_url")
+    assert_includes payload.fetch("connect_url"), "/google_drive/recordings/rec-1/connect"
+    assert_includes payload.fetch("connect_url"), "popup=1"
+    assert_not payload.key?("auth_url")
     assert_nil payload["access_token"]
+    assert_nil @request.session.dig("recording_studio_attachable_google_drive", "oauth_state")
+  end
+
+  def test_show_returns_forbidden_when_upload_is_denied
+    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+    @controller.define_singleton_method(:authorize_attachment_action!) do |_action, _recording, capability_options: {}|
+      raise RecordingStudioAttachable::Authorization::NotAuthorizedError, "Not authorized to upload attachments for Workspace"
+    end
+
+    with_routing do |set|
+      set.draw do
+        get "/google_drive/recordings/:recording_id/bootstrap(.:format)",
+            to: "recording_studio_attachable/google_drive/bootstrap#show"
+      end
+
+      @routes = set
+
+      RecordingStudio::Recording.stub(:find, recording) do
+        get :show, params: { recording_id: recording.id, format: :json }
+      end
+    end
+
+    assert_response :forbidden
+    assert_equal "Not authorized to upload attachments for Workspace", JSON.parse(@response.body).fetch("error")
+  end
+
+  def test_show_returns_unprocessable_when_google_drive_is_disabled
+    RecordingStudioAttachable.configuration.google_drive.enabled = false
+    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+
+    with_routing do |set|
+      set.draw do
+        get "/google_drive/recordings/:recording_id/bootstrap(.:format)",
+            to: "recording_studio_attachable/google_drive/bootstrap#show"
+      end
+
+      @routes = set
+
+      RecordingStudio::Recording.stub(:find, recording) do
+        get :show, params: { recording_id: recording.id, format: :json }
+      end
+    end
+
+    assert_response :unprocessable_content
+    assert_equal "Google Drive addon is not enabled", JSON.parse(@response.body).fetch("error")
   end
 
   def test_show_preserves_attachment_redirect_params_in_import_url

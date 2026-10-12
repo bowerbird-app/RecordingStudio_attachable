@@ -34,12 +34,12 @@ module RecordingStudioAttachable
     end
 
     attr_reader :key, :label, :description, :icon, :style, :size, :strategy, :launcher, :modal_size,
-                :remote_importer
+                :remote_importer, :allowed_payload_keys, :launcher_module
 
     def initialize(key:, label:, url:, description: nil, icon: "cloud", style: :secondary, size: :md,
                    target: nil, visible: nil, strategy: :link, launcher: nil, bootstrap_url: nil,
                    import_url: nil, remote_importer: nil, presentation: nil, modal_title: nil, modal_size: :xl,
-                   iframe_title: nil, **system_arguments)
+                   iframe_title: nil, allowed_payload_keys: nil, launcher_module: nil, **system_arguments)
       @key = key.to_sym
       @label = label
       @url = url
@@ -58,6 +58,8 @@ module RecordingStudioAttachable
       @modal_title = modal_title
       @modal_size = modal_size.to_sym
       @iframe_title = iframe_title
+      @allowed_payload_keys = Array(allowed_payload_keys).map(&:to_s).uniq
+      @launcher_module = launcher_module.presence
       @system_arguments = system_arguments
 
       validate_strategy!

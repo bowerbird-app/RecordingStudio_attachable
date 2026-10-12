@@ -6,6 +6,12 @@ else
   "http://127.0.0.1:3000/recording_studio_attachable/google_drive/oauth/callback"
 end
 
+codespaces_dropbox_redirect_uri = if ENV["CODESPACE_NAME"].present? && ENV["GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN"].present?
+  "https://#{ENV.fetch("CODESPACE_NAME")}-3000.#{ENV.fetch("GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN")}/recording_studio_attachable/dropbox/oauth/callback"
+else
+  "http://127.0.0.1:3000/recording_studio_attachable/dropbox/oauth/callback"
+end
+
 RecordingStudioAttachable.configure do |config|
   config.max_file_size = 25.megabytes
   config.image_processing_enabled = true
@@ -31,6 +37,11 @@ RecordingStudioAttachable.configure do |config|
                                ENV.fetch("DUMMY_GOOGLE_DRIVE_APP_ID", "dummy-google-drive-app-id")
   config.google_drive.redirect_uri = ENV["DUMMY_GOOGLE_REDIRECT_URI"].presence ||
                                      ENV.fetch("DUMMY_GOOGLE_DRIVE_REDIRECT_URI", codespaces_redirect_uri)
+
+  config.dropbox.enabled = true
+  config.dropbox.client_id = ENV.fetch("DUMMY_DROPBOX_CLIENT_ID", "dummy-dropbox-client-id")
+  config.dropbox.client_secret = ENV.fetch("DUMMY_DROPBOX_CLIENT_SECRET", "dummy-dropbox-client-secret")
+  config.dropbox.redirect_uri = ENV.fetch("DUMMY_DROPBOX_REDIRECT_URI", codespaces_dropbox_redirect_uri)
 
   config.placement_picker_libraries = lambda { |parent_recording|
     root = parent_recording.try(:root_recording) || parent_recording

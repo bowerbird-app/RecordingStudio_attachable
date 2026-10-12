@@ -1,6 +1,7 @@
-import { registerUploadProviderLauncher } from "controllers/recording_studio_attachable/provider_launchers"
+import { hideProviderContinueButton, registerUploadProviderLauncher } from "controllers/recording_studio_attachable/provider_launchers"
 
 let googlePickerPromise
+const sessions = new Map()
 
 function loadScript(src) {
   return new Promise((resolve, reject) => {
@@ -86,28 +87,123 @@ function openPicker(bootstrap) {
   })
 }
 
-registerUploadProviderLauncher("google_drive", {
-  async launch({ controller, providerKey, bootstrapUrl }) {
-    const bootstrap = await controller.fetchProviderBootstrap(bootstrapUrl)
+const ACCESS_TOKEN_REFRESH_SKEW_SECONDS = 30
 
-    if (bootstrap.auth_url) {
-      const popup = controller.openPopup(bootstrap.auth_url, `${providerKey}-auth`)
-      if (!popup) {
-        throw new Error("The sign-in popup was blocked. Allow popups and try again.")
-      }
+function forgetSession(bootstrapUrl) {
+  if (bootstrapUrl) sessions.delete(bootstrapUrl)
+}
 
-      return
+function accessTokenNearExpiry(bootstrap) {
+  if (!bootstrap?.access_token) return false
+
+  const expiresAt = Number(bootstrap.expires_at)
+  if (!Number.isFinite(expiresAt) || expiresAt <= 0) return false
+
+  return expiresAt <= (Date.now() / 1000) + ACCESS_TOKEN_REFRESH_SKEW_SECONDS
+}
+
+function sessionFor(controller, bootstrapUrl) {
+  let session = sessions.get(bootstrapUrl)
+  if (session?.error || accessTokenNearExpiry(session?.bootstrap)) {
+    forgetSession(bootstrapUrl)
+    session = null
+  }
+  if (session) return session
+
+  session = { ready: false, bootstrap: null, error: null, promise: null }
+  session.promise = controller.fetchProviderBootstrap(bootstrapUrl).then(async (bootstrap) => {
+    session.bootstrap = bootstrap
+    const picker = ensureGooglePickerLoaded()
+    if (!needsAuth(bootstrap)) await picker
+    session.ready = true
+    return session
+  }).catch((error) => {
+    session.error = error
+    forgetSession(bootstrapUrl)
+    throw error
+  })
+  sessions.set(bootstrapUrl, session)
+  return session
+}
+
+function needsAuth(bootstrap) {
+  return Boolean(bootstrap?.connect_url || bootstrap?.auth_url)
+}
+
+function canOpenNow(session) {
+  if (!session?.ready || session.error || !session.bootstrap) return false
+  if (needsAuth(session.bootstrap)) return true
+
+  return Boolean(window.google?.picker)
+}
+
+async function applySelections(controller, providerKey, selections) {
+  if (selections.length === 0) {
+    controller.clearProviderStatus()
+    return
+  }
+
+  controller.clearProviderStatus()
+  controller.addProviderSelections(providerKey, selections)
+}
+
+function openPickerNow(controller, providerKey, bootstrap) {
+  hideProviderContinueButton(controller)
+  controller.setProviderStatus("Opening Google Drive picker…")
+  return openPicker(bootstrap).then((selections) => applySelections(controller, providerKey, selections))
+}
+
+function openWithGesture(controller, providerKey, bootstrap) {
+  hideProviderContinueButton(controller)
+  const authUrl = bootstrap.connect_url || bootstrap.auth_url
+  if (authUrl) {
+    const popup = controller.openPopup(authUrl, `${providerKey}-auth`)
+    if (!popup) {
+      throw new Error("The sign-in popup was blocked. Allow popups and try again.")
     }
 
-    controller.setProviderStatus("Opening Google Drive picker…")
-    await ensureGooglePickerLoaded()
-    const selections = await openPicker(bootstrap)
-    if (selections.length === 0) {
+    return
+  }
+
+  return openPickerNow(controller, providerKey, bootstrap)
+}
+
+registerUploadProviderLauncher("google_drive", {
+  forget(bootstrapUrl) {
+    forgetSession(bootstrapUrl)
+  },
+
+  prefetch({ controller, bootstrapUrl, button }) {
+    if (!controller || !bootstrapUrl) return Promise.resolve()
+
+    return sessionFor(controller, bootstrapUrl).promise.catch((error) => {
+      forgetSession(bootstrapUrl)
+      controller.handleProviderBootstrapError?.(error, button, { announce: false })
+    })
+  },
+
+  async launch({ controller, providerKey, bootstrapUrl, button, gesture = false }) {
+    hideProviderContinueButton(controller)
+    const session = sessionFor(controller, bootstrapUrl)
+    if (gesture && canOpenNow(session)) {
+      return openWithGesture(controller, providerKey, session.bootstrap)
+    }
+
+    controller.setProviderStatus("Google Drive is warming up…")
+    try {
+      await session.promise
+    } catch (error) {
+      forgetSession(bootstrapUrl)
+      controller.handleProviderBootstrapError?.(error, button)
+      throw error
+    }
+    if (session.error) throw session.error
+
+    if (needsAuth(session.bootstrap)) {
       controller.clearProviderStatus()
       return
     }
 
-    controller.clearProviderStatus()
-    controller.addProviderSelections(providerKey, selections)
+    return openPickerNow(controller, providerKey, session.bootstrap)
   }
 })

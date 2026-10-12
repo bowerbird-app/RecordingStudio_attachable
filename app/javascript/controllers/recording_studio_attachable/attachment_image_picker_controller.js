@@ -1,12 +1,25 @@
 import { DirectUpload } from "@rails/activestorage"
 import { Controller } from "@hotwired/stimulus"
 import { application } from "controllers/application"
-import { getUploadProviderLauncher } from "controllers/recording_studio_attachable/provider_launchers"
+import { getUploadProviderLauncher, onUploadProviderLaunchersChanged, relaunchUploadProvider } from "controllers/recording_studio_attachable/provider_launchers"
 import { preprocessImageFile } from "controllers/recording_studio_attachable/image_preprocessing"
-import "controllers/recording_studio_attachable/google_drive_picker_launcher"
 
 const PROVIDER_EVENT_STORAGE_KEY = "recording-studio-attachable:provider-event"
 const PROVIDER_EVENT_CHANNEL_NAME = `${PROVIDER_EVENT_STORAGE_KEY}:channel`
+
+async function readProviderBootstrapPayload(response) {
+  try {
+    return await response.json()
+  } catch (_error) {
+    return {}
+  }
+}
+
+function providerBootstrapError(payload, response, fallback) {
+  const error = new Error(payload.error || response.statusText || fallback || "Could not load provider bootstrap data.")
+  error.status = response.status
+  return error
+}
 
 export default class extends Controller {
   static targets = [
@@ -84,6 +97,10 @@ export default class extends Controller {
     if (this.hasScrollContainerTarget) {
       this.scrollContainerTarget.addEventListener("scroll", this.boundHandleScroll)
     }
+
+    this.pickerPrefetchAbort = new AbortController()
+    this.stopLauncherWatch = onUploadProviderLaunchersChanged(() => this.prefetchClientPickers())
+    this.prefetchClientPickers()
   }
 
   disconnect() {
@@ -93,6 +110,11 @@ export default class extends Controller {
     }
 
     this.clearProviderUploadTimers()
+    this.clientPickerButtons().forEach((button) => {
+      delete button.dataset.providerPrefetchBound
+    })
+    this.pickerPrefetchAbort?.abort()
+    this.stopLauncherWatch?.()
 
     window.removeEventListener("message", this.handleProviderMessage)
     window.removeEventListener("storage", this.handleProviderStorage)
@@ -145,11 +167,11 @@ export default class extends Controller {
     if (providerKey) this.providerButtonsByKey.set(providerKey, button)
 
     if (providerStrategy === "client_picker") {
-      await this.launchClientPicker(button)
+      await this.launchClientPicker(button, { gesture: true })
     }
   }
 
-  async launchClientPicker(button) {
+  async launchClientPicker(button, { gesture = false } = {}) {
     const launcherName = button.dataset.providerLauncher
     const launcher = getUploadProviderLauncher(launcherName)
     if (!launcher) {
@@ -165,11 +187,44 @@ export default class extends Controller {
         controller: this,
         providerKey: button.dataset.providerKey,
         bootstrapUrl: button.dataset.providerBootstrapUrl,
-        importUrl: button.dataset.providerImportUrl
+        importUrl: button.dataset.providerImportUrl,
+        gesture
       })
     } catch (error) {
       this.showStatus(error?.message || "Could not open the provider picker.")
     }
+  }
+
+  clientPickerButtons() {
+    return Array.from(this.element.querySelectorAll("[data-provider-strategy='client_picker']"))
+  }
+
+  prefetchClientPickers() {
+    this.clientPickerButtons().forEach((button) => this.bindClientPickerPrefetch(button))
+  }
+
+  bindClientPickerPrefetch(button) {
+    const run = () => this.prefetchClientPicker(button)
+    run()
+    if (button.dataset.providerPrefetchBound === "true") return
+
+    button.dataset.providerPrefetchBound = "true"
+    const signal = this.pickerPrefetchAbort?.signal
+    button.addEventListener("pointerenter", run, { signal })
+    button.addEventListener("focus", run, { signal })
+  }
+
+  prefetchClientPicker(button) {
+    if (button.disabled) return
+
+    const launcher = getUploadProviderLauncher(button.dataset.providerLauncher)
+    launcher?.prefetch?.({
+      button,
+      controller: this,
+      providerKey: button.dataset.providerKey,
+      bootstrapUrl: button.dataset.providerBootstrapUrl,
+      importUrl: button.dataset.providerImportUrl
+    })
   }
 
   openPickerFromToolbar(event) {
@@ -542,10 +597,7 @@ export default class extends Controller {
   }
 
   relaunchProvider(providerKey) {
-    const button = this.providerButtonsByKey.get(providerKey)
-    if (!button) return
-
-    this.launchClientPicker(button)
+    return relaunchUploadProvider(this, providerKey)
   }
 
   fetchProviderBootstrap(bootstrapUrl) {
@@ -556,11 +608,27 @@ export default class extends Controller {
         "X-Requested-With": "XMLHttpRequest"
       }
     }).then(async (response) => {
-      const payload = await response.json()
-      if (!response.ok) throw new Error(payload.error || this.i18nText("js.could_not_load_bootstrap", "Could not load provider bootstrap data."))
+      const payload = await readProviderBootstrapPayload(response)
+      if (!response.ok) {
+        throw providerBootstrapError(
+          payload,
+          response,
+          this.i18nText("js.could_not_load_bootstrap", "Could not load provider bootstrap data.")
+        )
+      }
 
       return payload
     })
+  }
+
+  handleProviderBootstrapError(error, button, { announce = true } = {}) {
+    if (button && (error?.status === 403 || error?.status === 422)) {
+      button.disabled = true
+    }
+
+    if (!announce) return
+
+    this.showStatus(error?.message || this.i18nText("js.could_not_load_bootstrap", "Could not load provider bootstrap data."))
   }
 
   openPopup(url, name = "recording-studio-attachable-provider-auth") {

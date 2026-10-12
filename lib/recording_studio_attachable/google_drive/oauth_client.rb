@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require "json"
-require "net/http"
 require "uri"
 
 module RecordingStudioAttachable
   module GoogleDrive
     class OAuthClient
+      include RecordingStudioAttachable::Adapter::OauthClient
+
       class Error < RecordingStudioAttachable::Error; end
 
       AUTHORIZATION_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
@@ -56,48 +56,15 @@ module RecordingStudioAttachable
 
       attr_reader :configuration
 
-      def ensure_configured!
-        return if configuration.configured?
-
-        raise RecordingStudioAttachable::DependencyUnavailableError,
-              Copy.t(
-                "google_drive.missing_credentials",
-                default: "Google Drive addon is missing client credentials or redirect URI"
-              )
+      def missing_credentials_message
+        Copy.t(
+          "google_drive.missing_credentials",
+          default: "Google Drive addon is missing client credentials or redirect URI"
+        )
       end
 
-      def post_form(attributes)
-        ensure_configured!
-
-        uri = URI(TOKEN_ENDPOINT)
-        request = Net::HTTP::Post.new(uri)
-        request.set_form_data(attributes)
-
-        response = Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
-          http.request(request)
-        end
-
-        body = parse_json(response.body)
-        raise Error, response_error_message(body, "Google Drive authentication failed") unless response.is_a?(Net::HTTPSuccess)
-
-        normalize_token_response(body)
-      end
-
-      def normalize_token_response(body)
-        expires_in = body["expires_in"].to_i
-        return body unless expires_in.positive?
-
-        body.merge("expires_at" => Time.current.to_i + expires_in)
-      end
-
-      def parse_json(body)
-        JSON.parse(body.to_s)
-      rescue JSON::ParserError
-        {}
-      end
-
-      def response_error_message(body, default_message)
-        body["error_description"].presence || body["error"].presence || default_message
+      def authentication_failed_message
+        "Google Drive authentication failed"
       end
     end
   end

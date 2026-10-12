@@ -29,7 +29,7 @@ class GoogleDriveOAuthClientTest < Minitest::Test
   end
 
   def test_authorization_url_requires_a_configured_google_drive_client
-    unconfigured = RecordingStudioAttachable::Configuration::GoogleDriveConfiguration.new
+    unconfigured = RecordingStudioAttachable::GoogleDrive::Configuration.new
     oauth_client = RecordingStudioAttachable::GoogleDrive::OAuthClient.new(configuration: unconfigured)
 
     error = assert_raises(RecordingStudioAttachable::DependencyUnavailableError) do
@@ -47,10 +47,10 @@ class GoogleDriveOAuthClientTest < Minitest::Test
       success: true
     )
 
-    Net::HTTP.stub(:start, lambda { |host, port, use_ssl:, &block|
+    Net::HTTP.stub(:start, lambda { |host, port, **options, &block|
       assert_equal "oauth2.googleapis.com", host
       assert_equal 443, port
-      assert_equal true, use_ssl
+      assert_equal true, options[:use_ssl]
 
       http = Object.new
       http.define_singleton_method(:request) do |request|
@@ -83,8 +83,8 @@ class GoogleDriveOAuthClientTest < Minitest::Test
       success: true
     )
 
-    Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
-      assert_equal true, use_ssl
+    Net::HTTP.stub(:start, lambda { |_host, _port, **options, &block|
+      assert_equal true, options[:use_ssl]
 
       http = Object.new
       http.define_singleton_method(:request) { |_request| response }
@@ -103,8 +103,8 @@ class GoogleDriveOAuthClientTest < Minitest::Test
       success: false
     )
 
-    Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
-      assert_equal true, use_ssl
+    Net::HTTP.stub(:start, lambda { |_host, _port, **options, &block|
+      assert_equal true, options[:use_ssl]
 
       http = Object.new
       http.define_singleton_method(:request) { |_request| response }
@@ -121,8 +121,8 @@ class GoogleDriveOAuthClientTest < Minitest::Test
   def test_refresh_token_uses_default_error_message_for_invalid_json_failures
     response = FakeResponse.new(body: "upstream failure", code: "502", success: false)
 
-    Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
-      assert_equal true, use_ssl
+    Net::HTTP.stub(:start, lambda { |_host, _port, **options, &block|
+      assert_equal true, options[:use_ssl]
 
       http = Object.new
       http.define_singleton_method(:request) { |_request| response }
@@ -143,8 +143,8 @@ class GoogleDriveOAuthClientTest < Minitest::Test
       success: false
     )
 
-    Net::HTTP.stub(:start, lambda { |_host, _port, use_ssl:, &block|
-      assert_equal true, use_ssl
+    Net::HTTP.stub(:start, lambda { |_host, _port, **options, &block|
+      assert_equal true, options[:use_ssl]
 
       http = Object.new
       http.define_singleton_method(:request) { |_request| response }
@@ -165,7 +165,7 @@ class GoogleDriveOAuthClientTest < Minitest::Test
   end
 
   def configured_google_drive
-    @configured_google_drive ||= RecordingStudioAttachable::Configuration::GoogleDriveConfiguration.new.tap do |configuration|
+    @configured_google_drive ||= RecordingStudioAttachable::GoogleDrive::Configuration.new.tap do |configuration|
       configuration.merge!(
         client_id: "client-id",
         client_secret: "client-secret",

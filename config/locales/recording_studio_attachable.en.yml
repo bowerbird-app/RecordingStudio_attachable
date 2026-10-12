@@ -14,6 +14,10 @@ en:
       connected: "Connected Google Drive."
       disconnected: "Disconnected Google Drive."
       session_expired: "Google Drive session expired. Reconnect to continue."
+    dropbox:
+      connected: "Dropbox is connected."
+      disconnected: "Dropbox is disconnected."
+      session_expired: "Dropbox signed you out. Connect again to keep going."
     libraries:
       keys:
         default: "Images"

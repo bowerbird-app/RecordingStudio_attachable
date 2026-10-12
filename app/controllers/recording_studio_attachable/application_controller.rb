@@ -242,7 +242,7 @@ module RecordingStudioAttachable
           <body>
             <script>
               (() => {
-                const payload = JSON.parse("#{payload_json}");
+                const payload = #{payload_json};
                 const storageKey = "#{PROVIDER_EVENT_STORAGE_KEY}";
                 const channelName = `${storageKey}:channel`;
                 const targets = [];

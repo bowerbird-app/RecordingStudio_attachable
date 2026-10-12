@@ -169,6 +169,8 @@ class GoogleDriveOauthControllerTest < ActionController::TestCase
     assert_includes @response.body, "localStorage.setItem"
     assert_includes @response.body, "BroadcastChannel"
     assert_includes @response.body, "window.close()"
+    refute_match(/const payload = JSON\.parse\("/, @response.body)
+    assert_match(/const payload = \{/, @response.body)
   end
 
   def test_callback_renders_popup_completion_without_modal_reload_for_client_picker_flows

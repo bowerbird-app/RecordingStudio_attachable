@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `SafeRemoteFetch` treats `max_file_size` `nil` as no byte cap. Deadlines and connect/read timeouts still apply.
 - Drive and Dropbox bootstrap JSON returns `403` when the actor cannot upload (was `422` on Drive). Disabled adapters still return `422`.
 
+### Fixed
+
+- OAuth popup completion pages emit the postMessage payload as a JavaScript object literal so the script can run and close the window.
+
 ### Upgrade Notes
 
 - Google Drive stays off by default. Hosts that already set `config.google_drive.enabled = true` plus OAuth and Picker credentials keep the Drive button. `config.google_drive.*` is unchanged.

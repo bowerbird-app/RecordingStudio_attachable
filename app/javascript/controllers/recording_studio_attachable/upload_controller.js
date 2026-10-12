@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 import { DirectUpload } from "@rails/activestorage"
-import { getUploadProviderLauncher } from "controllers/recording_studio_attachable/provider_launchers"
+import { getUploadProviderLauncher, onUploadProviderLaunchersChanged } from "controllers/recording_studio_attachable/provider_launchers"
 import { preprocessImageFile, shouldPreprocessImageFile } from "controllers/recording_studio_attachable/image_preprocessing"
 
 const PROVIDER_EVENT_STORAGE_KEY = "recording-studio-attachable:provider-event"
@@ -53,11 +53,17 @@ export default class extends Controller {
       this.providerEventChannel = new window.BroadcastChannel(PROVIDER_EVENT_CHANNEL_NAME)
       this.providerEventChannel.addEventListener("message", this.handleProviderChannelMessage)
     }
+
+    this.pickerPrefetchAbort = new AbortController()
+    this.stopLauncherWatch = onUploadProviderLaunchersChanged(() => this.prefetchClientPickers())
+    this.prefetchClientPickers()
   }
 
   disconnect() {
     this.files.forEach((entry) => this.revokePreview(entry))
     this.clearAllRemoteStageTimers()
+    this.pickerPrefetchAbort?.abort()
+    this.stopLauncherWatch?.()
     window.removeEventListener("message", this.handleProviderMessage)
     window.removeEventListener("storage", this.handleProviderStorage)
 
@@ -83,7 +89,7 @@ export default class extends Controller {
     }
 
     if (providerStrategy === "client_picker") {
-      await this.launchClientPicker(button)
+      await this.launchClientPicker(button, { gesture: true })
     }
   }
 
@@ -104,7 +110,7 @@ export default class extends Controller {
     }
   }
 
-  async launchClientPicker(button) {
+  async launchClientPicker(button, { gesture = false } = {}) {
     const launcherName = button.dataset.providerLauncher
     const launcher = getUploadProviderLauncher(launcherName)
     if (!launcher) {
@@ -120,11 +126,42 @@ export default class extends Controller {
         controller: this,
         providerKey: button.dataset.providerKey,
         bootstrapUrl: button.dataset.providerBootstrapUrl,
-        importUrl: button.dataset.providerImportUrl
+        importUrl: button.dataset.providerImportUrl,
+        gesture
       })
     } catch (error) {
       this.setProviderStatus(error?.message || this.i18nText("js.could_not_open_picker", "Could not open the provider picker."), "error")
     }
+  }
+
+  clientPickerButtons() {
+    return Array.from(this.element.querySelectorAll("[data-provider-strategy='client_picker']"))
+  }
+
+  prefetchClientPickers() {
+    this.clientPickerButtons().forEach((button) => this.bindClientPickerPrefetch(button))
+  }
+
+  bindClientPickerPrefetch(button) {
+    const run = () => this.prefetchClientPicker(button)
+    run()
+    if (button.dataset.providerPrefetchBound === "true") return
+
+    button.dataset.providerPrefetchBound = "true"
+    const signal = this.pickerPrefetchAbort?.signal
+    button.addEventListener("pointerenter", run, { signal })
+    button.addEventListener("focus", run, { signal })
+  }
+
+  prefetchClientPicker(button) {
+    const launcher = getUploadProviderLauncher(button.dataset.providerLauncher)
+    launcher?.prefetch?.({
+      button,
+      controller: this,
+      providerKey: button.dataset.providerKey,
+      bootstrapUrl: button.dataset.providerBootstrapUrl,
+      importUrl: button.dataset.providerImportUrl
+    })
   }
 
   filesSelected(event) {
@@ -490,7 +527,7 @@ export default class extends Controller {
     const button = this.providerButtonsByKey.get(providerKey)
     if (!button) return
 
-    this.launchClientPicker(button)
+    this.launchClientPicker(button, { gesture: false })
   }
 
   reloadProviderFrame(payload) {

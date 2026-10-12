@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - OAuth popup completion pages emit the postMessage payload as a JavaScript object literal so the script can run and close the window.
+- Dropbox Chooser (`Dropbox.choose`) and OAuth popups run inside a user click. Bootstrap and `dropins.js` preload on connect/hover; if they are not ready yet, a Choose from Dropbox button appears. Drive uses the same gesture-safe open for its auth popup.
 
 ### Upgrade Notes
 

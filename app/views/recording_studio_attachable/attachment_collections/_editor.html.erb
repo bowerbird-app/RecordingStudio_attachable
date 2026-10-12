@@ -15,6 +15,7 @@
          data-recording-studio-attachable--collection-display-display-value="<%= collection.default_display %>"
          data-recording-studio-attachable--collection-display-active-classes-value="<%= FlatPack::Button::Pill::Component::ITEM_ACTIVE_CLASSES %>"
          data-recording-studio-attachable--collection-display-inactive-classes-value="<%= FlatPack::Button::Pill::Component::ITEM_INACTIVE_CLASSES %>"
+         data-recording-studio-attachable--collection-display-i18n-value="<%= ERB::Util.html_escape(attachable_collection_js_i18n.to_json) %>"
        <% end %>>
     <% if collection.displays.size > 1 %>
       <%= render FlatPack::Button::Pill::Component.new(
@@ -135,7 +136,7 @@
                         <p class="text-sm text-(--surface-muted-content-color)" data-save-status role="status" hidden></p>
                       </div>
                       <%= render FlatPack::Button::Component.new(
-                            text: collection.remove_label,
+                            text: RecordingStudioAttachable::Copy.translate_remove_label(collection.remove_label),
                             icon: "trash",
                             icon_only: true,
                             style: :danger,
@@ -220,7 +221,7 @@
                             show_order: collection.sortable? %>
                       <div class="inline-flex">
                         <%= render FlatPack::Button::Component.new(
-                              text: collection.remove_label,
+                              text: RecordingStudioAttachable::Copy.translate_remove_label(collection.remove_label),
                               icon: "trash",
                               style: :danger,
                               size: :md,

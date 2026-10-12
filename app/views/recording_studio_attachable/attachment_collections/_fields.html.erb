@@ -2,7 +2,7 @@
 <% collection.fields.each do |field| %>
   <% if field.control == :area %>
     <div>
-      <label class="mb-2 block text-sm font-medium"><%= field.label %></label>
+      <label class="mb-2 block text-sm font-medium"><%= RecordingStudioAttachable::Copy.field_label(field) %></label>
       <%= text_area_tag collection.input_name(field.key),
                         row.values[field.key],
                         form: form_id,
@@ -11,7 +11,7 @@
   <% else %>
     <%= render FlatPack::TextInput::Component.new(
       name: collection.input_name(field.key),
-      label: field.label,
+      label: RecordingStudioAttachable::Copy.field_label(field),
       value: row.values[field.key],
       required: field.key == :name,
       form: form_id

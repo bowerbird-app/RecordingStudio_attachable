@@ -4,6 +4,7 @@ require_relative "attachment_file_buttons_helper"
 require_relative "attachment_collections_helper"
 
 module RecordingStudioAttachable
+  # rubocop:disable Metrics/ModuleLength -- helpers include JS i18n payloads for upload/picker
   module ApplicationHelper
     include AttachmentFileButtonsHelper
     include AttachmentCollectionsHelper
@@ -66,6 +67,72 @@ module RecordingStudioAttachable
       end
     end
 
+    def attachable_js_i18n(english_by_key)
+      english_by_key.each_with_object({}) do |(key, english), payload|
+        payload[key] = RecordingStudioAttachable::Copy.t(key, default: english)
+      end
+    end
+
+    # rubocop:disable Metrics/MethodLength, Style/FormatStringToken -- I18n/JS tokens match en.yml %{name} form
+    def attachable_upload_js_i18n
+      attachable_js_i18n(
+        "js.provider_unavailable" => "This upload provider is not available on this page.",
+        "js.could_not_open_picker" => "Could not open the provider picker.",
+        "js.finalization_failed" => "Finalization failed",
+        "js.remote_file" => "Remote file",
+        "js.file_exceeds_max_size" => "File exceeds the maximum allowed size",
+        "js.type_not_allowed" => "%{type} is not allowed. Allowed types: %{types}",
+        "js.unknown_type" => "Unknown type",
+        "js.could_not_prepare_file" => "Could not prepare file for upload",
+        "js.max_files_up_to" => "You can upload up to %{count} %{noun} at a time",
+        "js.file_noun.one" => "file",
+        "js.file_noun.other" => "files",
+        "js.importing_from" => "Importing from %{provider}",
+        "js.authentication_failed" => "Authentication failed.",
+        "js.could_not_load_bootstrap" => "Could not load provider bootstrap data.",
+        "js.optimizing_before_upload" => "Optimizing image before upload…",
+        "js.uploading_name" => "Uploading %{name}",
+        "js.remove_from_queue" => "Remove from upload queue",
+        "js.remove_name_from_queue" => "Remove %{name} from upload queue",
+        "js.retry" => "Retry",
+        "js.progress" => "Progress",
+        "js.cloud_import" => "Cloud import",
+        "js.file_badge" => "FILE",
+        "js.cloud" => "Cloud",
+        "js.import_queued" => "Import queued",
+        "js.importing" => "Importing",
+        "js.creating_attachment" => "Creating attachment",
+        "js.import_complete" => "Import complete",
+        "js.import_failed" => "Import failed",
+        "js.ready_to_import" => "Ready to import"
+      )
+    end
+
+    def attachable_picker_js_i18n
+      attachable_js_i18n(
+        "picker.select_one_or_more" => "Select one or more",
+        "picker.selected.one" => "%{count} selected",
+        "picker.selected.other" => "%{count} selected",
+        "picker.untitled_image" => "Untitled image",
+        "picker.unable_to_load_library" => "Unable to load image library",
+        "picker.unable_to_add_image" => "Unable to add image",
+        "picker.uploading" => "Uploading",
+        "picker.uploading_of" => "Uploading %{index} of %{total}",
+        "picker.upload_completed_without_attachment" => "Upload completed without an attachment payload",
+        "js.could_not_load_bootstrap" => "Could not load provider bootstrap data.",
+        "js.progress" => "Progress",
+        "js.uploading_name" => "Uploading %{name}"
+      )
+    end
+    # rubocop:enable Metrics/MethodLength, Style/FormatStringToken
+
+    def attachable_collection_js_i18n
+      attachable_js_i18n(
+        "collection.saved" => "Saved",
+        "flashes.could_not_save" => "Could not save."
+      )
+    end
+
     private
 
     def attachable_routes
@@ -76,4 +143,5 @@ module RecordingStudioAttachable
       end
     end
   end
+  # rubocop:enable Metrics/ModuleLength
 end

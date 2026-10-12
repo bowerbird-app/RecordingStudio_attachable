@@ -34,7 +34,12 @@ module RecordingStudioAttachable
       respond_to do |format|
         format.html do
           if result.success?
-            redirect_to resolved_attachment_redirect_path(@recording), notice: "Uploaded #{result.value.size} attachment(s)."
+            redirect_to resolved_attachment_redirect_path(@recording),
+                        notice: Copy.t(
+                          "flashes.uploaded_count",
+                          count: result.value.size,
+                          default: "Uploaded #{result.value.size} attachment(s)."
+                        )
           else
             redirect_to recording_attachment_upload_path(@recording, attachment_redirect_params), alert: result.error
           end

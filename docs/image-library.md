@@ -134,8 +134,13 @@ en:
 Static interface copy on the gem's own screens (library listing, upload,
 attachment edit, collection editor, picker modal, Google Drive import) uses
 nested keys under `recording_studio.attachable` in `config/locales/en.yml`.
-Hosts override those the same way. Older `recording_studio_attachable.*` keys
-stay for flashes, placement chrome, and library labels.
+Non-view English (controller flashes, validation messages, collection empty and
+remove labels, file-fact type labels, Google Drive user-facing errors, and JS
+string blobs) uses the same nested prefix, with English `default:` on every
+lookup. Hosts override by defining the same keys in their own `config/locales`.
+Older `recording_studio_attachable.*` keys stay for library labels and as the
+legacy-first lookup for flashes and placement chrome; public constants such as
+`FIELDS`, `EMPTY_MESSAGES`, and `TYPE_LABELS` keep their English values.
 
 Or set `config.library_label` when i18n is not enough:
 

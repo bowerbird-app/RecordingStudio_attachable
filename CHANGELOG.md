@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-12
+
+### Added
+
+- English Rails I18n keys for non-view copy under `recording_studio.attachable` (controller flashes, validation messages, collection empty/remove labels, field labels at render, file-fact type labels, Google Drive user-facing errors, and JS string blobs).
+- Host English override coverage: test-only fixture `test/dummy/test/locales/attachable_host_override.en.yml` loaded via `I18n.backend.load_translations` (no `I18n.load_path` mutation) plus a real-page assert.
+- Always-loaded boot-order guard `test/dummy/config/locales/recording_studio_attachable_host.en.yml` for a rarely shown flash key, with a render assert on the not-found redirect.
+- Locale regression: every `lib/**/*.rb` file must not mention `i18n.load_path` / `I18n.load_path`.
+- Render-level asserts for library empty title and upload page English.
+
+### Changed
+
+- Controller flashes, validation messages, Google Drive user-facing errors, and JS string blobs resolve through `Copy.t` / `Copy.legacy_t` with English `default:`.
+- Public model/helper return values stay main's literal English (`Placement#title`, `AttachmentFileFacts#type_label`, collection `empty_message` / `remove_label`, STALE_FORM / GONE raises). Views keep main's conditional structure and swap only gem literals (or value expressions) to `t`/`Copy` with English `default:` — no new presence checks or branches.
+- Validation `errors.add` for former English-string types passes the translated string as the String type (ActiveModel 8.1 ignores `message:` for Strings). In non-English locales, `errors.details` carries the translated string for those former String types.
+- JS upload, picker, and collection-display controllers read copy from a data-attribute JSON blob with English fallbacks in JS (picker keeps the pre-existing `Select one or more` wording).
+
+### Upgrade Notes
+
+- Bump to `0.15.0`. No migration.
+- English hosts need no change. Copy new `recording_studio.attachable.flashes.*`, `errors.*`, `collection.*`, `file_facts.*`, `google_drive.*`, `js.*`, and related keys into host locale files when translating.
+- Hosts override by defining the same nested keys in their own `config/locales`. Public constants and public English-returning methods stay byte-identical to main; translate only at render.
+- `AttachmentCollectionDisplay::LABELS` stays English at the constant (public API); views already translate display pills via nested keys.
+- Metrics DSL titles stay English (captured at registration).
+
 ## [0.14.1] - 2026-10-09
 
 ### Fixed
@@ -347,7 +372,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.14.1...v0.15.0
 [0.11.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.9.1...v0.10.0
 [0.9.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.8.0...v0.9.0

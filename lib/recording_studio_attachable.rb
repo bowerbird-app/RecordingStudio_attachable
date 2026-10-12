@@ -49,6 +49,7 @@ require "active_support/core_ext/numeric/bytes"
 require "recording_studio"
 
 require "recording_studio_attachable/version"
+require "recording_studio_attachable/copy"
 require "recording_studio_attachable/configuration"
 require "recording_studio_attachable/direct_url"
 require "recording_studio_attachable/attachment_urls"

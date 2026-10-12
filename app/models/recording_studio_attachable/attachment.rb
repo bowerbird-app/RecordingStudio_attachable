@@ -103,7 +103,13 @@ module RecordingStudioAttachable
         allowed_content_types: validation_options[:allowed_content_types]
       )
 
-      errors.add(:content_type, "is not allowed")
+      errors.add(
+        :content_type,
+        RecordingStudioAttachable::Copy.t(
+          "errors.content_type_not_allowed",
+          default: "is not allowed"
+        )
+      )
     end
 
     def attachment_kind_must_be_enabled
@@ -113,7 +119,13 @@ module RecordingStudioAttachable
         enabled_attachment_kinds: validation_options[:enabled_attachment_kinds]
       )
 
-      errors.add(:attachment_kind, "is not enabled")
+      errors.add(
+        :attachment_kind,
+        RecordingStudioAttachable::Copy.t(
+          "errors.attachment_kind_not_enabled",
+          default: "is not enabled"
+        )
+      )
     end
   end
 end

@@ -16,19 +16,25 @@ module RecordingStudioAttachable
       def ensure_google_drive_enabled!
         unless google_drive_configuration.enabled?
           raise RecordingStudioAttachable::DependencyUnavailableError,
-                "Google Drive addon is not enabled"
+                Copy.t("google_drive.not_enabled", default: "Google Drive addon is not enabled")
         end
         return if google_drive_configuration.configured?
 
         raise RecordingStudioAttachable::DependencyUnavailableError,
-              "Google Drive addon is missing client credentials or redirect URI"
+              Copy.t(
+                "google_drive.missing_credentials",
+                default: "Google Drive addon is missing client credentials or redirect URI"
+              )
       end
 
       def ensure_google_drive_picker_configured!
         return if google_drive_configuration.picker_configured?
 
         raise RecordingStudioAttachable::DependencyUnavailableError,
-              "Google Drive picker requires api_key and app_id configuration"
+              Copy.t(
+                "google_drive.picker_requires_config",
+                default: "Google Drive picker requires api_key and app_id configuration"
+              )
       end
 
       def authorize_google_drive_upload!
@@ -73,7 +79,8 @@ module RecordingStudioAttachable
 
         return saved if expected.present? && actual.present? && ActiveSupport::SecurityUtils.secure_compare(expected, actual)
 
-        raise RecordingStudioAttachable::Error, "Google Drive authorization state did not match"
+        raise RecordingStudioAttachable::Error,
+              Copy.t("google_drive.state_mismatch", default: "Google Drive authorization state did not match")
       end
 
       def current_google_drive_access_token

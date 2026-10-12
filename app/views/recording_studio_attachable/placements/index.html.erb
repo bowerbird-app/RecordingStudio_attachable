@@ -17,7 +17,8 @@
   data-recording-studio-attachable--attachment-image-picker-image-processing-max-height-value="<%= RecordingStudioAttachable.configuration.image_processing_max_height %>"
   data-recording-studio-attachable--attachment-image-picker-image-processing-quality-value="<%= RecordingStudioAttachable.configuration.image_processing_quality %>"
   data-recording-studio-attachable--attachment-image-picker-multiple-selection-value="false"
-  data-recording-studio-attachable--attachment-image-picker-modal-id-value="<%= picker_modal_id %>">
+  data-recording-studio-attachable--attachment-image-picker-modal-id-value="<%= picker_modal_id %>"
+  data-recording-studio-attachable--attachment-image-picker-i18n-value="<%= ERB::Util.html_escape(attachable_picker_js_i18n.to_json) %>">
 
   <%= render FlatPack::PageNav::Component.new(
     back_icon: "arrow-left",

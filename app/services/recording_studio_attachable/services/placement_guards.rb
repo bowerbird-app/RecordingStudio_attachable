@@ -20,8 +20,9 @@ module RecordingStudioAttachable
       def assert_same_root!(parent, attachment)
         return if same_root?(parent, attachment)
 
-        raise ArgumentError, I18n.t(
-          "recording_studio_attachable.placements.different_workspace",
+        raise ArgumentError, Copy.legacy_t(
+          "placements.different_workspace",
+          "placements.different_workspace",
           default: "That photo belongs to another workspace."
         )
       end
@@ -35,8 +36,9 @@ module RecordingStudioAttachable
       def assert_library_image!(parent, attachment)
         return if library_child?(parent, attachment)
 
-        raise ArgumentError, I18n.t(
-          "recording_studio_attachable.placements.not_in_library",
+        raise ArgumentError, Copy.legacy_t(
+          "placements.not_in_library",
+          "placements.not_in_library",
           default: "That photo is not in a library in this workspace."
         )
       end

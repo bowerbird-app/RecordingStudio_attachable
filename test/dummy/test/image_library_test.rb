@@ -160,6 +160,22 @@ class ImageLibraryTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Drag and drop, or choose"
     assert_includes response.body, "Choose files"
     assert_includes response.body, "Back"
+    assert_includes response.body, "Progress"
+  end
+
+  test "empty library listing renders literal english empty title" do
+    workspace = Workspace.find_or_create_by!(name: "Empty Library Workspace #{SecureRandom.hex(4)}")
+    Current.actor = @user
+    root = RecordingStudio.root_recording_for(workspace)
+    grant_workspace_access!(root)
+    library = RecordingStudioAttachable.library_for(root, actor: @user)
+
+    get recording_studio_attachable.recording_attachments_path(library)
+    assert_response :success
+    assert_includes response.body, "Nothing uplaoded yet"
+    assert_includes response.body, "Upload files to start building this library."
+    assert_includes response.body, "Library"
+    refute_includes response.body, "HOST Nothing uplaoded yet"
   end
 
   test "attachment show page shows english edit chrome" do

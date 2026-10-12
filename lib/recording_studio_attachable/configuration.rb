@@ -325,7 +325,10 @@ module RecordingStudioAttachable
       lambda { |key|
         I18n.t(
           "recording_studio_attachable.libraries.keys.#{key}",
-          default: RecordingStudioAttachable::Services::LibraryQuery.humanized_key(key)
+          default: [
+            :"recording_studio.attachable.libraries.keys.#{key}",
+            RecordingStudioAttachable::Services::LibraryQuery.humanized_key(key)
+          ]
         )
       }
     end

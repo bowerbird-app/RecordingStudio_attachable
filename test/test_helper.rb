@@ -7,13 +7,20 @@ require "minitest/autorun"
 require "minitest/mock"
 require "rails"
 require "active_storage/engine"
+require "i18n"
+require "yaml"
 require "recording_studio_attachable"
 
+# Do not append gem locales to I18n.load_path here. Rails engines already put
+# config/locales on the load path when the dummy boots; an explicit append can
+# re-order files so gem English overrides the host. Unit tests (no Rails app)
+# seed the backend from en.yml without touching the load path.
+I18n.available_locales = Array(I18n.available_locales) | %i[en]
+I18n.default_locale = :en
 Dir[File.expand_path("../config/locales/*.yml", __dir__)].each do |path|
-  expanded = File.expand_path(path)
-  I18n.load_path << expanded unless I18n.load_path.map { |entry| File.expand_path(entry) }.include?(expanded)
+  tree = YAML.safe_load_file(path, aliases: true).fetch("en")
+  I18n.backend.store_translations(:en, tree)
 end
-I18n.backend.load_translations
 
 Mime::Type.register "text/vnd.turbo-stream.html", :turbo_stream unless Mime::Type.lookup_by_extension(:turbo_stream)
 

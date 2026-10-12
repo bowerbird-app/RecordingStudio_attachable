@@ -331,7 +331,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes picker_controller, "maxBytes: this.maxFileSizeValue"
     assert_includes picker_controller, "const selectedFiles = this.multipleSelectionEnabled() ? files : [files[0]]"
     assert_includes picker_controller, "const upload = new DirectUpload(file, this.directUploadUrlValue, entry"
-    assert_includes picker_controller, 'button.setAttribute("aria-label", attachment.name || "Untitled image")'
+    assert_includes picker_controller, 'button.setAttribute("aria-label", attachment.name || this.i18nText("picker.untitled_image", "Untitled image"))'
     assert_includes picker_controller, 'button.setAttribute("aria-pressed", this.attachmentSelectedForMultiMode(attachment.id) ? "true" : "false")'
     assert_includes picker_controller, "attachmentId: attachment.id"
     assert_includes picker_controller, "showPath: attachment.show_path"
@@ -449,8 +449,10 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes panel_partial, 'data-chat-demo-target="attachmentTemplate"'
     assert_includes attachment_preview_partial, "FlatPack::Chat::Attachment::Component.new("
     assert_includes attachment_preview_partial, "FlatPack::Button::Component.new("
-    assert_includes picker_controller, "`${count} selected`"
-    assert_includes picker_controller, '"Select one or more"'
+    # rubocop:disable Style/FormatStringToken -- asserts JS I18n %{count} token byte-identical to main
+    assert_includes picker_controller, 'this.i18nFormat(count === 1 ? "picker.selected.one" : "picker.selected.other", "%{count} selected", { count })'
+    # rubocop:enable Style/FormatStringToken
+    assert_includes picker_controller, 'this.i18nText("picker.select_one_or_more", "Select one or more")'
     assert_includes picker_modal_partial, 'data-recording-studio-attachable--attachment-image-picker-target="modeSummary"'
     assert_includes picker_modal_partial, 't("recording_studio.attachable.picker.add_selected")'
     assert_includes picker_modal_partial, 't("recording_studio.attachable.picker.clear")'

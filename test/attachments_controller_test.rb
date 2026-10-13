@@ -16,14 +16,13 @@ module RecordingStudioAttachable
       ensure_recording_lookup!
     end
 
-    def test_show_assigns_owner_and_attachment_configuration
+    def test_show_assigns_attachment_configuration_and_place_labels
       attachment = Struct.new(:name, :description, :original_filename, :file).new("Hero", "", "hero.png", Object.new)
       attachment_recording = FakeRecording.new(
         id: "att-1",
         recordable_type: "RecordingStudioAttachable::Attachment",
         recordable: attachment
       )
-      owner = FakeRecording.new(id: "owner-1", recordable_type: "Workspace")
 
       with_routing do |set|
         set.draw do
@@ -46,9 +45,9 @@ module RecordingStudioAttachable
             }
 
             @controller.stub(:configured_attachable_option, configured_option) do
-              @controller.stub(:attachable_owner_recording, owner) do
+              RecordingStudioAttachable.configuration.stub(:attachment_place_labels_for, ["Home page"]) do
                 @controller.define_singleton_method(:default_render) do
-                  render plain: [@attachment.name, @owner_recording.id, @replace_allowed_content_types.join(",")].join("|")
+                  render plain: [@attachment.name, @place_labels.join(","), @replace_allowed_content_types.join(",")].join("|")
                 end
 
                 get :show, params: { id: attachment_recording.id }
@@ -59,7 +58,7 @@ module RecordingStudioAttachable
       end
 
       assert_response :success
-      assert_equal "Hero|owner-1|image/*", @response.body
+      assert_equal "Hero|Home page|image/*", @response.body
     end
 
     def test_update_replaces_attachment_file_when_signed_blob_id_is_present

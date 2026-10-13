@@ -15,12 +15,7 @@ module RecordingStudioAttachable
       @image_processing_max_width = configured_attachable_option(@attachment_recording, :image_processing_max_width)
       @image_processing_max_height = configured_attachable_option(@attachment_recording, :image_processing_max_height)
       @image_processing_quality = configured_attachable_option(@attachment_recording, :image_processing_quality)
-      @owner_recording = attachable_owner_recording(@attachment_recording)
-      @placement_usages = if Placements.library_recording?(@owner_recording)
-                            RecordingStudioAttachable::Placements.usage_for(@attachment_recording)
-                          else
-                            []
-                          end
+      @place_labels = RecordingStudioAttachable.configuration.attachment_place_labels_for(@attachment_recording)
     end
 
     def update

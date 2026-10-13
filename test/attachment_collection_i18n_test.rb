@@ -49,23 +49,21 @@ class AttachmentCollectionI18nTest < Minitest::Test
 
   def test_remove_label_method_returns_main_literal_english
     collection = RecordingStudioAttachable::AttachmentCollection.allocate
-    collection.instance_variable_set(:@association, :attachments)
+    collection.instance_variable_set(:@remove_label, nil)
     assert_equal "Trash", collection.remove_label
 
-    collection.instance_variable_set(:@association, :placements)
+    collection.instance_variable_set(:@remove_label, "Remove from here")
     assert_equal "Remove from here", collection.remove_label
 
     I18n.backend.store_translations(
       :fr,
-      { recording_studio: { attachable: { collection: { trash: "Corbeille", remove_from_here: "Retirer d'ici" } } } }
+      { recording_studio: { attachable: { collection: { trash: "Corbeille" } } } }
     )
     I18n.with_locale(:fr) do
-      collection.instance_variable_set(:@association, :attachments)
+      collection.instance_variable_set(:@remove_label, nil)
       assert_equal "Trash", collection.remove_label
       assert_equal "Corbeille", RecordingStudioAttachable::Copy.translate_remove_label(collection.remove_label)
-      collection.instance_variable_set(:@association, :placements)
-      assert_equal "Remove from here", collection.remove_label
-      assert_equal "Retirer d'ici", RecordingStudioAttachable::Copy.translate_remove_label(collection.remove_label)
+      assert_equal "Remove from here", RecordingStudioAttachable::Copy.translate_remove_label("Remove from here")
       assert_equal "Custom", RecordingStudioAttachable::Copy.translate_remove_label("Custom")
     end
   end
@@ -100,18 +98,12 @@ class AttachmentCollectionI18nTest < Minitest::Test
     end
   end
 
-  def test_placement_title_returns_main_literal_english_at_method
-    source = File.read(File.expand_path("../app/models/recording_studio_attachable/placement.rb", __dir__))
-    assert_includes source, "def title"
-    assert_includes source, '"Image"'
-    refute_includes source, "Copy.t"
-    refute_includes source, "I18n.t"
-
+  def test_listing_uses_the_parent_title
     listing = File.read(
       File.expand_path("../app/views/recording_studio_attachable/recording_attachments/index.html.erb", __dir__)
     )
     assert_includes listing, "parent_recordable.respond_to?(:title) && parent_recordable.title.present?"
-    refute_includes listing, "is_a?(RecordingStudioAttachable::Placement)"
+    refute_includes listing, "Placement"
   end
 
   def test_collection_views_keep_main_structure_and_translate_at_value_sites

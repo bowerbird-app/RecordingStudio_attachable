@@ -294,7 +294,7 @@ export default class extends Controller {
       })
 
       if (!response.ok) {
-        throw new Error(this.i18nText("picker.unable_to_load_library", "Unable to load image library"))
+        throw new Error(this.i18nText("picker.unable_to_load_library", "Unable to load images"))
       }
 
       const payload = await response.json()
@@ -306,7 +306,7 @@ export default class extends Controller {
     } catch (error) {
       this.renderGallery([], { append: false })
       this.updatePagination({ current_page: 1, total_pages: 1, previous_page: false, next_page: false })
-      this.showStatus(error.message || this.i18nText("picker.unable_to_load_library", "Unable to load image library"))
+      this.showStatus(error.message || this.i18nText("picker.unable_to_load_library", "Unable to load images"))
       this.isLoading = false
     } finally {
       this.searchTimeoutId = null

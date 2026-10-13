@@ -20,11 +20,15 @@ module RecordingStudioAttachable
       empty_message: nil,
       url: nil,
       return_to: nil,
-      upload_button: nil
+      upload_button: nil,
+      remove_label: nil,
+      remove_path: nil,
+      orderable_message: nil
     )
       collection = AttachmentCollection.for(
         recording:, association:, fields:, sortable:, preview:, displays:, default_display:,
-        side_preview:, items_per_view:, return_to:, items:, empty_message:
+        side_preview:, items_per_view:, return_to:, items:, empty_message:,
+        remove_label:, remove_path:, orderable_message:
       )
       editor = render partial: "recording_studio_attachable/attachment_collections/editor",
                       locals: editor_locals(collection, recording, url, return_to)
@@ -58,26 +62,20 @@ module RecordingStudioAttachable
       attachable_routes.destroy_attachment_path(recording, **options)
     end
 
-    def attachable_destroy_placement_path(recording, **options)
-      attachable_routes.destroy_placement_path(recording, **options)
-    end
-
     def attachment_collection_remove_path(collection, row, return_to:)
       params = AttachmentFileButton.redirect_params(return_to: return_to)
-      if collection.placement?
-        attachable_destroy_placement_path(row.member, **params)
-      else
-        attachable_destroy_attachment_path(row.recording, **params)
-      end
+      custom = collection.remove_path
+      return custom.call(row, params) if custom
+
+      attachable_destroy_attachment_path(row.recording, **params)
     end
 
     def attachment_collection_image_path(_collection, row, return_to:)
       attachable_attachment_path(row.recording, **AttachmentFileButton.redirect_params(return_to: return_to))
     end
 
-    def attachment_collection_save_path(collection, recording, url)
+    def attachment_collection_save_path(_collection, recording, url)
       return url if url.present?
-      return attachable_routes.recording_placements_path(recording) if collection.placement?
 
       attachable_attachment_collection_path(recording)
     end

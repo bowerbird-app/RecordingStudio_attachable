@@ -8,12 +8,10 @@ module RecordingStudioAttachable
     GONE = "One of these is gone. Reload the page and try again."
     SORTABLE_MISSING = "sortable: true needs the parent to respond to recording_studio_orderable_reorder!. This parent does not."
     ORDERABLE_ALLOWS = "The parent must allow RecordingStudioAttachable::Attachment in Orderable allows, or omit allows."
-    ORDERABLE_PLACEMENTS = "The parent must allow RecordingStudioAttachable::Placement in Orderable allows, or omit allows."
     EMPTY_MESSAGES = {
       images: "No images yet.",
       files: "No files yet.",
-      attachments: "Nothing here yet.",
-      placements: "Pull one from a library or drop a new one in."
+      attachments: "Nothing here yet."
     }.freeze
 
     Field = Data.define(:key, :label, :column, :blank, :control)
@@ -24,7 +22,7 @@ module RecordingStudioAttachable
       name: Field.new(:name, "Name", :name, :keep, :text),
       description: Field.new(:description, "Description", :description, :clear, :area)
     }.freeze
-    ASSOCIATIONS = { images: :images, attachments: :all, files: :files, placements: :placements }.freeze
+    ASSOCIATIONS = { images: :images, attachments: :all, files: :files }.freeze
     ROW_KEYS = %i[recording_id order name description caption credit alt_text].freeze
 
     Row = Data.define(:recording, :order, :values, :member)
@@ -41,10 +39,10 @@ module RecordingStudioAttachable
         AttachmentCollectionParams.permit(params)
       end
 
-      def from_params(recording:, params:)
+      def from_params(recording:, params:, **options)
         sheet = AttachmentCollectionParams.editor(params)
         choices = AttachmentCollectionToken.read(sheet[:signed_editor], recording)
-        build(recording:, **choices, submitted_rows: sheet[:rows]).tap(&:prepare!)
+        build(recording:, **choices, submitted_rows: sheet[:rows], **editor_options(options)).tap(&:prepare!)
       end
 
       def normalize_association(association)
@@ -56,6 +54,10 @@ module RecordingStudioAttachable
       end
 
       private
+
+      def editor_options(options)
+        options.slice(:items, :remove_label, :remove_path, :orderable_message)
+      end
 
       def build(recording:, association:, fields:, sortable:, **options)
         new(
@@ -134,9 +136,13 @@ module RecordingStudioAttachable
       assert_known_rows!
     end
 
-    def placement? = association == :placements
+    def remove_label
+      @remove_label.presence || "Trash"
+    end
 
-    def remove_label = placement? ? "Remove from here" : "Trash"
+    def remove_path
+      @remove_path
+    end
 
     private
 
@@ -162,13 +168,7 @@ module RecordingStudioAttachable
     end
 
     def submitted_rows_for_changes
-      return @submitted_rows unless placement?
-
-      members = display_items.index_by { |item| item.member.id.to_s }
-      @submitted_rows.map do |row|
-        item = members[row[:recording_id].to_s]
-        item ? row.merge(recording_id: item.attachment_recording.id) : row
-      end
+      AttachmentCollectionLinkedRows.remap(@submitted_rows, display_items)
     end
 
     def display_recordings
@@ -202,18 +202,15 @@ module RecordingStudioAttachable
     end
 
     def membership
-      @membership ||= AttachmentCollectionMembership.new(recording:, association:, sortable: sortable?)
+      @membership ||= AttachmentCollectionMembership.new(
+        recording:, association:, sortable: sortable?, orderable_message: @orderable_message
+      )
     end
 
     def assign_display_options(options)
-      @preview = AttachmentCollectionPreview.choose(options.fetch(:preview, :square))
-      @displays = AttachmentCollectionDisplay.choose(options.fetch(:displays, [:list]))
-      @default_display = AttachmentCollectionDisplay.choose_default(options[:default_display], @displays)
-      @return_to = options[:return_to]
-      @side_preview = ActiveModel::Type::Boolean.new.cast(options.fetch(:side_preview, false)) == true
-      @items_per_view = AttachmentCollectionItemsPerView.choose(options.fetch(:items_per_view, 1))
-      @provided_items = options[:items]
-      @empty_message = options[:empty_message]
+      AttachmentCollectionOptions.read(options).each do |key, value|
+        instance_variable_set(:"@#{key}", value)
+      end
     end
 
     def ensure_sortable_parent!
@@ -232,6 +229,54 @@ module RecordingStudioAttachable
 
   class AttachmentCollection
     include AttachmentCollectionSheet
+  end
+
+  class AttachmentCollectionOptions
+    def self.read(options)
+      preview_options(options).merge(item_options(options))
+    end
+
+    def self.preview_options(options)
+      displays = AttachmentCollectionDisplay.choose(options.fetch(:displays, [:list]))
+      {
+        preview: AttachmentCollectionPreview.choose(options.fetch(:preview, :square)),
+        displays: displays,
+        default_display: AttachmentCollectionDisplay.choose_default(options[:default_display], displays),
+        return_to: options[:return_to],
+        side_preview: side_preview?(options),
+        items_per_view: AttachmentCollectionItemsPerView.choose(options.fetch(:items_per_view, 1))
+      }
+    end
+
+    def self.side_preview?(options)
+      ActiveModel::Type::Boolean.new.cast(options.fetch(:side_preview, false)) == true
+    end
+
+    def self.item_options(options)
+      {
+        provided_items: options[:items],
+        empty_message: options[:empty_message],
+        remove_label: options[:remove_label],
+        remove_path: options[:remove_path],
+        orderable_message: options[:orderable_message]
+      }
+    end
+  end
+
+  class AttachmentCollectionLinkedRows
+    def self.remap(rows, items)
+      return rows unless linked?(items)
+
+      members = items.index_by { |item| item.member.id.to_s }
+      rows.map do |row|
+        item = members[row[:recording_id].to_s]
+        item ? row.merge(recording_id: item.attachment_recording.id) : row
+      end
+    end
+
+    def self.linked?(items)
+      items.any? { |item| item.member.id.to_s != item.attachment_recording.id.to_s }
+    end
   end
 
   class AttachmentCollectionDisplay
@@ -459,8 +504,9 @@ module RecordingStudioAttachable
     def self.wrap(item)
       if item.is_a?(self)
         item
-      elsif item.respond_to?(:placement_recording) && item.respond_to?(:attachment_recording)
-        new(member: item.placement_recording, attachment_recording: item.attachment_recording)
+      elsif item.respond_to?(:member) && item.respond_to?(:attachment_recording) &&
+            item.member.present? && item.attachment_recording.present?
+        new(member: item.member, attachment_recording: item.attachment_recording)
       else
         new(member: item, attachment_recording: item)
       end
@@ -475,14 +521,15 @@ module RecordingStudioAttachable
   end
 
   class AttachmentCollectionMembership
-    def initialize(recording:, association:, sortable:)
+    def initialize(recording:, association:, sortable:, orderable_message: nil)
       @recording = recording
       @association = association
       @sortable = sortable
+      @orderable_message = orderable_message
     end
 
     def items
-      @items ||= placement? ? placement_items : attachment_items
+      @items ||= attachment_items
     end
 
     def recordings
@@ -494,20 +541,12 @@ module RecordingStudioAttachable
     end
 
     def orderable_allows_message
-      placement? ? AttachmentCollection::ORDERABLE_PLACEMENTS : AttachmentCollection::ORDERABLE_ALLOWS
+      @orderable_message.presence || AttachmentCollection::ORDERABLE_ALLOWS
     end
 
     private
 
     attr_reader :recording, :association
-
-    def placement?
-      association == :placements
-    end
-
-    def placement_items
-      Array(Placements.resolve(recording)).map { |item| AttachmentCollectionItem.wrap(item) }
-    end
 
     def attachment_items
       list = loaded.map { |item| AttachmentCollectionItem.wrap(item) }

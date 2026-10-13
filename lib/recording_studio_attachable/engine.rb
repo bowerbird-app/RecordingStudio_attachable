@@ -41,13 +41,10 @@ module RecordingStudioAttachable
 
       register_attachable_capabilities
       register_attachment_recordable_type
-      register_library_recordable_types
     end
 
     def self.register_attachable_capabilities
       register_one_capability(:attachable, RecordingStudio::Capabilities::Attachable, "RecordingStudioAttachable::Attachment")
-      register_one_capability(:image_library, RecordingStudio::Capabilities::ImageLibrary, "RecordingStudioAttachable::Library")
-      register_one_capability(:library_placement, RecordingStudio::Capabilities::LibraryPlacement, "RecordingStudioAttachable::Placement")
     end
 
     def self.register_one_capability(name, capability, child)
@@ -57,11 +54,6 @@ module RecordingStudioAttachable
         source: "recording_studio_attachable",
         child_recordables: [child]
       )
-    end
-
-    def self.register_library_recordable_types
-      register_recordable_type_if_needed("RecordingStudioAttachable::Library") if image_library_parent_types_registered?
-      register_recordable_type_if_needed("RecordingStudioAttachable::Placement") if library_placement_parent_types_registered?
     end
 
     def self.register_attachment_recordable_type
@@ -79,14 +71,6 @@ module RecordingStudioAttachable
 
     def self.attachable_parent_types_registered?
       capability_parent_types_registered?(:attachable)
-    end
-
-    def self.image_library_parent_types_registered?
-      capability_parent_types_registered?(:image_library)
-    end
-
-    def self.library_placement_parent_types_registered?
-      capability_parent_types_registered?(:library_placement)
     end
 
     def self.capability_parent_types_registered?(capability_name)

@@ -55,7 +55,6 @@ class HostCloudPickerModalTest < ActionDispatch::IntegrationTest
   end
 
   test "dropbox chooser selection imports through the host attachments endpoint" do
-    library = RecordingStudioAttachable.library_for(@root, actor: @user)
     captured = nil
     imported = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [])
 
@@ -70,7 +69,7 @@ class HostCloudPickerModalTest < ActionDispatch::IntegrationTest
     end
 
     with_cloud_adapters_configured do
-      post recording_studio_attachable.recording_attachment_imports_path(library),
+      post recording_studio_attachable.recording_attachment_imports_path(@root),
            params: {
              attachment_import: {
                provider_key: "dropbox",
@@ -99,16 +98,14 @@ class HostCloudPickerModalTest < ActionDispatch::IntegrationTest
   end
 
   test "disconnected dropbox and drive bootstrap leave session state for connect" do
-    library = RecordingStudioAttachable.library_for(@root, actor: @user)
-
     with_cloud_adapters_configured do
-      get "/recording_studio_attachable/dropbox/recordings/#{library.id}/bootstrap.json"
+      get "/recording_studio_attachable/dropbox/recordings/#{@root.id}/bootstrap.json"
       assert_response :success
       dropbox_payload = JSON.parse(response.body)
       assert dropbox_payload["connect_url"].present?
       refute dropbox_payload.key?("auth_url")
 
-      get "/recording_studio_attachable/google_drive/recordings/#{library.id}/bootstrap.json"
+      get "/recording_studio_attachable/google_drive/recordings/#{@root.id}/bootstrap.json"
       assert_response :success
       drive_payload = JSON.parse(response.body)
       assert drive_payload["connect_url"].present?
@@ -117,12 +114,12 @@ class HostCloudPickerModalTest < ActionDispatch::IntegrationTest
       assert_nil session.dig("recording_studio_attachable_dropbox", "oauth_state")
       assert_nil session.dig("recording_studio_attachable_google_drive", "oauth_state")
 
-      get "/recording_studio_attachable/dropbox/recordings/#{library.id}/connect", params: { popup: 1, provider_key: "dropbox" }
+      get "/recording_studio_attachable/dropbox/recordings/#{@root.id}/connect", params: { popup: 1, provider_key: "dropbox" }
       assert_response :redirect
       assert_not_nil session.dig("recording_studio_attachable_dropbox", "oauth_state")
       assert_nil session.dig("recording_studio_attachable_google_drive", "oauth_state")
 
-      get "/recording_studio_attachable/google_drive/recordings/#{library.id}/connect", params: { popup: 1, provider_key: "google_drive" }
+      get "/recording_studio_attachable/google_drive/recordings/#{@root.id}/connect", params: { popup: 1, provider_key: "google_drive" }
       assert_response :redirect
       assert_not_nil session.dig("recording_studio_attachable_dropbox", "oauth_state")
       assert_not_nil session.dig("recording_studio_attachable_google_drive", "oauth_state")

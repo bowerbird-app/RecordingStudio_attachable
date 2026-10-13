@@ -60,7 +60,6 @@ class LocalesTest < Minitest::Test
     "collection.image_name_fallback" => "image",
     "collection.file_fallback" => "FILE",
     "collection.trash" => "Trash",
-    "collection.remove_from_here" => "Remove from here",
     "collection.fields.caption" => "Caption",
     "collection.fields.credit" => "Credit",
     "collection.fields.alt_text" => "Alt text",
@@ -69,7 +68,6 @@ class LocalesTest < Minitest::Test
     "collection.empty_messages.images" => "No images yet.",
     "collection.empty_messages.files" => "No files yet.",
     "collection.empty_messages.attachments" => "Nothing here yet.",
-    "collection.empty_messages.placements" => "Pull one from a library or drop a new one in.",
     "collection.displays.list" => "List",
     "collection.displays.carousel" => "Slides",
     "collection.displays.grid" => "Grid",
@@ -107,9 +105,7 @@ class LocalesTest < Minitest::Test
     "google_drive.connected" => "Connected Google Drive.",
     "google_drive.disconnected" => "Disconnected Google Drive.",
     "google_drive.session_expired" => "Google Drive session expired. Reconnect to continue.",
-    "google_drive.not_enabled" => "Google Drive addon is not enabled",
-    "type_labels.placement.title" => "Image",
-    "libraries.keys.default" => "Images"
+    "google_drive.not_enabled" => "Google Drive addon is not enabled"
   }.freeze
   # rubocop:enable Style/FormatStringToken
 
@@ -206,9 +202,10 @@ class LocalesTest < Minitest::Test
     tree = locale_tree(File.join(engine_locales_dir, "recording_studio_attachable.en.yml"), "en")
            .fetch("recording_studio_attachable")
 
-    assert_equal "Images", tree.dig("libraries", "keys", "default")
-    assert_equal "Add from library", tree.dig("placements", "add")
     assert_equal "Saved", tree.dig("attachments", "updated")
+    assert_equal "Used in 1 place", tree.dig("attachments", "used_in", "one")
+    refute tree.key?("libraries")
+    refute tree.key?("placements")
     refute tree.key?("attachment_file_buttons")
     assert_equal "File updated", I18n.t("recording_studio.attachable.flashes.file_updated")
   end

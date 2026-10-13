@@ -26,7 +26,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 1. Add the gem to your host app.
 2. Ensure Active Storage and RecordingStudio Accessible are installed.
 3. Run `rails generate recording_studio_attachable:install`.
-4. Run `rails generate recording_studio_attachable:migrations`.
+4. Run `rails generate recording_studio_attachable:migrations`. Each copied file is stamped one second after the previous file.
 5. Run `rails db:migrate`.
 6. Declare each host-app domain recordable with `recording_studio_recordable(...)`.
 7. Opt parent recordables into `include RecordingStudio::Capabilities::Attachable.to(...)`. Installing the gem does not enable `:attachable`.

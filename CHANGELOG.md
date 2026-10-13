@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The collection editor still edits direct images, files, and attachments (List, Slides, Grid). A caller can pass `items:` whose member recording is not the file, plus `remove_label:`, `remove_path:`, and `orderable_message:`. The signed save token stores those options, and the default update action reads them back.
+- The migrations generator stamps each copied file one second after the previous file.
 - Attachment show warns before trash only when `config.attachment_place_labels` returns labels. The default is none.
 - The image picker's load error says "Unable to load images".
 

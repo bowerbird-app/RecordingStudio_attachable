@@ -42,7 +42,11 @@ module RecordingStudioAttachable
       def from_params(recording:, params:, **options)
         sheet = AttachmentCollectionParams.editor(params)
         choices = AttachmentCollectionToken.read(sheet[:signed_editor], recording)
-        build(recording:, **choices, submitted_rows: sheet[:rows], **editor_options(options)).tap(&:prepare!)
+        build(
+          recording:,
+          **AttachmentCollectionToken.apply_sheet(choices, recording, editor_options(options)),
+          submitted_rows: sheet[:rows]
+        ).tap(&:prepare!)
       end
 
       def normalize_association(association)
@@ -106,7 +110,19 @@ module RecordingStudioAttachable
     private
 
     def signed_token
-      AttachmentCollectionToken.sign(recording:, association:, fields: fields.map(&:key), sortable: sortable?)
+      AttachmentCollectionToken.sign(
+        recording:, association:, fields: fields.map(&:key), sortable: sortable?, **signed_sheet
+      )
+    end
+
+    def signed_sheet
+      {
+        items: @provided_items,
+        remove_label: @remove_label,
+        remove_path: @remove_path,
+        orderable_message: @orderable_message,
+        return_to: @return_to
+      }
     end
   end
 
@@ -453,8 +469,8 @@ module RecordingStudioAttachable
     PURPOSE = "recording_studio_attachable.attachment_collection"
 
     class << self
-      def sign(recording:, association:, fields:, sortable:)
-        verifier.generate(payload(recording, association, fields, sortable))
+      def sign(recording:, association:, fields:, sortable:, **sheet)
+        verifier.generate(payload(recording, association, fields, sortable, sheet))
       end
 
       def read(token, recording)
@@ -466,6 +482,18 @@ module RecordingStudioAttachable
         raise ArgumentError, AttachmentCollection::STALE_FORM
       end
 
+      def apply_sheet(choices, recording, passed)
+        refs = choices.delete(:item_refs)
+        merged = choices.merge(passed.compact)
+        return merged if passed.key?(:items) || refs.nil?
+
+        merged.merge(items: resolve_items(refs, recording))
+      end
+
+      def resolve_items(refs, parent)
+        AttachmentCollectionSignedItems.resolve_items(refs, parent)
+      end
+
       private
 
       def choices(data)
@@ -473,16 +501,16 @@ module RecordingStudioAttachable
           association: AttachmentCollectionParams.association(data[:association]),
           fields: data[:fields],
           sortable: ActiveModel::Type::Boolean.new.cast(data[:sortable]) == true
-        }
+        }.merge(AttachmentCollectionSignedSheet.choices(data))
       end
 
-      def payload(recording, association, fields, sortable)
+      def payload(recording, association, fields, sortable, sheet)
         {
           "parent_id" => recording.id.to_s,
           "association" => association.to_s,
           "fields" => Array(fields).map(&:to_s),
           "sortable" => sortable == true
-        }
+        }.merge(AttachmentCollectionSignedSheet.payload(sheet))
       end
 
       def payload_hash(payload)
@@ -496,6 +524,238 @@ module RecordingStudioAttachable
         return app.message_verifier(PURPOSE) if app.respond_to?(:message_verifier)
 
         @verifier ||= ActiveSupport::MessageVerifier.new(PURPOSE, digest: "SHA256", serializer: JSON)
+      end
+    end
+  end
+
+  class AttachmentCollectionSignedSheet
+    class << self
+      def payload(sheet)
+        body = {}
+        copy_items(body, sheet[:items])
+        copy_text(body, "remove_label", sheet[:remove_label])
+        copy_text(body, "orderable_message", sheet[:orderable_message])
+        AttachmentCollectionSignedPath.write(body, sheet)
+        body
+      end
+
+      def choices(data)
+        picked = {}
+        picked[:item_refs] = data[:items] if data.key?(:items)
+        copy_choice(picked, :remove_label, data[:remove_label])
+        copy_choice(picked, :orderable_message, data[:orderable_message])
+        AttachmentCollectionSignedPath.read(picked, data[:remove_path])
+        picked
+      end
+
+      private
+
+      def copy_items(body, items)
+        return if items.nil?
+
+        body["items"] = Array(items).map { |item| item_reference(AttachmentCollectionItem.wrap(item)) }
+      end
+
+      def copy_text(body, key, value)
+        body[key] = value.to_s if value.present?
+      end
+
+      def copy_choice(picked, key, value)
+        picked[key] = value if value.present?
+      end
+
+      def item_reference(item)
+        reference_for(item.member).merge(attachment_reference(item))
+      end
+
+      def attachment_reference(item)
+        return {} if item.member.id.to_s == item.attachment_recording.id.to_s
+
+        reference_for(item.attachment_recording, prefix: "attachment_")
+      end
+
+      def reference_for(recording, prefix: "")
+        ref = { "#{prefix}id" => recording.id.to_s }
+        gid = global_id_for(recording)
+        ref["#{prefix}gid"] = gid if gid
+        ref
+      end
+
+      def global_id_for(recording)
+        raw = global_id_raw(recording)
+        raw.to_s.presence if raw
+      end
+
+      def global_id_raw(recording)
+        return recording.to_global_id if recording.respond_to?(:to_global_id)
+
+        recording.to_gid if recording.respond_to?(:to_gid)
+      end
+    end
+  end
+
+  class AttachmentCollectionSignedPath
+    class << self
+      def write(body, sheet)
+        path = path_payload(sheet)
+        body["remove_path"] = path if path
+      end
+
+      def read(picked, payload)
+        path = restore(payload)
+        picked[:remove_path] = path if path
+      end
+
+      private
+
+      def path_payload(sheet)
+        path = sheet[:remove_path]
+        return { "template" => path } if path.is_a?(String) && path.present?
+        return unless path.respond_to?(:call)
+
+        paths = snapshot(sheet, path)
+        { "paths" => paths } if paths.present?
+      end
+
+      def snapshot(sheet, path)
+        params = AttachmentFileButton.redirect_params(return_to: sheet[:return_to])
+        Array(sheet[:items]).each_with_object({}) do |item, paths|
+          remember(paths, item, path, params)
+        end
+      end
+
+      def remember(paths, item, path, params)
+        wrapped = AttachmentCollectionItem.wrap(item)
+        paths[wrapped.member.id.to_s] = path.call(row_for(wrapped), params).to_s
+      end
+
+      def row_for(item)
+        AttachmentCollection::Row.new(
+          recording: item.attachment_recording, member: item.member, order: nil, values: {}
+        )
+      end
+
+      def restore(payload)
+        return if payload.blank?
+
+        data = indifferent(payload)
+        return snapped(data[:paths]) if data[:paths].present?
+
+        templated(data[:template]) if data[:template].present?
+      end
+
+      def snapped(paths)
+        lookup = indifferent(paths)
+        ->(row, _params) { lookup[row.member.id.to_s] }
+      end
+
+      def templated(template)
+        ->(row, _params) { fill(template, row) }
+      end
+
+      def fill(template, row)
+        template.to_s
+                .gsub(placeholder("member_id"), row.member.id.to_s)
+                .gsub(placeholder("attachment_id"), row.recording.id.to_s)
+      end
+
+      def placeholder(name)
+        ["%", "{", name, "}"].join
+      end
+
+      def indifferent(value)
+        return {}.with_indifferent_access unless value.is_a?(Hash)
+
+        value.with_indifferent_access
+      end
+    end
+  end
+
+  class AttachmentCollectionSignedItems
+    class << self
+      def resolve_items(refs, parent)
+        Array(refs).map { |ref| resolve_item(indifferent(ref), parent) }
+      end
+
+      private
+
+      def resolve_item(ref, parent)
+        member = find_signed(ref, "id", "gid")
+        attachment = signed_attachment(ref, member)
+        assert_member!(member, parent)
+        assert_attachment!(attachment)
+        linked_item(member, attachment)
+      end
+
+      def signed_attachment(ref, member)
+        return member if ref["attachment_id"].blank?
+
+        find_signed(ref, "attachment_id", "attachment_gid")
+      end
+
+      def linked_item(member, attachment)
+        return member if member.id.to_s == attachment.id.to_s
+
+        AttachmentCollectionItem.new(member: member, attachment_recording: attachment)
+      end
+
+      def find_signed(ref, id_key, gid_key)
+        recording = signed_recording(ref, id_key, gid_key)
+        same = recording && recording.id.to_s == ref[id_key].to_s
+        raise ArgumentError, AttachmentCollection::GONE unless same
+
+        recording
+      end
+
+      def signed_recording(ref, id_key, gid_key)
+        return locate(ref[gid_key]) if ref[gid_key].present?
+
+        find_recording(ref[id_key])
+      end
+
+      def locate(gid)
+        GlobalID::Locator.locate(gid)
+      rescue ActiveRecord::RecordNotFound
+        nil
+      end
+
+      def find_recording(id)
+        return if id.blank?
+
+        RecordingStudio::Recording.find(id)
+      rescue ActiveRecord::RecordNotFound
+        nil
+      end
+
+      def assert_member!(member, parent)
+        raise ArgumentError, AttachmentCollection::GONE unless member_parent_id(member).to_s == parent.id.to_s
+      end
+
+      def assert_attachment!(attachment)
+        return unless attachment.respond_to?(:recordable_type)
+        return if attachment.recordable_type.to_s == "RecordingStudioAttachable::Attachment"
+
+        raise ArgumentError, AttachmentCollection::GONE
+      end
+
+      def member_parent_id(member)
+        return member.parent_recording_id if parent_id?(member)
+
+        member.parent_recording.id if parent_recording?(member)
+      end
+
+      def parent_id?(member)
+        member.respond_to?(:parent_recording_id) && member.parent_recording_id.present?
+      end
+
+      def parent_recording?(member)
+        member.respond_to?(:parent_recording) && member.parent_recording.present?
+      end
+
+      def indifferent(value)
+        return {}.with_indifferent_access unless value.is_a?(Hash)
+
+        value.with_indifferent_access
       end
     end
   end
@@ -711,6 +971,8 @@ module RecordingStudioAttachable
   end
 
   private_constant :AttachmentCollectionSheet, :AttachmentCollectionPreview, :AttachmentCollectionParams,
-                   :AttachmentCollectionToken, :AttachmentCollectionItem, :AttachmentCollectionAligner,
+                   :AttachmentCollectionToken, :AttachmentCollectionSignedSheet, :AttachmentCollectionSignedPath,
+                   :AttachmentCollectionSignedItems, :AttachmentCollectionItem,
+                   :AttachmentCollectionAligner,
                    :AttachmentCollectionMembership, :AttachmentCollectionChanges, :AttachmentCollectionOrder
 end

@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The collection editor still edits direct images, files, and attachments (List, Slides, Grid). A caller can pass `items:` whose member recording is not the file, plus `remove_label:`, `remove_path:`, and `orderable_message:`.
+- The collection editor still edits direct images, files, and attachments (List, Slides, Grid). A caller can pass `items:` whose member recording is not the file, plus `remove_label:`, `remove_path:`, and `orderable_message:`. The signed save token stores those options, and the default update action reads them back.
 - Attachment show warns before trash only when `config.attachment_place_labels` returns labels. The default is none.
 - The image picker's load error says "Unable to load images".
 
@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stop calling `library_for`, `ImageLibrary.to`, `LibraryPlacement.to`, `recording_library_path`, and `recording_placements_path`. Install the library gem for that behavior.
 - Drop `Library` and `Placement` from `recordable_types`. Do not copy the removed migrations.
 - `config.placement_place_label`, `config.placement_picker_libraries`, and `config.library_label` are gone. Set `config.attachment_place_labels` if the attachment page should warn that a file is in use.
+- Collection editor `items:`, `remove_label:`, `remove_path:`, and `orderable_message:` travel in the signed save token. The default update URL uses them. A string `remove_path:` may include `%{member_id}` and `%{attachment_id}`. A callable is snapshotted for the members in `items:`.
 
 ## [0.17.0] - 2026-10-12
 

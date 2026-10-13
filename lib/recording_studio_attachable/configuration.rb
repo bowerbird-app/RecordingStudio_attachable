@@ -38,9 +38,7 @@ module RecordingStudioAttachable
                   :classify_attachment_kind,
                   :authorize_with,
                   :direct_url_host,
-                  :placement_place_label,
-                  :placement_picker_libraries,
-                  :library_label
+                  :attachment_place_labels
 
     attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode, :upload_presentation
 
@@ -225,6 +223,16 @@ module RecordingStudioAttachable
       }.merge(adapter_configurations_hash)
     end
 
+    # Labels for places that reuse this attachment. Empty unless a host sets
+    # attachment_place_labels. The attachment page warns before trash when
+    # the list is present.
+    def attachment_place_labels_for(attachment_recording)
+      resolver = attachment_place_labels
+      return [] unless resolver.respond_to?(:call)
+
+      Array(resolver.call(attachment_recording)).filter_map { |label| label.to_s.strip.presence }
+    end
+
     private
 
     def assign_defaults
@@ -249,32 +257,7 @@ module RecordingStudioAttachable
       @auth_roles = default_auth_roles
       @classify_attachment_kind = default_attachment_kind_classifier
       @authorize_with = nil
-      @placement_place_label = default_placement_place_label
-      @placement_picker_libraries = default_placement_picker_libraries
-      @library_label = default_library_label
-    end
-
-    def default_placement_place_label
-      ->(parent_recording) { RecordingStudioAttachable::Placements.fallback_place_label(parent_recording) }
-    end
-
-    def default_placement_picker_libraries
-      lambda { |parent_recording|
-        holder = RecordingStudioAttachable::Services::LibraryQuery.image_library_parent_for(parent_recording)
-        [RecordingStudioAttachable.library_for(holder)]
-      }
-    end
-
-    def default_library_label
-      lambda { |key|
-        I18n.t(
-          "recording_studio_attachable.libraries.keys.#{key}",
-          default: [
-            :"recording_studio.attachable.libraries.keys.#{key}",
-            RecordingStudioAttachable::Services::LibraryQuery.humanized_key(key)
-          ]
-        )
-      }
+      @attachment_place_labels = nil
     end
 
     def default_auth_roles

@@ -45,38 +45,8 @@ module RecordingStudioAttachable
       Array(content_types).map { |content_type| attachable_upload_type_label(content_type) }
     end
 
-    def library_path_for(parent_or_library, key: :default, **options)
-      if RecordingStudioAttachable::Placements.library_recording?(parent_or_library)
-        attachable_routes.library_path(parent_or_library, **options)
-      else
-        attachable_routes.recording_library_path(parent_or_library, key: key, **options)
-      end
-    end
-
-    def library_picker_path_for(parent_or_library, key: :default, **options)
-      library = if RecordingStudioAttachable::Placements.library_recording?(parent_or_library)
-                  parent_or_library
-                else
-                  RecordingStudioAttachable.library_for(parent_or_library, key: key)
-                end
-      attachable_routes.recording_attachment_picker_path(library, **options)
-    end
-
-    def library_title_for(library_recording)
-      RecordingStudioAttachable::Placements.library_title(library_recording)
-    end
-
     def upload_provider_launcher_modules(providers)
       Array(providers).select(&:client_picker?).filter_map(&:launcher_module).uniq
-    end
-
-    def library_picker_switcher_payload(libraries)
-      Array(libraries).each_with_object({}) do |library, payload|
-        payload[library.id.to_s] = {
-          pickerUrl: attachable_routes.recording_attachment_picker_path(library),
-          uploadUrl: attachable_routes.recording_attachments_path(library)
-        }
-      end
     end
 
     def attachable_js_i18n(english_by_key)
@@ -126,7 +96,7 @@ module RecordingStudioAttachable
         "picker.selected.one" => "%{count} selected",
         "picker.selected.other" => "%{count} selected",
         "picker.untitled_image" => "Untitled image",
-        "picker.unable_to_load_library" => "Unable to load image library",
+        "picker.unable_to_load_library" => "Unable to load images",
         "picker.unable_to_add_image" => "Unable to add image",
         "picker.uploading" => "Uploading",
         "picker.uploading_of" => "Uploading %{index} of %{total}",

@@ -61,7 +61,6 @@ en:
         image_name_fallback: "image"
         file_fallback: "FILE"
         trash: "Trash"
-        remove_from_here: "Remove from here"
         fields:
           caption: "Caption"
           credit: "Credit"
@@ -72,7 +71,6 @@ en:
           images: "No images yet."
           files: "No files yet."
           attachments: "Nothing here yet."
-          placements: "Pull one from a library or drop a new one in."
         displays:
           list: "List"
           carousel: "Slides"
@@ -92,7 +90,7 @@ en:
         clear: "Clear"
         add_selected: "Add selected"
         untitled_image: "Untitled image"
-        unable_to_load_library: "Unable to load image library"
+        unable_to_load_library: "Unable to load images"
         unable_to_add_image: "Unable to add image"
         uploading: "Uploading"
         uploading_of: "Uploading %{index} of %{total}"
@@ -154,34 +152,6 @@ en:
         attachment:
           label: "Attachment"
           plural_label: "Attachments"
-        placement:
-          label: "Image"
-          plural_label: "Images"
-          title: "Image"
-        library:
-          label: "Image library"
-          plural_label: "Image libraries"
-      libraries:
-        keys:
-          default: "Images"
-        trash_in_use: "Trashing this library hides every photo in it, including the ones already placed. You can bring it back."
-      placements:
-        title: "Images"
-        subtitle: "These photos live in a library. This page just lines them up."
-        add: "Add from library"
-        upload: "Upload"
-        empty_title: "Nothing here yet"
-        empty: "Pull one from a library or drop a new one in."
-        added: "Photo added."
-        removed: "Photo removed from this page."
-        reordered: "Photos reordered."
-        remove: "Remove from here"
-        picker_title: "Add from library"
-        picker_library: "Library"
-        search: "Search the library"
-        picker_empty: "Nothing matches. Upload one instead."
-        different_workspace: "That photo belongs to another workspace."
-        not_in_library: "That photo is not in a library in this workspace."
       attachment_lifecycle:
         removed: "Attachment removed."
         restored: "Attachment restored."

@@ -428,24 +428,6 @@ class EngineTest < Minitest::Test
           source: "recording_studio_attachable",
           child_recordables: ["RecordingStudioAttachable::Attachment"]
         }
-      ],
-      [
-        :image_library,
-        nil,
-        {
-          recording_methods: RecordingStudio::Capabilities::ImageLibrary::RecordingMethods,
-          source: "recording_studio_attachable",
-          child_recordables: ["RecordingStudioAttachable::Library"]
-        }
-      ],
-      [
-        :library_placement,
-        nil,
-        {
-          recording_methods: RecordingStudio::Capabilities::LibraryPlacement::RecordingMethods,
-          source: "recording_studio_attachable",
-          child_recordables: ["RecordingStudioAttachable::Placement"]
-        }
       ]
     ]
   end

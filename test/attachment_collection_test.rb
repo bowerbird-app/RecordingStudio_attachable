@@ -529,7 +529,7 @@ class AttachmentCollectionTest < Minitest::Test
     assert_equal "No images yet.", message_for(:images)
     assert_equal "No files yet.", message_for(:files)
     assert_equal "Nothing here yet.", message_for(:attachments)
-    assert_equal "Pull one from a library or drop a new one in.", placement_message
+    assert_equal "Trash", message_collection(:images).remove_label
 
     permitted = RecordingStudioAttachable::AttachmentCollection.permit(
       ActionController::Parameters.new(
@@ -558,76 +558,239 @@ class AttachmentCollectionTest < Minitest::Test
     assert_equal "/pages/1", permitted[:return_to]
   end
 
-  def test_items_accept_resolved_placements_instead_of_direct_children
+  def test_items_can_point_at_a_different_member_than_the_file
     photo = child("image-1", caption: "Pier light", credit: "Ada", alt_text: "A pier")
-    placement = child("place-1")
-    resolved = RecordingStudioAttachable::Placements::Resolved.new(
-      placement_recording: placement,
-      attachment_recording: photo,
-      attachment: photo.recordable
-    )
-    parent = orderable_parent([placement])
+    member = child("member-1")
+    linked = linked_row(member, photo)
+    parent = orderable_parent([member])
 
     collection = RecordingStudioAttachable::AttachmentCollection.for(
       recording: parent,
-      association: :placements,
+      association: :images,
       fields: %i[caption credit alt_text],
       sortable: true,
-      items: [resolved]
+      items: [linked],
+      remove_label: "Remove from here"
     )
 
-    assert_predicate collection, :placement?
-    refute_respond_to collection, :inline_fields?
+    refute_respond_to collection, :placement?
     assert_equal "Remove from here", collection.remove_label
     assert_equal "image-1", collection.rows.first.recording.id
-    assert_equal "place-1", collection.rows.first.member.id
+    assert_equal "member-1", collection.rows.first.member.id
     assert_equal "Pier light", collection.rows.first.values[:caption]
     assert_equal 1, collection.rows.first.order
   end
 
-  def test_placement_save_reorders_members_and_revises_the_photo
+  def test_linked_rows_reorder_the_member_and_revise_the_file
     photo = child("image-1", caption: "Pier light")
-    first = child("place-1")
-    second = child("place-2")
+    first = child("member-1")
+    second = child("member-2")
     parent = orderable_parent([first, second])
-    resolved = [
-      RecordingStudioAttachable::Placements::Resolved.new(
-        placement_recording: first,
-        attachment_recording: photo,
-        attachment: photo.recordable
-      ),
-      RecordingStudioAttachable::Placements::Resolved.new(
-        placement_recording: second,
-        attachment_recording: photo,
-        attachment: photo.recordable
-      )
-    ]
+    linked = [linked_row(first, photo), linked_row(second, photo)]
 
     collection = RecordingStudioAttachable::AttachmentCollection.for(
       recording: parent,
-      association: :placements,
+      association: :images,
       fields: [:caption],
       sortable: true,
-      items: resolved
+      items: linked
     )
 
-    RecordingStudioAttachable::Placements.stub(:resolve, resolved) do
-      saved = RecordingStudioAttachable::AttachmentCollection.from_params(
-        recording: parent,
-        params: {
-          signed_editor: collection.signed_editor,
-          rows: [
-            { recording_id: "place-2", order: "1", caption: "Sneaky" },
-            { recording_id: "place-1", order: "2", caption: "Also sneaky" }
-          ]
-        }
-      )
+    saved = RecordingStudioAttachable::AttachmentCollection.from_params(
+      recording: parent,
+      items: linked,
+      params: {
+        signed_editor: collection.signed_editor,
+        rows: [
+          { recording_id: "member-2", order: "1", caption: "Sneaky" },
+          { recording_id: "member-1", order: "2", caption: "Also sneaky" }
+        ]
+      }
+    )
 
-      assert_equal %w[place-2 place-1], saved.reorder_ids
-      assert_equal ["image-1"], saved.revisions.map { |revision| revision.recording.id }.uniq
-      assert_includes saved.revisions.map(&:changes), { caption: "Sneaky" }
-      assert_includes saved.revisions.map(&:changes), { caption: "Also sneaky" }
+    assert_equal %w[member-2 member-1], saved.reorder_ids
+    assert_equal ["image-1"], saved.revisions.map { |revision| revision.recording.id }.uniq
+    assert_includes saved.revisions.map(&:changes), { caption: "Sneaky" }
+    assert_includes saved.revisions.map(&:changes), { caption: "Also sneaky" }
+  end
+
+  def test_signed_sheet_reloads_linked_items_on_the_default_save
+    photo = linked_file("image-1", caption: "Pier light")
+    first = linked_member("member-1")
+    second = linked_member("member-2")
+    parent = orderable_parent([first, second])
+    linked = [linked_row(first, photo), linked_row(second, photo)]
+    owned = child("owned-1", caption: "Owned")
+    template = path_template
+
+    collection = with_membership([owned]) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent,
+        association: :images,
+        fields: [:caption],
+        sortable: true,
+        items: linked,
+        return_to: "/pages/1",
+        remove_label: "Remove from here",
+        remove_path: template,
+        orderable_message: "List every linked row."
+      )
     end
+
+    saved = with_membership([owned]) do
+      with_locator(photo, first, second) do
+        RecordingStudioAttachable::AttachmentCollection.from_params(
+          recording: parent,
+          params: {
+            signed_editor: collection.signed_editor,
+            rows: [
+              { recording_id: "member-2", order: "1", caption: "Sneaky" },
+              { recording_id: "member-1", order: "2", caption: "Also sneaky" }
+            ]
+          }
+        )
+      end
+    end
+
+    assert_equal %w[member-2 member-1], saved.reorder_ids
+    assert_equal ["image-1"], saved.revisions.map { |revision| revision.recording.id }.uniq
+    assert_includes saved.revisions.map(&:changes), { caption: "Sneaky" }
+    assert_equal "Remove from here", saved.remove_label
+    row = saved.rows.first
+    assert_equal "/sheets/#{row.member.id}/files/#{row.recording.id}", saved.remove_path.call(row, {})
+  end
+
+  def test_signed_sheet_snapshots_a_remove_path_callable
+    photo = linked_file("image-1", caption: "Pier light")
+    member = linked_member("member-1")
+    parent = orderable_parent([member])
+    linked = [linked_row(member, photo)]
+    collection = with_membership([]) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent,
+        association: :images,
+        fields: [:caption],
+        sortable: true,
+        items: linked,
+        return_to: "/pages/1",
+        remove_path: ->(row, params) { "/pointers/#{row.member.id}?back=#{params[:return_to]}" }
+      )
+    end
+
+    saved = with_membership([]) do
+      with_locator(photo, member) do
+        RecordingStudioAttachable::AttachmentCollection.from_params(
+          recording: parent,
+          params: { signed_editor: collection.signed_editor, rows: [] }
+        )
+      end
+    end
+
+    assert_equal "/pointers/member-1?back=/pages/1", saved.remove_path.call(saved.rows.first, {})
+  end
+
+  def test_signed_sheet_reads_the_orderable_message_back
+    photo = linked_file("image-1")
+    member = linked_member("member-1")
+    children = [member]
+    parent = orderable_parent(children)
+    collection = with_membership([]) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent,
+        association: :images,
+        fields: [:caption],
+        sortable: true,
+        items: [linked_row(member, photo)],
+        orderable_message: "List every linked row."
+      )
+    end
+    children.clear
+
+    error = assert_raises(ArgumentError) do
+      with_membership([]) do
+        with_locator(photo, member) do
+          RecordingStudioAttachable::AttachmentCollection.from_params(
+            recording: parent,
+            params: { signed_editor: collection.signed_editor, rows: [] }
+          )
+        end
+      end
+    end
+
+    assert_equal "List every linked row.", error.message
+  end
+
+  def test_signed_sheet_rejects_a_foreign_member_a_swapped_id_and_a_foreign_file
+    photo = linked_file("image-1")
+    member = linked_member("member-1")
+    parent = orderable_parent([member])
+    collection = with_membership([]) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: parent,
+        association: :images,
+        fields: [:caption],
+        sortable: true,
+        items: [linked_row(member, photo)]
+      )
+    end
+    foreign = linked_member("member-1", parent_id: "other-parent")
+    swapped = linked_member("other-id")
+    other_file = linked_file("image-1", recordable_type: "RecordingStudio::Page")
+
+    foreign_error = assert_raises(ArgumentError) do
+      reload_signed(parent, collection, photo, foreign)
+    end
+    swapped_error = assert_raises(ArgumentError) do
+      with_membership([]) do
+        GlobalID::Locator.stub(:locate, ->(gid) { gid.to_s.include?("image-1") ? photo : swapped }) do
+          RecordingStudioAttachable::AttachmentCollection.from_params(
+            recording: parent,
+            params: { signed_editor: collection.signed_editor, rows: [] }
+          )
+        end
+      end
+    end
+    file_error = assert_raises(ArgumentError) do
+      reload_signed(parent, collection, other_file, member)
+    end
+
+    assert_equal RecordingStudioAttachable::AttachmentCollection::GONE, foreign_error.message
+    assert_equal RecordingStudioAttachable::AttachmentCollection::GONE, swapped_error.message
+    assert_equal RecordingStudioAttachable::AttachmentCollection::GONE, file_error.message
+  end
+
+  def test_explicit_empty_items_stay_empty_when_the_save_omits_them
+    parent = Parent.new("parent-1")
+    collection = RecordingStudioAttachable::AttachmentCollection.for(
+      recording: parent,
+      association: :images,
+      fields: [:caption],
+      sortable: false,
+      items: []
+    )
+
+    saved = RecordingStudioAttachable::Queries::ForRecording.stub(:new, ->(**) { raise "membership loaded" }) do
+      RecordingStudioAttachable::AttachmentCollection.from_params(
+        recording: parent,
+        params: { signed_editor: collection.signed_editor, rows: [] }
+      )
+    end
+
+    assert_empty saved.rows
+  end
+
+  def test_placements_is_not_an_association
+    error = assert_raises(ArgumentError) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: Parent.new("parent-1"),
+        association: :placements,
+        fields: [:caption],
+        sortable: false,
+        items: []
+      )
+    end
+
+    assert_match(/Unknown association/, error.message)
   end
 
   private
@@ -643,14 +806,60 @@ class AttachmentCollectionTest < Minitest::Test
     end
   end
 
-  def placement_message
-    RecordingStudioAttachable::AttachmentCollection.for(
-      recording: Parent.new("parent-1"),
-      association: :placements,
-      fields: [:caption],
-      sortable: false,
-      items: []
-    ).empty_message
+  def message_collection(association)
+    with_membership([]) do
+      RecordingStudioAttachable::AttachmentCollection.for(
+        recording: Parent.new("parent-1"),
+        association: association,
+        fields: [:caption],
+        sortable: false
+      )
+    end
+  end
+
+  def linked_row(member, attachment_recording)
+    Struct.new(:member, :attachment_recording).new(member, attachment_recording)
+  end
+
+  def linked_member(id, parent_id: "parent-1")
+    identify(child(id), parent_id: parent_id)
+  end
+
+  def linked_file(id, recordable_type: "RecordingStudioAttachable::Attachment", **texts)
+    recording = identify(child(id, **texts), parent_id: "parent-1")
+    recording.define_singleton_method(:recordable_type) { recordable_type }
+    recording
+  end
+
+  def identify(recording, parent_id:)
+    gid = "gid://test/Recording/#{recording.id}"
+    recording.define_singleton_method(:to_global_id) { gid }
+    recording.define_singleton_method(:parent_recording_id) { parent_id }
+    recording
+  end
+
+  def with_locator(*recordings, &)
+    registry = recordings.to_h { |recording| [recording.to_global_id.to_s, recording] }
+    GlobalID::Locator.stub(:locate, lambda { |gid|
+      registry.fetch(gid.to_s) { raise ActiveRecord::RecordNotFound }
+    }, &)
+  end
+
+  def reload_signed(parent, collection, photo, member)
+    with_membership([]) do
+      with_locator(photo, member) do
+        RecordingStudioAttachable::AttachmentCollection.from_params(
+          recording: parent,
+          params: { signed_editor: collection.signed_editor, rows: [] }
+        )
+      end
+    end
+  end
+
+  def path_template
+    member_token = ["%", "{", "member_id", "}"].join
+    file_token = ["%", "{", "attachment_id", "}"].join
+    "/sheets/#{member_token}/files/#{file_token}"
   end
 
   def collection_for(parent, **options)

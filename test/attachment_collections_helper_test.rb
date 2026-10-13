@@ -429,28 +429,26 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, 'src="/attachments/image-1/preview/med" alt="Thumbnail 1"'
   end
 
-  def test_placement_editor_reuses_list_slides_and_grid_and_opens_the_photo
+  def test_linked_rows_reuse_list_slides_and_grid_and_open_the_file
     photo = child("image-1", name: "Pier", caption: "Light", credit: "Ada")
-    placement = Child.new(id: "place-1", created_at: Time.utc(2026, 1, 1), recordable: photo.recordable)
-    resolved = RecordingStudioAttachable::Placements::Resolved.new(
-      placement_recording: placement,
-      attachment_recording: photo,
-      attachment: photo.recordable
-    )
-    parent = orderable_parent([placement])
+    member = Child.new(id: "member-1", created_at: Time.utc(2026, 1, 1), recordable: photo.recordable)
+    linked = Struct.new(:member, :attachment_recording).new(member, photo)
+    parent = orderable_parent([member])
     @displays = %i[list carousel grid]
     html = render_editor(
       [photo],
       parent: parent,
       fields: %i[caption credit alt_text],
       sortable: true,
-      return_to: "/galleries/1",
-      association: :placements,
-      items: [resolved]
+      return_to: "/pages/1",
+      association: :images,
+      items: [linked],
+      remove_label: "Remove from here",
+      remove_path: ->(row, _params) { "/pointers/#{row.member.id}" }
     )
 
     list_form = form_markup(html, "attachment-collection-parent-1")
-    slide_form = form_markup(html, "attachment-collection-parent-1-slide-place-1")
+    slide_form = form_markup(html, "attachment-collection-parent-1-slide-member-1")
     grid = html[/data-recording-studio-attachable--collection-display-target="grid".*?<form/m]
 
     assert_includes html, ">List<"
@@ -466,13 +464,14 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, "flat-pack-input"
     assert_includes html, "border-[var(--surface-border-color)]"
     assert_includes html, ">Remove from here<"
-    assert_includes html, 'form="attachment-collection-parent-1-trash-place-1"'
-    assert_includes html, 'value="place-1"'
+    assert_includes html, 'form="attachment-collection-parent-1-trash-member-1"'
+    assert_includes html, 'value="member-1"'
+    assert_includes html, 'action="/pointers/member-1'
     assert_includes html, 'name="attachment_collection[rows][][order]"'
     assert_includes html, 'aria-label="Drag"'
     assert_includes html, 'data-flat-pack--icon-name-value="bars-2"'
     assert_includes html, 'aria-label="Edit Pier"'
-    assert_includes html, 'data-modal-id="attachment-collection-parent-1-edit-place-1"'
+    assert_includes html, 'data-modal-id="attachment-collection-parent-1-edit-member-1"'
     assert_includes html, "grid-cols-1"
     assert_includes html, "sm:grid-cols-2"
     assert_includes html, "lg:grid-cols-3"
@@ -581,6 +580,8 @@ class AttachmentCollectionsHelperTest < Minitest::Test
         side_preview: @side_preview || false,
         items_per_view: @items_per_view || 1,
         items: options[:items],
+        remove_label: options[:remove_label],
+        remove_path: options[:remove_path],
         url: "/save",
         return_to: options.fetch(:return_to)
       )
@@ -606,10 +607,6 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     view.define_singleton_method(:attachable_destroy_attachment_path) do |recording, **options|
       query = options.map { |key, value| "#{key}=#{CGI.escape(value.to_s)}" }.join("&")
       "/attachments/#{recording.id}?#{query}"
-    end
-    view.define_singleton_method(:attachable_destroy_placement_path) do |recording, **options|
-      query = options.map { |key, value| "#{key}=#{CGI.escape(value.to_s)}" }.join("&")
-      "/placements/#{recording.id}?#{query}"
     end
     view.define_singleton_method(:attachable_attachment_path) do |recording, **options|
       query = options.map { |key, value| "#{key}=#{CGI.escape(value.to_s)}" }.join("&")

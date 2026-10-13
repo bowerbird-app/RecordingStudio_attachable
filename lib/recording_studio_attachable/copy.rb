@@ -35,17 +35,12 @@ module RecordingStudioAttachable
       t("collection.empty_messages.#{association}", default: english)
     end
 
-    # Map main's known English remove_label literals to locale keys at render.
-    # Unknown strings pass through unchanged (no re-implementation of placement?).
+    # Map the editor's English Trash label to a locale key at render.
+    # Any other label is already the caller's copy and passes through.
     def translate_remove_label(english)
-      case english
-      when "Trash"
-        t("collection.trash", default: "Trash")
-      when "Remove from here"
-        t("collection.remove_from_here", default: "Remove from here")
-      else
-        english
-      end
+      return t("collection.trash", default: "Trash") if english == "Trash"
+
+      english
     end
 
     def type_label(mime_type, english:)

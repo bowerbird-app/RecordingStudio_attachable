@@ -17,29 +17,27 @@ class UploadProviderLauncherScriptsTest < ActionDispatch::IntegrationTest
     sign_in @user
   end
 
-  test "library upload page emits unescaped launcher module imports" do
-    library = prepare_library!
+  test "attachment upload page emits unescaped launcher module imports" do
+    prepare_workspace!
 
     with_client_picker_providers_registered do
-      get recording_studio_attachable.recording_attachment_upload_path(library)
+      get recording_studio_attachable.recording_attachment_upload_path(@root)
       assert_response :success
       assert_unescaped_launcher_imports(response.body)
     end
   end
 
   test "image picker modal emits unescaped launcher module imports" do
-    prepare_library!
-    gallery = Gallery.find_or_create_by!(title: "Kiln shots")
+    prepare_workspace!
+    page = Page.find_or_create_by!(title: "Home page")
     RecordingStudio::Recording.unscoped.find_or_create_by!(
       root_recording_id: @root.id,
       parent_recording_id: @root.id,
-      recordable: gallery
+      recordable: page
     )
 
     with_client_picker_providers_registered do
-      get gallery_path(gallery)
-      assert_response :redirect
-      follow_redirect!
+      get edit_page_path(page)
       assert_response :success
       assert_unescaped_launcher_imports(response.body)
     end
@@ -47,12 +45,11 @@ class UploadProviderLauncherScriptsTest < ActionDispatch::IntegrationTest
 
   private
 
-  def prepare_library!
+  def prepare_workspace!
     workspace = Workspace.find_or_create_by!(name: "Studio Workspace")
     Current.actor = @user
     @root = RecordingStudio.root_recording_for(workspace)
     grant_workspace_access!(@root)
-    RecordingStudioAttachable.library_for(@root, actor: @user)
   end
 
   def with_client_picker_providers_registered

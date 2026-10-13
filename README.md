@@ -26,7 +26,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 1. Add the gem to your host app.
 2. Ensure Active Storage and RecordingStudio Accessible are installed.
 3. Run `rails generate recording_studio_attachable:install`.
-4. Run `rails generate recording_studio_attachable:migrations`.
+4. Run `rails generate recording_studio_attachable:migrations`. Each copied file is stamped one second after the previous file.
 5. Run `rails db:migrate`.
 6. Declare each host-app domain recordable with `recording_studio_recordable(...)`.
 7. Opt parent recordables into `include RecordingStudio::Capabilities::Attachable.to(...)`. Installing the gem does not enable `:attachable`.
@@ -59,8 +59,6 @@ end
 Recording Studio 4 requires every configured host-app recordable to declare whether it can be a root and, for non-root domain recordables, which parent types are allowed.
 
 Do not enable `:attachable` on a shared root (`shared: true`). Attachments are capability-owned children, so enable the capability on domain recordables beneath that shared root instead.
-
-Reusable photos belong in host-mounted image libraries, not on the shared root. `RecordingStudioAttachable::Library` is a child of a parent that enables `ImageLibrary` — the root, or a brand / client / project. `library_for(parent)` find-or-creates one library per parent. Extra libraries use a host key, for example `library_for(parent, key: :campaign)`. People do not create or browse libraries. Host gems place those photos with `RecordingStudioAttachable::Placement`. See [Image libraries](docs/image-library.md).
 
 `RecordingStudioAttachable::Attachment` is owned by this addon. The addon declares it as `root: false` and registers it as a child recordable of the `:attachable` capability, so host apps should not add host-specific `allowed_parent_types:` to the attachment model.
 
@@ -526,37 +524,6 @@ The most important per-recordable options are:
 - `auth_roles`
 - `authorize_with`
 
-## Image libraries
-
-Photos that several pages reuse live once in a library the host mounts. A host page stores a placement, not a second file. Enable `ImageLibrary` on a root, brand, client, or project. People upload and edit photos. They do not create, title, or browse libraries.
-
-```ruby
-class Workspace < ApplicationRecord
-  recording_studio_recordable label: "Workspace", root: true
-  include RecordingStudio::Capabilities::ImageLibrary.to
-end
-
-class Gallery < ApplicationRecord
-  recording_studio_recordable label: "Gallery", root: false, allowed_parent_types: ["Workspace"]
-  include RecordingStudio::Capabilities::LibraryPlacement.to
-  include RecordingStudio::Capabilities::Orderable.to(allows: ["RecordingStudioAttachable::Placement"])
-end
-
-library = root_recording.image_library(actor: current_user)
-campaign = root_recording.image_library(key: :campaign, actor: current_user)
-gallery.place_library_image(attachment_recording: photo, actor: current_user)
-gallery.upload_to_library_and_place(signed_blob_id: blob.signed_id, library_recording: campaign, actor: current_user)
-gallery.library_placements
-```
-
-`library_path_for(library)` or `library_path_for(parent, key: :campaign)` opens the existing listing. Put those paths in the host nav. `recording_placements_path(gallery)` mounts the existing list, slides, and grid editor for the resolved placements. Add from library, Upload, list reorder, and Remove from here sit on top of that editor. Editing caption, credit, or alt opens the library photo. The switcher shows only when the host passed more than one library. Set `config.placement_picker_libraries` to pass the list.
-
-Trashing a library or a photo that is in use warns how many places point at it. Resolve skips a trashed photo. Permanently deleting a library or a photo removes its placements. Removing a placement leaves the photo in the library.
-
-Access follows the tree. Public pages render through `RecordingStudioAttachable::Placements.resolve`. Duplicating a host page copies placements, not files.
-
-Full setup, trash rules, and a Presskits note: [docs/image-library.md](docs/image-library.md).
-
 ## Helpers and queries
 
 The engine exposes a small set of route helpers that host apps typically use directly:
@@ -701,7 +668,7 @@ Wrap the editor in a turbo frame and pass that frame's id as `target:` when the 
 
 ### Edit many images
 
-`attachment_collection_editor` edits the direct images, files, or attachments on a parent and saves the rows that changed. Pass `association: :placements` and `items:` (resolved placements) to render the same List, Slides, and Grid for a host page that points at library photos. Caption, credit, and alt use the same Flatpack fields. Saving a placement writes those on the library photo. Nothing is written onto the blob. `:name` edits the existing name. There is no title column. Remove from here drops the pointer.
+`attachment_collection_editor` edits the direct images, files, or attachments on a parent and saves the rows that changed. Caption, credit, and alt use the same Flatpack fields. Nothing is written onto the blob. `:name` edits the existing name. There is no title column.
 
 ```ruby
 attachment_collection_editor(
@@ -723,6 +690,10 @@ Each image sits in a card. On Slides, the picture moves into that card and the f
 The switch does not reload the page. List, Slides, and Grid keep separate copies of the fields. The list has one Save, and that save writes every row that changed, then the page reloads on the list. Each slide has its own Save, and that save writes that image without reloading the page. The slide you are on stays on screen, and its Save returns to the default button. Grid works the same way inside the edit modal: Save writes that image, the modal stays open, and the list and slide copies of that image pick up the saved text. Text typed on another slide or in another grid modal stays there. The picture moves between the list thumbnail and the slide. The grid tile is its own picture. Refreshing returns to `default_display`. The choice is not in the signed save token.
 
 `sortable: true` reuses Orderable on that parent (`recording_studio_orderable_reorder!`) and splices this association into the parent's existing child order. This gem does not depend on `recording_studio_orderable`. Without that method, the helper raises. Omit `sortable` to keep newest-first and skip reorder. The drag handle and Order field show on List. A slide form and a grid form leave order out, so saving one image from Slides or Grid does not reorder the set. Reorder from List, then use the list Save.
+
+Pass `items:` to edit a linked sheet instead of the parent's own files. Each entry is a recording, or an object that responds to `member` and `attachment_recording` when the row is not the file. Reorder writes the member ids. Caption, credit, alt text, name, and description still revise the file. `remove_label:` replaces Trash. `remove_path:` is a path string or a callable. A string may include `%{member_id}` and `%{attachment_id}`. A callable is `->(row, redirect_params) { ... }` and is snapshotted for the current members. `orderable_message:` replaces the error raised when a sortable parent does not list every member.
+
+The signed save token stores `items:`, `remove_label:`, `remove_path:`, and `orderable_message:`. The default collection update URL reads them back, so the save does not need those options again. On save, each member is loaded from the signed id or GlobalID and must still belong to this parent. The file must still be an attachment, and its id must still match the signed id. A member from another parent, a swapped id, or a tampered token is rejected. `displays`, `default_display`, `side_preview`, `items_per_view`, and `preview` stay out of that token.
 
 On Grid, each tile is the natural preview, even when `preview:` is `:square`. A short picture can leave space under it when the neighbor in that row is taller. Click a tile to edit that image. The modal is as tall as the original file and the fields. A tall picture grows the card, and you scroll the overlay to reach the fields. Save sits on the left. Trash is the icon on the right. Close the modal without saving and the text is still there the next time you open it. List and Slides still open the original file when you click a preview.
 

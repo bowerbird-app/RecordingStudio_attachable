@@ -43,14 +43,6 @@ RecordingStudioAttachable.configure do |config|
   config.dropbox.client_secret = ENV.fetch("DUMMY_DROPBOX_CLIENT_SECRET", "dummy-dropbox-client-secret")
   config.dropbox.redirect_uri = ENV.fetch("DUMMY_DROPBOX_REDIRECT_URI", codespaces_dropbox_redirect_uri)
 
-  config.placement_picker_libraries = lambda { |parent_recording|
-    root = parent_recording.try(:root_recording) || parent_recording
-    [
-      RecordingStudioAttachable.library_for(root),
-      RecordingStudioAttachable.library_for(root, key: :campaign)
-    ]
-  }
-
   config.register_upload_provider(
     :demo_cloud,
     label: "Demo cloud import",

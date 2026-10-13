@@ -23,25 +23,6 @@ module RecordingStudioAttachable
     def configure
       yield(configuration) if block_given?
     end
-
-    def library_for(parent_recording, key: :default, actor: nil)
-      result = Services::FindOrCreateLibrary.call(
-        parent_recording: parent_recording,
-        key: key,
-        actor: actor
-      )
-      raise ArgumentError, result.error.presence || "Could not change the library" if result.failure?
-
-      result.value
-    end
-
-    def libraries_for(parent_recording)
-      Services::LibraryQuery.live_for_parent(parent_recording)
-    end
-
-    def libraries_in_root(recording)
-      Services::LibraryQuery.live_in_root(recording)
-    end
   end
 end
 
@@ -69,15 +50,11 @@ require "recording_studio_attachable/adapter/oauth_client"
 require "recording_studio_attachable/session_access_token"
 require "recording_studio_attachable/remote_file"
 require "recording_studio_attachable/safe_remote_fetch"
-require "recording_studio_attachable/library_authorization"
 require "recording_studio_attachable/authorization"
 require "recording_studio_attachable/storage_release"
 require "recording_studio_attachable/storage_limit"
-require "recording_studio_attachable/placements"
 require "recording_studio_attachable/services/base_service"
 require "recording_studio_attachable/adapter/import_selected_files"
-require "recording_studio/capabilities/image_library"
-require "recording_studio/capabilities/library_placement"
 Dir[File.expand_path("recording_studio_attachable/*/engine.rb", __dir__)].each do |path|
   require path
 end

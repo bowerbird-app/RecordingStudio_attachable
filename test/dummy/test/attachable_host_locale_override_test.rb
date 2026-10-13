@@ -69,9 +69,8 @@ class AttachableHostLocaleOverrideTest < ActionDispatch::IntegrationTest
     Current.actor = user
     root = RecordingStudio.root_recording_for(workspace)
     grant_workspace_access!(root, user)
-    library = RecordingStudioAttachable.library_for(root, actor: user)
 
-    get recording_studio_attachable.recording_attachments_path(library)
+    get recording_studio_attachable.recording_attachments_path(root)
     assert_response :success
     assert_includes response.body, HOST_EMPTY_TITLE
     refute_includes response.body, "HOST Library"

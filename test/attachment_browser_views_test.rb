@@ -2,7 +2,7 @@
 
 require "test_helper"
 
-class LibraryViewsTest < Minitest::Test
+class AttachmentBrowserViewsTest < Minitest::Test
   def test_attachment_show_edits_caption_credit_and_alt
     source = File.read(File.expand_path("../app/views/recording_studio_attachable/attachments/show.html.erb", __dir__))
 

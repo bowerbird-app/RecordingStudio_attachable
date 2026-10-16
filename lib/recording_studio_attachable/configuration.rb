@@ -26,6 +26,7 @@ module RecordingStudioAttachable
     attr_accessor :allowed_content_types,
                   :max_file_size,
                   :max_file_count,
+                  :unattached_blob_ttl,
                   :image_processing_enabled,
                   :image_processing_max_width,
                   :image_processing_max_height,
@@ -40,7 +41,7 @@ module RecordingStudioAttachable
                   :direct_url_host,
                   :attachment_place_labels
 
-    attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode, :upload_presentation
+    attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode, :upload_presentation, :import_allowed_hosts
 
     def initialize
       assign_defaults
@@ -195,6 +196,10 @@ module RecordingStudioAttachable
       raise ArgumentError, "Unknown upload presentation: #{value.inspect}. Use :page or :modal."
     end
 
+    def import_allowed_hosts=(hosts)
+      @import_allowed_hosts = Array(hosts).filter_map { |host| host.to_s.strip.downcase.presence }
+    end
+
     def storage_limit=(value)
       normalized = value.is_a?(String) ? value.strip : value
       @storage_limit = normalized.presence
@@ -205,6 +210,8 @@ module RecordingStudioAttachable
         allowed_content_types: allowed_content_types,
         max_file_size: max_file_size,
         max_file_count: max_file_count,
+        unattached_blob_ttl: unattached_blob_ttl,
+        import_allowed_hosts: import_allowed_hosts,
         storage_limit: storage_limit,
         image_processing_enabled: image_processing_enabled,
         image_processing_max_width: image_processing_max_width,
@@ -239,6 +246,8 @@ module RecordingStudioAttachable
       @allowed_content_types = ["image/*", "application/pdf"]
       @max_file_size = 25.megabytes
       @max_file_count = 20
+      @unattached_blob_ttl = 24.hours
+      @import_allowed_hosts = []
       @storage_limit = nil
       @image_processing_enabled = false
       @image_processing_max_width = 2560

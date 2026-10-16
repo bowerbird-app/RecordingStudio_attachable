@@ -106,6 +106,39 @@ class RecordAttachmentUploadTest < Minitest::Test
     end
   end
 
+  def test_forwards_caption_credit_and_alt_text
+    blob = FakeBlob.new("image/png", 1024, FakeFilename.new("photo.png"))
+    parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: FakeRecording.new(id: "root-1"))
+    built_attachment = Struct.new(:id, :name, :content_type, :byte_size, :attachment_kind, :original_filename).new(
+      "attachment-3", "Hero", "image/png", 1024, "image", "photo.png"
+    )
+    captured = nil
+
+    ActiveStorage::Blob.stub(:find_signed!, blob) do
+      RecordingStudioAttachable::Attachment.stub(:build_from_blob, lambda { |**kwargs|
+        captured = kwargs
+        built_attachment
+      }) do
+        RecordingStudio.stub(:record!, FakeEvent.new(Struct.new(:id, :recordable).new("child-3", built_attachment))) do
+          result = RecordingStudioAttachable::Services::RecordAttachmentUpload.call(
+            parent_recording: parent,
+            signed_blob_id: "signed-id",
+            actor: Object.new,
+            caption: "Door",
+            credit: "Ada",
+            alt_text: "Front door"
+          )
+
+          assert result.success?
+        end
+      end
+    end
+
+    assert_equal "Door", captured[:caption]
+    assert_equal "Ada", captured[:credit]
+    assert_equal "Front door", captured[:alt_text]
+  end
+
   def test_rejects_pdf_and_text_uploads_for_page_recordings
     parent = FakeRecording.new(id: "parent-1", recordable_type: "Page", root_recording: FakeRecording.new(id: "root-1"))
     capability_options = { allowed_content_types: ["image/*"], enabled_attachment_kinds: %i[image], max_file_size: 2.megabytes }

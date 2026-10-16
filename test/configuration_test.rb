@@ -28,6 +28,8 @@ class ConfigurationTest < Minitest::Test
   def test_defaults_match_attachable_expectations
     assert_equal ["image/*", "application/pdf"], @configuration.allowed_content_types
     assert_equal 20, @configuration.max_file_count
+    assert_equal 24.hours, @configuration.unattached_blob_ttl
+    assert_equal [], @configuration.import_allowed_hosts
     assert_nil @configuration.storage_limit
     assert_not @configuration.image_processing_enabled
     assert_equal 2560, @configuration.image_processing_max_width
@@ -356,6 +358,8 @@ class ConfigurationTest < Minitest::Test
         allowed_content_types: ["image/*", "application/pdf"],
         max_file_size: 25.megabytes,
         max_file_count: 20,
+        unattached_blob_ttl: 24.hours,
+        import_allowed_hosts: [],
         storage_limit: nil,
         image_processing_enabled: false,
         image_processing_max_width: 2560,

@@ -7,6 +7,10 @@ RecordingStudioAttachable.configure do |config|
   # config.storage_limit = :storage_bytes
   # Maximum number of files accepted in a single upload or import request.
   config.max_file_count = 20
+  # Hosts that import by URL list the HTTPS hosts SafeRemoteFetch may contact.
+  # config.import_allowed_hosts = ["cdn.example.com"]
+  # PurgeUnattachedBlobsJob deletes unattached blobs older than this.
+  # config.unattached_blob_ttl = 24.hours
   config.enabled_attachment_kinds = %i[image file]
   config.default_listing_scope = :direct
   config.default_kind_filter = :all

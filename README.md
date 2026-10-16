@@ -209,7 +209,75 @@ The gem registers site-wide `:attachments` metrics with RecordingStudio Metrics 
 
 `attachments.uploads_over_time` takes `from`, `to`, and `interval` (`day`, `week`, `month`, `year`). The scalar and breakdown metrics do not take a window.
 
-`api_authorize` is `RecordingStudioAttachable::Api::Access.can_view?`: AdminRoot `:view` through Recording Studio Accessible. The host calls `RecordingStudioMetrics::Api.register!(api: :operations)`. This gem does not register API endpoints. RecordingStudio MCP `0.17.0` builds one read-only tool per exposed metric from that registry.
+`api_authorize` is `RecordingStudioAttachable::Api::Access.can_view?`: AdminRoot `:view` through Recording Studio Accessible. The host calls `RecordingStudioMetrics::Api.register!(api: :operations)`. This gem does not register those metric endpoints. RecordingStudio MCP `0.17.0` builds one read-only tool per exposed metric from that registry.
+
+### Attachment API
+
+The upload, attach, and import actions are capability actions on the parent recording. They are registered when `RecordingStudioApi` is loaded. A host turns them on per recordable type.
+
+1. Add `recording_studio_api` to the host app. Include `RecordingStudioApi::ApiClient` in Accessible `access_actor_types` so a provisioned client can hold the upload role.
+2. Call `RecordingStudioAttachable::Api.register!`. The default API is `:public`. Pass the named admin APIs you also want:
+
+```ruby
+RecordingStudioAttachable::Api.register!(apis: [:public, :operations])
+```
+
+Configure a named API before you pass it. `register!` reads `config.auth_role_for(:upload)` at that moment. `import_attachment` uses `config.auth_roles[:import]` when that key exists, and `:upload` otherwise.
+
+3. Allow the actions on each parent type. Registration alone does not expose them.
+
+```ruby
+RecordingStudioApi.register_recordable_type_api(
+  "Workspace",
+  operations: %i[index show],
+  capability_actions: %i[create_upload attach import_attachment]
+)
+```
+
+A press kit gem does the same on its image and file sections:
+
+```ruby
+RecordingStudioApi.register_recordable_type_api(
+  "RecordingStudioPresskits::Images",
+  operations: %i[index show],
+  capability_actions: %i[update_image reorder_images remove_image create_upload attach import_attachment]
+)
+
+RecordingStudioApi.register_recordable_type_api(
+  "RecordingStudioPresskits::Files",
+  operations: %i[index show],
+  capability_actions: %i[update_file reorder_files remove_file create_upload attach import_attachment]
+)
+```
+
+A type that leaves those names off `capability_actions` does not show the actions in OpenAPI. Calling one returns the Recording Studio API's unsupported-action response.
+
+`create_upload` takes `filename`, `byte_size`, `checksum`, and `content_type`. The checksum is the base64 MD5 of the bytes. The response is `signed_blob_id`, `upload` (`url` and `headers`), and `expires_at`. PUT the bytes to `upload.url` with `upload.headers`.
+
+The disk service builds that URL from the current request host. This gem includes `ActiveStorage::SetCurrent` on `RecordingStudioApi::ApiController` so the host is set. An S3 service returns a presigned URL and does not use the app host.
+
+`attach` takes one file (`signed_blob_id`, and optional `name`, `description`, `caption`, `credit`, `alt_text`) or `attachments` as a list of those objects. The response is the new child attachment (`id`, `kind`, `name`, `urls`) or `{ attachments: [...] }` for a list.
+
+`import_attachment` takes `url`, and optional `name` and `description`. Set `config.import_allowed_hosts` to the HTTPS hosts the host app trusts. Private addresses, non-HTTPS URLs, and any other host are rejected. The fetch uses `SafeRemoteFetch`.
+
+Validation failures are `422` `invalid_input`. A caller without the upload role is `403`.
+
+Browser clients that PUT straight to S3 need a CORS rule on the bucket. Allow `PUT` from the app origin, and allow the headers `Content-Type`, `Content-MD5`, and `Content-Disposition`. A server or other non-browser client sends those headers itself and does not need the CORS rule.
+
+`create_upload` leaves an Active Storage blob before the client finishes the PUT. `PurgeUnattachedBlobsJob` deletes unattached blobs older than `config.unattached_blob_ttl` (default 24 hours). Attached blobs stay. Schedule the job at least that often. With Solid Queue:
+
+```yaml
+# config/recurring.yml
+purge_unattached_attachment_blobs:
+  class: RecordingStudioAttachable::PurgeUnattachedBlobsJob
+  schedule: every day at 3am
+```
+
+Or enqueue it from the host's own scheduler:
+
+```ruby
+RecordingStudioAttachable::PurgeUnattachedBlobsJob.perform_later
+```
 
 Trash and restore leave the file attached, so the total stays the same. Permanent deletion is `Recording#destroy!`. `RemoveAttachment` uses that when the recording has no Trashable hook. Trashable purge uses that after the recording is already trashed. Destroy detaches the file rows for the current attachment and earlier snapshots on that recording, then purges a blob that no other attachment still references. The total drops when those file rows are gone.
 
@@ -721,7 +789,7 @@ Dummy credentials (`test/dummy/config/credentials.yml.enc`) are encrypted with t
 
 - the dummy app is a validation shell, not a production template
 - CI installs the dummy app bundle and runs dummy-app migrations before the root checks
-- the dummy app pins RecordingStudio `v4.5.0`, Recording Studio Accessible `v0.15.0`, and Recording Studio Orderable `v0.3.0`
+- the dummy app pins RecordingStudio `v4.7.0`, Recording Studio Accessible `v0.15.0`, Recording Studio Orderable `v0.3.0`, and Recording Studio API `v0.11.4`
 - make sure engine, Active Storage, and Recording Studio tables are migrated in the dummy app before validating upload flows locally
 - `bin/rails db:seed` attaches a twenty-shot Kiln canister press kit to the workspace. The shots mix portrait, square, and landscape frames. Edit images uses those files. Seeds also remove the colour-block stand-ins `window.jpg`, `dock.jpg`, and `pier.jpg` when they are still on the workspace.
 - set `DUMMY_ACTIVE_STORAGE_SERVICE=amazon` plus `DUMMY_AWS_ACCESS_KEY_ID`, `DUMMY_AWS_SECRET_ACCESS_KEY`, `DUMMY_AWS_REGION`, and `DUMMY_AWS_BUCKET` to exercise S3-backed uploads in the dummy app; `DUMMY_AWS_BUCKET` may be either the plain bucket name or a bucket ARN

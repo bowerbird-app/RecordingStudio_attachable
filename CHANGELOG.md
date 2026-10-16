@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-10-16
+
+### Added
+
+- Recording Studio API actions `create_upload`, `attach`, and `import_attachment` on the `:attachable` capability. `RecordingStudioAttachable::Api.register!(apis: [:public, :operations])` registers them on each named API when `RecordingStudioApi` is loaded. A host still lists the action names in `capability_actions` for each parent type.
+- `create_upload` checks the parent's content types and max file size, claims storage capacity, and returns a direct-upload ticket (`signed_blob_id`, `upload.url`, `upload.headers`, `expires_at`).
+- `attach` records one signed blob or a list through `RecordAttachmentUpload` / `RecordAttachmentUploads`, including caption, credit, and alt text.
+- `import_attachment` fetches an HTTPS URL with `SafeRemoteFetch` and records it through `ImportAttachment`. `config.import_allowed_hosts` is the host allowlist (default empty).
+- `PurgeUnattachedBlobsJob` deletes unattached Active Storage blobs older than `config.unattached_blob_ttl` (default 24 hours).
+
+### Upgrade Notes
+
+- Bump to `0.20.0`. No migration.
+- Install `recording_studio_api` and call `RecordingStudioAttachable::Api.register!` (pass named admin APIs when those clients should upload too). Add `create_upload`, `attach`, and `import_attachment` to `capability_actions` on each parent type. Include `RecordingStudioApi::ApiClient` in Accessible `access_actor_types`.
+- Set `config.import_allowed_hosts` before calling `import_attachment`. An empty list rejects every URL.
+- Schedule `RecordingStudioAttachable::PurgeUnattachedBlobsJob`.
+- Browser uploads to S3 need a bucket CORS rule that allows `PUT` and the headers `Content-Type`, `Content-MD5`, and `Content-Disposition`. Other clients do not.
+
+## [0.19.0] - 2026-10-16
+
 ### Changed
 
 - Require `recording_studio_metrics` `>= 0.3.0, < 0.4` (GitHub tag `v0.3.1`).

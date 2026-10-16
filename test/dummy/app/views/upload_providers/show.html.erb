@@ -20,7 +20,7 @@
 
       <div class="flex flex-wrap items-center gap-3">
         <%= form_with url: demo_upload_provider_path(recording_id: @recording.id), method: :post, class: "inline-flex" do %>
-          <%= render FlatPack::Button::Component.new(text: "Import sample SVG", style: :primary, size: :md, type: "submit", icon: "cloud") %>
+          <%= render FlatPack::Button::Component.new(text: "Import sample image", style: :primary, size: :md, type: "submit", icon: "cloud") %>
         <% end %>
 
         <%= render FlatPack::Button::Component.new(

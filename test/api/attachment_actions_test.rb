@@ -14,8 +14,8 @@ class AttachmentActionsTest < Minitest::Test
       persisted
     end
 
-    def signed_id(expires_in:)
-      "signed-#{expires_in}"
+    def signed_id(purpose: nil, expires_in: nil)
+      "signed-#{purpose}-#{expires_in}"
     end
 
     def service_url_for_direct_upload(expires_in:)
@@ -80,7 +80,11 @@ class AttachmentActionsTest < Minitest::Test
 
         assert_equal "image/png", created[:content_type]
         assert_equal 12, created[:byte_size]
-        assert_match(/\Asigned-/, ticket[:signed_blob_id])
+        assert_equal "1", created.dig(:metadata, RecordingStudioAttachable::DirectUpload::TAG)
+        assert_equal "parent-1", created.dig(:metadata, "parent_recording_id")
+        assert_equal "Symbol", created.dig(:metadata, "actor_type")
+        assert_equal "actor", created.dig(:metadata, "actor_id")
+        assert_match(/\Asigned-attachable_upload-/, ticket[:signed_blob_id])
         assert_match(%r{\Ahttps://uploads\.example\.test/}, ticket.dig(:upload, :url))
         assert_equal "image/png", ticket.dig(:upload, :headers, "Content-Type")
         assert ticket[:expires_at].present?
@@ -112,6 +116,27 @@ class AttachmentActionsTest < Minitest::Test
 
       assert_includes oversized.message, "maximum file size"
       assert_includes negative.message, "zero or more"
+    end
+  end
+
+  def test_create_upload_uses_its_own_expiry_and_rejects_a_full_pending_queue
+    blob = FakeBlob.new(id: "blob-1", persisted: true, purged: false)
+    @configuration.direct_upload_expires_in = 2.minutes
+    @configuration.pending_upload_limit = 1
+
+    ActiveStorage::Blob.stub(:create_before_direct_upload!, blob) do
+      RecordingStudioAttachable::StorageLimit.stub(:with_storage_capacity!, ->(_root, _incoming, &block) { block.call }) do
+        ticket = create_upload.call(context(content_type: "image/png", byte_size: 12))
+        assert_includes ticket.dig(:upload, :url), 2.minutes.to_s
+        assert_in_delta 2.minutes.from_now.to_i, Time.iso8601(ticket[:expires_at]).to_i, 2
+
+        RecordingStudioAttachable::DirectUpload.stub(:pending_count, 1) do
+          error = assert_raises(RecordingStudioApi::InvalidActionInputError) do
+            create_upload.call(context(content_type: "image/png", byte_size: 12))
+          end
+          assert_includes error.message, "pending"
+        end
+      end
     end
   end
 

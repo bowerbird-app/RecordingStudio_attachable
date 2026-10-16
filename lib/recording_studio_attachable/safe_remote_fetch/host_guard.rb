@@ -29,7 +29,9 @@ module RecordingStudioAttachable
         IPAddr.new("::ffff:172.16.0.0/108"),
         IPAddr.new("::ffff:192.168.0.0/112"),
         IPAddr.new("::ffff:198.18.0.0/111"),
-        IPAddr.new("::ffff:224.0.0.0/100")
+        IPAddr.new("::ffff:224.0.0.0/100"),
+        IPAddr.new("::ffff:0:0/96"),
+        IPAddr.new("2002::/16")
       ].freeze
       BLOCKED_HOSTS = %w[localhost metadata.google.internal].freeze
 

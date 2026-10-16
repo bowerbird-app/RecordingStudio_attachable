@@ -5,8 +5,10 @@ module RecordingStudioAttachable
     queue_as :default
 
     def perform
+      return unless RecordingStudioAttachable.configuration.purge_unattached_blobs
+
       cutoff = RecordingStudioAttachable.configuration.unattached_blob_ttl.ago
-      ActiveStorage::Blob.unattached.where(created_at: ...cutoff).find_each(&:purge)
+      DirectUpload.expired_unattached(cutoff).find_each(&:purge)
     end
   end
 end

@@ -57,6 +57,7 @@ class ChatDemoController < ApplicationController
     )
     return if @root_recording.blank?
 
+    @chat_direct_upload_path = recording_studio_attachable.recording_direct_uploads_path(@root_recording)
     @chat_attachment_picker_path = recording_studio_attachable.recording_attachment_picker_path(
       @root_recording,
       scope: :subtree

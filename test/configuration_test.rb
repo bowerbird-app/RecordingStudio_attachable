@@ -28,7 +28,10 @@ class ConfigurationTest < Minitest::Test
   def test_defaults_match_attachable_expectations
     assert_equal ["image/*", "application/pdf"], @configuration.allowed_content_types
     assert_equal 20, @configuration.max_file_count
+    assert_equal 20, @configuration.pending_upload_limit
     assert_equal 24.hours, @configuration.unattached_blob_ttl
+    assert_equal 5.minutes, @configuration.direct_upload_expires_in
+    assert_equal false, @configuration.purge_unattached_blobs
     assert_equal [], @configuration.import_allowed_hosts
     assert_nil @configuration.storage_limit
     assert_not @configuration.image_processing_enabled
@@ -289,6 +292,8 @@ class ConfigurationTest < Minitest::Test
   def test_allowed_content_type_supports_wildcards
     assert @configuration.allowed_content_type?("image/png")
     assert_not @configuration.allowed_content_type?("text/plain")
+    assert_not @configuration.allowed_content_type?("image/svg+xml")
+    assert @configuration.allowed_content_type?("image/svg+xml", allowed_content_types: ["image/svg+xml"])
   end
 
   def test_allowed_content_type_accepts_blank_overrides
@@ -358,7 +363,10 @@ class ConfigurationTest < Minitest::Test
         allowed_content_types: ["image/*", "application/pdf"],
         max_file_size: 25.megabytes,
         max_file_count: 20,
+        pending_upload_limit: 20,
         unattached_blob_ttl: 24.hours,
+        direct_upload_expires_in: 5.minutes,
+        purge_unattached_blobs: false,
         import_allowed_hosts: [],
         storage_limit: nil,
         image_processing_enabled: false,

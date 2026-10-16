@@ -8,8 +8,18 @@ class RecordAttachmentUploadTest < Minitest::Test
   FakeRecording = Struct.new(:id, :recordable_type, :root_recording, keyword_init: true)
   FakeEvent = Struct.new(:recording)
   FakeBlob = Struct.new(:content_type, :byte_size, :filename) do
-    def signed_id
+    attr_accessor :metadata
+
+    def signed_id(**)
       "signed-id"
+    end
+
+    def attachments
+      []
+    end
+
+    def open
+      yield StringIO.new(UploadBlobBytes.for(content_type))
     end
   end
   FakeFilename = Struct.new(:value) do
@@ -46,6 +56,7 @@ class RecordAttachmentUploadTest < Minitest::Test
     event = FakeEvent.new(created_recording)
     captured_recording_kwargs = nil
 
+    bind_blob(blob, parent)
     ActiveStorage::Blob.stub(:find_signed!, blob) do
       RecordingStudioAttachable::Attachment.stub(:build_from_blob, built_attachment) do
         RecordingStudio.stub(:record!, lambda { |**kwargs|
@@ -55,7 +66,7 @@ class RecordAttachmentUploadTest < Minitest::Test
           result = RecordingStudioAttachable::Services::RecordAttachmentUpload.call(
             parent_recording: parent,
             signed_blob_id: "signed-id",
-            actor: Object.new,
+            actor: upload_actor,
             name: "Upload name"
           )
 
@@ -84,6 +95,7 @@ class RecordAttachmentUploadTest < Minitest::Test
     capability_options = { allowed_content_types: ["text/plain"], enabled_attachment_kinds: %i[file], max_file_size: 2.megabytes }
     captured_validation_options = nil
 
+    bind_blob(blob, parent)
     ActiveStorage::Blob.stub(:find_signed!, blob) do
       RecordingStudio.stub(:capability_options, capability_options) do
         RecordingStudioAttachable::Attachment.stub(:build_from_blob, lambda { |**kwargs|
@@ -94,7 +106,7 @@ class RecordAttachmentUploadTest < Minitest::Test
             result = RecordingStudioAttachable::Services::RecordAttachmentUpload.call(
               parent_recording: parent,
               signed_blob_id: "signed-id",
-              actor: Object.new,
+              actor: upload_actor,
               name: "notes"
             )
 
@@ -114,6 +126,7 @@ class RecordAttachmentUploadTest < Minitest::Test
     )
     captured = nil
 
+    bind_blob(blob, parent)
     ActiveStorage::Blob.stub(:find_signed!, blob) do
       RecordingStudioAttachable::Attachment.stub(:build_from_blob, lambda { |**kwargs|
         captured = kwargs
@@ -123,7 +136,7 @@ class RecordAttachmentUploadTest < Minitest::Test
           result = RecordingStudioAttachable::Services::RecordAttachmentUpload.call(
             parent_recording: parent,
             signed_blob_id: "signed-id",
-            actor: Object.new,
+            actor: upload_actor,
             caption: "Door",
             credit: "Ada",
             alt_text: "Front door"
@@ -147,12 +160,13 @@ class RecordAttachmentUploadTest < Minitest::Test
       FakeBlob.new("application/pdf", 1024, FakeFilename.new("brief.pdf")),
       FakeBlob.new("text/plain", 1024, FakeFilename.new("notes.txt"))
     ].each do |blob|
+      bind_blob(blob, parent)
       ActiveStorage::Blob.stub(:find_signed!, blob) do
         RecordingStudio.stub(:capability_options, capability_options) do
           result = RecordingStudioAttachable::Services::RecordAttachmentUpload.call(
             parent_recording: parent,
             signed_blob_id: "signed-id",
-            actor: Object.new,
+            actor: upload_actor,
             name: "invalid upload"
           )
 
@@ -201,9 +215,17 @@ class RecordAttachmentUploadTest < Minitest::Test
 
     return if ActiveStorage::Blob.respond_to?(:find_signed!)
 
-    ActiveStorage::Blob.define_singleton_method(:find_signed!) do |*|
+    ActiveStorage::Blob.define_singleton_method(:find_signed!) do |*, **|
       raise NotImplementedError
     end
+  end
+
+  def upload_actor
+    @upload_actor ||= Struct.new(:id).new("actor-1")
+  end
+
+  def bind_blob(blob, recording)
+    blob.metadata = RecordingStudioAttachable::DirectUpload.metadata_for(recording: recording, actor: upload_actor)
   end
 
   def stub_attachment_class!

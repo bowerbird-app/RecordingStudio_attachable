@@ -103,7 +103,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, "anchor_url: attachment_page_nav_anchor_url(fallback: recording_attachments_path(@recording))"
     assert_includes view_source, "FlatPack::PageTitle::Component"
     assert_includes view_source, "FlatPack::Button::Component"
-    assert_includes view_source, "rails_direct_uploads_path"
+    assert_includes view_source, "recording_direct_uploads_path"
     assert_includes view_source, "image-processing-max-height-value"
     assert_includes view_source, "image-processing-quality-value"
     assert_includes view_source, "remove-button-template-value"

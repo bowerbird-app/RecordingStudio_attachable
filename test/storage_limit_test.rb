@@ -24,7 +24,7 @@ unless defined?(ActiveStorage::Blob)
     class Blob < ActiveRecord::Base
       self.table_name = "active_storage_blobs"
 
-      def self.find_signed!(*); end
+      def self.find_signed!(*, **); end
 
       def self.create_and_upload!(**); end
 
@@ -56,14 +56,15 @@ class StorageLimitTest < Minitest::Test
   )
 
   class BlobDouble
-    attr_reader :id, :byte_size, :content_type, :signed_id, :attachments
-    attr_accessor :purged
+    attr_reader :id, :byte_size, :content_type, :attachments
+    attr_accessor :purged, :metadata
 
     def initialize(id:, byte_size:, content_type: "image/png", signed_id: nil, attached: false)
       @id = id
       @byte_size = byte_size
       @content_type = content_type
       @signed_id = signed_id || id
+      @metadata = {}
       @purged = false
       attached_flag = attached
       @attachments = Object.new
@@ -77,6 +78,14 @@ class StorageLimitTest < Minitest::Test
 
     def purge
       self.purged = true
+    end
+
+    def signed_id(**)
+      @signed_id
+    end
+
+    def open
+      yield StringIO.new(UploadBlobBytes.for(content_type))
     end
 
     def filename
@@ -489,7 +498,10 @@ class StorageLimitTest < Minitest::Test
     shared = BlobDouble.new(id: SecureRandom.uuid, byte_size: 30, attached: true)
 
     assert_raises(RecordingStudioStripe::PlanLimitReached) { upload(parent, loose) }
-    assert_raises(RecordingStudioStripe::PlanLimitReached) { upload(parent, shared) }
+    shared_incoming = RecordingStudioAttachable::StorageLimit::IncomingBytes.for(parent.root_recording, [shared])
+    assert_raises(RecordingStudioStripe::PlanLimitReached) do
+      RecordingStudioAttachable::StorageLimit.with_storage_capacity!(parent.root_recording, shared_incoming) { flunk "yielded" }
+    end
 
     assert_equal true, loose.purged
     assert_equal false, shared.purged
@@ -597,12 +609,15 @@ class StorageLimitTest < Minitest::Test
     replacement = BlobDouble.new(id: SecureRandom.uuid, byte_size: 40, signed_id: "replacement")
     attachment_recording = attachment_recording_for(root_id, attachment_id)
 
+    actor = storage_actor
+    owner = attachment_recording.parent_recording
+    replacement.metadata = RecordingStudioAttachable::DirectUpload.metadata_for(recording: owner, actor: actor)
     result = nil
     with_upload_stubs(replacement) do
       result = RecordingStudioAttachable::Services::ReplaceAttachmentFile.call(
         attachment_recording: attachment_recording,
         signed_blob_id: replacement.signed_id,
-        actor: Object.new
+        actor: actor
       )
     end
 
@@ -702,12 +717,14 @@ class StorageLimitTest < Minitest::Test
   def upload(parent, blob, max_file_size: nil)
     result = nil
     options = max_file_size ? { max_file_size: max_file_size } : {}
+    actor = storage_actor
+    blob.metadata = RecordingStudioAttachable::DirectUpload.metadata_for(recording: parent, actor: actor)
     RecordingStudio.stub(:capability_options, options) do
       with_upload_stubs(blob) do
         result = RecordingStudioAttachable::Services::RecordAttachmentUpload.call(
           parent_recording: parent,
           signed_blob_id: blob.signed_id,
-          actor: Object.new,
+          actor: actor,
           name: "Upload"
         )
       end
@@ -716,10 +733,14 @@ class StorageLimitTest < Minitest::Test
   end
 
   def upload_batch(parent, blobs)
+    actor = storage_actor
+    blobs.each do |blob|
+      blob.metadata = RecordingStudioAttachable::DirectUpload.metadata_for(recording: parent, actor: actor)
+    end
     signed = blobs.to_h { |blob| [blob.signed_id, blob] }
     result = nil
     RecordingStudioAttachable::Authorization.stub(:authorize!, true) do
-      ActiveStorage::Blob.stub(:find_signed!, ->(signed_id) { signed.fetch(signed_id) }) do
+      ActiveStorage::Blob.stub(:find_signed!, ->(signed_id, **) { signed.fetch(signed_id) }) do
         RecordingStudioAttachable::Attachment.stub(:build_from_blob, attachment_double(10)) do
           RecordingStudio.stub(:record!, lambda { |**|
             @record_calls += 1
@@ -727,7 +748,7 @@ class StorageLimitTest < Minitest::Test
           }) do
             result = RecordingStudioAttachable::Services::RecordAttachmentUploads.call(
               parent_recording: parent,
-              actor: Object.new,
+              actor: actor,
               attachments: blobs.map { |blob| { signed_blob_id: blob.signed_id, name: blob.signed_id } }
             )
           end
@@ -738,6 +759,8 @@ class StorageLimitTest < Minitest::Test
   end
 
   def import_one(parent, blob)
+    actor = storage_actor
+    blob.metadata = RecordingStudioAttachable::DirectUpload.metadata_for(recording: parent, actor: actor)
     RecordingStudioAttachable::Authorization.stub(:authorize!, true) do
       ActiveStorage::Blob.stub(:create_and_upload!, blob) do
         ActiveStorage::Blob.stub(:find_signed!, blob) do
@@ -748,17 +771,20 @@ class StorageLimitTest < Minitest::Test
             }) do
               RecordingStudioAttachable::Services::ImportAttachment.call(
                 parent_recording: parent,
-                io: StringIO.new("x"),
+                io: StringIO.new(UploadBlobBytes.for(blob.content_type)),
                 filename: "notes.png",
                 content_type: blob.content_type,
-                actor: Object.new,
-                identify: false
+                actor: actor
               )
             end
           end
         end
       end
     end
+  end
+
+  def storage_actor
+    Struct.new(:id).new("storage-actor")
   end
 
   def with_upload_stubs(blob, &block)

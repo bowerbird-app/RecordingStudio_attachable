@@ -10,7 +10,7 @@
 <% form_method = attachment_recording.present? ? :patch : :post %>
 <% accept_attribute = attachment_file_button_accept_attribute(allowed_content_types) %>
 <% form_controller_values = {
-  direct_upload_url: main_app.rails_direct_uploads_path,
+  direct_upload_url: recording_direct_uploads_path(recording),
   max_file_size: max_file_size,
   image_processing_enabled: image_processing_enabled,
   image_processing_max_width: image_processing_max_width,

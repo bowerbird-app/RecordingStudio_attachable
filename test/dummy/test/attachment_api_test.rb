@@ -32,7 +32,7 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
   end
 
   test "create_upload put and attach records a child and an attachment_uploaded event" do
-    bytes = "hello-image"
+    bytes = png_bytes
     created = upload_ticket("photo.png", "image/png", bytes)
     assert_response :success, response.body
     put_upload(created, bytes)
@@ -51,10 +51,10 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
   end
 
   test "attach accepts a batch of uploaded files" do
-    first = upload_ticket("one.png", "image/png", "one")
-    put_upload(first, "one")
-    second = upload_ticket("two.txt", "text/plain", "two")
-    put_upload(second, "two")
+    first = upload_ticket("one.png", "image/png", png_bytes)
+    put_upload(first, png_bytes)
+    second = upload_ticket("two.txt", "text/plain", "notes")
+    put_upload(second, "notes")
 
     attached = call(:post, "/workspaces/#{@root.id}/actions/attach", @editor_token, attachments: [
       { signed_blob_id: first.fetch("signed_blob_id"), name: "One" },
@@ -67,7 +67,7 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
   end
 
   test "import_attachment fetches an allowed url and rejects a private or disallowed host" do
-    body = "imported-bytes"
+    body = png_bytes
     with_fetch(body, content_type: "image/png") do
       imported = call(:post, "/workspaces/#{@root.id}/actions/import_attachment", @editor_token, url: "https://files.example.test/door.png", name: "Door")
       assert_response :success, response.body
@@ -119,6 +119,58 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
       call(:post, "/workspaces/#{@root.id}/actions/attach", @editor_token, signed_blob_id: expired)
       assert_response :unprocessable_entity
       assert_equal "invalid_input", json.dig("error", "code")
+    end
+  end
+
+  test "attach rejects a reused blob, another actor, and bytes that do not match the declared type" do
+    created = upload_ticket("photo.png", "image/png", png_bytes)
+    put_upload(created, png_bytes)
+    signed_id = created.fetch("signed_blob_id")
+    call(:post, "/workspaces/#{@root.id}/actions/attach", @editor_token, signed_blob_id: signed_id, name: "Door")
+    assert_response :success
+
+    call(:post, "/workspaces/#{@root.id}/actions/attach", @editor_token, signed_blob_id: signed_id, name: "Again")
+    assert_response :unprocessable_entity
+    assert_includes json.dig("error", "message"), "already attached"
+
+    other = user("other-editor")
+    other_token = token_for(grant!(other, :edit))
+    ticket = upload_ticket("second.png", "image/png", png_bytes)
+    put_upload(ticket, png_bytes)
+    call(:post, "/workspaces/#{@root.id}/actions/attach", other_token, signed_blob_id: ticket.fetch("signed_blob_id"))
+    assert_response :unprocessable_entity
+    assert_includes json.dig("error", "message"), "actor"
+
+    mismatch = upload_ticket("fake.png", "image/png", "not-a-png")
+    put_upload(mismatch, "not-a-png")
+    call(:post, "/workspaces/#{@root.id}/actions/attach", @editor_token, signed_blob_id: mismatch.fetch("signed_blob_id"))
+    assert_response :unprocessable_entity
+    assert_includes json.dig("error", "message"), "does not match"
+  end
+
+  test "create_upload caps pending uploads" do
+    previous = RecordingStudioAttachable.configuration.pending_upload_limit
+    RecordingStudioAttachable.configuration.pending_upload_limit = 1
+    upload_ticket("one.png", "image/png", png_bytes)
+    assert_response :success
+    call(:post, "/workspaces/#{@root.id}/actions/create_upload", @editor_token, upload_params("two.png", "image/png", png_bytes))
+    assert_response :unprocessable_entity
+    assert_includes json.dig("error", "message"), "pending"
+  ensure
+    RecordingStudioAttachable.configuration.pending_upload_limit = previous
+  end
+
+  test "import rejects a sniffed type mismatch and an svg content type" do
+    with_fetch("not-a-png", content_type: "image/png") do
+      call(:post, "/workspaces/#{@root.id}/actions/import_attachment", @editor_token, url: "https://files.example.test/fake.png")
+      assert_response :unprocessable_entity
+      assert_includes json.dig("error", "message"), "does not match"
+    end
+
+    with_fetch(png_bytes, content_type: "image/svg+xml") do
+      call(:post, "/workspaces/#{@root.id}/actions/import_attachment", @editor_token, url: "https://files.example.test/icon.svg")
+      assert_response :unprocessable_entity
+      assert_includes json.dig("error", "message"), "not allowed"
     end
   end
 
@@ -216,6 +268,10 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
 
   def json
     JSON.parse(response.body)
+  end
+
+  def png_bytes
+    Base64.decode64("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==")
   end
 
   def upload_params(filename, content_type, bytes, byte_size: bytes.bytesize)

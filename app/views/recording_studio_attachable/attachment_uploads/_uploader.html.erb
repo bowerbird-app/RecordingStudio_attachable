@@ -22,7 +22,7 @@
 
 <div class="flex w-full flex-col gap-6"
      data-controller="recording-studio-attachable--upload"
-     data-recording-studio-attachable--upload-direct-upload-url-value="<%= main_app.rails_direct_uploads_path %>"
+     data-recording-studio-attachable--upload-direct-upload-url-value="<%= recording_direct_uploads_path(@recording) %>"
      data-recording-studio-attachable--upload-finalize-url-value="<%= @create_path %>"
      data-recording-studio-attachable--upload-max-file-size-value="<%= @max_file_size %>"
      data-recording-studio-attachable--upload-max-files-count-value="<%= @max_file_count %>"

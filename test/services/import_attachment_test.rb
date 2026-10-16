@@ -8,6 +8,10 @@ require_relative "../../app/services/recording_studio_attachable/services/import
 class ImportAttachmentTest < Minitest::Test
   FakeRecording = Struct.new(:id, :recordable_type, :root_recording, keyword_init: true)
   FakeBlob = Struct.new(:signed_id, :content_type, :byte_size, :purged, keyword_init: true) do
+    def signed_id(**)
+      self[:signed_id]
+    end
+
     def purge
       self.purged = true
     end
@@ -27,8 +31,8 @@ class ImportAttachmentTest < Minitest::Test
 
   def test_import_attachment_creates_blob_and_delegates_to_finalize_service
     parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: FakeRecording.new(id: "root-1"))
-    blob = FakeBlob.new(signed_id: "signed-blob", content_type: "image/svg+xml", byte_size: 512)
-    io = StringIO.new("<svg></svg>")
+    blob = FakeBlob.new(signed_id: "signed-blob", content_type: "image/png", byte_size: 512)
+    io = StringIO.new(UploadBlobBytes::PNG)
     captured_blob_kwargs = nil
     captured_upload_kwargs = nil
     finalized = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: :attachment_recording)
@@ -44,10 +48,9 @@ class ImportAttachmentTest < Minitest::Test
         result = RecordingStudioAttachable::Services::ImportAttachment.call(
           parent_recording: parent,
           io: io,
-          filename: "demo-cloud-import.svg",
-          content_type: "image/svg+xml",
+          filename: "demo-cloud-import.png",
+          content_type: "image/png",
           actor: :actor,
-          identify: false,
           service_name: :mirror,
           source: "demo_cloud",
           metadata: { provider: "demo_cloud" }
@@ -59,9 +62,10 @@ class ImportAttachmentTest < Minitest::Test
     end
 
     assert_equal io, captured_blob_kwargs[:io]
-    assert_equal "demo-cloud-import.svg", captured_blob_kwargs[:filename]
-    assert_equal "image/svg+xml", captured_blob_kwargs[:content_type]
+    assert_equal "demo-cloud-import.png", captured_blob_kwargs[:filename]
+    assert_equal "image/png", captured_blob_kwargs[:content_type]
     assert_equal false, captured_blob_kwargs[:identify]
+    assert_equal "1", captured_blob_kwargs.dig(:metadata, RecordingStudioAttachable::DirectUpload::TAG)
     assert_equal :mirror, captured_blob_kwargs[:service_name]
 
     assert_equal parent, captured_upload_kwargs[:parent_recording]
@@ -72,9 +76,9 @@ class ImportAttachmentTest < Minitest::Test
     assert_not blob.purged
   end
 
-  def test_import_attachment_identifies_content_by_default
+  def test_import_attachment_keeps_the_declared_content_type
     parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: FakeRecording.new(id: "root-1"))
-    blob = FakeBlob.new(signed_id: "signed-blob", content_type: "image/svg+xml", byte_size: 512)
+    blob = FakeBlob.new(signed_id: "signed-blob", content_type: "image/png", byte_size: 512)
     captured_blob_kwargs = nil
     finalized = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: :attachment_recording)
 
@@ -86,8 +90,8 @@ class ImportAttachmentTest < Minitest::Test
         result = RecordingStudioAttachable::Services::ImportAttachment.call(
           parent_recording: parent,
           io: StringIO.new("<svg></svg>"),
-          filename: "demo-cloud-import.svg",
-          content_type: "image/svg+xml",
+          filename: "demo-cloud-import.png",
+          content_type: "image/png",
           actor: :actor
         )
 
@@ -95,7 +99,7 @@ class ImportAttachmentTest < Minitest::Test
       end
     end
 
-    assert_equal true, captured_blob_kwargs[:identify]
+    assert_equal false, captured_blob_kwargs[:identify]
   end
 
   def test_import_attachment_rejects_invalid_content_types_and_purges_blob
@@ -119,16 +123,16 @@ class ImportAttachmentTest < Minitest::Test
 
   def test_import_attachment_purges_blob_when_finalize_service_fails
     parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: FakeRecording.new(id: "root-1"))
-    blob = FakeBlob.new(signed_id: "signed-blob", content_type: "image/svg+xml", byte_size: 64)
+    blob = FakeBlob.new(signed_id: "signed-blob", content_type: "image/png", byte_size: 64)
     failed = RecordingStudioAttachable::Services::BaseService::Result.new(success: false, error: "could not finalize")
 
     ActiveStorage::Blob.stub(:create_and_upload!, blob) do
       RecordingStudioAttachable::Services::RecordAttachmentUpload.stub(:call, failed) do
         result = RecordingStudioAttachable::Services::ImportAttachment.call(
           parent_recording: parent,
-          io: StringIO.new("<svg></svg>"),
-          filename: "demo.svg",
-          content_type: "image/svg+xml",
+          io: StringIO.new(UploadBlobBytes::PNG),
+          filename: "demo.png",
+          content_type: "image/png",
           actor: :actor
         )
 
@@ -182,7 +186,7 @@ class ImportAttachmentTest < Minitest::Test
 
     return if ActiveStorage::Blob.respond_to?(:find_signed!)
 
-    ActiveStorage::Blob.define_singleton_method(:find_signed!) do |*|
+    ActiveStorage::Blob.define_singleton_method(:find_signed!) do |*, **|
       raise NotImplementedError
     end
   end

@@ -45,7 +45,6 @@ module RecordingStudioAttachable
           :description,
           :filename,
           :content_type,
-          :identify,
           :file,
           { metadata: {} },
           { provider_payload: {} }
@@ -74,7 +73,6 @@ module RecordingStudioAttachable
 
       payload[:metadata] = normalized_metadata(payload[:metadata], provider_key: payload[:provider_key])
       payload[:provider_payload] = normalized_provider_payload(payload[:provider_payload], provider_key: payload[:provider_key])
-      payload[:identify] = ActiveModel::Type::Boolean.new.cast(payload[:identify]) if payload.key?(:identify)
 
       return payload if uploaded_file.blank?
 

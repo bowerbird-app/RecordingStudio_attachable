@@ -29,7 +29,7 @@ module RecordingStudioAttachable
         capability_options = capability_options_for(parent_recording)
         authorize!(action: :upload, actor: resolved_actor, recording: parent_recording, capability_options: capability_options)
 
-        blob = signed_blob!(signed_blob_id, capability_options: capability_options)
+        blob = signed_blob!(signed_blob_id, capability_options: capability_options, recording: parent_recording, actor: resolved_actor)
         root_recording = root_recording_for(parent_recording)
         incoming = RecordingStudioAttachable::StorageLimit::IncomingBytes.for(root_recording, [blob])
         event = RecordingStudioAttachable::StorageLimit.with_storage_capacity!(root_recording, incoming) do

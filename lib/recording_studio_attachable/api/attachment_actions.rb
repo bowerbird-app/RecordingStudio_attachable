@@ -22,74 +22,22 @@ module RecordingStudioAttachable
         end
 
         def ticket
-          reject_type!
-          reject_size!
-          direct_upload(reserve(create_blob))
+          DirectUpload.ticket(prepare)
         end
 
         private
 
         attr_reader :context, :params
 
-        def reject_type!
-          return if Limits.allowed?(recording, params[:content_type])
-
-          Errors.invalid!("Content type #{params[:content_type]} is not allowed")
-        end
-
-        def reject_size!
-          Errors.invalid!("byte_size must be zero or more") if params[:byte_size].to_i.negative?
-          return if Limits.size_allowed?(recording, params[:byte_size])
-
-          Errors.invalid!("File exceeds maximum file size")
-        end
-
-        def create_blob
-          ActiveStorage::Blob.create_before_direct_upload!(**blob_attributes)
-        end
-
-        def blob_attributes
-          params.slice(:filename, :byte_size, :checksum, :content_type)
-        end
-
-        def reserve(blob)
-          incoming = StorageLimit::IncomingBytes.for(root_recording, [blob])
-          StorageLimit.with_storage_capacity!(root_recording, incoming) { blob }
-        rescue StandardError
-          drop(blob)
-          raise
-        end
-
-        def drop(blob)
-          return unless blob.respond_to?(:persisted?) && blob.persisted?
-
-          StorageLimit.discard_unattached!([blob])
-        rescue StandardError
-          nil
-        end
-
-        def direct_upload(blob)
-          ttl = ActiveStorage.service_urls_expire_in
-          {
-            signed_blob_id: blob.signed_id(expires_in: ttl),
-            upload: upload_instructions(blob, ttl),
-            expires_at: ttl.from_now.iso8601
-          }
-        end
-
-        def upload_instructions(blob, ttl)
-          {
-            url: blob.service_url_for_direct_upload(expires_in: ttl),
-            headers: blob.service_headers_for_direct_upload
-          }
-        end
-
-        def recording
-          context.recording
-        end
-
-        def root_recording
-          recording.respond_to?(:root_recording) ? recording.root_recording || recording : recording
+        def prepare
+          DirectUpload.prepare!(
+            recording: context.recording,
+            actor: context.actor,
+            filename: params[:filename],
+            byte_size: params[:byte_size],
+            checksum: params[:checksum],
+            content_type: params[:content_type]
+          )
         end
       end
 
@@ -225,18 +173,23 @@ module RecordingStudioAttachable
       end
 
       module Errors
+        INPUT_ERRORS = [
+          ArgumentError,
+          RecordingStudioAttachable::StorageLimitError,
+          RecordingStudioAttachable::StorageLimitUnknown,
+          RecordingStudioAttachable::SafeRemoteFetch::Error,
+          ActiveRecord::RecordInvalid,
+          URI::InvalidURIError
+        ].freeze
+
         module_function
 
         def wrap
           yield
-        rescue RecordingStudioAttachable::StorageLimitError,
-               RecordingStudioAttachable::StorageLimitUnknown,
-               RecordingStudioAttachable::SafeRemoteFetch::Error,
-               ActiveRecord::RecordInvalid,
-               URI::InvalidURIError => e
+        rescue *INPUT_ERRORS => e
           invalid!(e)
         rescue StandardError => e
-          raise e unless plan_limit?(e)
+          raise unless plan_limit?(e)
 
           invalid!(e)
         end
@@ -264,18 +217,6 @@ module RecordingStudioAttachable
 
       module Limits
         module_function
-
-        def allowed?(recording, content_type)
-          configuration.allowed_content_type?(content_type, allowed_content_types: option(recording, :allowed_content_types))
-        end
-
-        def size_allowed?(recording, byte_size)
-          size = byte_size.to_i
-          return false if size.negative?
-
-          max = max_file_size(recording)
-          max.blank? || size <= max
-        end
 
         def max_file_size(recording)
           option(recording, :max_file_size)

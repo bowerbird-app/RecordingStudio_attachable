@@ -10,6 +10,20 @@ require "active_storage/engine"
 require "i18n"
 require "yaml"
 require "recording_studio_attachable"
+require "base64"
+require "stringio"
+
+module UploadBlobBytes
+  PNG = Base64.decode64("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==")
+
+  def self.for(content_type)
+    case content_type.to_s
+    when "application/pdf" then "%PDF-1.4\n"
+    when "text/plain" then "notes"
+    else PNG
+    end
+  end
+end
 
 # Do not append gem locales to I18n.load_path here. Rails engines already put
 # config/locales on the load path when the dummy boots; an explicit append can

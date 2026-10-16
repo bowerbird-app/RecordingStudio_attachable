@@ -318,13 +318,20 @@ class AttachmentsMetricsTest < ActiveSupport::TestCase
 
   def import_file(root, filename, content_type, body)
     root.import_attachment(
-      io: StringIO.new(body),
+      io: StringIO.new(bytes_for(content_type, body)),
       filename: filename,
       content_type: content_type,
       name: filename,
       actor: @actor,
-      identify: false,
       source: "metrics_test"
     )
+  end
+
+  def bytes_for(content_type, body)
+    case content_type
+    when "image/jpeg" then "\xFF\xD8\xFF".b
+    when "application/pdf" then "%PDF-1.4\n"
+    else body
+    end
   end
 end

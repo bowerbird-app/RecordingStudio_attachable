@@ -39,6 +39,9 @@ module RecordingStudioAttachable
                   signed_blob_id: payload.fetch(:signed_blob_id),
                   name: payload[:name],
                   description: payload[:description],
+                  caption: payload[:caption],
+                  credit: payload[:credit],
+                  alt_text: payload[:alt_text],
                   actor: actor,
                   impersonator: impersonator,
                   batch_id: batch_id,
@@ -62,8 +65,15 @@ module RecordingStudioAttachable
       end
 
       def resolve_uploads(capability_options)
+        resolved_actor = resolve_actor(actor)
         Array(attachments).map do |payload|
-          [payload, signed_blob!(payload.fetch(:signed_blob_id), capability_options: capability_options)]
+          blob = signed_blob!(
+            payload.fetch(:signed_blob_id),
+            capability_options: capability_options,
+            recording: parent_recording,
+            actor: resolved_actor
+          )
+          [payload, blob]
         end
       end
 

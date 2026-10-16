@@ -12,6 +12,7 @@ class RecordAttachmentUploadsTest < Minitest::Test
 
   def test_returns_failure_without_partial_success_when_a_file_fails
     parent = Struct.new(:id, :recordable_type).new("parent-1", "Workspace")
+    actor = Struct.new(:id).new("actor-1")
     upload_service = RecordingStudioAttachable::Services::RecordAttachmentUpload
     success_result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: :created)
     failure_result = RecordingStudioAttachable::Services::BaseService::Result.new(success: false, error: "bad file")
@@ -21,10 +22,10 @@ class RecordAttachmentUploadsTest < Minitest::Test
       signed_blob_ids << kwargs[:signed_blob_id]
       signed_blob_ids.one? ? success_result : failure_result
     }) do
-      result = with_resolved_blobs do
+      result = with_resolved_blobs(parent, actor) do
         RecordingStudioAttachable::Services::RecordAttachmentUploads.call(
           parent_recording: parent,
-          actor: Object.new,
+          actor: actor,
           attachments: [
             { signed_blob_id: "blob-1", name: "one" },
             { signed_blob_id: "blob-2", name: "two" }
@@ -59,6 +60,7 @@ class RecordAttachmentUploadsTest < Minitest::Test
 
   def test_passes_provider_metadata_and_source_to_the_upload_service
     parent = Struct.new(:id, :recordable_type).new("parent-1", "Workspace")
+    actor = Struct.new(:id).new("actor-1")
     captured = nil
     success_result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: :created)
 
@@ -66,10 +68,10 @@ class RecordAttachmentUploadsTest < Minitest::Test
       captured = kwargs
       success_result
     }) do
-      result = with_resolved_blobs do
+      result = with_resolved_blobs(parent, actor) do
         RecordingStudioAttachable::Services::RecordAttachmentUploads.call(
           parent_recording: parent,
-          actor: Object.new,
+          actor: actor,
           default_source: "google_drive",
           attachments: [
             {
@@ -89,9 +91,15 @@ class RecordAttachmentUploadsTest < Minitest::Test
 
   private
 
-  def with_resolved_blobs(&)
-    ActiveStorage::Blob.stub(:find_signed!, lambda { |signed_id|
-      Struct.new(:id, :content_type, :byte_size).new(signed_id, "image/png", 32)
+  def with_resolved_blobs(parent, actor, &)
+    ActiveStorage::Blob.stub(:find_signed!, lambda { |signed_id, **|
+      blob = Struct.new(:id, :content_type, :byte_size, :filename).new(signed_id, "image/png", 32, "photo.png")
+      blob.define_singleton_method(:metadata) do
+        RecordingStudioAttachable::DirectUpload.metadata_for(recording: parent, actor: actor)
+      end
+      blob.define_singleton_method(:attachments) { [] }
+      blob.define_singleton_method(:open) { |&block| block.call(StringIO.new(UploadBlobBytes.for("image/png"))) }
+      blob
     }, &)
   end
 

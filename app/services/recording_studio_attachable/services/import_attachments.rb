@@ -55,7 +55,7 @@ module RecordingStudioAttachable
       def record_entries(staged, batch_id)
         staged.each do |entry|
           result = RecordAttachmentUpload.call(
-            parent_recording: parent_recording, signed_blob_id: entry[:blob].signed_id, actor: actor,
+            parent_recording: parent_recording, signed_blob_id: DirectUpload.sign(entry[:blob]), actor: actor,
             impersonator: impersonator, name: entry[:name], description: entry[:description],
             batch_id: batch_id, metadata: entry[:metadata].merge(batch_id: batch_id)
           )
@@ -77,8 +77,8 @@ module RecordingStudioAttachable
           io: attachment.fetch(:io),
           filename: attachment.fetch(:filename),
           content_type: attachment.fetch(:content_type),
-          identify: attachment.fetch(:identify, true),
-          service_name: attachment[:service_name]
+          service_name: attachment[:service_name],
+          metadata: DirectUpload.metadata_for(recording: parent_recording, actor: resolve_actor(actor))
         )
         validate_blob!(blob, capability_options: capability_options)
         {

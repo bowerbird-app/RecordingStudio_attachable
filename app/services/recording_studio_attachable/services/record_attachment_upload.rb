@@ -4,20 +4,24 @@ module RecordingStudioAttachable
   module Services
     class RecordAttachmentUpload < ApplicationService
       def initialize(parent_recording:, signed_blob_id:, actor: nil, impersonator: nil, name: nil, description: nil,
-                     batch_id: nil, metadata: {})
+                     caption: nil, credit: nil, alt_text: nil, batch_id: nil, metadata: {})
         @parent_recording = parent_recording
         @signed_blob_id = signed_blob_id
         @actor = actor
         @impersonator = impersonator
         @name = name
         @description = description
+        @caption = caption
+        @credit = credit
+        @alt_text = alt_text
         @batch_id = batch_id
         @metadata = metadata
       end
 
       private
 
-      attr_reader :parent_recording, :signed_blob_id, :actor, :impersonator, :name, :description, :batch_id, :metadata
+      attr_reader :parent_recording, :signed_blob_id, :actor, :impersonator, :name, :description,
+                  :caption, :credit, :alt_text, :batch_id, :metadata
 
       def perform
         require_recording_studio!
@@ -25,7 +29,7 @@ module RecordingStudioAttachable
         capability_options = capability_options_for(parent_recording)
         authorize!(action: :upload, actor: resolved_actor, recording: parent_recording, capability_options: capability_options)
 
-        blob = signed_blob!(signed_blob_id, capability_options: capability_options)
+        blob = signed_blob!(signed_blob_id, capability_options: capability_options, recording: parent_recording, actor: resolved_actor)
         root_recording = root_recording_for(parent_recording)
         incoming = RecordingStudioAttachable::StorageLimit::IncomingBytes.for(root_recording, [blob])
         event = RecordingStudioAttachable::StorageLimit.with_storage_capacity!(root_recording, incoming) do
@@ -33,6 +37,9 @@ module RecordingStudioAttachable
             blob: blob,
             name: name,
             description: description,
+            caption: caption,
+            credit: credit,
+            alt_text: alt_text,
             capability_options: capability_options,
             root_recording: root_recording
           )

@@ -197,12 +197,14 @@ module RecordingStudioAttachable
       end
 
       def download
+        yield processed_data if block_given?
         processed_data
       end
     end
 
     FakeFile = Struct.new(:downloaded_data, keyword_init: true) do
       def download
+        yield downloaded_data if block_given?
         downloaded_data
       end
     end
@@ -234,6 +236,8 @@ module RecordingStudioAttachable
       assert_equal "blob-bytes", @response.body
       assert_equal "attachment; filename=\"hero.png\"; filename*=UTF-8''hero.png", @response.headers["Content-Disposition"]
       assert_equal "image/png", @response.media_type
+      assert_equal "sandbox", @response.headers["Content-Security-Policy"]
+      assert_equal "nosniff", @response.headers["X-Content-Type-Options"]
     end
 
     def test_file_streams_attachment_data_inline
@@ -258,6 +262,32 @@ module RecordingStudioAttachable
       assert_response :success
       assert_equal "blob-bytes", @response.body
       assert_equal "inline; filename=\"hero.png\"; filename*=UTF-8''hero.png", @response.headers["Content-Disposition"]
+      assert_equal "sandbox", @response.headers["Content-Security-Policy"]
+      assert_equal "nosniff", @response.headers["X-Content-Type-Options"]
+    end
+
+    def test_file_downloads_types_outside_the_inline_list
+      file = FakeFile.new(downloaded_data: "<svg></svg>")
+      attachment = Struct.new(:file, :original_filename, :content_type).new(file, "icon.svg", "image/svg+xml")
+      attachment_recording = FakeRecording.new(id: "att-1", recordable_type: "RecordingStudioAttachable::Attachment", recordable: attachment)
+
+      with_routing do |set|
+        set.draw do
+          get "/attachments/:id/file", to: "recording_studio_attachable/attachments#file"
+        end
+
+        @routes = set
+
+        RecordingStudio::Recording.stub(:find, attachment_recording) do
+          @controller.stub(:authorize_attachment_owner_action!, true) do
+            get :file, params: { id: attachment_recording.id }
+          end
+        end
+      end
+
+      assert_response :success
+      assert_includes @response.headers["Content-Disposition"], "attachment"
+      assert_equal "sandbox", @response.headers["Content-Security-Policy"]
     end
 
     def test_preview_streams_processed_variant_inline
@@ -287,6 +317,8 @@ module RecordingStudioAttachable
       assert_response :success
       assert_equal "preview-bytes", @response.body
       assert_equal "inline; filename=\"hero.png\"; filename*=UTF-8''hero.png", @response.headers["Content-Disposition"]
+      assert_equal "sandbox", @response.headers["Content-Security-Policy"]
+      assert_equal "nosniff", @response.headers["X-Content-Type-Options"]
     end
 
     private

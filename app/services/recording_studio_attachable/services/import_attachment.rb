@@ -4,7 +4,7 @@ module RecordingStudioAttachable
   module Services
     class ImportAttachment < ApplicationService
       def initialize(parent_recording:, io:, filename:, content_type:, actor: nil, impersonator: nil, name: nil,
-                     description: nil, identify: true, metadata: {}, source: "provider_import", service_name: nil)
+                     description: nil, metadata: {}, source: "provider_import", service_name: nil)
         @parent_recording = parent_recording
         @io = io
         @filename = filename
@@ -13,7 +13,6 @@ module RecordingStudioAttachable
         @impersonator = impersonator
         @name = name
         @description = description
-        @identify = identify
         @metadata = metadata
         @source = source
         @service_name = service_name
@@ -22,7 +21,7 @@ module RecordingStudioAttachable
       private
 
       attr_reader :parent_recording, :io, :filename, :content_type, :actor, :impersonator, :name, :description,
-                  :identify, :metadata, :source, :service_name
+                  :metadata, :source, :service_name
 
       def perform
         capability_options = capability_options_for(parent_recording)
@@ -32,7 +31,7 @@ module RecordingStudioAttachable
         validate_blob!(blob, capability_options: capability_options)
         result = RecordAttachmentUpload.call(
           parent_recording: parent_recording,
-          signed_blob_id: blob.signed_id,
+          signed_blob_id: DirectUpload.sign(blob),
           actor: actor,
           impersonator: impersonator,
           name: resolved_name,
@@ -56,8 +55,8 @@ module RecordingStudioAttachable
           io: io,
           filename: filename,
           content_type: content_type,
-          identify: identify,
-          service_name: service_name
+          service_name: service_name,
+          metadata: DirectUpload.metadata_for(recording: parent_recording, actor: resolve_actor(actor))
         )
       end
 

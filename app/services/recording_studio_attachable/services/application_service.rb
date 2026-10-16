@@ -75,15 +75,17 @@ module RecordingStudioAttachable
         }.compact
       end
 
-      def signed_blob!(signed_blob_id, capability_options:)
-        blob = ActiveStorage::Blob.find_signed!(signed_blob_id)
+      def signed_blob!(signed_blob_id, capability_options:, recording:, actor:)
+        blob = DirectUpload.accept!(signed_blob_id, recording: recording, actor: actor)
         validate_blob!(blob, capability_options: capability_options)
+        DirectUpload.sniff!(blob, capability_options)
         blob
       end
 
-      def create_imported_blob!(io:, filename:, content_type:, identify: true, service_name: nil)
+      def create_imported_blob!(io:, filename:, content_type:, service_name: nil, metadata: nil)
         ActiveStorage::Blob.create_and_upload!(**{
-          io: io, filename: filename, content_type: content_type, identify: identify, service_name: service_name
+          io: io, filename: filename, content_type: content_type, identify: false,
+          service_name: service_name, metadata: metadata
         }.compact)
       end
 

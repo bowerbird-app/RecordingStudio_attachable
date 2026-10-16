@@ -91,21 +91,43 @@ module RecordingStudioAttachable
 
     def send_attachment_data(attachment_recording, disposition:)
       attachment = attachment_recording.recordable
-      send_data \
-        attachment.file.download,
-        filename: attachment.original_filename,
-        type: attachment.content_type,
-        disposition: disposition
+      send_blob(attachment.file, filename: attachment.original_filename, type: attachment.content_type, disposition: disposition)
     end
 
     def send_preview_data(attachment, preview_target)
-      data = if attachment.file.variable?
-               preview_target.processed.download
-             else
-               attachment.file.download
-             end
+      body = attachment.file.variable? ? preview_target.processed : attachment.file
+      send_blob(body, filename: attachment.original_filename, type: attachment.content_type, disposition: :inline)
+    end
 
-      send_data data, filename: attachment.original_filename, type: attachment.content_type, disposition: :inline
+    def send_blob(blob, filename:, type:, disposition:)
+      response.headers["Content-Type"] = type.to_s
+      response.headers["Content-Disposition"] = file_disposition(filename, disposition, type)
+      response.headers["Content-Security-Policy"] = "sandbox"
+      response.headers["X-Content-Type-Options"] = "nosniff"
+      self.response_body = StreamedFile.new(blob)
+    end
+
+    def file_disposition(filename, disposition, type)
+      ActionDispatch::Http::ContentDisposition.format(
+        disposition: DirectUpload.delivery_disposition(disposition, type).to_s,
+        filename: filename
+      )
+    end
+  end
+
+  class StreamedFile
+    def initialize(blob)
+      @blob = blob
+    end
+
+    def each(&)
+      @blob.download(&)
+    end
+
+    def body
+      chunks = []
+      each { |chunk| chunks << chunk.to_s }
+      chunks.join
     end
   end
 end

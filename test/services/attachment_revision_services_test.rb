@@ -9,7 +9,17 @@ require_relative "../../app/services/recording_studio_attachable/services/restor
 class AttachmentRevisionServicesTest < Minitest::Test
   RecordingDouble = Struct.new(:id, :recordable_type, :root_recording, keyword_init: true)
   FakeEvent = Struct.new(:recording)
-  BlobDouble = Struct.new(:content_type, :byte_size, :filename)
+  BlobDouble = Struct.new(:content_type, :byte_size, :filename) do
+    attr_accessor :metadata
+
+    def attachments
+      []
+    end
+
+    def open
+      yield StringIO.new(UploadBlobBytes.for(content_type))
+    end
+  end
   FilenameDouble = Struct.new(:value) do
     def to_s
       value
@@ -102,6 +112,7 @@ class AttachmentRevisionServicesTest < Minitest::Test
       file: nil
     )
     blob = BlobDouble.new("image/png", 2048, FilenameDouble.new("new.png"))
+    blob.metadata = RecordingStudioAttachable::DirectUpload.metadata_for(recording: parent, actor: :actor)
     created_recording = Struct.new(:id).new("recording-1")
     captured_build_kwargs = nil
     captured_event_kwargs = nil
@@ -377,7 +388,9 @@ class AttachmentRevisionServicesTest < Minitest::Test
       recordable: current_attachment,
       root_recording: root
     )
+    actor = :actor
     blob = BlobDouble.new("image/png", 2048, FilenameDouble.new("new.png"))
+    blob.metadata = RecordingStudioAttachable::DirectUpload.metadata_for(recording: parent, actor: actor)
     captured_build_kwargs = nil
 
     ActiveStorage::Blob.stub(:find_signed!, blob) do
@@ -390,6 +403,7 @@ class AttachmentRevisionServicesTest < Minitest::Test
             RecordingStudioAttachable::Services::ReplaceAttachmentFile.call(
               attachment_recording: attachment_recording,
               signed_blob_id: "signed-blob",
+              actor: actor,
               name: "Old name"
             )
           end
@@ -485,7 +499,7 @@ class AttachmentRevisionServicesTest < Minitest::Test
 
     return if ActiveStorage::Blob.respond_to?(:find_signed!)
 
-    ActiveStorage::Blob.define_singleton_method(:find_signed!) do |*|
+    ActiveStorage::Blob.define_singleton_method(:find_signed!) do |*, **|
       raise NotImplementedError
     end
   end

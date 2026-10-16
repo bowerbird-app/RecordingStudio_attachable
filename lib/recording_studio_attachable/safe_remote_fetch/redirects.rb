@@ -30,10 +30,9 @@ module RecordingStudioAttachable
       end
 
       def headers_for_redirect(headers, from:, to:)
-        next_headers = headers.to_h.dup
-        return next_headers if from.host.to_s.downcase == to.host.to_s.downcase
+        return headers.to_h.dup if from.host.to_s.casecmp(to.host.to_s).zero?
 
-        next_headers.reject { |key, _value| key.to_s.casecmp("Authorization").zero? }
+        {}
       end
     end
   end

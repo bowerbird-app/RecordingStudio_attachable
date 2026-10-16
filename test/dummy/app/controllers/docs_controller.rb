@@ -262,6 +262,11 @@ class DocsController < ApplicationController
           restore: :admin,
           download: :view
         }
+
+        # Hosts that import by URL list the HTTPS hosts SafeRemoteFetch may contact.
+        # config.import_allowed_hosts = ["cdn.example.com"]
+        # PurgeUnattachedBlobsJob deletes unattached blobs older than this.
+        # config.unattached_blob_ttl = 24.hours
       end
     RUBY
 
@@ -370,8 +375,8 @@ class DocsController < ApplicationController
             actor: Current.actor,
             impersonator: Current.impersonator,
             name: remote_file.title,
-            # identify defaults to true; only disable it for trusted providers
-            # that already verified the file metadata out of band.
+            # The declared content type is kept. Attach sniffs the bytes and
+            # rejects a mismatch.
             source: "google_drive",
             metadata: { external_id: remote_file.id }
           )
@@ -414,7 +419,7 @@ class DocsController < ApplicationController
       "io, filename, content_type: the direct service-level import contract for provider integrations.",
       "name and description: optional attachment metadata overrides.",
       "metadata: extra provider details such as external ids or URLs.",
-      "source and identify: trusted direct-service options; identify defaults to true, and the HTTP endpoint stamps source from provider_key and ignores storage-service overrides."
+      "source: a trusted direct-service option. The HTTP endpoint stamps source from provider_key. The declared content type is sniffed before the file is attached."
     ]
 
     @picker_summary = [
@@ -461,7 +466,7 @@ class DocsController < ApplicationController
             data-action="recording-studio-attachable--attachment-image-picker:selected->chat-demo#attachmentSelected"
             data-recording-studio-attachable--attachment-image-picker-picker-url-value="<%= @chat_attachment_picker_path %>"
             data-recording-studio-attachable--attachment-image-picker-upload-url-value="<%= @chat_attachment_create_path %>"
-            data-recording-studio-attachable--attachment-image-picker-direct-upload-url-value="<%= main_app.rails_direct_uploads_path %>">
+            data-recording-studio-attachable--attachment-image-picker-direct-upload-url-value="<%= recording_studio_attachable.recording_direct_uploads_path(@recording) %>">
           </div>
         ERB
       },

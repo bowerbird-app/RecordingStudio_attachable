@@ -23,6 +23,20 @@ module RecordingStudioAttachable
       end
     end
 
+    initializer "recording_studio_attachable.filter_parameters" do |app|
+      app.config.filter_parameters += %i[signed_blob_id checksum]
+    end
+
+    initializer "recording_studio_attachable.api" do
+      config.to_prepare do
+        if defined?(::RecordingStudioApi::ApiController) && !(RecordingStudioApi::ApiController < ActiveStorage::SetCurrent)
+          RecordingStudioApi::ApiController.include ActiveStorage::SetCurrent
+        end
+
+        RecordingStudioAttachable::Api.register!
+      end
+    end
+
     initializer "recording_studio_attachable.storage_limit" do |app|
       app.config.to_prepare do
         RecordingStudioAttachable::StorageLimit.register_usage!

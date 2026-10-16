@@ -26,6 +26,10 @@ module RecordingStudioAttachable
     attr_accessor :allowed_content_types,
                   :max_file_size,
                   :max_file_count,
+                  :pending_upload_limit,
+                  :unattached_blob_ttl,
+                  :direct_upload_expires_in,
+                  :purge_unattached_blobs,
                   :image_processing_enabled,
                   :image_processing_max_width,
                   :image_processing_max_height,
@@ -40,7 +44,7 @@ module RecordingStudioAttachable
                   :direct_url_host,
                   :attachment_place_labels
 
-    attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode, :upload_presentation
+    attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode, :upload_presentation, :import_allowed_hosts
 
     def initialize
       assign_defaults
@@ -92,10 +96,12 @@ module RecordingStudioAttachable
 
     def allowed_content_type?(content_type, allowed_content_types: self.allowed_content_types)
       allowed_content_types ||= self.allowed_content_types
+      type = content_type.to_s.downcase.split(";").first.to_s.strip
+      return false if type == "image/svg+xml" && !explicit_svg?(allowed_content_types)
       return true if allowed_content_types.blank?
 
       allowed_content_types.any? do |pattern|
-        File.fnmatch?(pattern.to_s.downcase, content_type.to_s.downcase)
+        File.fnmatch?(pattern.to_s.downcase, type)
       end
     end
 
@@ -195,6 +201,10 @@ module RecordingStudioAttachable
       raise ArgumentError, "Unknown upload presentation: #{value.inspect}. Use :page or :modal."
     end
 
+    def import_allowed_hosts=(hosts)
+      @import_allowed_hosts = Array(hosts).filter_map { |host| host.to_s.strip.downcase.presence }
+    end
+
     def storage_limit=(value)
       normalized = value.is_a?(String) ? value.strip : value
       @storage_limit = normalized.presence
@@ -205,6 +215,11 @@ module RecordingStudioAttachable
         allowed_content_types: allowed_content_types,
         max_file_size: max_file_size,
         max_file_count: max_file_count,
+        pending_upload_limit: pending_upload_limit,
+        unattached_blob_ttl: unattached_blob_ttl,
+        direct_upload_expires_in: direct_upload_expires_in,
+        purge_unattached_blobs: purge_unattached_blobs,
+        import_allowed_hosts: import_allowed_hosts,
         storage_limit: storage_limit,
         image_processing_enabled: image_processing_enabled,
         image_processing_max_width: image_processing_max_width,
@@ -235,10 +250,19 @@ module RecordingStudioAttachable
 
     private
 
+    def explicit_svg?(allowed_content_types)
+      Array(allowed_content_types).any? { |pattern| pattern.to_s.downcase.strip == "image/svg+xml" }
+    end
+
     def assign_defaults
       @allowed_content_types = ["image/*", "application/pdf"]
       @max_file_size = 25.megabytes
       @max_file_count = 20
+      @pending_upload_limit = 20
+      @unattached_blob_ttl = 24.hours
+      @direct_upload_expires_in = 5.minutes
+      @purge_unattached_blobs = false
+      @import_allowed_hosts = []
       @storage_limit = nil
       @image_processing_enabled = false
       @image_processing_max_width = 2560

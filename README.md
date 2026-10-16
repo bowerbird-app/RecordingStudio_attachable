@@ -103,6 +103,8 @@ mount RecordingStudioAttachable::Engine, at: "/recording_studio_attachable"
 
 ### 5. Wire direct uploads
 
+Browser uploads POST to this engine's recording direct-upload route (`recordings/:id/attachments/direct_uploads`), not `/rails/active_storage/direct_uploads`. That route checks the upload role, content type, size, pending-upload cap, and storage capacity, then returns a signed id bound to that recording and actor.
+
 The install generator also wires the Active Storage importmap pin, starts Active Storage in `app/javascript/application.js`, and eager-loads the engine Stimulus controllers from `app/javascript/controllers/index.js`.
 
 If your app customizes those entrypoints, make sure all three of these remain true:
@@ -209,7 +211,79 @@ The gem registers site-wide `:attachments` metrics with RecordingStudio Metrics 
 
 `attachments.uploads_over_time` takes `from`, `to`, and `interval` (`day`, `week`, `month`, `year`). The scalar and breakdown metrics do not take a window.
 
-`api_authorize` is `RecordingStudioAttachable::Api::Access.can_view?`: AdminRoot `:view` through Recording Studio Accessible. The host calls `RecordingStudioMetrics::Api.register!(api: :operations)`. This gem does not register API endpoints. RecordingStudio MCP `0.17.0` builds one read-only tool per exposed metric from that registry.
+`api_authorize` is `RecordingStudioAttachable::Api::Access.can_view?`: AdminRoot `:view` through Recording Studio Accessible. The host calls `RecordingStudioMetrics::Api.register!(api: :operations)`. This gem does not register those metric endpoints. RecordingStudio MCP `0.17.0` builds one read-only tool per exposed metric from that registry.
+
+### Attachment API
+
+The upload, attach, and import actions are capability actions on the parent recording. They are registered when `RecordingStudioApi` is loaded. A host turns them on per recordable type.
+
+1. Add `recording_studio_api` to the host app. Include `RecordingStudioApi::ApiClient` in Accessible `access_actor_types` so a provisioned client can hold the upload role.
+2. Call `RecordingStudioAttachable::Api.register!`. The default API is `:public`. Pass the named admin APIs you also want:
+
+```ruby
+RecordingStudioAttachable::Api.register!(apis: [:public, :operations])
+```
+
+Configure a named API before you pass it. `register!` reads `config.auth_role_for(:upload)` at that moment. `import_attachment` uses `config.auth_roles[:import]` when that key exists, and `:upload` otherwise.
+
+3. Allow the actions on each parent type. Registration alone does not expose them.
+
+```ruby
+RecordingStudioApi.register_recordable_type_api(
+  "Workspace",
+  operations: %i[index show],
+  capability_actions: %i[create_upload attach import_attachment]
+)
+```
+
+A press kit gem does the same on its image and file sections:
+
+```ruby
+RecordingStudioApi.register_recordable_type_api(
+  "RecordingStudioPresskits::Images",
+  operations: %i[index show],
+  capability_actions: %i[update_image reorder_images remove_image create_upload attach import_attachment]
+)
+
+RecordingStudioApi.register_recordable_type_api(
+  "RecordingStudioPresskits::Files",
+  operations: %i[index show],
+  capability_actions: %i[update_file reorder_files remove_file create_upload attach import_attachment]
+)
+```
+
+A type that leaves those names off `capability_actions` does not show the actions in OpenAPI. Calling one returns the Recording Studio API's unsupported-action response.
+
+`create_upload` takes `filename`, `byte_size`, `checksum`, and `content_type`. The checksum is the base64 MD5 of the bytes. The response is `signed_blob_id`, `upload` (`url` and `headers`), and `expires_at`. PUT the bytes to `upload.url` with `upload.headers`. The signed id uses the `:attachable_upload` purpose and expires after `config.direct_upload_expires_in` (default 5 minutes). It is bound to the parent recording and the actor that asked for it. `attach` accepts it once, and only while the blob is still unattached. The file bytes are sniffed and must match the declared content type.
+
+`config.pending_upload_limit` (default 20) caps unattached uploads this gem issued for that actor on that root. `image/*` does not allow `image/svg+xml`. Name `image/svg+xml` in the allow list when a host wants SVG. File responses stream the bytes. PNG, JPEG, GIF, WebP, and PDF can be inline. Anything else is downloaded. Responses send `Content-Security-Policy: sandbox` and `X-Content-Type-Options: nosniff`.
+
+Request logs filter `signed_blob_id` and `checksum`. This gem does not write the upload URL into a log line. The Recording Studio API request log stores allowlisted request params, not the response body.
+
+The disk service builds that URL from the current request host. This gem includes `ActiveStorage::SetCurrent` on `RecordingStudioApi::ApiController` so the host is set. An S3 service returns a presigned URL and does not use the app host.
+
+`attach` takes one file (`signed_blob_id`, and optional `name`, `description`, `caption`, `credit`, `alt_text`) or `attachments` as a list of those objects. The response is the new child attachment (`id`, `kind`, `name`, `urls`) or `{ attachments: [...] }` for a list.
+
+`import_attachment` takes `url`, and optional `name` and `description`. Set `config.import_allowed_hosts` to the HTTPS hosts the host app trusts. Private addresses, non-HTTPS URLs, and any other host are rejected. The fetch uses `SafeRemoteFetch`.
+
+Validation failures are `422` `invalid_input`. A caller without the upload role is `403`.
+
+Browser clients that PUT straight to S3 need a CORS rule on the bucket. Allow `PUT` from the app origin, and allow the headers `Content-Type`, `Content-MD5`, and `Content-Disposition`. A server or other non-browser client sends those headers itself and does not need the CORS rule.
+
+`create_upload` leaves an Active Storage blob before the client finishes the PUT. `PurgeUnattachedBlobsJob` deletes unattached blobs this gem tagged, older than `config.unattached_blob_ttl` (default 24 hours). It does nothing until `config.purge_unattached_blobs` is true. Other gems' unattached blobs stay. Schedule the job at least that often. With Solid Queue:
+
+```yaml
+# config/recurring.yml
+purge_unattached_attachment_blobs:
+  class: RecordingStudioAttachable::PurgeUnattachedBlobsJob
+  schedule: every day at 3am
+```
+
+Or enqueue it from the host's own scheduler:
+
+```ruby
+RecordingStudioAttachable::PurgeUnattachedBlobsJob.perform_later
+```
 
 Trash and restore leave the file attached, so the total stays the same. Permanent deletion is `Recording#destroy!`. `RemoveAttachment` uses that when the recording has no Trashable hook. Trashable purge uses that after the recording is already trashed. Destroy detaches the file rows for the current attachment and earlier snapshots on that recording, then purges a blob that no other attachment still references. The total drops when those file rows are gone.
 
@@ -249,7 +323,7 @@ In the browser, the bundled `recording-studio-attachable--attachment-image-picke
   data-action="recording-studio-attachable--attachment-image-picker:selected->chat-demo#attachmentSelected"
   data-recording-studio-attachable--attachment-image-picker-picker-url-value="<%= recording_studio_attachable.recording_attachment_picker_path(@recording) %>"
   data-recording-studio-attachable--attachment-image-picker-upload-url-value="<%= recording_studio_attachable.recording_attachments_path(@recording) %>"
-  data-recording-studio-attachable--attachment-image-picker-direct-upload-url-value="<%= main_app.rails_direct_uploads_path %>">
+  data-recording-studio-attachable--attachment-image-picker-direct-upload-url-value="<%= recording_studio_attachable.recording_direct_uploads_path(@recording) %>">
 </div>
 ```
 
@@ -362,7 +436,7 @@ registerUploadProviderLauncher("google_drive", {
 
 The upload page then posts the whole batch to `recording_attachment_imports_path(recording)`. Recording Studio Attachable owns the queue UI, retries, response handling, and redirect behavior; the provider only implements `remote_importer`.
 
-In your provider controller or service, hand the gem an IO object plus metadata and let it create the blob, identify the file content by default, enforce attachable validations, and create the child recording:
+In your provider controller or service, hand the gem an IO object plus the declared content type. The declared type is stored, the bytes are sniffed, and a mismatch is rejected. The gem then enforces attachable validations and creates the child recording:
 
 ```ruby
 result = RecordingStudioAttachable::Services::ImportAttachment.call(
@@ -408,7 +482,7 @@ post recording_studio_attachable.recording_attachment_imports_path(recording), p
 }
 ```
 
-Signed blob finalization with provider metadata:
+Signed blob finalization with provider metadata. The blob comes from this gem's direct-upload route:
 
 ```ruby
 post recording_studio_attachable.recording_attachment_imports_path(recording), params: {
@@ -416,7 +490,7 @@ post recording_studio_attachable.recording_attachment_imports_path(recording), p
     provider_key: "google_drive",
     attachments: [
       {
-        signed_blob_id: blob.signed_id,
+        signed_blob_id: RecordingStudioAttachable::DirectUpload.sign(blob),
         name: remote_file.title,
         metadata: {
           external_id: remote_file.id,
@@ -499,17 +573,16 @@ Each import payload supports:
 
 - `io`: readable IO object for the provider file
 - `filename`: original filename to store in Active Storage
-- `content_type`: MIME type used for validation and attachment kind classification
+- `content_type`: declared MIME type. It is stored as given and must match the type sniffed from the bytes
 - `name`, `description`: optional attachment metadata overrides
 - `actor`, `impersonator`: optional audit actors
 - `source`: metadata source label stored on the recording event, defaults to `provider_import`; use this only in trusted direct service calls
 - `metadata`: extra event metadata merged into the attachment upload event
-- `identify`: optional Active Storage blob creation option. Defaults to `true`; only disable it in trusted integrations that already know the file metadata is accurate.
 
 The HTTP endpoint accepts a single `attachment_import` envelope plus either:
 
 - `file`: a multipart uploaded file that the engine should import into Active Storage
-- `signed_blob_id`: an existing Active Storage blob id that the engine should finalize as an attachment
+- `signed_blob_id`: a signed id from this gem's direct-upload route (`purpose: :attachable_upload`), bound to this recording and actor
 
 The HTTP endpoint does not accept caller-controlled `source` or `service_name` values. Provider provenance is derived from the registered `provider_key`.
 
@@ -721,7 +794,7 @@ Dummy credentials (`test/dummy/config/credentials.yml.enc`) are encrypted with t
 
 - the dummy app is a validation shell, not a production template
 - CI installs the dummy app bundle and runs dummy-app migrations before the root checks
-- the dummy app pins RecordingStudio `v4.5.0`, Recording Studio Accessible `v0.15.0`, and Recording Studio Orderable `v0.3.0`
+- the dummy app pins RecordingStudio `v4.7.0`, Recording Studio Accessible `v0.15.0`, Recording Studio Orderable `v0.3.0`, and Recording Studio API `v0.11.4`
 - make sure engine, Active Storage, and Recording Studio tables are migrated in the dummy app before validating upload flows locally
 - `bin/rails db:seed` attaches a twenty-shot Kiln canister press kit to the workspace. The shots mix portrait, square, and landscape frames. Edit images uses those files. Seeds also remove the colour-block stand-ins `window.jpg`, `dock.jpg`, and `pier.jpg` when they are still on the workspace.
 - set `DUMMY_ACTIVE_STORAGE_SERVICE=amazon` plus `DUMMY_AWS_ACCESS_KEY_ID`, `DUMMY_AWS_SECRET_ACCESS_KEY`, `DUMMY_AWS_REGION`, and `DUMMY_AWS_BUCKET` to exercise S3-backed uploads in the dummy app; `DUMMY_AWS_BUCKET` may be either the plain bucket name or a bucket ARN

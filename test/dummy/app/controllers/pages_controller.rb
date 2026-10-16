@@ -25,6 +25,7 @@ class PagesController < ApplicationController
     return if @page_recording.blank?
 
     @page_attachment_picker_path = recording_studio_attachable.recording_attachment_picker_path(@page_recording)
+    @page_direct_upload_path = recording_studio_attachable.recording_direct_uploads_path(@page_recording)
     @page_attachment_create_path = recording_studio_attachable.recording_attachment_imports_path(
       @page_recording,
       redirect_mode: "return_to",

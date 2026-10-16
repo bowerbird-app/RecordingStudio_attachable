@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-10-16
+
+### Added
+
+- Recording Studio API actions `create_upload`, `attach`, and `import_attachment` on the `:attachable` capability. `RecordingStudioAttachable::Api.register!(apis: [:public, :operations])` registers them on each named API when `RecordingStudioApi` is loaded. A host still lists the action names in `capability_actions` for each parent type.
+- `create_upload` checks the parent's content types and max file size, the pending-upload cap, and storage capacity, and returns a direct-upload ticket (`signed_blob_id`, `upload.url`, `upload.headers`, `expires_at`).
+- `attach` records one signed blob or a list through `RecordAttachmentUpload` / `RecordAttachmentUploads`, including caption, credit, and alt text. The signed id is purpose `:attachable_upload`, bound to the parent recording and actor, and refused once the blob is attached. The bytes are sniffed and must match the declared type.
+- `import_attachment` fetches an HTTPS URL with `SafeRemoteFetch` and records it through `ImportAttachment`. `config.import_allowed_hosts` is the host allowlist (default empty). The declared type is kept and checked against the sniffed bytes.
+- `PurgeUnattachedBlobsJob` deletes unattached blobs this gem tagged, older than `config.unattached_blob_ttl` (default 24 hours), when `config.purge_unattached_blobs` is true.
+- Browser uploads use the recording direct-upload route. File responses stream, force a download outside PNG, JPEG, GIF, WebP, and PDF, and send a sandbox content security policy. `image/svg+xml` is excluded from `image/*` unless the allow list names it.
+- `config.direct_upload_expires_in` (default 5 minutes) and `config.pending_upload_limit` (default 20).
+- Safe remote fetch blocks `2002::/16` and every IPv4-mapped IPv6 address. A cross-host redirect drops the caller's headers.
+
+### Upgrade Notes
+
+- Bump to `0.20.0`. No migration.
+- Install `recording_studio_api` and call `RecordingStudioAttachable::Api.register!` (pass named admin APIs when those clients should upload too). Add `create_upload`, `attach`, and `import_attachment` to `capability_actions` on each parent type. Include `RecordingStudioApi::ApiClient` in Accessible `access_actor_types`.
+- Set `config.import_allowed_hosts` before calling `import_attachment`. An empty list rejects every URL.
+- Set `config.purge_unattached_blobs = true` and schedule `RecordingStudioAttachable::PurgeUnattachedBlobsJob`. The job only deletes blobs this gem tagged.
+- Point browser direct uploads at `recording_direct_uploads_path(recording)`. A signed id from `/rails/active_storage/direct_uploads` will not attach.
+- `image/*` no longer allows `image/svg+xml`. Add that type explicitly to allow it. Imported files must declare the type Marcel sniffs from the bytes.
+- `config.direct_upload_expires_in` replaces Active Storage's service URL expiry for these tickets. `config.pending_upload_limit` caps waiting uploads per actor and root.
+- Browser uploads to S3 need a bucket CORS rule that allows `PUT` and the headers `Content-Type`, `Content-MD5`, and `Content-Disposition`. Other clients do not.
+- Google Drive and Dropbox tokens live in the Rails session. Use the encrypted cookie store (the Rails default) or another encrypted server-side store.
+- `signed_blob_id` and `checksum` are filtered from request logs. This gem does not log the upload URL.
+
+## [0.19.0] - 2026-10-16
+
 ### Changed
 
 - Require `recording_studio_metrics` `>= 0.3.0, < 0.4` (GitHub tag `v0.3.1`).

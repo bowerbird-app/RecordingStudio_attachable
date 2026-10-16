@@ -71,12 +71,12 @@ class SafeRemoteFetchTest < Minitest::Test
 
     with_public_dns do
       stub_http(lambda { |host, request|
-        requests << { host: host, authorization: request["Authorization"] }
+        requests << { host: host, authorization: request["Authorization"], api_key: request["X-Api-Key"] }
         host == "api.example.test" ? redirect : success
       }) do
         result = fetch(
           uri: "https://api.example.test/files/1",
-          headers: { "authorization" => "Bearer secret" },
+          headers: { "authorization" => "Bearer secret", "X-Api-Key" => "secret-key" },
           allowed_hosts: ["api.example.test", "cdn.example.test"]
         )
 
@@ -85,7 +85,9 @@ class SafeRemoteFetchTest < Minitest::Test
     end
 
     assert_equal "Bearer secret", requests.first.fetch(:authorization)
+    assert_equal "secret-key", requests.first.fetch(:api_key)
     assert_nil requests.second.fetch(:authorization)
+    assert_nil requests.second.fetch(:api_key)
   end
 
   def test_redirect_to_disallowed_host_is_refused
@@ -146,6 +148,18 @@ class SafeRemoteFetchTest < Minitest::Test
       end
 
       assert_equal "Remote download host resolves to a private address", error.message
+    end
+  end
+
+  def test_ipv4_mapped_and_6to4_addresses_are_refused
+    ["::ffff:8.8.8.8", "2002:0808:0808::"].each do |address|
+      Resolv.stub(:getaddresses, ->(_host) { [address] }) do
+        error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
+          fetch(uri: "https://api.example.test/file", allowed_hosts: ["api.example.test"])
+        end
+
+        assert_equal "Remote download host resolves to a private address", error.message
+      end
     end
   end
 

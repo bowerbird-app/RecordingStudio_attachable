@@ -4,6 +4,11 @@ Rails.application.routes.draw do
   get "/recording_studio", to: redirect("/"), as: nil
   mount RecordingStudio::Engine, at: "/recording_studio"
   mount RecordingStudioAttachable::Engine, at: "/recording_studio_attachable"
+  mount RecordingStudioApi::Engine, at: "/recording_studio_api"
+  get "APIdocs/:version/openapi.json",
+      to: "recording_studio_api/scalar_docs#openapi",
+      defaults: { api_key: "public", engine_mount_path: "/recording_studio_api" },
+      as: :api_docs_openapi
 
   get "setup", to: "docs#setup", as: :setup_docs
   get "config", to: "docs#configuration", as: :configuration_docs

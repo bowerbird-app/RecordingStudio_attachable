@@ -18,8 +18,12 @@
    - confirm server-side file type, file size, and file count rules
    - revise metadata and replace a file from the detail page
 11. For operations-API storage and upload metrics, add RecordingStudio Metrics
-    (`~> 0.2`, GitHub tag `v0.2.0`). This gem registers `:attachments` metrics
-    only. The host calls `RecordingStudioMetrics::Api.register!(api: :operations)`.
+    (`>= 0.3.0, < 0.4`, GitHub tag `v0.3.1`). This gem registers `:attachments`
+    metrics only. The host calls `RecordingStudioMetrics::Api.register!(api: :operations)`.
+    RecordingStudio MCP `0.17.0` then advertises `attachments-storage_used`,
+    `attachments-uploads_over_time`, `attachments-by_kind`, and
+    `attachments-by_content_type`. Only `attachments.uploads_over_time` takes
+    `from`, `to`, and `interval`.
 12. For contributor validation, mirror CI:
    - run `bundle install` inside `test/dummy`
    - run `bundle exec rake db:migrate RAILS_ENV=test` inside `test/dummy`

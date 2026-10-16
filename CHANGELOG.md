@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Require `recording_studio_metrics` `>= 0.3.0, < 0.4` (GitHub tag `v0.3.1`).
+  `RecordingStudioAttachable::Metrics.register!` is unchanged: it still
+  registers `:attachments` with `api_authorize` via
+  `RecordingStudioAttachable::Api::Access.can_view?`. The host still calls
+  `RecordingStudioMetrics::Api.register!(api: :operations)`.
+
+### Added
+
+- README and install notes name the RecordingStudio MCP `0.17.0` tools
+  (`attachments-storage_used`, `attachments-uploads_over_time`,
+  `attachments-by_kind`, `attachments-by_content_type`). `from`, `to`, and
+  `interval` apply only to `attachments.uploads_over_time`.
+
+### Upgrade Notes
+
+- Bump to `0.19.0`. No migration.
+- Pin `recording_studio_metrics` to `>= 0.3.0, < 0.4` (tag `v0.3.1`).
+- RecordingStudio MCP `0.17.0` advertises one tool per exposed metric. No
+  extra register call in this gem.
+
 ## [0.18.0] - 2026-10-13
 
 ### Removed

@@ -10,7 +10,7 @@ gem "puma"
 gem "recording_studio", github: "bowerbird-app/RecordingStudio", tag: "v4.5.0"
 gem "recording_studio_metrics",
     github: "bowerbird-app/RecordingStudio_metrics",
-    tag: "v0.2.0"
+    tag: "v0.3.1"
 gem "sprockets-rails"
 
 group :development, :test do

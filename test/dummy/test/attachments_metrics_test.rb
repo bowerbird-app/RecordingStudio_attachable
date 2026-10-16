@@ -37,7 +37,19 @@ class AttachmentsMetricsTest < ActiveSupport::TestCase
     RecordingStudioMetrics.for_resource(:attachments).each do |definition|
       assert_equal [:operations], definition.exposed_apis
       assert_equal :site, definition.blast_radius
+      tool = definition.identifier.sub(".", "-")
+      assert_match(/\A[a-z][a-z0-9_]*-[a-z][a-z0-9_]*\z/, tool)
+      assert_operator tool.size, :<=, 64
     end
+
+    assert_equal :timeseries, RecordingStudioMetrics.find("attachments.uploads_over_time").result_type
+    assert_equal :scalar, RecordingStudioMetrics.find("attachments.storage_used").result_type
+    assert_equal :breakdown, RecordingStudioMetrics.find("attachments.by_kind").result_type
+    assert_equal :breakdown, RecordingStudioMetrics.find("attachments.by_content_type").result_type
+    assert_equal %i[day week month year], RecordingStudioMetrics.find("attachments.uploads_over_time").intervals
+    assert_empty RecordingStudioMetrics.find("attachments.storage_used").intervals
+    assert_empty RecordingStudioMetrics.find("attachments.by_kind").intervals
+    assert_empty RecordingStudioMetrics.find("attachments.by_content_type").intervals
   end
 
   test "storage_used sums live current snapshots and ignores trash and revisions" do
@@ -112,6 +124,32 @@ class AttachmentsMetricsTest < ActiveSupport::TestCase
 
     assert_equal "attachments.storage_used", payload[:metric]
     assert_equal execute("attachments.storage_used").value, payload[:value]
+  end
+
+  test "execute handler accepts from to and interval only on uploads_over_time" do
+    travel_to Time.utc(2026, 3, 10, 12) do
+      import_file(@root, "from-to.txt", "text/plain", "from-to-bytes")
+    end
+
+    payload = RecordingStudioMetrics::Api::ExecuteHandler.call(
+      build_api_context(
+        @actor,
+        name: "uploads_over_time",
+        interval: "month",
+        from: "2026-03-01T00:00:00Z",
+        to: "2026-05-01T00:00:00Z"
+      )
+    )
+
+    assert_equal "attachments.uploads_over_time", payload[:metric]
+    values = payload[:data].to_h { |row| [row[:date], row[:value]] }
+    assert_operator values["2026-03-01"], :>=, 1
+
+    scalar = RecordingStudioMetrics::Api::ExecuteHandler.call(
+      build_api_context(@actor, name: "storage_used")
+    )
+    assert_equal execute("attachments.storage_used").value, scalar[:value]
+    refute scalar.key?(:data)
   end
 
   test "execute handler is 403 when access denies" do
@@ -201,16 +239,18 @@ class AttachmentsMetricsTest < ActiveSupport::TestCase
     )
   end
 
-  def build_api_context(actor, name: "storage_used")
+  def build_api_context(actor, name: "storage_used", interval: nil, from: nil, to: nil)
     grant = Struct.new(:actor).new(actor)
     params = {
       resource: "attachments",
       name: name,
-      interval: nil,
+      interval: interval,
       start: nil,
       start_at: nil,
       end: nil,
       end_at: nil,
+      from: from,
+      to: to,
       timezone: "UTC",
       filters: {}
     }

@@ -15,6 +15,14 @@ class MetricsTest < Minitest::Test
     assert_includes source, "Metrics.register!"
   end
 
+  def test_metrics_register_uses_can_view_api_authorize
+    source = File.read(File.expand_path("../lib/recording_studio_attachable/metrics.rb", __dir__))
+
+    assert_includes source, "RecordingStudioMetrics.register("
+    assert_includes source, "api_authorize: ->(context) { RecordingStudioAttachable::Api::Access.can_view?(context) }"
+    refute_includes source, "RecordingStudioMetrics::Api.register!"
+  end
+
   def test_access_denies_without_an_admin_root
     actor = Object.new
     grant = Struct.new(:actor).new(actor)

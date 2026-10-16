@@ -6,7 +6,7 @@ gem "recording_studio_accessible", github: "bowerbird-app/RecordingStudio_access
 gem "recording_studio_orderable", github: "bowerbird-app/RecordingStudio_orderable", tag: "v0.3.0"
 gem "recording_studio_metrics",
     github: "bowerbird-app/RecordingStudio_metrics",
-    tag: "v0.2.0"
+    tag: "v0.3.1"
 gem "devise"
 gem "rails", "~> 8.1.1"
 gem "propshaft"

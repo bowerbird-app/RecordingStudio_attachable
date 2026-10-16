@@ -3,5 +3,5 @@
 return unless defined?(RecordingStudioAccessible)
 
 RecordingStudioAccessible.configure do |config|
-  config.access_actor_types = ["User"]
+  config.access_actor_types = ["User", "RecordingStudioApi::ApiClient"]
 end

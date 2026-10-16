@@ -262,6 +262,11 @@ class DocsController < ApplicationController
           restore: :admin,
           download: :view
         }
+
+        # Hosts that import by URL list the HTTPS hosts SafeRemoteFetch may contact.
+        # config.import_allowed_hosts = ["cdn.example.com"]
+        # PurgeUnattachedBlobsJob deletes unattached blobs older than this.
+        # config.unattached_blob_ttl = 24.hours
       end
     RUBY
 

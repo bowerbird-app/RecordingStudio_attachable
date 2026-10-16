@@ -153,7 +153,7 @@ class AttachmentsMetricsTest < ActiveSupport::TestCase
   end
 
   test "execute handler is 403 when access denies" do
-    error = assert_raises(RecordingStudioMetrics::Errors::AuthorizationError) do
+    error = assert_raises(RecordingStudioApi::AuthorizationError) do
       RecordingStudioMetrics::Api::ExecuteHandler.call(
         build_api_context(@denied, name: "storage_used")
       )

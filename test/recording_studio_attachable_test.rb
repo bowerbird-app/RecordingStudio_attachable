@@ -4,7 +4,7 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.20.0", RecordingStudioAttachable::VERSION
+    assert_equal "0.20.1", RecordingStudioAttachable::VERSION
   end
 
   def test_recording_studio_dependency_is_4_2_or_newer
@@ -36,20 +36,19 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes dummy_lock, "tag: v0.1.213"
   end
 
-  def test_metrics_dependency_is_0_3_line
+  def test_metrics_dependency_is_0_3_through_0_5
     spec = Gem.loaded_specs.fetch("recording_studio_metrics")
     gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
     root_gemfile = File.read(File.expand_path("../Gemfile", __dir__))
     dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
-    pin = 'tag: "v0.3.1"'
 
     assert spec.version >= Gem::Version.new("0.3.0"),
            "expected recording_studio_metrics >= 0.3.0, got #{spec.version}"
-    assert spec.version < Gem::Version.new("0.4.0"),
-           "expected recording_studio_metrics < 0.4, got #{spec.version}"
-    assert_includes gemspec, 'spec.add_dependency "recording_studio_metrics", ">= 0.3.0", "< 0.4"'
-    assert_includes root_gemfile, pin
-    assert_includes dummy_gemfile, pin
+    assert spec.version < Gem::Version.new("0.6.0"),
+           "expected recording_studio_metrics < 0.6, got #{spec.version}"
+    assert_includes gemspec, 'spec.add_dependency "recording_studio_metrics", ">= 0.3.0", "< 0.6"'
+    assert_includes root_gemfile, 'tag: "v0.5.0"'
+    assert_includes dummy_gemfile, 'tag: "v0.3.1"'
   end
 
   def test_engine_exists

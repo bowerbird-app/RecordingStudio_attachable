@@ -19,7 +19,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - Recording Studio 4.2.0 or newer installed in the host app
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
-- RecordingStudio Metrics `>= 0.3.0, < 0.4` (GitHub tag `v0.3.1`) for operations-API storage and upload metrics
+- RecordingStudio Metrics `>= 0.3.0, < 0.6` (latest GitHub tag `v0.5.0`) for operations-API storage and upload metrics
 
 ## Quick start
 

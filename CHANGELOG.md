@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.1] - 2026-10-20
+
+### Changed
+
+- Require `recording_studio_metrics` `>= 0.3.0, < 0.6` so hosts can use Metrics 0.4 and 0.5. `RecordingStudioAttachable::Metrics.register!` is unchanged.
+
+### Upgrade Notes
+
+- Bump to `0.20.1`. No migration.
+- Pin `recording_studio_metrics` to `>= 0.3.0, < 0.6`. Latest Metrics is `v0.5.0`. The dummy app stays on Metrics `v0.3.1` because `recording_studio_api` `v0.11.4` and `recording_studio_trashable` `v0.11.1` still require Metrics `< 0.4`.
+
 ## [0.20.0] - 2026-10-16
 
 ### Added

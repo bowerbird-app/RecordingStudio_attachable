@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.2] - 2026-10-22
+
+### Changed
+
+- Raise the Metrics/Logs ceiling to `< 1.0` so hosts can use Logs 0.7.0 and Metrics 0.6.1. No code change.
+
+### Upgrade Notes
+
+- Bump to `0.20.2`. No migration.
+- Pin `recording_studio_metrics` to `>= 0.3.0, < 1.0`. Dummy and Gemfile pins stay put.
+
 ## [0.20.1] - 2026-10-20
 
 ### Changed

@@ -617,7 +617,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes initializer_template, "config.dropbox.enabled = true"
     assert_includes view_source, 'title: t("recording_studio.attachable.google_drive.title")'
     assert_includes view_source, "if @show_connect"
-    assert_includes connect_form_source, 't("recording_studio.attachable.google_drive.connect")'
+    assert_includes connect_form_source, 't(reconnect ? "recording_studio.attachable.google_drive.reconnect" : "recording_studio.attachable.google_drive.connect")'
     assert_includes connect_form_source, "form_with url: connect_path, method: :post"
     assert_includes connect_form_source, 'hidden_field_tag :owner, "user"'
     assert_includes view_source, 't("recording_studio.attachable.google_drive.import_selected")'

@@ -34,15 +34,20 @@ module RecordingStudioAttachable
         authorize_google_drive_upload!
         ensure_google_drive_enabled!
         disconnect_google_drive!
+        redirect_after_disconnect
+      rescue RecordingStudioAttachable::DependencyUnavailableError => e
+        dependency_unavailable_alert(e)
+      end
 
+      private
+
+      def redirect_after_disconnect
         redirect_to google_drive.recording_imports_path(@recording, upload_flow_params),
                     notice: Copy.legacy_t(
                       "google_drive.disconnected",
                       "google_drive.disconnected",
                       default: "Disconnected Google Drive."
                     )
-      rescue RecordingStudioAttachable::DependencyUnavailableError => e
-        dependency_unavailable_alert(e)
       end
     end
   end

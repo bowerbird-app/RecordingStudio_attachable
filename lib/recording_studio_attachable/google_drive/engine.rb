@@ -48,7 +48,7 @@ module RecordingStudioAttachable
           route_helpers.google_drive.recording_imports_path(recording, format: :json)
         end
 
-        def remote_importer(parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil)
+        def remote_importer(parent_recording:, attachments:, actor: nil, impersonator: nil, **)
           Services::ImportSelectedFiles.call(
             parent_recording: parent_recording,
             file_ids: Adapter::Selection.from_attachments(attachments),

@@ -7,6 +7,33 @@ GIT
       rails (>= 8.1.0)
 
 GIT
+  remote: https://github.com/bowerbird-app/RecordingStudio_GoogleDrive.git
+  revision: 3837db652fbac6622db72b159cbff7a99076d859
+  tag: v0.2.0
+  specs:
+    recording_studio_google_drive (0.2.0)
+      rails (~> 8.1.0)
+      recording_studio (~> 4.2)
+      recording_studio_oauth (>= 0.14.1, < 1.0)
+
+GIT
+  remote: https://github.com/bowerbird-app/RecordingStudio_Oauth.git
+  revision: bb4b66357d70f12d658ac06ca136383ee38cefba
+  tag: v0.14.1
+  specs:
+    recording_studio_oauth (0.14.1)
+      flat_pack (~> 0.1.198)
+      rails (~> 8.1.0)
+      recording_studio (~> 4.2)
+      recording_studio_accessible (~> 0.11)
+      recording_studio_admin (~> 2.0)
+      recording_studio_api (>= 0.5.2, < 0.15)
+      recording_studio_cache (~> 0.5)
+      recording_studio_metrics (>= 0.3, < 1.0)
+      recording_studio_site_settings (~> 0.2)
+      recording_studio_trashable (~> 0.10)
+
+GIT
   remote: https://github.com/bowerbird-app/RecordingStudio_accessible.git
   revision: db1d692fdecccdf251c7c8b5dc19074a0e4da97c
   tag: v0.15.0
@@ -40,6 +67,15 @@ GIT
       redis (~> 5.3)
 
 GIT
+  remote: https://github.com/bowerbird-app/RecordingStudio_cache.git
+  revision: ffadfbd2a804104e1146c835aaf1bdb8068596ff
+  tag: v0.5.0
+  specs:
+    recording_studio_cache (0.5.0)
+      rails (~> 8.1.0)
+      recording_studio (~> 4.2)
+
+GIT
   remote: https://github.com/bowerbird-app/RecordingStudio_metrics.git
   revision: a6cad79bcd2a82473db7b140cebdc1cc5e428d80
   tag: v0.3.1
@@ -57,6 +93,19 @@ GIT
       flat_pack (>= 0.1.74)
       rails (~> 8.1.0)
       recording_studio (~> 4.1)
+
+GIT
+  remote: https://github.com/bowerbird-app/RecordingStudio_site_settings.git
+  revision: f116e327badc21f3026dcb6b81444ea8fceba962
+  tag: v0.2.0
+  specs:
+    recording_studio_site_settings (0.2.0)
+      flat_pack (>= 0.1.144)
+      rails (~> 8.1.0)
+      recording_studio (~> 4.2)
+      recording_studio_accessible (~> 0.11)
+      recording_studio_admin (~> 2.0)
+      recording_studio_attachable (~> 0.5)
 
 GIT
   remote: https://github.com/bowerbird-app/RecordingStudio_trashable.git
@@ -83,7 +132,7 @@ GIT
 PATH
   remote: ../..
   specs:
-    recording_studio_attachable (0.20.2)
+    recording_studio_attachable (0.21.0)
       flat_pack (>= 0.1.213)
       rails (~> 8.1.0)
       recording_studio (~> 4.2)
@@ -562,8 +611,12 @@ DEPENDENCIES
   recording_studio_admin!
   recording_studio_api!
   recording_studio_attachable!
+  recording_studio_cache!
+  recording_studio_google_drive!
   recording_studio_metrics!
+  recording_studio_oauth!
   recording_studio_orderable!
+  recording_studio_site_settings!
   recording_studio_trashable!
   rubocop-rails-omakase
   selenium-webdriver
@@ -705,9 +758,13 @@ CHECKSUMS
   recording_studio_accessible (0.15.0)
   recording_studio_admin (2.3.0)
   recording_studio_api (0.11.3)
-  recording_studio_attachable (0.20.2)
+  recording_studio_attachable (0.21.0)
+  recording_studio_cache (0.5.0)
+  recording_studio_google_drive (0.2.0)
   recording_studio_metrics (0.3.0)
+  recording_studio_oauth (0.14.1)
   recording_studio_orderable (0.3.0)
+  recording_studio_site_settings (0.2.0)
   recording_studio_trashable (0.11.1)
   redis (5.4.1) sha256=b5e675b57ad22b15c9bcc765d5ac26f60b675408af916d31527af9bd5a81faae
   redis-client (0.31.0) sha256=6820cb2a21e6795a823141f50fd25e655de2b8dc8ff833b43509a27b0263fd75

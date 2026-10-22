@@ -33,7 +33,7 @@ class GoogleDriveImportTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes response.body, "Connect Google Drive"
-    assert_includes response.body, recording_studio_oauth.outbound_connect_path(provider: "google_drive")
+    assert_includes response.body, oauth_outbound_connect_path
     refute_includes response.body, "fake-access-"
     assert_nil session["recording_studio_attachable_google_drive"]
     assert_nil session["access_token"]
@@ -63,7 +63,7 @@ class GoogleDriveImportTest < ActionDispatch::IntegrationTest
     client.define_singleton_method(:fetch_file) { |_id, resource_key: nil| drive_file }
     client.define_singleton_method(:download) { |_id, resource_key: nil| downloaded }
 
-    RecordingStudioGoogleDrive::Client.stub(:for, client) do
+    with_drive_client(client) do
       get google_drive_imports_path
       assert_response :success
       assert_includes response.body, "Brief.pdf"
@@ -89,20 +89,20 @@ class GoogleDriveImportTest < ActionDispatch::IntegrationTest
       raise RecordingStudioGoogleDrive::ReconnectRequired, "Reconnect Google Drive"
     end
 
-    RecordingStudioGoogleDrive::Client.stub(:for, client) do
+    with_drive_client(client) do
       get google_drive_imports_path
     end
 
     assert_response :success
     assert_includes response.body, "Reconnect Google Drive"
-    assert_includes response.body, recording_studio_oauth.outbound_connect_path(provider: "google_drive")
+    assert_includes response.body, oauth_outbound_connect_path
     assert_nil session["recording_studio_attachable_google_drive"]
   end
 
   private
 
   def follow_connect!
-    post recording_studio_oauth.outbound_connect_path(provider: "google_drive"), params: {
+    post oauth_outbound_connect_path, params: {
       owner: "user",
       return_to: google_drive_imports_path
     }
@@ -112,6 +112,18 @@ class GoogleDriveImportTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_response :redirect
     follow_redirect!
+  end
+
+  def with_drive_client(client)
+    original = RecordingStudioGoogleDrive::Client.method(:for)
+    RecordingStudioGoogleDrive::Client.define_singleton_method(:for) { |**| client }
+    yield
+  ensure
+    RecordingStudioGoogleDrive::Client.define_singleton_method(:for, original)
+  end
+
+  def oauth_outbound_connect_path
+    RecordingStudioOauth::Engine.routes.url_helpers.outbound_connect_path(provider: "google_drive")
   end
 
   def google_drive_imports_path

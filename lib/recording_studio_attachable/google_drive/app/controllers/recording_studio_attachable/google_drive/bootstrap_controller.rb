@@ -39,12 +39,14 @@ module RecordingStudioAttachable
       end
 
       def gem_client_id
-        return unless Integration.gem_loaded?
+        return unless defined?(::RecordingStudioGoogleDrive)
 
         ::RecordingStudioGoogleDrive.configuration.client_id
       end
 
       def gem_scopes
+        return [] unless defined?(::RecordingStudioGoogleDrive)
+
         Array(::RecordingStudioGoogleDrive.configuration.scopes)
       end
     end

@@ -51,7 +51,12 @@ class GoogleDriveConnectControllerTest < ActionController::TestCase
       RecordingStudio::Recording.stub(:find, recording) do
         GoogleDriveFakes.with_gem_loaded do
           @controller.stub(:render, lambda { |*_, **kwargs|
-            @controller.response_body = [@controller.instance_variable_get(:@oauth_connect_path).to_s]
+            @controller.response_body = [
+              [
+                @controller.instance_variable_get(:@oauth_connect_path),
+                @controller.instance_variable_get(:@auto_submit)
+              ].join(" ")
+            ]
             @controller.status = kwargs[:status] || :ok
           }) do
             get :show, params: { recording_id: recording.id, popup: 1 }
@@ -62,7 +67,7 @@ class GoogleDriveConnectControllerTest < ActionController::TestCase
 
     assert_response :success
     assert_includes @response.body, "/recording_studio_oauth/outbound/google_drive/connect"
-    assert_equal true, @controller.instance_variable_get(:@auto_submit)
+    assert_includes @response.body, "true"
     assert_nil @request.session["recording_studio_attachable_google_drive"]
   end
 

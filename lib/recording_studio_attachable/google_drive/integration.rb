@@ -14,9 +14,9 @@ module RecordingStudioAttachable
       end
 
       def provider_key
-        return ::RecordingStudioGoogleDrive.configuration.oauth_provider_key if gem_loaded?
+        return :google_drive unless defined?(::RecordingStudioGoogleDrive)
 
-        :google_drive
+        ::RecordingStudioGoogleDrive.configuration.oauth_provider_key
       end
 
       def client(root:, actor:)
@@ -40,11 +40,18 @@ module RecordingStudioAttachable
       end
 
       def reconnect_required?(error)
-        gem_loaded? && error.is_a?(::RecordingStudioGoogleDrive::ReconnectRequired)
+        drive_error?(error, "ReconnectRequired")
       end
 
       def request_error?(error)
-        gem_loaded? && error.is_a?(::RecordingStudioGoogleDrive::RequestError)
+        drive_error?(error, "RequestError")
+      end
+
+      def drive_error?(error, name)
+        return false unless defined?(::RecordingStudioGoogleDrive)
+        return false unless ::RecordingStudioGoogleDrive.const_defined?(name, false)
+
+        error.is_a?(::RecordingStudioGoogleDrive.const_get(name))
       end
 
       def live_connection(root:, actor:)

@@ -81,6 +81,8 @@ class GoogleDriveApplicationControllerTest < Minitest::Test
   end
 
   def test_google_drive_connected_uses_oauth_connection_not_session
+    @controller.instance_variable_set(:@recording, FakeRecording.new(id: "rec-1", recordable_type: "Workspace"))
+
     RecordingStudioAttachable::GoogleDrive::Integration.stub(:connection, nil) do
       assert_not @controller.send(:google_drive_connected?)
     end

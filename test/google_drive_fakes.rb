@@ -8,7 +8,15 @@ module GoogleDriveFakes
   end
 
   DownloadedFile = Struct.new(:body, :filename, :content_type, keyword_init: true)
-  Page = Struct.new(:entries, :next_cursor, keyword_init: true)
+
+  class Page
+    attr_reader :entries, :next_cursor
+
+    def initialize(entries:, next_cursor: nil)
+      @entries = entries
+      @next_cursor = next_cursor
+    end
+  end
   Connection = Struct.new(:access_token, :expires_at, :needs_reconnect, keyword_init: true) do
     def needs_reconnect?
       !!needs_reconnect

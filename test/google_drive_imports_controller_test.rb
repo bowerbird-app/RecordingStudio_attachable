@@ -206,7 +206,8 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
             @controller.stub(:google_drive_client, client) do
               @controller.stub(:render, lambda { |*_, **kwargs|
                 files = @controller.instance_variable_get(:@files)
-                @controller.response_body = [files.map { |file| file["id"] }.join(",")]
+                token = @controller.instance_variable_get(:@next_page_token)
+                @controller.response_body = ["#{files.map { |file| file['id'] }.join(',')} #{token}"]
                 @controller.status = kwargs[:status] || :ok
               }) do
                 get :index, params: { recording_id: recording.id }
@@ -218,8 +219,7 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
     end
 
     assert_response :success
-    assert_equal "file-1", @response.body
-    assert_equal "next-page", @controller.instance_variable_get(:@next_page_token)
+    assert_equal "file-1 next-page", @response.body
     assert_nil @request.session["recording_studio_attachable_google_drive"]
   end
 
@@ -337,7 +337,7 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
                     @controller.response_body = [Array(@controller.flash.now[:alert]).join]
                     @controller.status = kwargs[:status] || :ok
                   }) do
-                    get :index, params: { recording_id: recording.id, query: "budget" }
+                    get :index, params: { recording_id: recording.id }
                   end
                 end
               end

@@ -3,7 +3,8 @@
 module RecordingStudioAttachable
   module GoogleDrive
     class ApplicationController < RecordingStudioAttachable::ApplicationController
-      helper_method :google_drive_connected?, :google_drive_reconnect?
+      helper_method :google_drive_connected?, :google_drive_reconnect?,
+                    :current_upload_provider_key, :current_upload_provider_modal_id
 
       private
 
@@ -12,10 +13,10 @@ module RecordingStudioAttachable
       end
 
       def ensure_google_drive_enabled!
-        unless google_drive_configuration.enabled? && Integration.gem_loaded?
-          raise RecordingStudioAttachable::DependencyUnavailableError,
-                Copy.t("google_drive.not_enabled", default: "Google Drive isn't available right now")
-        end
+        return if google_drive_configuration.enabled? && Integration.gem_loaded?
+
+        raise RecordingStudioAttachable::DependencyUnavailableError,
+              Copy.t("google_drive.not_enabled", default: "Google Drive isn't available right now")
       end
 
       def ensure_google_drive_picker_configured!
@@ -61,14 +62,12 @@ module RecordingStudioAttachable
         live.present? && live.respond_to?(:needs_reconnect?) && live.needs_reconnect?
       end
 
-      def google_drive_oauth
-        return unless Integration.oauth_loaded? && main_app.respond_to?(:recording_studio_oauth)
-
-        main_app.recording_studio_oauth
-      end
-
       def google_drive_oauth_connect_path
-        google_drive_oauth&.outbound_connect_path(provider: Integration.provider_key)
+        return unless Integration.oauth_loaded?
+
+        ::RecordingStudioOauth::Engine.routes.url_helpers.outbound_connect_path(
+          provider: Integration.provider_key
+        )
       end
 
       def google_drive_popup_connect_url
@@ -82,7 +81,7 @@ module RecordingStudioAttachable
 
       def google_drive_connect_return_path(popup:)
         if popup
-          google_drive.recording_connected_path(@recording, **upload_flow_params.merge(popup: 1))
+          google_drive.recording_connected_path(@recording, popup: 1, **upload_flow_params)
         else
           google_drive.recording_imports_path(@recording, **upload_flow_params)
         end

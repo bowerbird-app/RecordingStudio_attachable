@@ -19,7 +19,8 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - Recording Studio 4.2.0 or newer installed in the host app
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
-- RecordingStudio Metrics `>= 0.3.0, < 0.6` (latest GitHub tag `v0.5.0`) for operations-API storage and upload metrics
+- RecordingStudio Metrics `>= 0.3.0, < 1.0` (latest GitHub tag `v0.5.0`) for operations-API storage and upload metrics
+- Optional Google Drive import: `recording_studio_google_drive` `>= 0.2.0, < 1.0` and `recording_studio_oauth` `>= 0.14.1, < 1.0`. Attachable does not depend on those gems at runtime.
 
 ## Quick start
 
@@ -367,12 +368,9 @@ RecordingStudioAttachable.configure do |config|
       route_helpers.google_drive.recording_bootstrap_path(recording, format: :json)
     end,
     remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|
-      access_token = GoogleDriveSessionAccessToken.fetch(session: context.session)
-
-      MyAddon::GoogleDrive::ImportSelectedFiles.call(
+      MyAddon::Drive::ImportSelectedFiles.call(
         parent_recording: parent_recording,
         file_ids: attachments.map { |payload| payload.fetch(:provider_payload) },
-        access_token: access_token,
         actor: actor,
         impersonator: impersonator
       )
@@ -412,7 +410,7 @@ For modal-page providers, the shared browser contract is:
 - addon screens can complete auth in a popup and post a `provider-auth-complete` message back to the upload page
 - addon screens can post a `provider-import-complete` message with a `redirectPath` when the import succeeds
 
-For `:client_picker`, the upload page stays in place and calls a registered browser launcher. Prefetch loads picker config only and does not write OAuth state, so Dropbox and Drive can warm up together without clobbering a cookie session. A click opens the local connect URL (which creates OAuth state) or the vendor picker. After OAuth completes, the cached bootstrap is dropped and fetched again. Drive then opens the Picker on its own. Dropbox waits for the next click on the same Dropbox button so `choose()` stays inside a user gesture. Chooser selections send the file id and filename; the shared imports endpoint copies the file through Dropbox’s API using the session token. Neither flow adds a second Choose from… button. Drive also refetches when the picker `access_token` is within 30 seconds of expiry. A `403` or `422` bootstrap disables the provider button after a click; prefetch failures stay quiet.
+For `:client_picker`, the upload page stays in place and calls a registered browser launcher. Prefetch loads picker config only and does not write OAuth state, so Dropbox and Drive can warm up together without clobbering a cookie session. A click opens connect or the vendor picker. Google Drive connect uses Recording Studio Oauth outbound connections. Dropbox still creates OAuth state in the session. After OAuth completes, the cached bootstrap is dropped and fetched again. Drive then opens the Picker on its own. Dropbox waits for the next click on the same Dropbox button so `choose()` stays inside a user gesture. Chooser selections send the file id and filename; the shared imports endpoint copies the file through Dropbox’s API using the session token. Neither flow adds a second Choose from… button. Drive also refetches when the picker `access_token` is within 30 seconds of expiry. A `403` or `422` bootstrap disables the provider button after a click; prefetch failures stay quiet.
 
 Client-picker launchers are registered in JavaScript:
 
@@ -511,7 +509,7 @@ If you are working in trusted internal app code and only want the created record
 
 ### Cloud upload adapters
 
-Google Drive and Dropbox ship as optional adapters. Each adapter owns its config, OAuth, routes, launcher JS, and file resolve/download rules. Core owns the upload-provider registry, the generic `attachments/imports` endpoint, and a shared HTTPS fetch used by every adapter.
+Google Drive and Dropbox ship as optional adapters. Dropbox still owns its OAuth and session tokens. Google Drive import uses the `recording_studio_google_drive` gem for Drive API calls and Recording Studio Oauth outbound connections for tokens. Core owns the upload-provider registry, the generic `attachments/imports` endpoint, and a shared HTTPS fetch used by adapters that still download over HTTP.
 
 Adapters are **off** until the host turns them on **and** supplies real credentials. Dummy placeholder values do not count. Hosts can enable Drive only, Dropbox only, both, or neither. When an adapter is off or incomplete, it is not registered, nothing from it appears on the upload page, and its endpoints refuse the request.
 
@@ -519,20 +517,24 @@ Files are always **copied** into Active Storage. There are no linked attachments
 
 #### Google Drive
 
+Google Drive stays optional. This gem has no runtime dependency on `recording_studio_google_drive` or `recording_studio_oauth`. The Drive engine mounts and the upload-page button registers only when the host bundles the Google Drive gem.
+
+1. Add `recording_studio_google_drive` `>= 0.2.0, < 1.0` and `recording_studio_oauth` `>= 0.14.1, < 1.0`.
+2. Install and migrate Oauth (`recording_studio_oauth:install` and `recording_studio_oauth:migrations`).
+3. Mount Oauth and set Google app credentials on the Oauth outbound provider (`recording_studio_oauth.outbound.google_drive`). Name the keys. Do not put the values in git.
+4. Enable the Attachable picker keys:
+
 ```ruby
 RecordingStudioAttachable.configure do |config|
   config.google_drive.enabled = true
-  config.google_drive.client_id = ENV.fetch("GOOGLE_DRIVE_CLIENT_ID")
-  config.google_drive.client_secret = ENV.fetch("GOOGLE_DRIVE_CLIENT_SECRET")
   config.google_drive.api_key = ENV.fetch("GOOGLE_DRIVE_API_KEY")
   config.google_drive.app_id = ENV.fetch("GOOGLE_DRIVE_APP_ID")
-  config.google_drive.redirect_uri = "https://your-app.test/recording_studio_attachable/google_drive/oauth/callback"
 end
 ```
 
 `GOOGLE_DRIVE_API_KEY` must be a browser API key for the same Google Cloud project, and `GOOGLE_DRIVE_APP_ID` is the Google Cloud project number used by Google Picker.
 
-Once enabled, the upload page shows a Google Drive button: OAuth popup, Google Picker, then a server-side copy through `ImportAttachments`. Bootstrap JSON includes `expires_at` so the browser can drop a near-expiry picker token. Native Docs/Sheets/Slides export to PDF, PNG, or CSV as before. Routes live at `/recording_studio_attachable/google_drive`.
+Connect and reconnect use Oauth's outbound flow. Tokens are not stored in the Rails session. Without a connection, or when the Google Drive gem raises `ReconnectRequired`, the import UI shows Connect or Reconnect instead of a 500. Once connected, the upload page still launches Google Picker, then copies selected files through `ImportAttachments`. Bootstrap JSON may include a short-lived picker `access_token` and `expires_at`; that token is read from Oauth, not written to the session. Native Docs/Sheets/Slides export to PDF, PNG, or CSV as before. Routes live at `/recording_studio_attachable/google_drive`.
 
 #### Dropbox
 
@@ -556,7 +558,7 @@ In the Dropbox app console, add this host to **Chooser / Saver domains** (for ex
 
 Hosts with a Content Security Policy must allow the Chooser script at `https://www.dropbox.com/static/api/2/dropins.js` (`script-src`). Inline launcher imports use a CSP nonce via `javascript_tag`.
 
-OAuth tokens stay in the Rails session. Hosts that enable both Drive and Dropbox should use a server-side session store (Redis, cache, or Active Record) so the browser’s 4 KB cookie limit is not hit.
+Dropbox OAuth tokens stay in the Rails session. Google Drive tokens do not. Hosts that enable Dropbox (or Dropbox plus Drive) should use a server-side session store (Redis, cache, or Active Record) so the browser’s 4 KB cookie limit is not hit.
 
 #### Adding another provider
 
@@ -794,7 +796,7 @@ Dummy credentials (`test/dummy/config/credentials.yml.enc`) are encrypted with t
 
 - the dummy app is a validation shell, not a production template
 - CI installs the dummy app bundle and runs dummy-app migrations before the root checks
-- the dummy app pins RecordingStudio `v4.7.0`, Recording Studio Accessible `v0.15.0`, Recording Studio Orderable `v0.3.0`, and Recording Studio API `v0.11.4`
+- the dummy app pins RecordingStudio `v4.7.0`, Recording Studio Accessible `v0.15.0`, Recording Studio Orderable `v0.3.0`, Recording Studio API `v0.11.4`, RecordingStudio Google Drive `v0.2.0`, and RecordingStudio Oauth `v0.14.1`
 - make sure engine, Active Storage, and Recording Studio tables are migrated in the dummy app before validating upload flows locally
 - `bin/rails db:seed` attaches a twenty-shot Kiln canister press kit to the workspace. The shots mix portrait, square, and landscape frames. Edit images uses those files. Seeds also remove the colour-block stand-ins `window.jpg`, `dock.jpg`, and `pier.jpg` when they are still on the workspace.
 - set `DUMMY_ACTIVE_STORAGE_SERVICE=amazon` plus `DUMMY_AWS_ACCESS_KEY_ID`, `DUMMY_AWS_SECRET_ACCESS_KEY`, `DUMMY_AWS_REGION`, and `DUMMY_AWS_BUCKET` to exercise S3-backed uploads in the dummy app; `DUMMY_AWS_BUCKET` may be either the plain bucket name or a bucket ARN

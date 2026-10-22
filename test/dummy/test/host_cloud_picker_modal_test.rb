@@ -120,9 +120,12 @@ class HostCloudPickerModalTest < ActionDispatch::IntegrationTest
       assert_nil session.dig("recording_studio_attachable_google_drive", "oauth_state")
 
       get "/recording_studio_attachable/google_drive/recordings/#{@root.id}/connect", params: { popup: 1, provider_key: "google_drive" }
-      assert_response :redirect
+      assert_response :success
+      assert_includes response.body, "recording_studio_oauth"
       assert_not_nil session.dig("recording_studio_attachable_dropbox", "oauth_state")
-      assert_not_nil session.dig("recording_studio_attachable_google_drive", "oauth_state")
+      assert_nil session.dig("recording_studio_attachable_google_drive", "oauth_state")
+      assert_nil session["access_token"]
+      refute_includes response.body, "fake-access-"
     end
   end
 
@@ -142,11 +145,8 @@ class HostCloudPickerModalTest < ActionDispatch::IntegrationTest
     )
     configuration.google_drive.merge!(
       enabled: true,
-      client_id: "google-drive-client-id",
-      client_secret: "google-drive-client-secret",
       api_key: "google-drive-api-key",
-      app_id: "google-drive-app-id",
-      redirect_uri: "http://www.example.com/recording_studio_attachable/google_drive/oauth/callback"
+      app_id: "google-drive-app-id"
     )
 
     RecordingStudioAttachable::Dropbox::Engine.send(:register_upload_provider)

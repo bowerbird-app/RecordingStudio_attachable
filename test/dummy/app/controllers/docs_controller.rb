@@ -348,12 +348,9 @@ class DocsController < ApplicationController
                 route_helpers.google_drive.recording_bootstrap_path(recording, format: :json)
               end,
               remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|
-                access_token = GoogleDriveSessionAccessToken.fetch(session: context.session)
-
                 MyAddon::GoogleDrive::ImportSelectedFiles.call(
                   parent_recording: parent_recording,
                   file_ids: attachments.map { |payload| payload.fetch(:provider_payload) },
-                  access_token: access_token,
                   actor: actor,
                   impersonator: impersonator
                 )
@@ -388,12 +385,9 @@ class DocsController < ApplicationController
         language: :ruby,
         code: <<~RUBY
           remote_importer = lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|
-            access_token = GoogleDriveSessionAccessToken.fetch(session: context.session)
-
             MyAddon::GoogleDrive::ImportSelectedFiles.call(
               parent_recording: parent_recording,
               file_ids: attachments.map { |payload| payload.fetch(:provider_payload) },
-              access_token: access_token,
               actor: actor,
               impersonator: impersonator
             )

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require_relative "google_drive_fakes"
 require_relative "dummy/app/models/current"
 require_relative "../app/controllers/recording_studio_attachable/application_controller"
 require_relative "../lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/application_controller"
@@ -10,21 +11,19 @@ require_relative "../lib/recording_studio_attachable/services/base_service"
 class GoogleDriveImportsControllerTest < ActionController::TestCase
   tests RecordingStudioAttachable::GoogleDrive::ImportsController
 
-  FakeRecording = Struct.new(:id, :recordable_type, keyword_init: true)
+  FakeRecording = Struct.new(:id, :recordable_type, :root_recording, keyword_init: true)
+  FakeRequestError = Class.new(StandardError)
 
   def setup
     @original_configuration = RecordingStudioAttachable.instance_variable_get(:@configuration)
     RecordingStudioAttachable.instance_variable_set(:@configuration, RecordingStudioAttachable::Configuration.new)
-    RecordingStudioAttachable.configuration.google_drive.merge!(
-      enabled: true,
-      client_id: "client-id",
-      client_secret: "client-secret",
-      redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback"
-    )
+    RecordingStudioAttachable.configuration.google_drive.merge!(enabled: true, page_size: 25)
 
     @controller = RecordingStudioAttachable::GoogleDrive::ImportsController.new
     @controller.define_singleton_method(:authorize_attachment_action!) { |_action, _recording, capability_options: {}| true }
     @controller.define_singleton_method(:capability_options_for) { |_recording| {} }
+    @controller.define_singleton_method(:current_attachable_actor) { :actor }
+    @controller.define_singleton_method(:current_attachable_impersonator) { :impersonator }
     ensure_recording_lookup!
   end
 
@@ -41,9 +40,6 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
       "/recording_studio_attachable/recordings/#{record.id}/attachments"
     end
     @controller.define_singleton_method(:recording_studio_attachable) { attachable_proxy }
-    @request.session["recording_studio_attachable_google_drive"] = {
-      "tokens" => { "access_token" => "token-1", "expires_at" => Time.current.to_i + 3600 }
-    }
 
     with_routing do |set|
       set.draw do
@@ -54,12 +50,14 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
       @routes = set
 
       RecordingStudio::Recording.stub(:find, recording) do
-        RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.stub(:call, lambda { |**kwargs|
-          captured = kwargs
-          result
-        }) do
-          @controller.stub(:protect_against_forgery?, false) do
-            post :create, params: { recording_id: recording.id, file_ids: %w[file-1 file-2] }
+        GoogleDriveFakes.with_gem_loaded do
+          RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.stub(:call, lambda { |**kwargs|
+            captured = kwargs
+            result
+          }) do
+            @controller.stub(:protect_against_forgery?, false) do
+              post :create, params: { recording_id: recording.id, file_ids: %w[file-1 file-2] }
+            end
           end
         end
       end
@@ -68,7 +66,9 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
     assert_redirected_to "/recording_studio_attachable/recordings/rec-1/attachments"
     assert_equal recording, captured[:parent_recording]
     assert_equal %w[file-1 file-2], captured[:file_ids]
-    assert_equal "token-1", captured[:access_token]
+    assert_nil captured[:access_token]
+    assert_equal :actor, captured[:actor]
+    assert_nil @request.session["recording_studio_attachable_google_drive"]
   end
 
   def test_create_renders_modal_event_when_embedded_provider_import_succeeds
@@ -79,9 +79,6 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
       "/recording_studio_attachable/recordings/#{record.id}/attachments"
     end
     @controller.define_singleton_method(:recording_studio_attachable) { attachable_proxy }
-    @request.session["recording_studio_attachable_google_drive"] = {
-      "tokens" => { "access_token" => "token-1", "expires_at" => Time.current.to_i + 3600 }
-    }
 
     with_routing do |set|
       set.draw do
@@ -92,15 +89,17 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
       @routes = set
 
       RecordingStudio::Recording.stub(:find, recording) do
-        RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.stub(:call, result) do
-          @controller.stub(:protect_against_forgery?, false) do
-            post :create, params: {
-              recording_id: recording.id,
-              file_ids: ["file-1"],
-              embed: "modal",
-              provider_key: "google_drive",
-              provider_modal_id: "modal-1"
-            }
+        GoogleDriveFakes.with_gem_loaded do
+          RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.stub(:call, result) do
+            @controller.stub(:protect_against_forgery?, false) do
+              post :create, params: {
+                recording_id: recording.id,
+                file_ids: ["file-1"],
+                embed: "modal",
+                provider_key: "google_drive",
+                provider_modal_id: "modal-1"
+              }
+            end
           end
         end
       end
@@ -120,9 +119,6 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
       "/recording_studio_attachable/recordings/#{record.id}/attachments"
     end
     @controller.define_singleton_method(:recording_studio_attachable) { attachable_proxy }
-    @request.session["recording_studio_attachable_google_drive"] = {
-      "tokens" => { "access_token" => "token-1", "expires_at" => Time.current.to_i + 3600 }
-    }
 
     with_routing do |set|
       set.draw do
@@ -133,9 +129,11 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
       @routes = set
 
       RecordingStudio::Recording.stub(:find, recording) do
-        RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.stub(:call, result) do
-          @controller.stub(:protect_against_forgery?, false) do
-            post :create, params: { recording_id: recording.id, file_ids: ["file-1"], format: :json }
+        GoogleDriveFakes.with_gem_loaded do
+          RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.stub(:call, result) do
+            @controller.stub(:protect_against_forgery?, false) do
+              post :create, params: { recording_id: recording.id, file_ids: ["file-1"], format: :json }
+            end
           end
         end
       end
@@ -143,6 +141,7 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
 
     assert_response :created
     assert_equal "/recording_studio_attachable/recordings/rec-1/attachments", JSON.parse(@response.body).fetch("redirect_path")
+    assert_nil @request.session["recording_studio_attachable_google_drive"]
   end
 
   def test_create_uses_explicit_return_to_for_provider_redirects
@@ -151,9 +150,6 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
     attachable_proxy = Object.new
     attachable_proxy.define_singleton_method(:recording_attachments_path) { |record| "/recording_studio_attachable/recordings/#{record.id}/attachments" }
     @controller.define_singleton_method(:recording_studio_attachable) { attachable_proxy }
-    @request.session["recording_studio_attachable_google_drive"] = {
-      "tokens" => { "access_token" => "token-1", "expires_at" => Time.current.to_i + 3600 }
-    }
 
     with_routing do |set|
       set.draw do
@@ -164,15 +160,17 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
       @routes = set
 
       RecordingStudio::Recording.stub(:find, recording) do
-        RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.stub(:call, result) do
-          @controller.stub(:protect_against_forgery?, false) do
-            post :create, params: {
-              recording_id: recording.id,
-              file_ids: ["file-1"],
-              redirect_mode: "return_to",
-              return_to: "/pages/page-1#gallery",
-              format: :json
-            }
+        GoogleDriveFakes.with_gem_loaded do
+          RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.stub(:call, result) do
+            @controller.stub(:protect_against_forgery?, false) do
+              post :create, params: {
+                recording_id: recording.id,
+                file_ids: ["file-1"],
+                redirect_mode: "return_to",
+                return_to: "/pages/page-1#gallery",
+                format: :json
+              }
+            end
           end
         end
       end
@@ -182,15 +180,17 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
     assert_equal "/pages/page-1#gallery", JSON.parse(@response.body).fetch("redirect_path")
   end
 
-  def test_index_renders_disconnected_state_when_tokens_are_missing
+  def test_index_lists_drive_files_when_connected
     recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
-    route_proxy = Object.new
-    route_proxy.define_singleton_method(:recording_connect_path) do |record, options = {}|
-      suffix = options.compact.to_query
-      path = "/google_drive/recordings/#{record.id}/connect"
-      suffix.present? ? "#{path}?#{suffix}" : path
-    end
-    @controller.define_singleton_method(:google_drive) { route_proxy }
+    page = GoogleDriveFakes::Page.new(
+      entries: [
+        GoogleDriveFakes::DriveFile.new(id: "file-1", name: "Brief.pdf", mime_type: "application/pdf", web_view_link: "https://drive.test/file-1"),
+        GoogleDriveFakes::DriveFile.new(id: "folder-1", name: "Inbox", mime_type: "application/vnd.google-apps.folder", folder: true)
+      ],
+      next_cursor: "next-page"
+    )
+    client = Object.new
+    client.define_singleton_method(:list) { |**| page }
 
     with_routing do |set|
       set.draw do
@@ -201,66 +201,84 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
       @routes = set
 
       RecordingStudio::Recording.stub(:find, recording) do
-        @controller.stub(:render, lambda { |*_, **kwargs|
-          @controller.response_body = [@controller.instance_variable_get(:@authorization_path).to_s]
-          @controller.status = kwargs[:status] || :ok
-        }) do
-          get :index, params: { recording_id: recording.id, redirect_mode: "return_to", return_to: "/pages/page-1" }
+        GoogleDriveFakes.with_gem_loaded do
+          RecordingStudioAttachable::GoogleDrive::Integration.stub(:connection, GoogleDriveFakes::Connection.new(access_token: "tok")) do
+            @controller.stub(:google_drive_client, client) do
+              @controller.stub(:render, lambda { |*_, **kwargs|
+                files = @controller.instance_variable_get(:@files)
+                @controller.response_body = [files.map { |file| file["id"] }.join(",")]
+                @controller.status = kwargs[:status] || :ok
+              }) do
+                get :index, params: { recording_id: recording.id }
+              end
+            end
+          end
         end
       end
     end
 
     assert_response :success
-    assert_includes @response.body, "/google_drive/recordings/rec-1/connect"
-    assert_includes @response.body, "return_to=%2Fpages%2Fpage-1"
+    assert_equal "file-1", @response.body
+    assert_equal "next-page", @controller.instance_variable_get(:@next_page_token)
+    assert_nil @request.session["recording_studio_attachable_google_drive"]
   end
 
-  def test_index_redirects_to_reconnect_when_google_drive_session_is_unauthorized
+  def test_index_renders_connect_state_when_there_is_no_connection
     recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
-    route_proxy = Object.new
-    route_proxy.define_singleton_method(:recording_imports_path) do |record, options = {}|
-      suffix = options.compact.to_query
-      path = "/google_drive/recordings/#{record.id}/imports"
-      suffix.present? ? "#{path}?#{suffix}" : path
-    end
-    @controller.define_singleton_method(:google_drive) { route_proxy }
-    @request.session["recording_studio_attachable_google_drive"] = {
-      "tokens" => { "access_token" => "token-1", "expires_at" => Time.current.to_i + 3600 }
-    }
-    client = Object.new
-    client.define_singleton_method(:list_files) do |**|
-      raise RecordingStudioAttachable::GoogleDrive::Client::UnauthorizedError, "expired"
-    end
-
-    with_routing do |set|
-      set.draw do
-        get "/google_drive/recordings/:recording_id/imports",
-            to: "recording_studio_attachable/google_drive/imports#index"
-      end
-
-      @routes = set
-
-      RecordingStudio::Recording.stub(:find, recording) do
-        @controller.stub(:google_drive_client, client) do
-          get :index, params: { recording_id: recording.id, redirect_mode: "return_to", return_to: "/pages/page-1" }
+    @controller.define_singleton_method(:google_drive_oauth_connect_path) { "/recording_studio_oauth/outbound/google_drive/connect" }
+    @controller.define_singleton_method(:google_drive) do
+      Object.new.tap do |proxy|
+        proxy.define_singleton_method(:recording_imports_path) do |record, **kwargs|
+          "/google_drive/recordings/#{record.id}/imports?#{kwargs.compact.to_query}"
+        end
+        proxy.define_singleton_method(:recording_connected_path) do |record, **kwargs|
+          "/google_drive/recordings/#{record.id}/connected?#{kwargs.compact.to_query}"
         end
       end
     end
 
-    assert_redirected_to "/google_drive/recordings/rec-1/imports?redirect_mode=return_to&return_to=%2Fpages%2Fpage-1"
-    assert_equal "Google Drive session expired. Reconnect to continue.", flash[:alert]
-    assert_nil @request.session.dig("recording_studio_attachable_google_drive", "tokens")
+    with_routing do |set|
+      set.draw do
+        get "/google_drive/recordings/:recording_id/imports",
+            to: "recording_studio_attachable/google_drive/imports#index"
+      end
+
+      @routes = set
+
+      RecordingStudio::Recording.stub(:find, recording) do
+        GoogleDriveFakes.with_gem_loaded do
+          RecordingStudioAttachable::GoogleDrive::Integration.stub(:connection, nil) do
+            @controller.stub(:render, lambda { |*_, **kwargs|
+              @controller.response_body = [@controller.instance_variable_get(:@oauth_connect_path).to_s]
+              @controller.status = kwargs[:status] || :ok
+            }) do
+              get :index, params: { recording_id: recording.id, redirect_mode: "return_to", return_to: "/pages/page-1" }
+            end
+          end
+        end
+      end
+    end
+
+    assert_response :success
+    assert_includes @response.body, "/recording_studio_oauth/outbound/google_drive/connect"
+    assert_nil @request.session["recording_studio_attachable_google_drive"]
   end
 
-  def test_index_renders_bad_gateway_when_google_drive_returns_an_error
+  def test_index_renders_reconnect_when_the_google_drive_gem_requires_reconnect
     recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
-    @request.session["recording_studio_attachable_google_drive"] = {
-      "tokens" => { "access_token" => "token-1", "expires_at" => Time.current.to_i + 3600 }
-    }
-    client = Object.new
-    client.define_singleton_method(:list_files) do |**|
-      raise RecordingStudioAttachable::GoogleDrive::Client::Error, "drive down"
+    @controller.define_singleton_method(:google_drive_oauth_connect_path) { "/recording_studio_oauth/outbound/google_drive/connect" }
+    @controller.define_singleton_method(:google_drive) do
+      Object.new.tap do |proxy|
+        proxy.define_singleton_method(:recording_imports_path) do |record, **kwargs|
+          "/google_drive/recordings/#{record.id}/imports?#{kwargs.compact.to_query}"
+        end
+        proxy.define_singleton_method(:recording_connected_path) do |record, **kwargs|
+          "/google_drive/recordings/#{record.id}/connected?#{kwargs.compact.to_query}"
+        end
+      end
     end
+    client = Object.new
+    client.define_singleton_method(:list) { |**| raise StandardError, "needs reconnect" }
 
     with_routing do |set|
       set.draw do
@@ -271,12 +289,59 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
       @routes = set
 
       RecordingStudio::Recording.stub(:find, recording) do
-        @controller.stub(:google_drive_client, client) do
-          @controller.stub(:render, lambda { |*_, **kwargs|
-            @controller.response_body = [Array(@controller.flash.now[:alert]).join]
-            @controller.status = kwargs[:status] || :ok
-          }) do
-            get :index, params: { recording_id: recording.id, query: "budget" }
+        GoogleDriveFakes.with_gem_loaded do
+          RecordingStudioAttachable::GoogleDrive::Integration.stub(:connection, GoogleDriveFakes::Connection.new(access_token: "tok")) do
+            RecordingStudioAttachable::GoogleDrive::Integration.stub(:reconnect_required?, true) do
+              @controller.stub(:google_drive_client, client) do
+                @controller.stub(:render, lambda { |*_, **kwargs|
+                  @controller.response_body = [
+                    [@controller.instance_variable_get(:@reconnect), @controller.instance_variable_get(:@oauth_connect_path)].join(" ")
+                  ]
+                  @controller.status = kwargs[:status] || :ok
+                }) do
+                  get :index, params: { recording_id: recording.id }
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+
+    assert_response :success
+    assert_includes @response.body, "true"
+    assert_includes @response.body, "/recording_studio_oauth/outbound/google_drive/connect"
+    assert_nil @request.session["recording_studio_attachable_google_drive"]
+  end
+
+  def test_index_renders_bad_gateway_when_google_drive_returns_an_error
+    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+    client = Object.new
+    client.define_singleton_method(:list) { |**| raise FakeRequestError, "drive down" }
+
+    with_routing do |set|
+      set.draw do
+        get "/google_drive/recordings/:recording_id/imports",
+            to: "recording_studio_attachable/google_drive/imports#index"
+      end
+
+      @routes = set
+
+      RecordingStudio::Recording.stub(:find, recording) do
+        GoogleDriveFakes.with_gem_loaded do
+          RecordingStudioAttachable::GoogleDrive::Integration.stub(:connection, GoogleDriveFakes::Connection.new(access_token: "tok")) do
+            RecordingStudioAttachable::GoogleDrive::Integration.stub(:reconnect_required?, false) do
+              RecordingStudioAttachable::GoogleDrive::Integration.stub(:request_error?, true) do
+                @controller.stub(:google_drive_client, client) do
+                  @controller.stub(:render, lambda { |*_, **kwargs|
+                    @controller.response_body = [Array(@controller.flash.now[:alert]).join]
+                    @controller.status = kwargs[:status] || :ok
+                  }) do
+                    get :index, params: { recording_id: recording.id, query: "budget" }
+                  end
+                end
+              end
+            end
           end
         end
       end
@@ -289,9 +354,6 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
   def test_create_returns_json_error_when_the_import_service_fails
     recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
     result = RecordingStudioAttachable::Services::BaseService::Result.new(success: false, error: "Select at least one file")
-    @request.session["recording_studio_attachable_google_drive"] = {
-      "tokens" => { "access_token" => "token-1", "expires_at" => Time.current.to_i + 3600 }
-    }
 
     with_routing do |set|
       set.draw do
@@ -302,9 +364,11 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
       @routes = set
 
       RecordingStudio::Recording.stub(:find, recording) do
-        RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.stub(:call, result) do
-          @controller.stub(:protect_against_forgery?, false) do
-            post :create, params: { recording_id: recording.id, file_ids: [], format: :json }
+        GoogleDriveFakes.with_gem_loaded do
+          RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.stub(:call, result) do
+            @controller.stub(:protect_against_forgery?, false) do
+              post :create, params: { recording_id: recording.id, file_ids: [], format: :json }
+            end
           end
         end
       end
@@ -323,9 +387,6 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
       "/recording_studio_attachable/recordings/#{record.id}/attachments"
     end
     @controller.define_singleton_method(:recording_studio_attachable) { attachable_proxy }
-    @request.session["recording_studio_attachable_google_drive"] = {
-      "tokens" => { "access_token" => "token-1", "expires_at" => Time.current.to_i + 3600 }
-    }
 
     with_routing do |set|
       set.draw do
@@ -336,16 +397,18 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
       @routes = set
 
       RecordingStudio::Recording.stub(:find, recording) do
-        RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.stub(:call, lambda { |**kwargs|
-          captured = kwargs
-          result
-        }) do
-          @controller.stub(:protect_against_forgery?, false) do
-            post :create, params: {
-              recording_id: recording.id,
-              file_ids: [{ id: "file-1", resource_key: "resource-key-1" }],
-              format: :json
-            }
+        GoogleDriveFakes.with_gem_loaded do
+          RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.stub(:call, lambda { |**kwargs|
+            captured = kwargs
+            result
+          }) do
+            @controller.stub(:protect_against_forgery?, false) do
+              post :create, params: {
+                recording_id: recording.id,
+                file_ids: [{ id: "file-1", resource_key: "resource-key-1" }],
+                format: :json
+              }
+            end
           end
         end
       end
@@ -375,35 +438,7 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
     end
 
     assert_response :unprocessable_entity
-    assert_equal "Google Drive addon is not enabled", JSON.parse(@response.body).fetch("error")
-  end
-
-  def test_index_redirects_back_to_upload_page_when_google_drive_is_misconfigured
-    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
-    RecordingStudioAttachable.configuration.google_drive.client_id = nil
-    upload_proxy = Object.new
-    upload_proxy.define_singleton_method(:recording_attachment_upload_path) do |record, options = {}|
-      suffix = options.compact.to_query
-      path = "/recordings/#{record.id}/attachments/upload"
-      suffix.present? ? "#{path}?#{suffix}" : path
-    end
-    @controller.define_singleton_method(:recording_studio_attachable) { upload_proxy }
-
-    with_routing do |set|
-      set.draw do
-        get "/google_drive/recordings/:recording_id/imports",
-            to: "recording_studio_attachable/google_drive/imports#index"
-      end
-
-      @routes = set
-
-      RecordingStudio::Recording.stub(:find, recording) do
-        get :index, params: { recording_id: recording.id, redirect_mode: "return_to", return_to: "/pages/page-1" }
-      end
-    end
-
-    assert_redirected_to "/recordings/rec-1/attachments/upload?redirect_mode=return_to&return_to=%2Fpages%2Fpage-1"
-    assert_equal "Google Drive addon is missing client credentials or redirect URI", flash[:alert]
+    assert_equal "Google Drive isn't available right now", JSON.parse(@response.body).fetch("error")
   end
 
   def test_create_redirects_back_to_imports_when_html_import_service_fails
@@ -416,9 +451,6 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
       suffix.present? ? "#{path}?#{suffix}" : path
     end
     @controller.define_singleton_method(:google_drive) { route_proxy }
-    @request.session["recording_studio_attachable_google_drive"] = {
-      "tokens" => { "access_token" => "token-1", "expires_at" => Time.current.to_i + 3600 }
-    }
 
     with_routing do |set|
       set.draw do
@@ -429,9 +461,11 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
       @routes = set
 
       RecordingStudio::Recording.stub(:find, recording) do
-        RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.stub(:call, result) do
-          @controller.stub(:protect_against_forgery?, false) do
-            post :create, params: { recording_id: recording.id, file_ids: [] }
+        GoogleDriveFakes.with_gem_loaded do
+          RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.stub(:call, result) do
+            @controller.stub(:protect_against_forgery?, false) do
+              post :create, params: { recording_id: recording.id, file_ids: [] }
+            end
           end
         end
       end
@@ -441,71 +475,10 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
     assert_equal "Select at least one file", flash[:alert]
   end
 
-  def test_create_redirects_back_to_imports_when_html_session_has_expired
+  def test_create_returns_json_unauthorized_when_reconnect_is_required
     recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
-    route_proxy = Object.new
-    route_proxy.define_singleton_method(:recording_imports_path) do |record, options = {}|
-      suffix = options.compact.to_query
-      path = "/google_drive/recordings/#{record.id}/imports"
-      suffix.present? ? "#{path}?#{suffix}" : path
-    end
-    @controller.define_singleton_method(:google_drive) { route_proxy }
-    @request.session["recording_studio_attachable_google_drive"] = {
-      "tokens" => {
-        "access_token" => "expired-token",
-        "refresh_token" => "refresh-token",
-        "expires_at" => Time.current.to_i + 5
-      }
-    }
-    oauth_client = Object.new
-    oauth_client.define_singleton_method(:refresh_token) do |refresh_token:|
-      raise "wrong refresh token" unless refresh_token == "refresh-token"
-
-      raise RecordingStudioAttachable::GoogleDrive::Client::UnauthorizedError, "expired"
-    end
-
-    with_routing do |set|
-      set.draw do
-        post "/google_drive/recordings/:recording_id/imports",
-             to: "recording_studio_attachable/google_drive/imports#create"
-      end
-
-      @routes = set
-
-      RecordingStudio::Recording.stub(:find, recording) do
-        @controller.stub(:oauth_client, oauth_client) do
-          @controller.stub(:protect_against_forgery?, false) do
-            post :create, params: { recording_id: recording.id, file_ids: ["file-1"] }
-          end
-        end
-      end
-    end
-
-    assert_redirected_to "/google_drive/recordings/rec-1/imports"
-    assert_equal "Google Drive session expired. Reconnect to continue.", flash[:alert]
-  end
-
-  def test_create_returns_json_unauthorized_when_the_google_session_has_expired
-    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
-    route_proxy = Object.new
-    route_proxy.define_singleton_method(:recording_imports_path) do |record, **kwargs|
-      suffix = kwargs.compact.to_query
-      path = "/google_drive/recordings/#{record.id}/imports"
-      suffix.present? ? "#{path}?#{suffix}" : path
-    end
-    @controller.define_singleton_method(:google_drive) { route_proxy }
-    @request.session["recording_studio_attachable_google_drive"] = {
-      "tokens" => {
-        "access_token" => "expired-token",
-        "refresh_token" => "refresh-token",
-        "expires_at" => Time.current.to_i + 5
-      }
-    }
-    oauth_client = Object.new
-    oauth_client.define_singleton_method(:refresh_token) do |refresh_token:|
-      raise "wrong refresh token" unless refresh_token == "refresh-token"
-
-      raise RecordingStudioAttachable::GoogleDrive::Client::UnauthorizedError, "expired"
+    @controller.define_singleton_method(:recording_connect_path) do |record, **kwargs|
+      "/google_drive/recordings/#{record.id}/connect?#{kwargs.compact.to_query}"
     end
 
     with_routing do |set|
@@ -517,17 +490,23 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
       @routes = set
 
       RecordingStudio::Recording.stub(:find, recording) do
-        @controller.stub(:oauth_client, oauth_client) do
-          @controller.stub(:protect_against_forgery?, false) do
-            post :create, params: { recording_id: recording.id, file_ids: ["file-1"], format: :json }
+        GoogleDriveFakes.with_gem_loaded do
+          RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.stub(:call, ->(**) { raise StandardError, "needs reconnect" }) do
+            RecordingStudioAttachable::GoogleDrive::Integration.stub(:reconnect_required?, true) do
+              @controller.stub(:protect_against_forgery?, false) do
+                post :create, params: { recording_id: recording.id, file_ids: ["file-1"], format: :json }
+              end
+            end
           end
         end
       end
     end
 
     assert_response :unauthorized
-    assert_equal "Google Drive session expired. Reconnect to continue.", JSON.parse(@response.body).fetch("error")
-    assert_nil @request.session.dig("recording_studio_attachable_google_drive", "tokens")
+    payload = JSON.parse(@response.body)
+    assert_equal "Reconnect Google Drive to continue", payload.fetch("error")
+    assert_includes payload.fetch("connect_url"), "/google_drive/recordings/rec-1/connect"
+    assert_nil @request.session["recording_studio_attachable_google_drive"]
   end
 
   private

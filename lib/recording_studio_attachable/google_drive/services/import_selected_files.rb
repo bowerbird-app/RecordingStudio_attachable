@@ -1,9 +1,15 @@
 # frozen_string_literal: true
 
+require "stringio"
+
 module RecordingStudioAttachable
   module GoogleDrive
     module Services
       class ImportSelectedFiles < RecordingStudioAttachable::Adapter::ImportSelectedFiles
+        def initialize(parent_recording:, file_ids:, access_token: nil, **options)
+          super
+        end
+
         private
 
         def provider_key
@@ -22,8 +28,29 @@ module RecordingStudioAttachable
           { "resource_key" => %i[resource_key resourceKey] }
         end
 
+        def download_attachment(selection, downloaded)
+          file_id = selection.fetch("id")
+          resource_key = selection["resource_key"]
+          metadata = adapter_client.fetch_file(file_id, resource_key: resource_key)
+          downloaded_file = adapter_client.download(file_id, resource_key: resource_key)
+          io = StringIO.new(downloaded_file.body)
+          downloaded << io
+          {
+            io: io,
+            filename: downloaded_file.filename,
+            content_type: downloaded_file.content_type,
+            name: selection["name"].presence || metadata.name,
+            description: selection["description"].presence || default_description,
+            metadata: {
+              provider: provider_key,
+              external_id: metadata.id,
+              external_url: metadata.web_view_link
+            }.compact.merge(selection.fetch("metadata", {}))
+          }
+        end
+
         def build_client
-          RecordingStudioAttachable::GoogleDrive::Client.new(access_token: access_token)
+          Integration.client(root: root_recording_for(parent_recording), actor: actor)
         end
       end
     end

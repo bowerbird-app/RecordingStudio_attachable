@@ -654,8 +654,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes initializer_template, 'label: "Google Drive"'
     assert_includes initializer_template, "remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|"
     assert_includes initializer_template, "config.google_drive.enabled = true"
-    assert_includes initializer_template, "GOOGLE_DRIVE_CLIENT_ID"
-    assert_includes initializer_template, "/recording_studio_attachable/google_drive/oauth/callback"
+    assert_includes initializer_template, "GOOGLE_DRIVE_API_KEY"
+    assert_includes initializer_template, "recording_studio_google_drive"
     assert_includes initializer_template, "config.dropbox.enabled = true"
     assert_includes initializer_template, "DROPBOX_CLIENT_ID"
     assert_includes initializer_template, "/recording_studio_attachable/dropbox/oauth/callback"
@@ -677,6 +677,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes page_model, "max_file_size: 25.megabytes"
     assert_includes workspace_model, "max_file_size: 25.megabytes"
     assert_includes routes, "as: :demo_upload_provider"
+    assert_includes routes, "RecordingStudioOauth::Engine"
+    assert_includes routes, 'get "fake_oauth/authorize"'
   end
 
   def test_dummy_schema_includes_active_storage_tables_for_direct_uploads

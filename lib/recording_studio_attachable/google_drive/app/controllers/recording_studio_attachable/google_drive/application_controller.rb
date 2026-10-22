@@ -3,7 +3,7 @@
 module RecordingStudioAttachable
   module GoogleDrive
     class ApplicationController < RecordingStudioAttachable::ApplicationController
-      helper_method :google_drive_connected?
+      helper_method :google_drive_connected?, :google_drive_reconnect?
 
       private
 
@@ -12,17 +12,10 @@ module RecordingStudioAttachable
       end
 
       def ensure_google_drive_enabled!
-        unless google_drive_configuration.enabled?
+        unless google_drive_configuration.enabled? && Integration.gem_loaded?
           raise RecordingStudioAttachable::DependencyUnavailableError,
-                Copy.t("google_drive.not_enabled", default: "Google Drive addon is not enabled")
+                Copy.t("google_drive.not_enabled", default: "Google Drive isn't available right now")
         end
-        return if google_drive_configuration.configured?
-
-        raise RecordingStudioAttachable::DependencyUnavailableError,
-              Copy.t(
-                "google_drive.missing_credentials",
-                default: "Google Drive addon is missing client credentials or redirect URI"
-              )
       end
 
       def ensure_google_drive_picker_configured!
@@ -31,7 +24,7 @@ module RecordingStudioAttachable
         raise RecordingStudioAttachable::DependencyUnavailableError,
               Copy.t(
                 "google_drive.picker_requires_config",
-                default: "Google Drive picker requires api_key and app_id configuration"
+                default: "Google Drive picker needs an API key and app id"
               )
       end
 
@@ -40,73 +33,68 @@ module RecordingStudioAttachable
         authorize_attachment_action!(:upload, @recording, capability_options: capability_options_for(@recording))
       end
 
+      def google_drive_root
+        recording = @recording || find_recording
+        return recording unless recording.respond_to?(:root_recording)
+
+        recording.root_recording || recording
+      end
+
+      def google_drive_client
+        Integration.client(root: google_drive_root, actor: current_attachable_actor)
+      end
+
+      def google_drive_connection
+        Integration.connection(root: google_drive_root, actor: current_attachable_actor)
+      end
+
+      def google_drive_live_connection
+        Integration.live_connection(root: google_drive_root, actor: current_attachable_actor)
+      end
+
       def google_drive_connected?
-        google_drive_tokens["access_token"].present?
+        google_drive_connection.present?
       end
 
-      def google_drive_tokens
-        google_drive_oauth_session.tokens
+      def google_drive_reconnect?
+        live = google_drive_live_connection
+        live.present? && live.respond_to?(:needs_reconnect?) && live.needs_reconnect?
       end
 
-      def store_google_drive_tokens!(tokens)
-        google_drive_oauth_session.store_tokens!(tokens)
+      def google_drive_oauth
+        return unless Integration.oauth_loaded? && main_app.respond_to?(:recording_studio_oauth)
+
+        main_app.recording_studio_oauth
       end
 
-      def clear_google_drive_tokens!
-        google_drive_oauth_session.clear_tokens!
+      def google_drive_oauth_connect_path
+        google_drive_oauth&.outbound_connect_path(provider: Integration.provider_key)
       end
 
-      def store_google_drive_state!(recording_id:, popup: params[:popup].to_s == "1",
-                                    provider_key: current_upload_provider_key,
-                                    redirect_params: attachment_redirect_params)
-        google_drive_oauth_session.store_state!(
-          recording_id: recording_id,
-          extra: drive_state_extra(popup:, provider_key:),
-          redirect_params: redirect_params
+      def google_drive_popup_connect_url
+        recording_connect_path(
+          @recording,
+          popup: 1,
+          provider_key: "google_drive",
+          **attachment_redirect_params
         )
       end
 
-      def drive_state_extra(popup:, provider_key:)
-        {
-          "provider_modal_id" => current_upload_provider_modal_id,
-          "embedded" => embedded_upload_provider_request?,
-          "popup" => popup,
-          "provider_key" => provider_key
-        }
+      def google_drive_connect_return_path(popup:)
+        if popup
+          google_drive.recording_connected_path(@recording, **upload_flow_params.merge(popup: 1))
+        else
+          google_drive.recording_imports_path(@recording, **upload_flow_params)
+        end
       end
 
-      def consume_google_drive_state!(state)
-        google_drive_oauth_session.consume_state!(state)
-      rescue RecordingStudioAttachable::Error
-        raise RecordingStudioAttachable::Error,
-              Copy.t("google_drive.state_mismatch", default: "Google Drive authorization state did not match")
-      end
+      def disconnect_google_drive!
+        connection = google_drive_live_connection
+        return if connection.nil? || !defined?(::RecordingStudioOauth::Services::DisconnectOutboundConnection)
 
-      def current_google_drive_access_token
-        RecordingStudioAttachable::GoogleDrive::SessionAccessToken.fetch(
-          session: session,
-          configuration: google_drive_configuration,
-          oauth_client: oauth_client
-        )
-      end
-
-      def oauth_client
-        @oauth_client ||= RecordingStudioAttachable::GoogleDrive::OAuthClient.new(configuration: google_drive_configuration)
-      end
-
-      def google_drive_client(access_token: current_google_drive_access_token)
-        RecordingStudioAttachable::GoogleDrive::Client.new(access_token: access_token)
-      end
-
-      def google_drive_session
-        google_drive_oauth_session.storage
-      end
-
-      def google_drive_oauth_session
-        @google_drive_oauth_session ||= RecordingStudioAttachable::Adapter::Session.new(
-          session,
-          key: "recording_studio_attachable_google_drive",
-          provider_name: "Google Drive"
+        ::RecordingStudioOauth::Services::DisconnectOutboundConnection.call(
+          connection: connection,
+          actor: current_attachable_actor
         )
       end
 

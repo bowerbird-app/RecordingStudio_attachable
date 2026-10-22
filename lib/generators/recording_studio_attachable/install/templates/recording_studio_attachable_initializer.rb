@@ -84,12 +84,9 @@ RecordingStudioAttachable.configure do |config|
   #     # `attachments` arrives as normalized remote selections from the shared
   #     # upload queue. Each entry includes `provider_payload`, optional name /
   #     # description overrides, and provider-stamped metadata.
-  #     access_token = YourProvider::SessionAccessToken.fetch(session: context.session)
-  #
   #     YourProvider::Services::ImportSelectedFiles.call(
   #       parent_recording: parent_recording,
   #       file_ids: attachments.map { |payload| payload.fetch(:provider_payload) },
-  #       access_token: access_token,
   #       actor: actor,
   #       impersonator: impersonator
   #     )
@@ -99,13 +96,12 @@ RecordingStudioAttachable.configure do |config|
   # Built-in cloud adapters are off until you enable them and supply credentials.
   # An adapter is registered and shown only when enabled AND fully configured.
   #
-  # Google Drive:
+  # Google Drive (optional). Bundle recording_studio_google_drive >= 0.2.0, < 1.0
+  # and recording_studio_oauth >= 0.14.1, < 1.0. Oauth stores tokens. This gem
+  # only needs Picker keys:
   # config.google_drive.enabled = true
-  # config.google_drive.client_id = ENV["GOOGLE_DRIVE_CLIENT_ID"]
-  # config.google_drive.client_secret = ENV["GOOGLE_DRIVE_CLIENT_SECRET"]
   # config.google_drive.api_key = ENV["GOOGLE_DRIVE_API_KEY"] # Browser API key for Google Picker
   # config.google_drive.app_id = ENV["GOOGLE_DRIVE_APP_ID"]   # Google Cloud project number
-  # config.google_drive.redirect_uri = "https://your-app.test/recording_studio_attachable/google_drive/oauth/callback"
   #
   # Dropbox (OAuth redirect URI and scopes files.metadata.read + files.content.read):
   # config.dropbox.enabled = true

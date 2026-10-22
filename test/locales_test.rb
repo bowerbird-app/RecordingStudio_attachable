@@ -105,7 +105,8 @@ class LocalesTest < Minitest::Test
     "google_drive.connected" => "Connected Google Drive.",
     "google_drive.disconnected" => "Disconnected Google Drive.",
     "google_drive.session_expired" => "Google Drive session expired. Reconnect to continue.",
-    "google_drive.not_enabled" => "Google Drive addon is not enabled"
+    "google_drive.not_enabled" => "Google Drive isn't available right now",
+    "google_drive.reconnect" => "Reconnect Google Drive"
   }.freeze
   # rubocop:enable Style/FormatStringToken
 

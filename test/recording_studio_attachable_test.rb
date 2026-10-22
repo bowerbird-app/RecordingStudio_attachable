@@ -4,7 +4,7 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.20.2", RecordingStudioAttachable::VERSION
+    assert_equal "0.21.0", RecordingStudioAttachable::VERSION
   end
 
   def test_recording_studio_dependency_is_4_2_or_newer
@@ -49,6 +49,16 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes gemspec, 'spec.add_dependency "recording_studio_metrics", ">= 0.3.0", "< 1.0"'
     assert_includes root_gemfile, 'tag: "v0.5.0"'
     assert_includes dummy_gemfile, 'tag: "v0.3.1"'
+  end
+
+  def test_google_drive_and_oauth_stay_optional_host_gems
+    gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
+    dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
+
+    assert_not_includes gemspec, "recording_studio_google_drive"
+    assert_not_includes gemspec, "recording_studio_oauth"
+    assert_includes dummy_gemfile, 'gem "recording_studio_google_drive", github: "bowerbird-app/RecordingStudio_GoogleDrive", tag: "v0.2.0"'
+    assert_includes dummy_gemfile, 'gem "recording_studio_oauth", github: "bowerbird-app/RecordingStudio_Oauth", tag: "v0.14.1"'
   end
 
   def test_engine_exists
@@ -571,16 +581,24 @@ class RecordingStudioAttachableTest < Minitest::Test
         __dir__
       )
     )
+    connect_form_source = File.read(
+      File.expand_path(
+        "../lib/recording_studio_attachable/google_drive/app/views/recording_studio_attachable/google_drive/connect/_form.html.erb",
+        __dir__
+      )
+    )
     upload_view = File.read(
       File.expand_path("../app/views/recording_studio_attachable/attachment_uploads/_uploader.html.erb", __dir__)
     )
 
     assert_includes library_source, "recording_studio_attachable/*/engine.rb"
     assert_includes routes_source, "adapter_route_blocks"
+    assert_includes engine_source, "Integration.gem_loaded?"
     assert_includes engine_source, 'mount RecordingStudioAttachable::GoogleDrive::Engine, at: "/google_drive", as: :google_drive'
     assert_includes engine_routes_source, 'get "bootstrap", to: "bootstrap#show", as: :bootstrap'
-    assert_includes engine_routes_source, 'get "connect", to: "oauth#new", as: :connect'
-    assert_includes engine_routes_source, 'delete "connect", to: "oauth#destroy", as: :disconnect'
+    assert_includes engine_routes_source, 'get "connect", to: "connect#show", as: :connect'
+    assert_includes engine_routes_source, 'get "connected", to: "connect#complete", as: :connected'
+    assert_includes engine_routes_source, 'delete "connect", to: "connect#destroy", as: :disconnect'
     picker_source = File.read(
       File.expand_path("../lib/recording_studio_attachable/adapter/client_picker.rb", __dir__)
     )
@@ -598,11 +616,13 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes initializer_template, "GOOGLE_DRIVE_APP_ID"
     assert_includes initializer_template, "config.dropbox.enabled = true"
     assert_includes view_source, 'title: t("recording_studio.attachable.google_drive.title")'
-    assert_includes view_source, 't("recording_studio.attachable.google_drive.connect")'
+    assert_includes view_source, "if @show_connect"
+    assert_includes connect_form_source, 't("recording_studio.attachable.google_drive.connect")'
+    assert_includes connect_form_source, "form_with url: connect_path, method: :post"
+    assert_includes connect_form_source, 'hidden_field_tag :owner, "user"'
     assert_includes view_source, 't("recording_studio.attachable.google_drive.import_selected")'
     assert_includes view_source, "google_drive.recording_disconnect_path(@recording)"
     assert_includes view_source, "recording_studio_attachable.recording_attachment_upload_path(@recording, redirect_params)"
-    assert_includes view_source, "recording-studio-attachable--provider-modal-frame#openPopup"
     assert_includes view_source, 'hidden_field_tag :embed, "modal" if embedded_upload_provider_request?'
     assert_includes upload_view, "upload_provider_launcher_modules"
     assert_includes upload_view, 'javascript_tag(%(import #{module_path.to_json}), type: "module", nonce: true)'

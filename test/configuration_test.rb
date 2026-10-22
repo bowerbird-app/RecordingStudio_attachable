@@ -65,7 +65,6 @@ class ConfigurationTest < Minitest::Test
     assert_not @configuration.google_drive.enabled?
     assert_not @configuration.google_drive.configured?
     assert_not @configuration.google_drive.picker_configured?
-    assert_equal ["https://www.googleapis.com/auth/drive.readonly"], @configuration.google_drive.scopes
     assert_nil @configuration.attachment_place_labels
     assert_equal [], @configuration.attachment_place_labels_for(Object.new)
   end
@@ -242,33 +241,34 @@ class ConfigurationTest < Minitest::Test
   def test_merge_updates_google_drive_configuration
     @configuration[:google_drive] = {
       enabled: true,
-      client_id: "client-id",
-      client_secret: "client-secret",
       api_key: "api-key",
       app_id: "app-id",
-      redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
       page_size: 10
     }
 
     assert @configuration.google_drive.enabled?
-    assert @configuration.google_drive.configured?
     assert @configuration.google_drive.picker_configured?
-    assert_equal "client-id", @configuration.google_drive.client_id
+    assert_equal "api-key", @configuration.google_drive.api_key
     assert_equal 10, @configuration.google_drive.page_size
+    RecordingStudioAttachable::GoogleDrive::Integration.stub(:gem_loaded?, true) do
+      assert @configuration.google_drive.available?
+    end
+    RecordingStudioAttachable::GoogleDrive::Integration.stub(:gem_loaded?, false) do
+      assert_not @configuration.google_drive.available?
+    end
   end
 
   def test_google_drive_picker_configuration_rejects_dummy_placeholder_values
     @configuration[:google_drive] = {
       enabled: true,
-      client_id: "client-id",
-      client_secret: "client-secret",
-      redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
       api_key: "dummy-google-drive-api-key",
       app_id: "dummy-google-drive-app-id"
     }
 
-    assert @configuration.google_drive.configured?
     assert_not @configuration.google_drive.picker_configured?
+    RecordingStudioAttachable::GoogleDrive::Integration.stub(:gem_loaded?, true) do
+      assert_not @configuration.google_drive.available?
+    end
   end
 
   def test_google_drive_merge_returns_self_and_ignores_unknown_keys
@@ -432,14 +432,13 @@ class ConfigurationTest < Minitest::Test
   def test_adapters_can_be_enabled_independently
     @configuration[:google_drive] = {
       enabled: true,
-      client_id: "client-id",
-      client_secret: "client-secret",
-      redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
       api_key: "api-key",
       app_id: "app-id"
     }
 
-    assert @configuration.google_drive.available?
+    RecordingStudioAttachable::GoogleDrive::Integration.stub(:gem_loaded?, true) do
+      assert @configuration.google_drive.available?
+    end
     assert_not @configuration.dropbox.available?
 
     @configuration[:dropbox] = {

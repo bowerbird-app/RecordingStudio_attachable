@@ -43,9 +43,6 @@ Metrics/MethodLength:
     - 'lib/recording_studio_attachable/configuration.rb'
     - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/bootstrap_controller.rb'
     - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/imports_controller.rb'
-    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/oauth_controller.rb'
-    - 'lib/recording_studio_attachable/google_drive/client.rb'
-    - 'lib/recording_studio_attachable/google_drive/oauth_client.rb'
     - 'lib/recording_studio_attachable/google_drive/services/import_selected_files.rb'
     - 'lib/recording_studio_attachable/upload_provider.rb'
 
@@ -59,9 +56,6 @@ Metrics/AbcSize:
     - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/application_controller.rb'
     - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/bootstrap_controller.rb'
     - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/imports_controller.rb'
-    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/oauth_controller.rb'
-    - 'lib/recording_studio_attachable/google_drive/client.rb'
-    - 'lib/recording_studio_attachable/google_drive/oauth_client.rb'
     - 'lib/recording_studio_attachable/google_drive/services/import_selected_files.rb'
     - 'lib/recording_studio_attachable/upload_provider.rb'
     - 'lib/recording_studio_attachable/configuration.rb'
@@ -106,7 +100,6 @@ Metrics/CyclomaticComplexity:
   Exclude:
     - 'test/**/*'
     - 'app/controllers/recording_studio_attachable/attachment_imports_controller.rb'
-    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/oauth_controller.rb'
     - 'lib/recording_studio_attachable/upload_provider.rb'
     - 'lib/recording_studio_attachable/attachment_urls.rb'
 
@@ -114,7 +107,6 @@ Metrics/PerceivedComplexity:
   Exclude:
     - 'test/**/*'
     - 'app/controllers/recording_studio_attachable/attachment_imports_controller.rb'
-    - 'lib/recording_studio_attachable/google_drive/app/controllers/recording_studio_attachable/google_drive/oauth_controller.rb'
     - 'lib/recording_studio_attachable/attachment_urls.rb'
 
 Naming/PredicatePrefix:

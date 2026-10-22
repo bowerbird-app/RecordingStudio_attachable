@@ -188,9 +188,6 @@ class EngineTest < Minitest::Test
   def test_google_drive_initializer_registers_provider_when_picker_is_configured
     RecordingStudioAttachable.configuration[:google_drive] = {
       enabled: true,
-      client_id: "client-id",
-      client_secret: "client-secret",
-      redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
       api_key: "api-key",
       app_id: "app-id"
     }
@@ -201,8 +198,10 @@ class EngineTest < Minitest::Test
       end
     )
 
-    find_google_drive_initializer("recording_studio_attachable.google_drive.register_upload_provider").block.call(app)
-    after_initialize.call
+    RecordingStudioAttachable::GoogleDrive::Integration.stub(:gem_loaded?, true) do
+      find_google_drive_initializer("recording_studio_attachable.google_drive.register_upload_provider").block.call(app)
+      after_initialize.call
+    end
 
     provider = RecordingStudioAttachable.configuration.upload_provider(:google_drive)
     assert_not_nil provider
@@ -230,10 +229,7 @@ class EngineTest < Minitest::Test
 
   def test_google_drive_initializer_skips_provider_when_picker_configuration_is_incomplete
     RecordingStudioAttachable.configuration[:google_drive] = {
-      enabled: true,
-      client_id: "client-id",
-      client_secret: "client-secret",
-      redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback"
+      enabled: true
     }
     after_initialize = nil
     app = Struct.new(:config).new(
@@ -251,9 +247,6 @@ class EngineTest < Minitest::Test
   def test_google_drive_initializer_skips_provider_when_picker_configuration_uses_dummy_placeholders
     RecordingStudioAttachable.configuration[:google_drive] = {
       enabled: true,
-      client_id: "client-id",
-      client_secret: "client-secret",
-      redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
       api_key: "dummy-google-drive-api-key",
       app_id: "dummy-google-drive-app-id"
     }
@@ -273,9 +266,6 @@ class EngineTest < Minitest::Test
   def test_google_drive_initializer_registers_provider_with_route_helper_urls
     RecordingStudioAttachable.configuration[:google_drive] = {
       enabled: true,
-      client_id: "client-id",
-      client_secret: "client-secret",
-      redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
       api_key: "api-key",
       app_id: "app-id"
     }
@@ -286,8 +276,10 @@ class EngineTest < Minitest::Test
       end
     )
 
-    find_google_drive_initializer("recording_studio_attachable.google_drive.register_upload_provider").block.call(app)
-    after_initialize.call
+    RecordingStudioAttachable::GoogleDrive::Integration.stub(:gem_loaded?, true) do
+      find_google_drive_initializer("recording_studio_attachable.google_drive.register_upload_provider").block.call(app)
+      after_initialize.call
+    end
 
     provider = RecordingStudioAttachable.configuration.upload_provider(:google_drive)
     google_drive_proxy = Object.new
@@ -367,9 +359,6 @@ class EngineTest < Minitest::Test
   def test_google_drive_and_dropbox_providers_register_independently
     RecordingStudioAttachable.configuration[:google_drive] = {
       enabled: true,
-      client_id: "client-id",
-      client_secret: "client-secret",
-      redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
       api_key: "api-key",
       app_id: "app-id"
     }
@@ -380,7 +369,7 @@ class EngineTest < Minitest::Test
       redirect_uri: "https://example.test/recording_studio_attachable/dropbox/oauth/callback"
     }
 
-    run_adapter_initializers
+    run_adapter_initializers(google_drive_gem: true)
 
     assert_not_nil RecordingStudioAttachable.configuration.upload_provider(:google_drive)
     assert_nil RecordingStudioAttachable.configuration.upload_provider(:dropbox)
@@ -388,10 +377,31 @@ class EngineTest < Minitest::Test
     RecordingStudioAttachable.configuration.dropbox.enabled = true
     RecordingStudioAttachable.configuration.google_drive.enabled = false
     RecordingStudioAttachable.instance_variable_get(:@configuration).instance_variable_set(:@upload_providers, [])
-    run_adapter_initializers
+    run_adapter_initializers(google_drive_gem: true)
 
     assert_nil RecordingStudioAttachable.configuration.upload_provider(:google_drive)
     assert_not_nil RecordingStudioAttachable.configuration.upload_provider(:dropbox)
+  end
+
+  def test_google_drive_initializer_skips_provider_when_the_google_drive_gem_is_missing
+    RecordingStudioAttachable.configuration[:google_drive] = {
+      enabled: true,
+      api_key: "api-key",
+      app_id: "app-id"
+    }
+    after_initialize = nil
+    app = Struct.new(:config).new(
+      Object.new.tap do |config|
+        config.define_singleton_method(:after_initialize) { |&block| after_initialize = block }
+      end
+    )
+
+    RecordingStudioAttachable::GoogleDrive::Integration.stub(:gem_loaded?, false) do
+      find_google_drive_initializer("recording_studio_attachable.google_drive.register_upload_provider").block.call(app)
+      after_initialize.call
+    end
+
+    assert_nil RecordingStudioAttachable.configuration.upload_provider(:google_drive)
   end
 
   private
@@ -408,13 +418,15 @@ class EngineTest < Minitest::Test
     RecordingStudioAttachable::Dropbox::Engine.initializers.find { |initializer| initializer.name == name }
   end
 
-  def run_adapter_initializers
+  def run_adapter_initializers(google_drive_gem: false)
     app = Struct.new(:config).new(
       Object.new.tap do |config|
         config.define_singleton_method(:after_initialize) { |&block| block.call }
       end
     )
-    find_google_drive_initializer("recording_studio_attachable.google_drive.register_upload_provider").block.call(app)
+    RecordingStudioAttachable::GoogleDrive::Integration.stub(:gem_loaded?, google_drive_gem) do
+      find_google_drive_initializer("recording_studio_attachable.google_drive.register_upload_provider").block.call(app)
+    end
     find_dropbox_initializer("recording_studio_attachable.dropbox.register_upload_provider").block.call(app)
   end
 

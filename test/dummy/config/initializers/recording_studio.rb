@@ -7,6 +7,7 @@ RecordingStudio.configure do |config|
     "User",
     "ChatThread",
     "ChatMessage",
+    "RecordingStudioSiteSettings::SiteSetting",
     "RecordingStudioAttachable::Attachment"
   ]
   config.require_recordable_declarations = true

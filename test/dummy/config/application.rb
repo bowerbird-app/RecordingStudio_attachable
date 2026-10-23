@@ -44,5 +44,14 @@ module Dummy
 
     # Don't generate system test files.
     config.generators.system_tests = nil
+
+    # Oauth/Logs/Site Settings append migrate paths on the application, but
+    # ActiveRecord::Migrator.migrations_paths is snapshotted earlier. Keep them
+    # in sync so dummy db:migrate applies the engine files.
+    initializer "dummy.engine_migrations", after: "recording_studio_oauth.append_migrations" do |app|
+      paths = app.config.paths["db/migrate"].expanded
+      ActiveRecord::Migrator.migrations_paths = paths if paths.any?
+    end
   end
 end
+

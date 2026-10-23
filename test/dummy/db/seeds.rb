@@ -173,3 +173,6 @@ puts "Seeded: Page '#{page.title}' beneath the workspace root recording"
 puts "Seeded: User '#{user.name}' beneath the workspace root recording"
 puts "Seeded: Chat thread '#{chat_thread.title}' with #{chat_messages.count} recorded messages"
 puts "Seeded: Kiln canister press kit (#{press_kit.size} images) on the workspace"
+puts "Upload page: /recording_studio_attachable/recordings/#{root_recording.id}/attachments/upload"
+page_recording = RecordingStudio::Recording.unscoped.find_by(recordable: page, root_recording_id: root_recording.id)
+puts "Page upload: /recording_studio_attachable/recordings/#{page_recording.id}/attachments/upload" if page_recording

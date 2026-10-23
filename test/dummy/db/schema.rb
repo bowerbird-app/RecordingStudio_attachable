@@ -10,30 +10,30 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_000003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
 
   create_table "active_storage_attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "name", null: false
+    t.string "record_type", null: false
+    t.uuid "record_id", null: false
     t.uuid "blob_id", null: false
     t.datetime "created_at", null: false
-    t.string "name", null: false
-    t.uuid "record_id", null: false
-    t.string "record_type", null: false
     t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
     t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
   end
 
   create_table "active_storage_blobs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.bigint "byte_size", null: false
-    t.string "checksum"
-    t.string "content_type"
-    t.datetime "created_at", null: false
-    t.string "filename", null: false
     t.string "key", null: false
+    t.string "filename", null: false
+    t.string "content_type"
     t.text "metadata"
     t.string "service_name", null: false
+    t.bigint "byte_size", null: false
+    t.string "checksum"
+    t.datetime "created_at", null: false
     t.index ["key"], name: "index_active_storage_blobs_on_key", unique: true
   end
 
@@ -44,8 +44,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_150000) do
   end
 
   create_table "chat_message_attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "attachment_recording_id", null: false
     t.uuid "chat_message_id", null: false
+    t.uuid "attachment_recording_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["attachment_recording_id"], name: "index_chat_message_attachments_on_attachment_recording_id"
@@ -54,36 +54,36 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_150000) do
   end
 
   create_table "chat_messages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.text "body"
     t.uuid "chat_thread_id", null: false
-    t.datetime "created_at", null: false
-    t.string "direction", null: false
     t.integer "position", null: false
-    t.boolean "seeded", default: false, null: false
-    t.datetime "sent_at"
-    t.string "status", default: "draft", null: false
+    t.string "direction", null: false
+    t.text "body"
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "status", default: "draft", null: false
+    t.datetime "sent_at"
+    t.boolean "seeded", default: false, null: false
     t.index ["chat_thread_id", "position"], name: "index_chat_messages_on_chat_thread_id_and_position", unique: true
     t.index ["chat_thread_id"], name: "index_chat_messages_on_chat_thread_id"
     t.index ["status"], name: "index_chat_messages_on_status"
   end
 
   create_table "chat_threads", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.datetime "created_at", null: false
     t.string "title", null: false
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
 
   create_table "pages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.text "body"
-    t.datetime "created_at", null: false
     t.string "title"
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "body"
   end
 
   create_table "recording_studio_access_boundaries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.datetime "created_at", null: false
     t.integer "minimum_role"
+    t.datetime "created_at", null: false
   end
 
   create_table "recording_studio_access_constraints", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -122,10 +122,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_150000) do
   end
 
   create_table "recording_studio_accesses", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "actor_id", null: false
     t.string "actor_type", null: false
-    t.datetime "created_at", null: false
+    t.uuid "actor_id", null: false
     t.string "role", default: "view", null: false
+    t.datetime "created_at", null: false
     t.uuid "depends_on_recording_id"
     t.index ["actor_type", "actor_id", "role"], name: "index_recording_studio_accesses_on_actor_and_role"
     t.index ["actor_type", "actor_id"], name: "index_recording_studio_accesses_on_actor"
@@ -259,50 +259,50 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_150000) do
   end
 
   create_table "recording_studio_attachable_attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.text "alt_text"
-    t.string "attachment_kind", null: false
-    t.bigint "byte_size", null: false
-    t.text "caption"
-    t.string "content_type", null: false
-    t.text "credit"
-    t.text "description"
     t.string "name", null: false
+    t.text "description"
+    t.string "attachment_kind", null: false
     t.string "original_filename", null: false
+    t.string "content_type", null: false
+    t.bigint "byte_size", null: false
     t.uuid "root_recording_id"
+    t.text "caption"
+    t.text "credit"
+    t.text "alt_text"
     t.index ["attachment_kind", "content_type"], name: "idx_rs_attachable_kind_type"
     t.index ["attachment_kind"], name: "idx_on_attachment_kind_d683071625"
     t.index ["root_recording_id"], name: "index_rs_attachable_attachments_on_root_recording_id"
   end
 
   create_table "recording_studio_device_sessions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "actor_id", null: false
     t.string "actor_type", null: false
-    t.datetime "created_at", null: false
+    t.uuid "actor_id", null: false
     t.string "device_fingerprint", null: false
     t.string "device_name"
     t.datetime "last_active_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.uuid "root_recording_id", null: false
-    t.datetime "updated_at", null: false
     t.string "user_agent"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.index ["actor_type", "actor_id", "device_fingerprint"], name: "index_rs_device_sessions_on_actor_and_fingerprint", unique: true
     t.index ["root_recording_id"], name: "index_rs_device_sessions_on_root_recording"
   end
 
   create_table "recording_studio_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.string "action", null: false
-    t.uuid "actor_id"
-    t.string "actor_type"
-    t.datetime "created_at", null: false
-    t.string "idempotency_key"
-    t.uuid "impersonator_id"
-    t.string "impersonator_type"
-    t.jsonb "metadata", default: {}, null: false
-    t.datetime "occurred_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
-    t.uuid "previous_recordable_id"
-    t.string "previous_recordable_type"
-    t.uuid "recordable_id", null: false
-    t.string "recordable_type", null: false
     t.uuid "recording_id", null: false
+    t.string "action", null: false
+    t.string "recordable_type", null: false
+    t.uuid "recordable_id", null: false
+    t.string "previous_recordable_type"
+    t.uuid "previous_recordable_id"
+    t.string "actor_type"
+    t.uuid "actor_id"
+    t.string "impersonator_type"
+    t.uuid "impersonator_id"
+    t.datetime "occurred_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.string "idempotency_key"
+    t.datetime "created_at", null: false
     t.index ["action", "occurred_at"], name: "index_rs_events_on_action_and_occurred_at"
     t.index ["actor_type", "actor_id", "occurred_at"], name: "index_rs_events_on_actor_and_occurred_at"
     t.index ["recording_id", "idempotency_key"], name: "index_recording_studio_events_on_recording_and_idempotency_key", unique: true, where: "(idempotency_key IS NOT NULL)"
@@ -310,14 +310,178 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_150000) do
     t.index ["recording_id"], name: "index_recording_studio_events_on_recording_id"
   end
 
-  create_table "recording_studio_recordings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "recording_studio_logs_aggregation_runs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "aggregation_name", null: false
+    t.date "day", null: false
+    t.string "status", null: false
+    t.text "error_message"
+    t.datetime "finished_at"
     t.datetime "created_at", null: false
-    t.uuid "parent_recording_id"
-    t.uuid "recordable_id", null: false
-    t.string "recordable_type", null: false
-    t.uuid "root_recording_id"
-    t.datetime "trashed_at"
     t.datetime "updated_at", null: false
+    t.index ["aggregation_name", "day"], name: "index_rs_logs_aggregation_runs_on_name_and_day", unique: true
+  end
+
+  create_table "recording_studio_logs_maintenance_runs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "task", null: false
+    t.string "subject", null: false
+    t.string "status", null: false
+    t.text "details"
+    t.datetime "finished_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["task", "subject", "finished_at"], name: "index_rs_logs_maintenance_runs_on_task_and_subject"
+  end
+
+  create_table "recording_studio_oauth_access_tokens", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "oauth_authorization_id", null: false
+    t.string "token_digest", null: false
+    t.string "token_prefix", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "revoked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "last_used_at"
+    t.index ["expires_at"], name: "index_recording_studio_oauth_access_tokens_on_expires_at"
+    t.index ["oauth_authorization_id"], name: "idx_on_oauth_authorization_id_7313b03aba"
+    t.index ["token_digest"], name: "index_recording_studio_oauth_access_tokens_on_token_digest", unique: true
+  end
+
+  create_table "recording_studio_oauth_authorization_codes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "oauth_authorization_id", null: false
+    t.string "code_digest", null: false
+    t.string "redirect_uri", null: false
+    t.string "code_challenge"
+    t.string "code_challenge_method"
+    t.datetime "expires_at", null: false
+    t.datetime "used_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code_digest"], name: "idx_on_code_digest_bcebd970b4", unique: true
+    t.index ["expires_at"], name: "index_recording_studio_oauth_authorization_codes_on_expires_at"
+    t.index ["oauth_authorization_id"], name: "idx_on_oauth_authorization_id_4cb485335a"
+  end
+
+  create_table "recording_studio_oauth_authorizations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "oauth_client_id", null: false
+    t.string "manager_actor_type", null: false
+    t.uuid "manager_actor_id", null: false
+    t.uuid "manager_access_recording_id", null: false
+    t.uuid "access_recording_id"
+    t.string "role", null: false
+    t.datetime "revoked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["access_recording_id"], name: "idx_on_access_recording_id_94e16371a2"
+    t.index ["manager_access_recording_id"], name: "idx_on_manager_access_recording_id_ee8e9d6f9c"
+    t.index ["manager_actor_type", "manager_actor_id"], name: "index_rs_oauth_authorizations_on_manager_actor"
+    t.index ["oauth_client_id", "manager_actor_type", "manager_actor_id", "manager_access_recording_id"], name: "index_rs_oauth_authorizations_unique_active", unique: true, where: "(revoked_at IS NULL)"
+    t.index ["oauth_client_id"], name: "index_recording_studio_oauth_authorizations_on_oauth_client_id"
+    t.index ["revoked_at"], name: "index_recording_studio_oauth_authorizations_on_revoked_at"
+  end
+
+  create_table "recording_studio_oauth_clients", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "name", null: false
+    t.string "client_id", null: false
+    t.string "client_secret_digest"
+    t.jsonb "redirect_uris", default: [], null: false
+    t.boolean "confidential", default: true, null: false
+    t.string "api_key", default: "public", null: false
+    t.datetime "revoked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.boolean "use_central_relay", default: false, null: false
+    t.jsonb "allowed_return_patterns", default: [], null: false
+    t.jsonb "exact_return_urls", default: [], null: false
+    t.boolean "allow_registration", default: false, null: false
+    t.string "session_token_provider"
+    t.string "session_token_audience"
+    t.text "session_token_secret_ciphertext"
+    t.boolean "self_registered", default: false, null: false
+    t.string "token_endpoint_auth_method", null: false
+    t.index ["api_key"], name: "index_recording_studio_oauth_clients_on_api_key"
+    t.index ["client_id"], name: "index_recording_studio_oauth_clients_on_client_id", unique: true
+  end
+
+  create_table "recording_studio_oauth_external_installs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "oauth_client_id", null: false
+    t.string "provider", null: false
+    t.string "external_id", null: false
+    t.uuid "root_recording_id"
+    t.string "connected_by_type"
+    t.uuid "connected_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["connected_by_type", "connected_by_id"], name: "index_rs_oauth_external_installs_on_connected_by"
+    t.index ["oauth_client_id", "provider", "external_id"], name: "index_rs_oauth_external_installs_on_client_provider_external", unique: true
+    t.index ["provider", "external_id"], name: "index_rs_oauth_external_installs_on_provider_external"
+    t.index ["root_recording_id"], name: "idx_on_root_recording_id_efcab19ee0"
+  end
+
+  create_table "recording_studio_oauth_outbound_connections", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "provider_key", null: false
+    t.uuid "root_recording_id"
+    t.string "owner_actor_type"
+    t.uuid "owner_actor_id"
+    t.string "connected_by_type", null: false
+    t.uuid "connected_by_id", null: false
+    t.string "external_account_id"
+    t.string "external_account_label"
+    t.jsonb "granted_scopes", default: [], null: false
+    t.text "access_token"
+    t.text "refresh_token"
+    t.datetime "expires_at"
+    t.string "status", default: "active", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provider_key", "owner_actor_type", "owner_actor_id"], name: "idx_rs_oauth_outbound_live_user", unique: true, where: "((owner_actor_id IS NOT NULL) AND ((status)::text = ANY ((ARRAY['active'::character varying, 'needs_reconnect'::character varying])::text[])))"
+    t.index ["provider_key", "root_recording_id"], name: "idx_rs_oauth_outbound_live_root", unique: true, where: "((root_recording_id IS NOT NULL) AND ((status)::text = ANY ((ARRAY['active'::character varying, 'needs_reconnect'::character varying])::text[])))"
+    t.index ["provider_key"], name: "idx_on_provider_key_ad5bab8401"
+    t.index ["root_recording_id"], name: "idx_on_root_recording_id_85327fae16"
+    t.index ["status"], name: "index_recording_studio_oauth_outbound_connections_on_status"
+    t.check_constraint "root_recording_id IS NOT NULL AND owner_actor_id IS NULL AND owner_actor_type IS NULL OR root_recording_id IS NULL AND owner_actor_id IS NOT NULL AND owner_actor_type IS NOT NULL", name: "chk_rs_oauth_outbound_owner"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'needs_reconnect'::character varying, 'revoked'::character varying]::text[])", name: "chk_rs_oauth_outbound_status"
+  end
+
+  create_table "recording_studio_oauth_outbound_handshakes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "nonce_digest", null: false
+    t.string "provider_key", null: false
+    t.string "owner_kind", null: false
+    t.uuid "root_recording_id"
+    t.string "actor_type", null: false
+    t.uuid "actor_id", null: false
+    t.text "code_verifier"
+    t.string "return_to", default: "/", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "consumed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["expires_at"], name: "index_recording_studio_oauth_outbound_handshakes_on_expires_at"
+    t.index ["nonce_digest"], name: "idx_rs_oauth_outbound_handshakes_nonce", unique: true
+  end
+
+  create_table "recording_studio_oauth_refresh_tokens", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "oauth_authorization_id", null: false
+    t.string "token_digest", null: false
+    t.string "token_prefix", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "revoked_at"
+    t.uuid "replaced_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["expires_at"], name: "index_recording_studio_oauth_refresh_tokens_on_expires_at"
+    t.index ["oauth_authorization_id"], name: "idx_on_oauth_authorization_id_a1e93340c5"
+    t.index ["replaced_by_id"], name: "index_recording_studio_oauth_refresh_tokens_on_replaced_by_id"
+    t.index ["token_digest"], name: "index_recording_studio_oauth_refresh_tokens_on_token_digest", unique: true
+  end
+
+  create_table "recording_studio_recordings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "recordable_type", null: false
+    t.uuid "recordable_id", null: false
+    t.datetime "trashed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "parent_recording_id"
+    t.uuid "root_recording_id"
     t.integer "recording_studio_orderable_position"
     t.boolean "trash_root", default: false, null: false
     t.index ["parent_recording_id", "recording_studio_orderable_position"], name: "idx_rs_recordings_orderable_sibling_position"
@@ -336,6 +500,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_150000) do
     t.index ["trashed_at"], name: "index_recording_studio_recordings_on_trashed_at"
   end
 
+  create_table "recording_studio_site_settings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+  end
+
   create_table "recording_studio_trashable_retention_settings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "recording_id", null: false
     t.integer "purge_after_days"
@@ -345,21 +514,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_150000) do
   end
 
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.datetime "created_at", null: false
     t.string "email", default: "", null: false
     t.string "encrypted_password", default: "", null: false
-    t.string "name"
-    t.datetime "remember_created_at"
-    t.datetime "reset_password_sent_at"
     t.string "reset_password_token"
+    t.datetime "reset_password_sent_at"
+    t.datetime "remember_created_at"
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "name"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
   end
 
   create_table "workspaces", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.datetime "created_at", null: false
     t.string "name"
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
 
@@ -373,6 +542,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_150000) do
   add_foreign_key "recording_studio_api_api_credentials", "recording_studio_api_api_clients", column: "api_client_id"
   add_foreign_key "recording_studio_device_sessions", "recording_studio_recordings", column: "root_recording_id"
   add_foreign_key "recording_studio_events", "recording_studio_recordings", column: "recording_id"
+  add_foreign_key "recording_studio_oauth_access_tokens", "recording_studio_oauth_authorizations", column: "oauth_authorization_id"
+  add_foreign_key "recording_studio_oauth_authorization_codes", "recording_studio_oauth_authorizations", column: "oauth_authorization_id"
+  add_foreign_key "recording_studio_oauth_authorizations", "recording_studio_oauth_clients", column: "oauth_client_id"
+  add_foreign_key "recording_studio_oauth_external_installs", "recording_studio_oauth_clients", column: "oauth_client_id"
+  add_foreign_key "recording_studio_oauth_external_installs", "recording_studio_recordings", column: "root_recording_id"
+  add_foreign_key "recording_studio_oauth_outbound_connections", "recording_studio_recordings", column: "root_recording_id"
+  add_foreign_key "recording_studio_oauth_outbound_handshakes", "recording_studio_recordings", column: "root_recording_id", on_delete: :cascade
+  add_foreign_key "recording_studio_oauth_refresh_tokens", "recording_studio_oauth_authorizations", column: "oauth_authorization_id"
   add_foreign_key "recording_studio_recordings", "recording_studio_recordings", column: "parent_recording_id"
   add_foreign_key "recording_studio_recordings", "recording_studio_recordings", column: "root_recording_id"
   add_foreign_key "recording_studio_trashable_retention_settings", "recording_studio_recordings", column: "recording_id"

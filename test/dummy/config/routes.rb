@@ -3,8 +3,12 @@ Rails.application.routes.draw do
 
   get "/recording_studio", to: redirect("/"), as: nil
   mount RecordingStudio::Engine, at: "/recording_studio"
+  mount RecordingStudioOauth::Engine, at: "/recording_studio_oauth"
   mount RecordingStudioAttachable::Engine, at: "/recording_studio_attachable"
   mount RecordingStudioApi::Engine, at: "/recording_studio_api"
+  mount RecordingStudioSiteSettings::Engine, at: "/recording_studio_site_settings"
+
+  RecordingStudioOauth::ProtectedResourceRegistry.draw_origin_well_known(self)
   get "APIdocs/:version/openapi.json",
       to: "recording_studio_api/scalar_docs#openapi",
       defaults: { api_key: "public", engine_mount_path: "/recording_studio_api" },
@@ -28,6 +32,19 @@ Rails.application.routes.draw do
       to: "chat_demo#detach_attachment",
       as: :chat_demo_message_attachment
   delete "chat/demo", to: "chat_demo#destroy", as: :reset_chat_demo
+  get "fake_oauth/authorize",
+      to: "fake_oauth#authorize",
+      constraints: ->(req) { req.params[:client_id].to_s == FakeOauth::CLIENT_ID }
+  post "fake_oauth/token",
+       to: "fake_oauth#token",
+       constraints: ->(req) { req.params[:client_id].to_s == FakeOauth::CLIENT_ID }
+  post "fake_oauth/revoke",
+       to: "fake_oauth#revoke",
+       constraints: ->(req) { req.params[:client_id].to_s == FakeOauth::CLIENT_ID }
+  get "fake_oauth/authorize", to: "fake_dropbox_oauth#authorize"
+  post "fake_oauth/token", to: "fake_dropbox_oauth#token"
+  post "fake_oauth/revoke", to: "fake_dropbox_oauth#revoke"
+
   get "upload_providers/demo", to: "upload_providers#show", as: :demo_upload_provider
   post "upload_providers/demo", to: "upload_providers#create"
   resources :pages, only: %i[show edit update]

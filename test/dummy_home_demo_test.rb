@@ -651,14 +651,11 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes initializer_template, "config.direct_url_host"
     assert_includes initializer_template, "config.preprocessed_variants = %i[small med large poster]"
     assert_includes initializer_template, "After commit, preprocess small/med/large plus any host-added custom"
-    assert_includes initializer_template, 'label: "Google Drive"'
-    assert_includes initializer_template, "remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|"
-    assert_includes initializer_template, "config.google_drive.enabled = true"
-    assert_includes initializer_template, "GOOGLE_DRIVE_CLIENT_ID"
-    assert_includes initializer_template, "/recording_studio_attachable/google_drive/oauth/callback"
-    assert_includes initializer_template, "config.dropbox.enabled = true"
-    assert_includes initializer_template, "DROPBOX_CLIENT_ID"
-    assert_includes initializer_template, "/recording_studio_attachable/dropbox/oauth/callback"
+    assert_includes initializer_template, 'label: "My Cloud"'
+    assert_includes initializer_template, "remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, **"
+    assert_includes initializer_template, "Services::ImportRemoteFiles.call"
+    assert_includes initializer_template, "register_adapter_routes(:my_cloud)"
+    assert_includes initializer_template, "RecordingStudioAttachable::ProviderController"
   end
 
   def test_dummy_home_demo_includes_registered_demo_cloud_provider
@@ -670,13 +667,13 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes initializer, "config.max_file_size = 25.megabytes"
     assert_includes initializer, "poster: { resize_to_limit: [1280, 720] }"
     assert_not_includes initializer, "config.preprocessed_variants ="
-    assert_includes initializer, "config.dropbox.enabled = true"
-    assert_includes initializer, "DUMMY_DROPBOX_CLIENT_ID"
     assert_includes initializer, ":demo_cloud"
     assert_includes initializer, 'label: "Demo cloud import"'
     assert_includes page_model, "max_file_size: 25.megabytes"
     assert_includes workspace_model, "max_file_size: 25.megabytes"
     assert_includes routes, "as: :demo_upload_provider"
+    refute_includes routes, "RecordingStudioOauth::Engine"
+    refute_includes routes, "fake_oauth"
   end
 
   def test_dummy_schema_includes_active_storage_tables_for_direct_uploads

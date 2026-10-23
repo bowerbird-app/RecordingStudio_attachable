@@ -39,7 +39,8 @@ module RecordingStudioAttachable
         importmap_path = Rails.root.join("config/importmap.rb")
         return unless File.exist?(importmap_path)
 
-        append_to_file importmap_path, <<~RUBY unless File.read(importmap_path).include?("controllers/recording_studio_attachable")
+        importmap = File.read(importmap_path)
+        append_to_file importmap_path, <<~RUBY unless importmap.include?("controllers/recording_studio_attachable")
 
           pin "@rails/activestorage", to: "activestorage.esm.js"
           pin_all_from RecordingStudioAttachable::Engine.root.join("app/javascript/controllers/recording_studio_attachable"),
@@ -48,6 +49,14 @@ module RecordingStudioAttachable
           pin "recording_studio_attachable/tiptap/attachment_image_addon",
             to: "recording_studio_attachable/tiptap/attachment_image_addon.js"
         RUBY
+
+        unless File.read(importmap_path).include?("recording_studio_attachable/provider_launchers")
+          append_to_file importmap_path, <<~RUBY
+
+            pin "recording_studio_attachable/provider_launchers",
+              to: "controllers/recording_studio_attachable/provider_launchers.js"
+          RUBY
+        end
 
         wire_javascript_entrypoints
       end

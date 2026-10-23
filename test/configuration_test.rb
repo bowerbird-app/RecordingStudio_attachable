@@ -60,12 +60,6 @@ class ConfigurationTest < Minitest::Test
     assert_empty @configuration.upload_providers
     assert_equal :view, @configuration.auth_role_for(:view)
     assert_equal :edit, @configuration.auth_role_for(:upload)
-    assert @configuration.singleton_methods.include?(:google_drive)
-    assert @configuration.singleton_methods.include?(:dropbox)
-    assert_not @configuration.google_drive.enabled?
-    assert_not @configuration.google_drive.configured?
-    assert_not @configuration.google_drive.picker_configured?
-    assert_equal ["https://www.googleapis.com/auth/drive.readonly"], @configuration.google_drive.scopes
     assert_nil @configuration.attachment_place_labels
     assert_equal [], @configuration.attachment_place_labels_for(Object.new)
   end
@@ -135,46 +129,46 @@ class ConfigurationTest < Minitest::Test
 
   def test_register_upload_provider_stores_provider_by_key
     provider = @configuration.register_upload_provider(
-      :google_drive,
-      label: "Google Drive",
-      url: "/imports/google_drive",
+      :my_cloud,
+      label: "My Cloud",
+      url: "/imports/my_cloud",
       icon: "cloud"
     )
 
-    assert_equal provider, @configuration.upload_provider(:google_drive)
-    assert_equal [:google_drive], @configuration.upload_providers.map(&:key)
+    assert_equal provider, @configuration.upload_provider(:my_cloud)
+    assert_equal [:my_cloud], @configuration.upload_providers.map(&:key)
   end
 
   def test_register_upload_provider_replaces_existing_provider_with_same_key
-    @configuration.register_upload_provider(:google_drive, label: "Old", url: "/imports/old")
+    @configuration.register_upload_provider(:my_cloud, label: "Old", url: "/imports/old")
 
-    provider = @configuration.register_upload_provider(:google_drive, label: "New", url: "/imports/new")
+    provider = @configuration.register_upload_provider(:my_cloud, label: "New", url: "/imports/new")
 
     assert_equal [provider], @configuration.upload_providers
-    assert_equal "New", @configuration.upload_provider(:google_drive).label
+    assert_equal "New", @configuration.upload_provider(:my_cloud).label
   end
 
   def test_register_upload_provider_accepts_existing_provider_instances
-    provider = RecordingStudioAttachable::UploadProvider.new(key: :dropbox, label: "Dropbox", url: "/imports/dropbox")
+    provider = RecordingStudioAttachable::UploadProvider.new(key: :my_cloud, label: "My Cloud", url: "/imports/my_cloud")
 
     returned = @configuration.register_upload_provider(provider)
 
     assert_same provider, returned
-    assert_same provider, @configuration.upload_provider(:dropbox)
+    assert_same provider, @configuration.upload_provider(:my_cloud)
   end
 
   def test_upload_providers_assignment_normalizes_hashes
-    @configuration.upload_providers = [{ key: :dropbox, label: "Dropbox", url: "/imports/dropbox" }]
+    @configuration.upload_providers = [{ key: :my_cloud, label: "My Cloud", url: "/imports/my_cloud" }]
 
-    provider = @configuration.upload_provider(:dropbox)
+    provider = @configuration.upload_provider(:my_cloud)
     assert_instance_of RecordingStudioAttachable::UploadProvider, provider
-    assert_equal "Dropbox", provider.label
+    assert_equal "My Cloud", provider.label
   end
 
   def test_upload_provider_callables_can_use_route_helpers_without_full_view_context
     provider = @configuration.register_upload_provider(
-      :google_drive,
-      label: "Google Drive",
+      :my_cloud,
+      label: "My Cloud",
       url: ->(route_helpers:, recording:) { route_helpers.recording_imports_path(recording_id: recording.id) }
     )
     route_helpers = Object.new
@@ -237,48 +231,6 @@ class ConfigurationTest < Minitest::Test
     assert_equal({ resize_to_limit: [1280, 720] }, @configuration.image_variant(:poster))
     assert_equal %i[small med large poster], @configuration.preprocessed_variants
     assert_equal :subtree, @configuration.default_listing_scope
-  end
-
-  def test_merge_updates_google_drive_configuration
-    @configuration[:google_drive] = {
-      enabled: true,
-      client_id: "client-id",
-      client_secret: "client-secret",
-      api_key: "api-key",
-      app_id: "app-id",
-      redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
-      page_size: 10
-    }
-
-    assert @configuration.google_drive.enabled?
-    assert @configuration.google_drive.configured?
-    assert @configuration.google_drive.picker_configured?
-    assert_equal "client-id", @configuration.google_drive.client_id
-    assert_equal 10, @configuration.google_drive.page_size
-  end
-
-  def test_google_drive_picker_configuration_rejects_dummy_placeholder_values
-    @configuration[:google_drive] = {
-      enabled: true,
-      client_id: "client-id",
-      client_secret: "client-secret",
-      redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
-      api_key: "dummy-google-drive-api-key",
-      app_id: "dummy-google-drive-app-id"
-    }
-
-    assert @configuration.google_drive.configured?
-    assert_not @configuration.google_drive.picker_configured?
-  end
-
-  def test_google_drive_merge_returns_self_and_ignores_unknown_keys
-    google_drive = @configuration.google_drive
-
-    returned = google_drive.merge!(enabled: true, unknown: "ignored")
-
-    assert_same google_drive, returned
-    assert google_drive.enabled?
-    assert_not google_drive.respond_to?(:unknown)
   end
 
   def test_merge_ignores_non_enumerable_inputs
@@ -390,67 +342,9 @@ class ConfigurationTest < Minitest::Test
         default_kind_filter: :all,
         layout: :application,
         upload_presentation: :page,
-        auth_roles: @configuration.auth_roles,
-        google_drive: @configuration.google_drive.to_h,
-        dropbox: @configuration.dropbox.to_h
+        auth_roles: @configuration.auth_roles
       },
       @configuration.to_h
     )
-  end
-
-  def test_dropbox_defaults_are_disabled_and_unconfigured
-    assert_not @configuration.dropbox.enabled?
-    assert_not @configuration.dropbox.configured?
-    assert_equal %w[files.metadata.read files.content.read], @configuration.dropbox.scopes
-  end
-
-  def test_merge_updates_dropbox_configuration
-    @configuration[:dropbox] = {
-      enabled: true,
-      client_id: "dropbox-client-id",
-      client_secret: "dropbox-client-secret",
-      redirect_uri: "https://example.test/recording_studio_attachable/dropbox/oauth/callback"
-    }
-
-    assert @configuration.dropbox.enabled?
-    assert @configuration.dropbox.configured?
-    assert @configuration.dropbox.available?
-  end
-
-  def test_dropbox_configuration_rejects_dummy_placeholder_values
-    @configuration[:dropbox] = {
-      enabled: true,
-      client_id: "dummy-dropbox-client-id",
-      client_secret: "dummy-dropbox-client-secret",
-      redirect_uri: "https://example.test/recording_studio_attachable/dropbox/oauth/callback"
-    }
-
-    assert_not @configuration.dropbox.configured?
-    assert_not @configuration.dropbox.available?
-  end
-
-  def test_adapters_can_be_enabled_independently
-    @configuration[:google_drive] = {
-      enabled: true,
-      client_id: "client-id",
-      client_secret: "client-secret",
-      redirect_uri: "https://example.test/recording_studio_attachable/google_drive/oauth/callback",
-      api_key: "api-key",
-      app_id: "app-id"
-    }
-
-    assert @configuration.google_drive.available?
-    assert_not @configuration.dropbox.available?
-
-    @configuration[:dropbox] = {
-      enabled: true,
-      client_id: "dropbox-client-id",
-      client_secret: "dropbox-client-secret",
-      redirect_uri: "https://example.test/recording_studio_attachable/dropbox/oauth/callback"
-    }
-    @configuration.google_drive.enabled = false
-
-    assert_not @configuration.google_drive.available?
-    assert @configuration.dropbox.available?
   end
 end

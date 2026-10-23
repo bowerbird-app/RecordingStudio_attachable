@@ -22,8 +22,8 @@ class UploadProviderTest < Minitest::Test
 
   def test_button_options_resolve_callable_url_and_target
     provider = RecordingStudioAttachable::UploadProvider.new(
-      key: :google_drive,
-      label: "Google Drive",
+      key: :my_cloud,
+      label: "My Cloud",
       icon: "cloud",
       url: ->(view_context:, recording:) { "#{view_context.prefix}/imports/#{recording.id}" },
       target: ->(view_context:, recording:) { "_blank" }
@@ -31,7 +31,7 @@ class UploadProviderTest < Minitest::Test
 
     options = provider.button_options(view_context: FakeViewContext.new("/root"), recording: FakeRecording.new("rec-1"))
 
-    assert_equal "Google Drive", options[:text]
+    assert_equal "My Cloud", options[:text]
     assert_equal "/root/imports/rec-1", options[:href]
     assert_equal "_blank", options[:target]
     assert_equal :secondary, options[:style]
@@ -39,33 +39,33 @@ class UploadProviderTest < Minitest::Test
 
   def test_modal_button_options_open_flatpack_modal_and_pass_frame_url
     provider = RecordingStudioAttachable::UploadProvider.new(
-      key: :google_drive,
-      label: "Google Drive",
-      url: "/recording_studio_attachable/google_drive/recordings/rec-1/imports",
+      key: :my_cloud,
+      label: "My Cloud",
+      url: "/recording_studio_attachable/my_cloud/recordings/rec-1/imports",
       strategy: :modal_page,
-      modal_title: "Google Drive picker"
+      modal_title: "My Cloud picker"
     )
 
     options = provider.button_options(view_context: FakeViewContext.new("/root"), recording: FakeRecording.new("rec-1"))
 
     assert_equal "button", options[:type]
     assert_equal "recording-studio-attachable--upload#launchProvider", options.dig(:data, :action)
-    assert_equal "recording-studio-attachable-provider-google_drive-rec-1-modal", options.dig(:data, :modal_id)
+    assert_equal "recording-studio-attachable-provider-my_cloud-rec-1-modal", options.dig(:data, :modal_id)
     assert_includes options.dig(:data, :provider_frame_url), "embed=modal"
-    assert_includes options.dig(:data, :provider_frame_url), "provider_key=google_drive"
+    assert_includes options.dig(:data, :provider_frame_url), "provider_key=my_cloud"
     assert_includes options.dig(:data, :provider_frame_url),
-                    "provider_modal_id=recording-studio-attachable-provider-google_drive-rec-1-modal"
+                    "provider_modal_id=recording-studio-attachable-provider-my_cloud-rec-1-modal"
   end
 
   def test_client_picker_button_options_expose_launcher_and_bootstrap_urls
     provider = RecordingStudioAttachable::UploadProvider.new(
-      key: :google_drive,
-      label: "Google Drive",
-      url: "/bootstrap/google_drive",
+      key: :my_cloud,
+      label: "My Cloud",
+      url: "/bootstrap/my_cloud",
       strategy: :client_picker,
-      launcher: "google_drive",
-      bootstrap_url: "/bootstrap/google_drive",
-      import_url: "/imports/google_drive"
+      launcher: "my_cloud",
+      bootstrap_url: "/bootstrap/my_cloud",
+      import_url: "/imports/my_cloud"
     )
 
     options = provider.button_options(view_context: FakeViewContext.new("/root"), recording: FakeRecording.new("rec-1"))
@@ -73,20 +73,20 @@ class UploadProviderTest < Minitest::Test
     assert_equal "button", options[:type]
     assert_equal "recording-studio-attachable--upload#launchProvider", options.dig(:data, :action)
     assert_equal :client_picker, options.dig(:data, :provider_strategy)
-    assert_equal "google_drive", options.dig(:data, :provider_launcher)
-    assert_equal "/bootstrap/google_drive", options.dig(:data, :provider_bootstrap_url)
-    assert_equal "/imports/google_drive", options.dig(:data, :provider_import_url)
+    assert_equal "my_cloud", options.dig(:data, :provider_launcher)
+    assert_equal "/bootstrap/my_cloud", options.dig(:data, :provider_bootstrap_url)
+    assert_equal "/imports/my_cloud", options.dig(:data, :provider_import_url)
   end
 
   def test_button_options_append_redirect_query_params_to_provider_urls
     provider = RecordingStudioAttachable::UploadProvider.new(
-      key: :google_drive,
-      label: "Google Drive",
-      url: "/bootstrap/google_drive",
+      key: :my_cloud,
+      label: "My Cloud",
+      url: "/bootstrap/my_cloud",
       strategy: :client_picker,
-      launcher: "google_drive",
-      bootstrap_url: "/bootstrap/google_drive",
-      import_url: "/imports/google_drive"
+      launcher: "my_cloud",
+      bootstrap_url: "/bootstrap/my_cloud",
+      import_url: "/imports/my_cloud"
     )
 
     options = provider.button_options(
@@ -102,11 +102,11 @@ class UploadProviderTest < Minitest::Test
   def test_supports_remote_imports_is_true_when_hook_is_registered
     importer = ->(**) { :ok }
     provider = RecordingStudioAttachable::UploadProvider.new(
-      key: :google_drive,
-      label: "Google Drive",
-      url: "/bootstrap/google_drive",
+      key: :my_cloud,
+      label: "My Cloud",
+      url: "/bootstrap/my_cloud",
       strategy: :client_picker,
-      launcher: "google_drive",
+      launcher: "my_cloud",
       remote_importer: importer
     )
 
@@ -130,9 +130,9 @@ class UploadProviderTest < Minitest::Test
   def test_initialize_rejects_non_callable_remote_importers
     error = assert_raises(ArgumentError) do
       RecordingStudioAttachable::UploadProvider.new(
-        key: :google_drive,
-        label: "Google Drive",
-        url: "/bootstrap/google_drive",
+        key: :my_cloud,
+        label: "My Cloud",
+        url: "/bootstrap/my_cloud",
         remote_importer: Object.new
       )
     end
@@ -143,9 +143,9 @@ class UploadProviderTest < Minitest::Test
   def test_import_remote_attachments_forwards_full_hook_context
     captured = nil
     provider = RecordingStudioAttachable::UploadProvider.new(
-      key: :google_drive,
-      label: "Google Drive",
-      url: "/bootstrap/google_drive",
+      key: :my_cloud,
+      label: "My Cloud",
+      url: "/bootstrap/my_cloud",
       remote_importer: lambda { |**kwargs|
         captured = kwargs
         :result
@@ -169,9 +169,9 @@ class UploadProviderTest < Minitest::Test
 
   def test_render_returns_false_when_visible_callback_rejects_provider
     provider = RecordingStudioAttachable::UploadProvider.new(
-      key: :dropbox,
-      label: "Dropbox",
-      url: "/imports/dropbox",
+      key: :extra_cloud,
+      label: "Extra Cloud",
+      url: "/imports/extra_cloud",
       visible: ->(view_context:, recording:) { false }
     )
 
@@ -180,8 +180,8 @@ class UploadProviderTest < Minitest::Test
 
   def test_render_returns_false_when_url_resolves_blank
     provider = RecordingStudioAttachable::UploadProvider.new(
-      key: :dropbox,
-      label: "Dropbox",
+      key: :extra_cloud,
+      label: "Extra Cloud",
       url: ->(view_context:, recording:) {}
     )
 
@@ -212,40 +212,40 @@ class UploadProviderTest < Minitest::Test
 
   def test_modal_provider_uses_label_for_modal_title_by_default
     provider = RecordingStudioAttachable::UploadProvider.new(
-      key: :dropbox,
-      label: "Dropbox",
-      url: "/imports/dropbox",
+      key: :extra_cloud,
+      label: "Extra Cloud",
+      url: "/imports/extra_cloud",
       strategy: :modal_page
     )
 
-    assert_equal "Dropbox", provider.modal_title(view_context: FakeViewContext.new("/root"), recording: FakeRecording.new("rec-1"))
+    assert_equal "Extra Cloud", provider.modal_title(view_context: FakeViewContext.new("/root"), recording: FakeRecording.new("rec-1"))
   end
 
   def test_iframe_title_uses_custom_value_and_falls_back_to_label
     custom_provider = RecordingStudioAttachable::UploadProvider.new(
-      key: :google_drive,
-      label: "Google Drive",
-      url: "/imports/google_drive",
+      key: :my_cloud,
+      label: "My Cloud",
+      url: "/imports/my_cloud",
       iframe_title: ->(recording:) { "Picker for #{recording.id}" }
     )
     default_provider = RecordingStudioAttachable::UploadProvider.new(
-      key: :dropbox,
-      label: "Dropbox",
-      url: "/imports/dropbox"
+      key: :extra_cloud,
+      label: "Extra Cloud",
+      url: "/imports/extra_cloud"
     )
 
     assert_equal "Picker for rec-1",
                  custom_provider.iframe_title(view_context: FakeViewContext.new("/root"), recording: FakeRecording.new("rec-1"))
-    assert_equal "Dropbox picker",
+    assert_equal "Extra Cloud picker",
                  default_provider.iframe_title(view_context: FakeViewContext.new("/root"), recording: FakeRecording.new("rec-2"))
   end
 
   def test_initialize_rejects_unknown_strategies
     error = assert_raises(ArgumentError) do
       RecordingStudioAttachable::UploadProvider.new(
-        key: :google_drive,
-        label: "Google Drive",
-        url: "/imports/google_drive",
+        key: :my_cloud,
+        label: "My Cloud",
+        url: "/imports/my_cloud",
         strategy: :drawer
       )
     end
@@ -305,8 +305,8 @@ class UploadProviderTest < Minitest::Test
 
   def test_modal_button_options_merge_existing_actions_and_rewrite_invalid_modal_urls
     provider = RecordingStudioAttachable::UploadProvider.new(
-      key: :google_drive,
-      label: "Google Drive",
+      key: :my_cloud,
+      label: "My Cloud",
       url: "https://example.test/%zz",
       strategy: :modal_page,
       data: { action: "analytics#track", source: "toolbar" },
@@ -319,13 +319,13 @@ class UploadProviderTest < Minitest::Test
     assert_equal "toolbar", options.dig(:data, :source)
     assert_equal "provider-button", options[:class]
     assert_includes options.dig(:data, :provider_frame_url), "embed=modal"
-    assert_includes options.dig(:data, :provider_frame_url), "provider_key=google_drive"
+    assert_includes options.dig(:data, :provider_frame_url), "provider_key=my_cloud"
   end
 
   def test_button_options_append_query_params_for_invalid_urls_without_parsing
     provider = RecordingStudioAttachable::UploadProvider.new(
-      key: :dropbox,
-      label: "Dropbox",
+      key: :extra_cloud,
+      label: "Extra Cloud",
       url: "https://example.test/%zz"
     )
 
@@ -341,8 +341,8 @@ class UploadProviderTest < Minitest::Test
 
   def test_modal_button_options_allow_blank_urls_without_rendering_frame_url
     provider = RecordingStudioAttachable::UploadProvider.new(
-      key: :google_drive,
-      label: "Google Drive",
+      key: :my_cloud,
+      label: "My Cloud",
       url: ->(**) {},
       strategy: :modal_page
     )

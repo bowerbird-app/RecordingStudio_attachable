@@ -3,7 +3,14 @@
 module RecordingStudioAttachable
   module Services
     class ImportAttachmentPayloads < ApplicationService
-      class BatchFailure < StandardError; end
+      class BatchFailure < StandardError
+        attr_reader :result_errors
+
+        def initialize(message, result_errors = [])
+          super(message)
+          @result_errors = result_errors
+        end
+      end
 
       def initialize(parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil)
         @parent_recording = parent_recording
@@ -33,14 +40,14 @@ module RecordingStudioAttachable
             end
           rescue BatchFailure => e
             purge_created_attachments(created)
-            return failure(e.message, errors: failures || [])
+            return failure(e.message, errors: e.result_errors.presence || failures || [])
           end
 
           success(created)
         end
       rescue BatchFailure => e
         purge_created_attachments(created)
-        failure(e.message, errors: failures || [])
+        failure(e.message, errors: e.result_errors.presence || failures || [])
       end
 
       def import_io_payloads!(created)
@@ -112,7 +119,7 @@ module RecordingStudioAttachable
       def handle_result!(result, fallback_error:)
         return if result.success?
 
-        raise BatchFailure, result.error.presence || fallback_error
+        raise BatchFailure.new(result.error.presence || fallback_error, result.errors)
       end
 
       def source_for(payload, fallback:)

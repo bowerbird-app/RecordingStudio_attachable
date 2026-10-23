@@ -10,11 +10,3 @@ en:
         other: "Used in %{count} places"
       trash_in_use: "Trashing this photo hides it everywhere it appears. You can bring it back."
       alt_text_hint: "What a screen reader says."
-    google_drive:
-      connected: "Connected Google Drive."
-      disconnected: "Disconnected Google Drive."
-      session_expired: "Google Drive session expired. Reconnect to continue."
-    dropbox:
-      connected: "Dropbox is connected."
-      disconnected: "Dropbox is disconnected."
-      session_expired: "Dropbox signed you out. Connect again to keep going."

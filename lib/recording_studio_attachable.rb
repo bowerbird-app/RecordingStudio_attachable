@@ -6,6 +6,7 @@ module RecordingStudioAttachable
   class DependencyUnavailableError < Error; end
   class StorageLimitUnknown < Error; end
   class StorageLimitError < Error; end
+  class ReconnectRequired < Error; end
 
   class << self
     def configuration
@@ -39,15 +40,11 @@ require "recording_studio_attachable/attachment_file_facts"
 require "recording_studio_attachable/attachment_collection"
 require "recording_studio_attachable/attachment_file_button_responses"
 require "recording_studio_attachable/upload_provider"
+require "recording_studio_attachable/provider_connect"
 require "recording_studio_attachable/json_body"
 require "recording_studio_attachable/adapter"
 require "recording_studio_attachable/adapter/selection"
 require "recording_studio_attachable/adapter/client_picker"
-require "recording_studio_attachable/adapter/oauth_http"
-require "recording_studio_attachable/adapter/session"
-require "recording_studio_attachable/adapter/configurable"
-require "recording_studio_attachable/adapter/oauth_client"
-require "recording_studio_attachable/session_access_token"
 require "recording_studio_attachable/remote_file"
 require "recording_studio_attachable/safe_remote_fetch"
 require "recording_studio_attachable/authorization"
@@ -56,9 +53,7 @@ require "recording_studio_attachable/api"
 require "recording_studio_attachable/storage_release"
 require "recording_studio_attachable/storage_limit"
 require "recording_studio_attachable/services/base_service"
-require "recording_studio_attachable/adapter/import_selected_files"
-Dir[File.expand_path("recording_studio_attachable/*/engine.rb", __dir__)].each do |path|
-  require path
-end
 require "recording_studio_attachable/engine"
 require "recording_studio/capabilities/attachable"
+
+ActiveSupport.run_load_hooks(:recording_studio_attachable, RecordingStudioAttachable)

@@ -93,14 +93,15 @@ class DummyDocsTest < Minitest::Test
     assert_includes controller_source, "config.register_upload_provider("
     assert_includes controller_source, "RecordingStudioAttachable::Services::ImportAttachment.call"
     assert_includes controller_source, "recording_attachment_imports_path(recording)"
-    assert_includes controller_source, "route_helpers.google_drive.recording_bootstrap_path(recording, format: :json)"
-    assert_includes controller_source, "remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|"
+    assert_includes controller_source, "route_helpers.my_cloud.recording_bootstrap_path(recording, format: :json)"
+    assert_includes controller_source, "remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, **"
     assert_includes controller_source, "payload.fetch(:provider_payload)"
+    assert_not_includes controller_source, "access_token: access_token"
     assert_includes controller_source, "strategy: :client_picker"
     assert_includes controller_source, "provider.import_remote_attachments(...) via remote_importer:"
     assert_includes controller_source, "provider_payload: opaque provider-specific selection data"
     assert_includes controller_source,
-                    "The built-in Google Drive addon in the dummy app demonstrates the same provider registration and import flow"
+                    "The dummy My Cloud addon demonstrates the same provider registration and import flow"
   end
 
   def test_dummy_picker_page_documents_picker_contract_and_examples

@@ -9,6 +9,9 @@ pin_all_from "app/javascript/controllers", under: "controllers"
 pin_all_from RecordingStudioAttachable::Engine.root.join("app/javascript/controllers/recording_studio_attachable"),
   under: "controllers/recording_studio_attachable",
   to: "controllers/recording_studio_attachable"
+pin "recording_studio_attachable/provider_launchers",
+  to: "controllers/recording_studio_attachable/provider_launchers.js"
+pin "my_cloud/picker_launcher", to: "my_cloud/picker_launcher.js"
 pin "page_html_preview_addon", to: "page_html_preview_addon.js"
 pin "recording_studio_attachable/tiptap/attachment_image_addon",
   to: "recording_studio_attachable/tiptap/attachment_image_addon.js"

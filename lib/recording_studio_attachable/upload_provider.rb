@@ -39,7 +39,8 @@ module RecordingStudioAttachable
     def initialize(key:, label:, url:, description: nil, icon: "cloud", style: :secondary, size: :md,
                    target: nil, visible: nil, strategy: :link, launcher: nil, bootstrap_url: nil,
                    import_url: nil, remote_importer: nil, presentation: nil, modal_title: nil, modal_size: :xl,
-                   iframe_title: nil, allowed_payload_keys: nil, launcher_module: nil, **system_arguments)
+                   iframe_title: nil, allowed_payload_keys: nil, launcher_module: nil, connect: nil,
+                   reconnect_error: nil, **system_arguments)
       @key = key.to_sym
       @label = label
       @url = url
@@ -55,6 +56,8 @@ module RecordingStudioAttachable
       @bootstrap_url = bootstrap_url
       @import_url = import_url
       @remote_importer = remote_importer
+      @connect = connect
+      @reconnect_error = reconnect_error
       @modal_title = modal_title
       @modal_size = modal_size.to_sym
       @iframe_title = iframe_title
@@ -64,6 +67,8 @@ module RecordingStudioAttachable
 
       validate_strategy!
       validate_remote_importer!
+      validate_callable!(@connect, :connect)
+      validate_callable!(@reconnect_error, :reconnect_error)
     end
 
     def render?(view_context:, recording:)
@@ -143,6 +148,23 @@ module RecordingStudioAttachable
         impersonator: impersonator,
         context: context
       )
+    rescue StandardError => e
+      raise unless reconnect_required?(e)
+
+      reconnect_import_result(parent_recording: parent_recording, context: context)
+    end
+
+    def connect_payload(recording:, context:)
+      return if @connect.blank?
+
+      normalize_connect_payload(call_connect(recording: recording, context: context))
+    end
+
+    def reconnect_required?(error)
+      return true if error.is_a?(RecordingStudioAttachable::ReconnectRequired)
+      return false unless @reconnect_error.respond_to?(:call)
+
+      !!@reconnect_error.call(error)
     end
 
     private
@@ -154,9 +176,42 @@ module RecordingStudioAttachable
     end
 
     def validate_remote_importer!
-      return if remote_importer.nil? || remote_importer.respond_to?(:call)
+      validate_callable!(remote_importer, :remote_importer)
+    end
 
-      raise ArgumentError, "remote_importer must respond to #call"
+    def validate_callable!(value, name)
+      return if value.nil? || value.respond_to?(:call)
+
+      raise ArgumentError, "#{name} must respond to #call"
+    end
+
+    def reconnect_import_result(parent_recording:, context:)
+      RecordingStudioAttachable::Services::BaseService::Result.new(
+        success: false,
+        error: Copy.t(
+          "providers.reconnect_to_continue",
+          provider: label,
+          default: "Reconnect #{label} to continue"
+        ),
+        errors: connect_payload(recording: parent_recording, context: context)
+      )
+    end
+
+    def normalize_connect_payload(payload)
+      return if payload.blank?
+
+      hash = payload.to_h.symbolize_keys
+      {
+        url: hash[:url],
+        method: (hash[:method].presence || "post").to_s.downcase,
+        fields: hash.fetch(:fields, {}).to_h,
+        fallback_url: hash[:fallback_url]
+      }.compact
+    end
+
+    # `connect` is called with keyword arguments only: `recording:` and `context:`.
+    def call_connect(recording:, context:)
+      @connect.call(recording: recording, context: context)
     end
 
     def launch_url(view_context:, recording:, query_params: {})
@@ -228,37 +283,16 @@ module RecordingStudioAttachable
       @system_arguments.except(:data)
     end
 
+    # `remote_importer` is called with keyword arguments only: `parent_recording:`,
+    # `attachments:`, `actor:`, `impersonator:`, and `context:`.
     def call_importer(parent_recording:, attachments:, actor:, impersonator:, context:)
-      kwargs = {
+      @remote_importer.call(
         parent_recording: parent_recording,
         attachments: attachments,
         actor: actor,
         impersonator: impersonator,
         context: context
-      }
-      parameters = @remote_importer.parameters
-
-      return @remote_importer.call(**kwargs) if parameters.any? { |type, _name| type == :keyrest }
-
-      keyword_names = parameters.filter_map do |type, name|
-        name if KEYWORD_PARAMETER_TYPES.include?(type)
-      end
-      return @remote_importer.call(**kwargs.slice(*keyword_names)) if keyword_names.any?
-
-      case @remote_importer.arity
-      when 5
-        @remote_importer.call(parent_recording, attachments, actor, impersonator, context)
-      when 4
-        @remote_importer.call(parent_recording, attachments, actor, impersonator)
-      when 3
-        @remote_importer.call(parent_recording, attachments, actor)
-      when 2
-        @remote_importer.call(parent_recording, attachments)
-      when 1
-        @remote_importer.call(parent_recording)
-      else
-        @remote_importer.call
-      end
+      )
     end
 
     def resolve(value, view_context:, recording:)

@@ -72,11 +72,11 @@ class RecordAttachmentUploadsTest < Minitest::Test
         RecordingStudioAttachable::Services::RecordAttachmentUploads.call(
           parent_recording: parent,
           actor: actor,
-          default_source: "google_drive",
+          default_source: "my_cloud",
           attachments: [
             {
               signed_blob_id: "blob-1",
-              name: "drive file",
+              name: "cloud file",
               metadata: { external_id: "file-1" }
             }
           ]
@@ -86,7 +86,7 @@ class RecordAttachmentUploadsTest < Minitest::Test
       assert result.success?
     end
 
-    assert_equal({ external_id: "file-1", source: "google_drive" }, captured[:metadata])
+    assert_equal({ external_id: "file-1", source: "my_cloud" }, captured[:metadata])
   end
 
   private

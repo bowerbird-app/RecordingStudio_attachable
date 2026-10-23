@@ -30,7 +30,7 @@ class AdapterSelectionTest < Minitest::Test
           provider_payload: { "id" => "file-1" },
           name: "Brief",
           description: "Notes",
-          metadata: { "provider" => "dropbox", "folder" => "inbox" }
+          metadata: { "provider" => "extra_cloud", "folder" => "inbox" }
         }
       ]
     ).first

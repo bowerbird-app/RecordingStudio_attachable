@@ -24,7 +24,7 @@ module RecordingStudioAttachable
       recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
       captured = nil
       result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [])
-      provider = Struct.new(:key).new(:google_drive)
+      provider = Struct.new(:key).new(:my_cloud)
 
       with_routing do |set|
         set.draw do
@@ -49,11 +49,11 @@ module RecordingStudioAttachable
                          params: {
                            recording_id: recording.id,
                            attachment_import: {
-                             provider_key: "google_drive",
+                             provider_key: "my_cloud",
                              attachments: [
                                {
                                  signed_blob_id: "blob-1",
-                                 name: "Drive file",
+                                 name: "Cloud file",
                                  metadata: { external_id: "file-1", provider: "spoofed" },
                                  source: "spoofed",
                                  service_name: "mirror"
@@ -72,7 +72,7 @@ module RecordingStudioAttachable
 
       assert_response :created
       assert_equal recording, captured[:parent_recording]
-      assert_equal [{ provider_key: "google_drive", signed_blob_id: "blob-1", name: "Drive file", metadata: { "external_id" => "file-1", "provider" => "google_drive" }, provider_payload: nil }],
+      assert_equal [{ provider_key: "my_cloud", signed_blob_id: "blob-1", name: "Cloud file", metadata: { "external_id" => "file-1", "provider" => "my_cloud" }, provider_payload: nil }],
                    captured[:attachments]
     end
 
@@ -114,18 +114,18 @@ module RecordingStudioAttachable
 
     def test_attachment_payloads_strip_provider_payload_to_allowed_keys
       @controller = AttachmentImportsController.new
-      provider = Struct.new(:key, :allowed_payload_keys).new(:dropbox, %w[id])
+      provider = Struct.new(:key, :allowed_payload_keys).new(:my_cloud, %w[id])
 
       @controller.send(
         :params=,
         ActionController::Parameters.new(
           attachment_import: {
-            provider_key: "dropbox",
+            provider_key: "my_cloud",
             attachments: [
               {
                 provider_payload: {
                   id: "file-1",
-                  url: "https://dl.dropboxusercontent.com/s/stolen",
+                  url: "https://files.example.test/s/stolen",
                   link: "https://evil.test"
                 }
               }
@@ -145,7 +145,7 @@ module RecordingStudioAttachable
       @controller = AttachmentImportsController.new
       recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
       authorized = nil
-      provider = Struct.new(:key, :allowed_payload_keys).new(:dropbox, %w[id])
+      provider = Struct.new(:key, :allowed_payload_keys).new(:my_cloud, %w[id])
       result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [])
 
       with_routing do |set|
@@ -170,7 +170,7 @@ module RecordingStudioAttachable
                          params: {
                            recording_id: recording.id,
                            attachment_import: {
-                             provider_key: "dropbox",
+                             provider_key: "my_cloud",
                              attachments: [{ provider_payload: { id: "file-1" } }]
                            }
                          },
@@ -187,21 +187,24 @@ module RecordingStudioAttachable
       assert_equal [:upload, "rec-1"], authorized
     end
 
-    def test_create_imports_a_dropbox_chooser_selection_through_the_shared_endpoint
+    def test_create_imports_a_client_picker_selection_through_the_shared_endpoint
       @controller = AttachmentImportsController.new
       recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
       captured = nil
       result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [])
       original_providers = RecordingStudioAttachable.configuration.upload_providers.dup
-      original_dropbox = RecordingStudioAttachable.configuration.dropbox.to_h
-
-      RecordingStudioAttachable.configuration.dropbox.merge!(
-        enabled: true,
-        client_id: "dropbox-client-id",
-        client_secret: "dropbox-client-secret",
-        redirect_uri: "https://example.test/recording_studio_attachable/dropbox/oauth/callback"
+      RecordingStudioAttachable.configuration.register_upload_provider(
+        :my_cloud,
+        label: "My Cloud",
+        url: "/my_cloud/bootstrap",
+        strategy: :client_picker,
+        launcher: "my_cloud",
+        allowed_payload_keys: %w[id],
+        remote_importer: lambda { |**kwargs|
+          captured = kwargs
+          result
+        }
       )
-      RecordingStudioAttachable::Dropbox::Engine.send(:register_upload_provider)
 
       with_routing do |set|
         set.draw do
@@ -215,33 +218,24 @@ module RecordingStudioAttachable
           @controller.stub(:authorize_attachment_action!, true) do
             @controller.stub(:capability_options_for, {}) do
               @controller.define_singleton_method(:recording_attachments_path) { |_recording| "/recordings/#{recording.id}/attachments" }
-              @request.session["recording_studio_attachable_dropbox"] = {
-                "tokens" => { "access_token" => "dropbox-token", "expires_at" => Time.current.to_i + 3600 }
-              }
-
-              RecordingStudioAttachable::Dropbox::Services::ImportSelectedFiles.stub(:call, lambda { |**kwargs|
-                captured = kwargs
-                result
-              }) do
-                @controller.stub(:protect_against_forgery?, false) do
-                  post :create,
-                       params: {
-                         recording_id: recording.id,
-                         attachment_import: {
-                           provider_key: "dropbox",
-                           attachments: [
-                             {
-                               name: "kiln.jpg",
-                               description: "",
-                               provider_key: "dropbox",
-                               provider_payload: { id: "id:fia-lKYKs5AAAAAAAAAACw" },
-                               content_type: ""
-                             }
-                           ]
-                         }
-                       },
-                       as: :json
-                end
+              @controller.stub(:protect_against_forgery?, false) do
+                post :create,
+                     params: {
+                       recording_id: recording.id,
+                       attachment_import: {
+                         provider_key: "my_cloud",
+                         attachments: [
+                           {
+                             name: "kiln.jpg",
+                             description: "",
+                             provider_key: "my_cloud",
+                             provider_payload: { id: "file-1" },
+                             content_type: ""
+                           }
+                         ]
+                       }
+                     },
+                     as: :json
               end
             end
           end
@@ -250,13 +244,72 @@ module RecordingStudioAttachable
 
       assert_response :created
       assert_equal recording, captured[:parent_recording]
-      assert_equal "dropbox-token", captured[:access_token]
-      selection = captured[:file_ids].first
-      assert_equal "id:fia-lKYKs5AAAAAAAAAACw", selection.fetch("id")
-      assert_equal "kiln.jpg", selection.fetch("name")
+      payload = captured[:attachments].first
+      assert_equal "file-1", payload.fetch(:provider_payload).fetch("id")
+      assert_equal "kiln.jpg", payload.fetch(:name)
     ensure
-      RecordingStudioAttachable.configuration.dropbox.merge!(original_dropbox)
-      RecordingStudioAttachable.configuration.instance_variable_set(:@upload_providers, original_providers)
+      RecordingStudioAttachable.configuration.upload_providers = original_providers
+    end
+
+    def test_create_returns_reconnect_payload_when_remote_import_requires_reconnect
+      @controller = AttachmentImportsController.new
+      recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+      original_providers = RecordingStudioAttachable.configuration.upload_providers.dup
+      @controller.define_singleton_method(:provider_csrf_token) { "csrf-token" }
+      RecordingStudioAttachable.configuration.register_upload_provider(
+        :my_cloud,
+        label: "My Cloud",
+        url: "/my_cloud/bootstrap",
+        strategy: :client_picker,
+        launcher: "my_cloud",
+        allowed_payload_keys: %w[id],
+        remote_importer: ->(**) { raise RecordingStudioAttachable::ReconnectRequired, "reconnect" },
+        connect: lambda { |recording:, context:|
+          {
+            url: "/my_cloud/recordings/#{recording.id}/connect",
+            method: "post",
+            fields: { authenticity_token: context.provider_csrf_token },
+            fallback_url: "/my_cloud/recordings/#{recording.id}/connect"
+          }
+        }
+      )
+
+      with_routing do |set|
+        set.draw do
+          post "/recordings/:recording_id/attachments/imports",
+               to: "recording_studio_attachable/attachment_imports#create"
+        end
+
+        @routes = set
+
+        RecordingStudio::Recording.stub(:find, recording) do
+          @controller.stub(:authorize_attachment_action!, true) do
+            @controller.stub(:capability_options_for, {}) do
+              @controller.stub(:protect_against_forgery?, false) do
+                post :create,
+                     params: {
+                       recording_id: recording.id,
+                       attachment_import: {
+                         provider_key: "my_cloud",
+                         attachments: [{ provider_payload: { id: "file-1" } }]
+                       }
+                     },
+                     as: :json
+              end
+            end
+          end
+        end
+      end
+
+      assert_response :unprocessable_entity
+      payload = JSON.parse(@response.body)
+      assert_equal "Reconnect My Cloud to continue", payload.fetch("error")
+      errors = payload.fetch("errors")
+      assert_equal "/my_cloud/recordings/rec-1/connect", errors.fetch("url")
+      assert_equal "post", errors.fetch("method")
+      assert_equal "csrf-token", errors.fetch("fields").fetch("authenticity_token")
+    ensure
+      RecordingStudioAttachable.configuration.upload_providers = original_providers
     end
 
     def test_create_rejects_unknown_provider_keys
@@ -300,7 +353,7 @@ module RecordingStudioAttachable
       @controller = AttachmentImportsController.new
       recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
       result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [])
-      provider = Struct.new(:key).new(:google_drive)
+      provider = Struct.new(:key).new(:my_cloud)
 
       with_routing do |set|
         set.draw do
@@ -322,8 +375,8 @@ module RecordingStudioAttachable
                            redirect_mode: "return_to",
                            return_to: "/pages/page-1#gallery",
                            attachment_import: {
-                             provider_key: "google_drive",
-                             attachments: [{ signed_blob_id: "blob-1", name: "Drive file" }]
+                             provider_key: "my_cloud",
+                             attachments: [{ signed_blob_id: "blob-1", name: "Cloud file" }]
                            }
                          },
                          as: :json

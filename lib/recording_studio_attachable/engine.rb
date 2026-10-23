@@ -10,6 +10,14 @@ module RecordingStudioAttachable
       app.config.assets.paths << root.join("app/javascript")
     end
 
+    initializer "recording_studio_attachable.adapter_routes", after: :load_config_initializers do
+      RecordingStudioAttachable::Engine.routes.append do
+        RecordingStudioAttachable.adapter_route_blocks.each_value do |route_block|
+          instance_eval(&route_block)
+        end
+      end
+    end
+
     initializer "recording_studio_attachable.load_config" do |app|
       RecordingStudioAttachable::Engine.send(:load_yaml_config, app)
       RecordingStudioAttachable::Engine.send(:load_x_config, app)

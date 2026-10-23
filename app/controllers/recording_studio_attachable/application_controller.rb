@@ -19,6 +19,11 @@ module RecordingStudioAttachable
     helper_method :attachment_page_nav_anchor_url
     helper_method :authorized_attachment_file_path
     helper_method :authorized_attachment_preview_path
+    helper_method :provider_csrf_token
+
+    def provider_csrf_token
+      form_authenticity_token
+    end
 
     private
 

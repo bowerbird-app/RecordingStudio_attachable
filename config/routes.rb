@@ -1,10 +1,6 @@
 # frozen_string_literal: true
 
 RecordingStudioAttachable::Engine.routes.draw do
-  RecordingStudioAttachable.adapter_route_blocks.each do |route_block|
-    instance_eval(&route_block)
-  end
-
   resources :recordings, only: [] do
     resources :attachments, only: :index, controller: "recording_attachments"
     get "attachments/picker", to: "attachment_pickers#index", as: :attachment_picker

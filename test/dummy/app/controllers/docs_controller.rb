@@ -328,7 +328,7 @@ class DocsController < ApplicationController
       "Providers that need cloud imports should register a remote_importer hook so the shared upload queue can hand normalized remote selections back to addon code without giving up control of the browser flow.",
       "Provider code should usually call the import services directly; the engine-owned recording_attachment_imports_path(recording) endpoint is for browser handoff flows that already run inside the host app.",
       "The gem owns authorization, Active Storage validation, attachment-recording creation, and provider provenance once the provider hands over a file IO or signed blob id.",
-      "The built-in Google Drive addon in the dummy app demonstrates the same provider registration and import flow that third-party addons can implement in their own engines or services."
+      "The dummy My Cloud addon demonstrates the same provider registration and import flow that third-party addons can implement in their own engines or services."
     ]
 
     @plugin_api_examples = [
@@ -339,23 +339,21 @@ class DocsController < ApplicationController
         code: <<~RUBY
           RecordingStudioAttachable.configure do |config|
             config.register_upload_provider(
-              :google_drive,
-              label: "Google Drive",
+              :my_cloud,
+              label: "My Cloud",
               icon: "cloud",
               strategy: :client_picker,
-              launcher: "google_drive",
+              launcher: "my_cloud",
               bootstrap_url: ->(route_helpers:, recording:) do
-                route_helpers.google_drive.recording_bootstrap_path(recording, format: :json)
+                route_helpers.my_cloud.recording_bootstrap_path(recording, format: :json)
               end,
-              remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|
-                access_token = GoogleDriveSessionAccessToken.fetch(session: context.session)
-
-                MyAddon::GoogleDrive::ImportSelectedFiles.call(
+              remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, **|
+                RecordingStudioAttachable::Services::ImportRemoteFiles.call(
                   parent_recording: parent_recording,
-                  file_ids: attachments.map { |payload| payload.fetch(:provider_payload) },
-                  access_token: access_token,
+                  provider_key: :my_cloud,
                   actor: actor,
-                  impersonator: impersonator
+                  impersonator: impersonator,
+                  payloads: attachments.map { |payload| payload.fetch(:provider_payload) }
                 )
               end
             )
@@ -377,7 +375,7 @@ class DocsController < ApplicationController
             name: remote_file.title,
             # The declared content type is kept. Attach sniffs the bytes and
             # rejects a mismatch.
-            source: "google_drive",
+            source: "my_cloud",
             metadata: { external_id: remote_file.id }
           )
         RUBY
@@ -387,15 +385,13 @@ class DocsController < ApplicationController
         subtitle: "provider.import_remote_attachments(...) via remote_importer:",
         language: :ruby,
         code: <<~RUBY
-          remote_importer = lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|
-            access_token = GoogleDriveSessionAccessToken.fetch(session: context.session)
-
-            MyAddon::GoogleDrive::ImportSelectedFiles.call(
+          remote_importer = lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, **|
+            RecordingStudioAttachable::Services::ImportRemoteFiles.call(
               parent_recording: parent_recording,
-              file_ids: attachments.map { |payload| payload.fetch(:provider_payload) },
-              access_token: access_token,
+              provider_key: :my_cloud,
               actor: actor,
-              impersonator: impersonator
+              impersonator: impersonator,
+              payloads: attachments.map { |payload| payload.fetch(:provider_payload) }
             )
           end
         RUBY

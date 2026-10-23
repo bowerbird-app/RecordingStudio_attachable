@@ -94,18 +94,17 @@ class LocalesTest < Minitest::Test
     "file_facts.types.image/jpeg" => "JPEG",
     "file_facts.types.image/png" => "PNG",
     "file_facts.types.application/pdf" => "PDF",
-    "google_drive.connect" => "Connect Google Drive",
-    "google_drive.search" => "Search",
-    "google_drive.disconnect" => "Disconnect",
-    "google_drive.import_selected" => "Import selected",
-    "google_drive.back_to_upload" => "Back to upload page",
-    "google_drive.empty" => "No Google Drive files matched the current search.",
-    "google_drive.next_page" => "Next page",
-    "google_drive.title" => "Google Drive",
-    "google_drive.connected" => "Connected Google Drive.",
-    "google_drive.disconnected" => "Disconnected Google Drive.",
-    "google_drive.session_expired" => "Google Drive session expired. Reconnect to continue.",
-    "google_drive.not_enabled" => "Google Drive addon is not enabled"
+    "providers.connect" => "Connect %{provider}",
+    "providers.search" => "Search",
+    "providers.disconnect" => "Disconnect",
+    "providers.import_selected" => "Import selected",
+    "providers.back_to_upload" => "Back to upload page",
+    "providers.empty" => "Nothing matched that search.",
+    "providers.next_page" => "Next page",
+    "providers.title" => "%{provider}",
+    "providers.disconnect_failed" => "%{provider} isn't connected.",
+    "providers.not_available" => "%{provider} isn't available right now",
+    "providers.reconnect" => "Reconnect %{provider}"
   }.freeze
   # rubocop:enable Style/FormatStringToken
 
@@ -168,8 +167,8 @@ class LocalesTest < Minitest::Test
       )
       assert_equal "Edit Hero", I18n.t("recording_studio.attachable.collection.edit_aria", name: "Hero")
       assert_equal(
-        "Import files into recording #42 using the built-in addon",
-        I18n.t("recording_studio.attachable.google_drive.subtitle", recording_id: 42)
+        "Connect My Cloud",
+        I18n.t("recording_studio.attachable.providers.connect", provider: "My Cloud")
       )
     end
   end
@@ -191,7 +190,7 @@ class LocalesTest < Minitest::Test
     assert tree.key?("upload")
     assert tree.key?("collection")
     assert tree.key?("picker")
-    assert tree.key?("google_drive")
+    assert tree.key?("providers")
     assert tree.key?("flashes")
     assert tree.key?("errors")
     assert tree.key?("file_facts")
@@ -215,16 +214,16 @@ class LocalesTest < Minitest::Test
       I18n.backend.store_translations(
         :en,
         {
-          "recording_studio_attachable" => { "google_drive" => { "connected" => "LEGACY Connected" } },
-          "recording_studio" => { "attachable" => { "google_drive" => { "connected" => "NESTED Connected" } } }
+          "recording_studio_attachable" => { "attachments" => { "updated" => "LEGACY Saved" } },
+          "recording_studio" => { "attachable" => { "attachments" => { "updated" => "NESTED Saved" } } }
         }
       )
 
-      assert_equal "LEGACY Connected",
+      assert_equal "LEGACY Saved",
                    RecordingStudioAttachable::Copy.legacy_t(
-                     "google_drive.connected",
-                     "google_drive.connected",
-                     default: "Connected Google Drive."
+                     "attachments.updated",
+                     "attachments.updated",
+                     default: "Saved"
                    )
     end
   end
@@ -233,14 +232,14 @@ class LocalesTest < Minitest::Test
     with_isolated_backend do
       I18n.backend.store_translations(
         :en,
-        { "recording_studio" => { "attachable" => { "google_drive" => { "connected" => "NESTED Connected" } } } }
+        { "recording_studio" => { "attachable" => { "attachments" => { "updated" => "NESTED Saved" } } } }
       )
 
-      assert_equal "NESTED Connected",
+      assert_equal "NESTED Saved",
                    RecordingStudioAttachable::Copy.legacy_t(
-                     "google_drive.connected",
-                     "google_drive.connected",
-                     default: "Connected Google Drive."
+                     "attachments.updated",
+                     "attachments.updated",
+                     default: "Saved"
                    )
     end
   end

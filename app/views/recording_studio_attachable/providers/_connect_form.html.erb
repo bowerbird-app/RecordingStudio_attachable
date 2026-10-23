@@ -1,0 +1,42 @@
+<% provider_label = local_assigns.fetch(:provider_label) %>
+<% reconnect = local_assigns.fetch(:reconnect, false) %>
+<% connect_url = local_assigns.fetch(:connect_url) %>
+<% method = local_assigns.fetch(:method, :post) %>
+<% fields = local_assigns.fetch(:fields, {}) %>
+<% auto_submit = local_assigns.fetch(:auto_submit, false) %>
+<% form_id = ("provider-connect-#{provider_label.to_s.parameterize}" if auto_submit) %>
+<% form_html = { id: form_id }.compact %>
+
+<div class="space-y-4" data-controller="recording-studio-attachable--provider-modal-frame">
+  <p class="text-sm text-(--surface-muted-content-color)">
+    <% if reconnect %>
+      <%= t("recording_studio.attachable.providers.reconnect_help", provider: provider_label) %>
+    <% else %>
+      <%= t("recording_studio.attachable.providers.connect_help", provider: provider_label) %>
+    <% end %>
+  </p>
+
+  <% if connect_url.present? %>
+    <%= form_with url: connect_url, method: method, html: form_html, class: "inline-flex" do %>
+      <% fields.each do |name, value| %>
+        <%= hidden_field_tag name, value %>
+      <% end %>
+      <%= render FlatPack::Button::Component.new(
+        text: t(
+          reconnect ? "recording_studio.attachable.providers.reconnect" : "recording_studio.attachable.providers.connect",
+          provider: provider_label
+        ),
+        style: reconnect ? :danger : :primary,
+        size: :md,
+        icon: "cloud",
+        type: "submit"
+      ) %>
+    <% end %>
+  <% end %>
+</div>
+
+<% if auto_submit && connect_url.present? && form_id.present? %>
+  <script>
+    document.getElementById(<%= form_id.to_json %>)?.submit()
+  </script>
+<% end %>

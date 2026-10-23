@@ -20,6 +20,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
 - RecordingStudio Metrics `>= 0.3.0, < 0.6` (latest GitHub tag `v0.5.0`) for operations-API storage and upload metrics
+- Optional cloud import: a separate provider gem that registers with `register_upload_provider`. Attachable does not depend on provider gems at runtime.
 
 ## Quick start
 
@@ -358,25 +359,43 @@ The public import services remain the provider integration layer.
 ```ruby
 RecordingStudioAttachable.configure do |config|
   config.register_upload_provider(
-    :google_drive,
-    label: "Google Drive",
+    :my_cloud,
+    label: "My Cloud",
     icon: "cloud",
     strategy: :client_picker,
-    launcher: "google_drive",
+    launcher: "my_cloud",
+    launcher_module: "my_cloud/picker_launcher",
     bootstrap_url: ->(route_helpers:, recording:) do
-      route_helpers.google_drive.recording_bootstrap_path(recording, format: :json)
+      route_helpers.my_cloud.recording_bootstrap_path(recording, format: :json)
     end,
-    remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|
-      access_token = GoogleDriveSessionAccessToken.fetch(session: context.session)
-
-      MyAddon::GoogleDrive::ImportSelectedFiles.call(
+    import_url: ->(route_helpers:, recording:) do
+      route_helpers.my_cloud.recording_imports_path(recording, format: :json)
+    end,
+    allowed_payload_keys: %w[id],
+    remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, **|
+      RecordingStudioAttachable::Services::ImportRemoteFiles.call(
         parent_recording: parent_recording,
-        file_ids: attachments.map { |payload| payload.fetch(:provider_payload) },
-        access_token: access_token,
+        provider_key: :my_cloud,
         actor: actor,
-        impersonator: impersonator
+        impersonator: impersonator,
+        payloads: attachments.map { |payload|
+          {
+            download: -> { { io: downloaded_io, filename: "file.bin", content_type: "application/octet-stream" } },
+            filename: payload.dig(:provider_payload, "id"),
+            metadata: { external_id: payload.dig(:provider_payload, "id") }
+          }
+        }
       )
-    end
+    end,
+    connect: ->(recording:, context:) {
+      {
+        url: "/my_cloud/connect",
+        method: "post",
+        fields: { authenticity_token: context.provider_csrf_token },
+        fallback_url: "/my_cloud/connect"
+      }
+    },
+    reconnect_error: ->(error) { error.is_a?(RecordingStudioAttachable::ReconnectRequired) }
   )
 end
 ```
@@ -388,19 +407,24 @@ Each provider registration supports:
 - `strategy`: `:link`, `:modal_page`, or `:client_picker`
 - `url`: string or callable for `:link`
 - `bootstrap_url`: JSON bootstrap endpoint for `:client_picker`
+- `import_url`: shared import endpoint for `:client_picker`
 - `launcher`: browser launcher name for `:client_picker`
-- `remote_importer`: callable hook that materializes queued remote selections into attachments through the shared Attachable result contract
+- `launcher_module`: importmap module the upload page pins when the provider is shown
+- `allowed_payload_keys`: keys kept from browser `provider_payload`
+- `remote_importer`: callable hook that materializes queued remote selections into attachments through the shared Attachable result contract. It is called with keyword arguments only: `parent_recording:`, `attachments:`, `actor:`, `impersonator:`, and `context:`.
+- `connect`: callable receiving keyword arguments only (`recording:`, `context:`) and returning `{ url, method, fields, fallback_url }`
+- `reconnect_error`: callable `(error) -> bool` mapped by the shared import path, in addition to `RecordingStudioAttachable::ReconnectRequired`
 - `modal_title`: optional modal heading for `:modal_page`
 - `icon`, `style`, `size`, `target`: FlatPack button options
 - `visible`: optional callable receiving `view_context:` and `recording:`
 
-The `remote_importer` hook is the public cloud-provider API. It receives:
+The `remote_importer` hook is the public cloud-provider API. It receives keyword arguments only:
 
-- `parent_recording`
-- `attachments`: normalized remote selections from the shared upload queue
-- `actor`
-- `impersonator`
-- `context`: the request/controller context for session-backed provider auth
+- `parent_recording:`
+- `attachments:`: normalized remote selections from the shared upload queue
+- `actor:`
+- `impersonator:`
+- `context:`: the request/controller context for session-backed provider auth
 
 It must return the same `RecordingStudioAttachable::Services::BaseService::Result` shape used by the gem's other service APIs.
 
@@ -412,16 +436,16 @@ For modal-page providers, the shared browser contract is:
 - addon screens can complete auth in a popup and post a `provider-auth-complete` message back to the upload page
 - addon screens can post a `provider-import-complete` message with a `redirectPath` when the import succeeds
 
-For `:client_picker`, the upload page stays in place and calls a registered browser launcher. Prefetch loads picker config only and does not write OAuth state, so Dropbox and Drive can warm up together without clobbering a cookie session. A click opens the local connect URL (which creates OAuth state) or the vendor picker. After OAuth completes, the cached bootstrap is dropped and fetched again. Drive then opens the Picker on its own. Dropbox waits for the next click on the same Dropbox button so `choose()` stays inside a user gesture. Chooser selections send the file id and filename; the shared imports endpoint copies the file through Dropbox’s API using the session token. Neither flow adds a second Choose from… button. Drive also refetches when the picker `access_token` is within 30 seconds of expiry. A `403` or `422` bootstrap disables the provider button after a click; prefetch failures stay quiet.
+For `:client_picker`, the upload page stays in place and calls a registered browser launcher. Prefetch loads picker config only. A click opens connect (generic `{ url, method, fields, fallback_url }`) or the vendor picker. After auth completes, the cached bootstrap is dropped and fetched again. Selections post to `recording_attachment_imports_path(recording)`. A `403` or `422` bootstrap disables the provider button after a click; prefetch failures stay quiet.
 
 Client-picker launchers are registered in JavaScript:
 
 ```js
-import { registerUploadProviderLauncher } from "controllers/recording_studio_attachable/provider_launchers"
+import { registerUploadProviderLauncher } from "recording_studio_attachable/provider_launchers"
 
-registerUploadProviderLauncher("google_drive", {
+registerUploadProviderLauncher("my_cloud", {
   forget(bootstrapUrl) {
-    // drop the cached bootstrap so relaunch after OAuth sees a connected session
+    // drop the cached bootstrap so relaunch after auth sees a connected session
   },
   prefetch({ controller, bootstrapUrl }) {
     return controller.fetchProviderBootstrap(bootstrapUrl)
@@ -429,7 +453,7 @@ registerUploadProviderLauncher("google_drive", {
   async launch({ controller, providerKey, bootstrapUrl, gesture }) {
     const bootstrap = await controller.fetchProviderBootstrap(bootstrapUrl)
     // open auth popup or vendor picker inside the click when gesture is true
-    controller.addProviderSelections(providerKey, [{ id: "file-1", resource_key: "rk-1" }])
+    controller.addProviderSelections(providerKey, [{ id: "file-1" }])
   }
 })
 ```
@@ -447,12 +471,12 @@ result = RecordingStudioAttachable::Services::ImportAttachment.call(
   actor: Current.actor,
   impersonator: Current.impersonator,
   name: remote_file.title,
-  description: "Imported from Google Drive",
-  source: "google_drive",
+  description: "Imported from My Cloud",
+  source: "my_cloud",
   metadata: {
-    provider: "google_drive",
+    provider: "my_cloud",
     external_id: remote_file.id,
-    external_url: remote_file.web_view_link
+    external_url: remote_file.url
   }
 )
 
@@ -470,12 +494,12 @@ Multipart file imports:
 ```ruby
 post recording_studio_attachable.recording_attachment_imports_path(recording), params: {
   attachment_import: {
-    provider_key: "google_drive",
+    provider_key: "my_cloud",
     attachments: [
       {
         file: downloaded_file,
         name: remote_file.title,
-        description: "Imported from Google Drive"
+        description: "Imported from My Cloud"
       }
     ]
   }
@@ -487,14 +511,14 @@ Signed blob finalization with provider metadata. The blob comes from this gem's 
 ```ruby
 post recording_studio_attachable.recording_attachment_imports_path(recording), params: {
   attachment_import: {
-    provider_key: "google_drive",
+    provider_key: "my_cloud",
     attachments: [
       {
         signed_blob_id: RecordingStudioAttachable::DirectUpload.sign(blob),
         name: remote_file.title,
         metadata: {
           external_id: remote_file.id,
-          external_url: remote_file.web_view_link
+          external_url: remote_file.url
         }
       }
     ]
@@ -511,61 +535,56 @@ If you are working in trusted internal app code and only want the created record
 
 ### Cloud upload adapters
 
-Google Drive and Dropbox ship as optional adapters. Each adapter owns its config, OAuth, routes, launcher JS, and file resolve/download rules. Core owns the upload-provider registry, the generic `attachments/imports` endpoint, and a shared HTTPS fetch used by every adapter.
+Provider gems are optional. This gem has no runtime dependency on them. Hosts that still need Google Drive or Dropbox add `recording_studio_google_drive >= 0.4.0` / `recording_studio_dropbox >= 0.3.0`. Core owns the upload-provider registry, keyed adapter routes, `ProviderController`, generic connect JSON, the shared `attachments/imports` endpoint, `ImportRemoteFiles`, and a shared HTTPS fetch.
 
-Adapters are **off** until the host turns them on **and** supplies real credentials. Dummy placeholder values do not count. Hosts can enable Drive only, Dropbox only, both, or neither. When an adapter is off or incomplete, it is not registered, nothing from it appears on the upload page, and its endpoints refuse the request.
+A provider gem mounts with:
+
+```ruby
+ActiveSupport.on_load(:recording_studio_attachable) do
+  RecordingStudioAttachable.register_adapter_routes(:my_cloud) do
+    mount MyCloud::Engine, at: "/my_cloud", as: :my_cloud
+  end
+end
+```
+
+Provider controllers inherit `RecordingStudioAttachable::ProviderController` and set `self.upload_provider_key = :my_cloud`. Pin the gem's launcher, and import helpers from `recording_studio_attachable/provider_launchers` (`loadScript`, `createBootstrapCache`, `providerNeedsAuth`, `openProviderAuth`, `csrfToken`).
+
+Bootstrap JSON is provider-neutral:
+
+```json
+{
+  "provider_key": "my_cloud",
+  "launcher": "my_cloud",
+  "import_url": "/my_cloud/imports",
+  "needs_auth": true,
+  "reconnect": false,
+  "connect": {
+    "url": "/my_cloud/connect",
+    "method": "post",
+    "fields": { "authenticity_token": "..." },
+    "fallback_url": "/my_cloud/connect"
+  }
+}
+```
+
+The `providers/_remote_file_browser` partial takes:
+
+- `provider_label`, `recording`
+- `reconnect`, `show_connect`, `auto_submit`, `connect_url`, `connect_method`, `connect_fields`
+- `entries` or `files`: `kind: :file|:folder`; folders need `open_url`; files need `id`, `name`, `content_type`
+- `current_path`, `parent_url`, `path` (hidden on the search and import forms)
+- `query`, `search_url`, `import_url`, `disconnect_url`, `next_page_url`
+- `flow_params`
 
 Files are always **copied** into Active Storage. There are no linked attachments.
 
-#### Google Drive
-
-```ruby
-RecordingStudioAttachable.configure do |config|
-  config.google_drive.enabled = true
-  config.google_drive.client_id = ENV.fetch("GOOGLE_DRIVE_CLIENT_ID")
-  config.google_drive.client_secret = ENV.fetch("GOOGLE_DRIVE_CLIENT_SECRET")
-  config.google_drive.api_key = ENV.fetch("GOOGLE_DRIVE_API_KEY")
-  config.google_drive.app_id = ENV.fetch("GOOGLE_DRIVE_APP_ID")
-  config.google_drive.redirect_uri = "https://your-app.test/recording_studio_attachable/google_drive/oauth/callback"
-end
-```
-
-`GOOGLE_DRIVE_API_KEY` must be a browser API key for the same Google Cloud project, and `GOOGLE_DRIVE_APP_ID` is the Google Cloud project number used by Google Picker.
-
-Once enabled, the upload page shows a Google Drive button: OAuth popup, Google Picker, then a server-side copy through `ImportAttachments`. Bootstrap JSON includes `expires_at` so the browser can drop a near-expiry picker token. Native Docs/Sheets/Slides export to PDF, PNG, or CSV as before. Routes live at `/recording_studio_attachable/google_drive`.
-
-#### Dropbox
-
-Create a Dropbox app with scoped access:
-
-- Redirect URI: `https://your-app.test/recording_studio_attachable/dropbox/oauth/callback`
-- Scopes: `files.metadata.read`, `files.content.read`
-
-```ruby
-RecordingStudioAttachable.configure do |config|
-  config.dropbox.enabled = true
-  config.dropbox.client_id = ENV.fetch("DROPBOX_CLIENT_ID")
-  config.dropbox.client_secret = ENV.fetch("DROPBOX_CLIENT_SECRET")
-  config.dropbox.redirect_uri = "https://your-app.test/recording_studio_attachable/dropbox/oauth/callback"
-end
-```
-
-People sign in to their own Dropbox via OAuth 2.0 with PKCE. The Chooser returns file ids only. The server loads metadata and content through the Dropbox API with the user token. Client-supplied download URLs are ignored.
-
-In the Dropbox app console, add this host to **Chooser / Saver domains** (for example `your-app.test`) so the Chooser can open.
-
-Hosts with a Content Security Policy must allow the Chooser script at `https://www.dropbox.com/static/api/2/dropins.js` (`script-src`). Inline launcher imports use a CSP nonce via `javascript_tag`.
-
-OAuth tokens stay in the Rails session. Hosts that enable both Drive and Dropbox should use a server-side session store (Redis, cache, or Active Record) so the browser’s 4 KB cookie limit is not hit.
-
 #### Adding another provider
 
-1. Add a self-contained adapter directory (engine, routes, config object, OAuth, resolve, launcher JS).
-2. Register the config with `RecordingStudioAttachable.register_adapter_configuration(:your_key, Your::Configuration)`.
-3. Mount routes with `RecordingStudioAttachable.register_adapter_routes { mount Your::Engine, at: "/your_key", as: :your_key }`.
-4. When `enabled?` and `configured?`, `register_upload_provider` on the existing registry (`strategy: :client_picker`, `remote_importer`, `allowed_payload_keys`).
-5. Resolve a selection to a `RecordingStudioAttachable::RemoteFile` (HTTPS URI, allowed hosts, headers, filename, content type, size, external id). Fetch with `RecordingStudioAttachable::SafeRemoteFetch`, then `ImportAttachments`.
-6. Register a launcher with `registerUploadProviderLauncher("your_key", …)` in `your_key_picker_launcher.js`. The upload page imports that module only when the provider is shown.
+1. Ship an isolated engine in the provider gem (controllers inherit `ProviderController`).
+2. Register routes with `RecordingStudioAttachable.register_adapter_routes(:your_key) { mount Your::Engine, at: "/your_key", as: :your_key }`. A second registration for the same key raises.
+3. Call `register_upload_provider` with the contract above (`strategy: :client_picker`, `remote_importer`, `connect`, `allowed_payload_keys`).
+4. Hand `ImportRemoteFiles` payloads `{ download: -> { io:, filename:, content_type: }, filename:, content_type:, byte_size:, name:, description:, metadata: { external_id:, external_url: } }`, or resolve a `RecordingStudioAttachable::RemoteFile` and fetch with `SafeRemoteFetch.call(..., max_bytes: configuration.max_file_size)` for URL fetches.
+5. Register a launcher with `registerUploadProviderLauncher("your_key", …)`. Pin that module from the provider gem. The upload page imports it only when the provider is shown.
 
 Do not add a second registry. Do not special-case the new provider in core config, routes, or JS.
 
@@ -725,7 +744,7 @@ Override it per button or per collection editor:
 - The modal body is a lazy turbo frame. The first open loads `attachments/upload?embed=upload_modal&frame_id=...` without a layout, page nav, or title. The page and the modal render `attachment_uploads/_uploader`. Hosts need Turbo (`@hotwired/turbo-rails`) on the page.
 - After a successful upload the uploader dispatches a bubbling `attachable:uploaded` event (`event.detail.attachments`, `event.detail.redirectPath`) instead of redirecting. It clears its queue and closes the modal. The button then reloads `target:` when that id is a turbo frame on the page. Otherwise it re-visits the current page with Turbo, or reloads it when Turbo is missing.
 - The standalone page still redirects to `return_to` after upload.
-- Providers with `strategy: :modal_page` are left out of the modal, because that modal page cannot open inside the upload modal. Link providers open at the top level (`data-turbo-frame="_top"`). Client pickers such as Google Drive and Dropbox stay on the uploader.
+- Providers with `strategy: :modal_page` are left out of the modal, because that modal page cannot open inside the upload modal. Link providers open at the top level (`data-turbo-frame="_top"`). Client pickers stay on the uploader.
 - `upload_button:` takes `true` or a hash with `presentation:`, `label:`, and `target:`. Leave it out and the editor renders no Add button. The collection button always adds.
 
 Wrap the editor in a turbo frame and pass that frame's id as `target:` when the list should refresh in place:

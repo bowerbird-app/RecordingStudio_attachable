@@ -13,6 +13,4 @@ en:
     google_drive:
       disconnected: "Disconnected Google Drive."
     dropbox:
-      connected: "Dropbox is connected."
-      disconnected: "Dropbox is disconnected."
-      session_expired: "Dropbox signed you out. Connect again to keep going."
+      disconnected: "Disconnected Dropbox."

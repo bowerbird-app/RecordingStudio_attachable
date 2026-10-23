@@ -6,6 +6,8 @@ module RecordingStudioAttachable
       def show
         authorize_dropbox_upload!
         ensure_dropbox_enabled!
+        ensure_dropbox_chooser_configured!
+
         render json: bootstrap_payload
       rescue RecordingStudioAttachable::DependencyUnavailableError => e
         render json: { error: e.message }, status: :unprocessable_content
@@ -15,10 +17,12 @@ module RecordingStudioAttachable
 
       def bootstrap_payload
         payload = chooser_payload
-        current_dropbox_access_token
+        Integration.chooser_access(root: dropbox_root, actor: current_attachable_actor)
         payload
-      rescue RecordingStudioAttachable::Error
-        payload.merge(connect_url: popup_connect_url)
+      rescue StandardError => e
+        raise unless Integration.reconnect_required?(e)
+
+        payload.merge(dropbox_popup_connect_payload)
       end
 
       def chooser_payload
@@ -26,25 +30,8 @@ module RecordingStudioAttachable
           provider_key: "dropbox",
           launcher: "dropbox",
           client_id: dropbox_configuration.client_id,
-          import_url: import_json_url
+          import_url: dropbox.recording_imports_path(@recording, format: :json, **attachment_redirect_params)
         }
-      end
-
-      def import_json_url
-        recording_studio_attachable.recording_attachment_imports_path(
-          @recording,
-          format: :json,
-          **attachment_redirect_params
-        )
-      end
-
-      def popup_connect_url
-        recording_connect_path(
-          @recording,
-          popup: 1,
-          provider_key: "dropbox",
-          **attachment_redirect_params
-        )
       end
     end
   end

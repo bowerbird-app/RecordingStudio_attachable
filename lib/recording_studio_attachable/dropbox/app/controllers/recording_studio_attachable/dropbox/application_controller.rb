@@ -3,6 +3,9 @@
 module RecordingStudioAttachable
   module Dropbox
     class ApplicationController < RecordingStudioAttachable::ApplicationController
+      helper_method :dropbox_connected?, :dropbox_reconnect?,
+                    :current_upload_provider_key, :current_upload_provider_modal_id
+
       private
 
       def dropbox_configuration
@@ -10,11 +13,17 @@ module RecordingStudioAttachable
       end
 
       def ensure_dropbox_enabled!
-        raise RecordingStudioAttachable::DependencyUnavailableError, "Dropbox addon is not enabled" unless dropbox_configuration.enabled?
-        return if dropbox_configuration.configured?
+        return if dropbox_configuration.enabled? && Integration.gem_loaded?
 
         raise RecordingStudioAttachable::DependencyUnavailableError,
-              "Dropbox addon is missing client credentials or redirect URI"
+              Copy.t("dropbox.not_enabled", default: "Dropbox isn't available right now")
+      end
+
+      def ensure_dropbox_chooser_configured!
+        return if dropbox_configuration.chooser_configured?
+
+        raise RecordingStudioAttachable::DependencyUnavailableError,
+              Copy.t("dropbox.chooser_requires_config", default: "Dropbox Chooser needs an app key")
       end
 
       def authorize_dropbox_upload!
@@ -22,65 +31,91 @@ module RecordingStudioAttachable
         authorize_attachment_action!(:upload, @recording, capability_options: capability_options_for(@recording))
       end
 
-      def dropbox_tokens
-        dropbox_oauth_session.tokens
+      def dropbox_root
+        recording = @recording || find_recording
+        return recording unless recording.respond_to?(:root_recording)
+
+        recording.root_recording || recording
       end
 
-      def store_dropbox_tokens!(tokens)
-        dropbox_oauth_session.store_tokens!(tokens)
+      def dropbox_client
+        Integration.client(root: dropbox_root, actor: current_attachable_actor)
       end
 
-      def clear_dropbox_tokens!
-        dropbox_oauth_session.clear_tokens!
+      def dropbox_connection
+        Integration.connection(root: dropbox_root, actor: current_attachable_actor)
       end
 
-      def store_dropbox_state!(recording_id:, popup: params[:popup].to_s == "1", provider_key: current_upload_provider_key,
-                               redirect_params: attachment_redirect_params)
-        verifier = RecordingStudioAttachable::Dropbox::OAuthClient.generate_code_verifier
-        state = dropbox_oauth_session.store_state!(
-          recording_id: recording_id,
-          extra: pkce_state_extra(verifier, popup:, provider_key:),
-          redirect_params: redirect_params
+      def dropbox_connected?
+        dropbox_connection.present?
+      end
+
+      def dropbox_reconnect?
+        Integration.connection_status(root: dropbox_root, actor: current_attachable_actor) == :needs_reconnect
+      end
+
+      def dropbox_oauth_connect_path
+        return unless Integration.oauth_loaded?
+
+        ::RecordingStudioOauth::Engine.routes.url_helpers.outbound_connect_path(
+          provider: Integration.provider_key
         )
-        [state, verifier]
       end
 
-      def pkce_state_extra(verifier, popup:, provider_key:)
+      def dropbox_oauth_disconnect_path(connection_id)
+        return if connection_id.blank? || !Integration.oauth_loaded?
+
+        ::RecordingStudioOauth::Engine.routes.url_helpers.outbound_connection_path(
+          connection_id,
+          return_to: dropbox.recording_imports_path(@recording, upload_flow_params)
+        )
+      end
+
+      def dropbox_popup_connect_url
+        recording_connect_path(
+          @recording,
+          popup: 1,
+          provider_key: "dropbox",
+          **attachment_redirect_params
+        )
+      end
+
+      def dropbox_popup_connect_payload
         {
-          "code_verifier" => verifier,
-          "provider_modal_id" => current_upload_provider_modal_id,
-          "embedded" => embedded_upload_provider_request?,
-          "popup" => popup,
-          "provider_key" => provider_key
-        }
+          connect_url: dropbox_popup_connect_url,
+          oauth_connect_url: dropbox_oauth_connect_path,
+          return_to: dropbox_connect_return_path(popup: true),
+          authenticity_token: form_authenticity_token
+        }.compact
       end
 
-      def consume_dropbox_state!(state)
-        dropbox_oauth_session.consume_state!(state)
+      def dropbox_connect_return_path(popup:)
+        if popup
+          dropbox.recording_connected_path(@recording, popup: 1, **upload_flow_params)
+        else
+          dropbox.recording_imports_path(@recording, **upload_flow_params)
+        end
       end
 
-      def current_dropbox_access_token
-        RecordingStudioAttachable::Dropbox::SessionAccessToken.fetch(
-          session: session,
-          configuration: dropbox_configuration,
-          oauth_client: oauth_client
+      def dropbox_connect_reload_url
+        dropbox.recording_imports_path(
+          @recording,
+          **upload_flow_params,
+          embed: "modal",
+          provider_key: "dropbox"
         )
       end
 
-      def oauth_client
-        @oauth_client ||= RecordingStudioAttachable::Dropbox::OAuthClient.new(configuration: dropbox_configuration)
+      def disconnect_dropbox
+        connection_id = Integration.connection_id_for(root: dropbox_root, actor: current_attachable_actor)
+        dropbox_oauth_disconnect_path(connection_id)
       end
 
-      def dropbox_session
-        dropbox_oauth_session.storage
-      end
-
-      def dropbox_oauth_session
-        @dropbox_oauth_session ||= RecordingStudioAttachable::Adapter::Session.new(
-          session,
-          key: "recording_studio_attachable_dropbox",
-          provider_name: "Dropbox"
-        )
+      def dependency_unavailable_alert(error)
+        redirect_to recording_studio_attachable.recording_attachment_upload_path(
+          @recording || find_recording,
+          attachment_redirect_params
+        ), alert: error.message
       end
     end
   end

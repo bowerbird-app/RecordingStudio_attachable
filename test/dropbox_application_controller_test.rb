@@ -1,12 +1,22 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require_relative "dropbox_fakes"
 require_relative "../app/controllers/recording_studio_attachable/application_controller"
 require_relative "../lib/recording_studio_attachable/dropbox/app/controllers/recording_studio_attachable/dropbox/application_controller"
 
 class DropboxApplicationControllerTest < Minitest::Test
   class ProbeController < RecordingStudioAttachable::Dropbox::ApplicationController
+    def recording_studio_attachable
+      @recording_studio_attachable ||= Object.new.tap do |proxy|
+        proxy.define_singleton_method(:recording_attachment_upload_path) do |recording, _query = {}|
+          "/recordings/#{recording.id}/attachment_upload"
+        end
+      end
+    end
   end
+
+  FakeRecording = Struct.new(:id, :recordable_type, :root_recording, keyword_init: true)
 
   def setup
     @original_configuration = RecordingStudioAttachable.instance_variable_get(:@configuration)
@@ -14,16 +24,12 @@ class DropboxApplicationControllerTest < Minitest::Test
     @controller = ProbeController.new
     @request = ActionDispatch::TestRequest.create
     @response = ActionDispatch::TestResponse.create
+    @request.env["action_dispatch.request.flash_hash"] = ActionDispatch::Flash::FlashHash.new
     @session = {}
     @controller.set_request!(@request)
     @controller.set_response!(@response)
     @controller.define_singleton_method(:session) { @test_session }
     @controller.instance_variable_set(:@test_session, @session)
-    @controller.define_singleton_method(:params) { { popup: "1" } }
-    @controller.define_singleton_method(:current_upload_provider_key) { "dropbox" }
-    @controller.define_singleton_method(:current_upload_provider_modal_id) { nil }
-    @controller.define_singleton_method(:embedded_upload_provider_request?) { false }
-    @controller.define_singleton_method(:attachment_redirect_params) { {} }
   end
 
   def teardown
@@ -35,28 +41,65 @@ class DropboxApplicationControllerTest < Minitest::Test
       @controller.send(:ensure_dropbox_enabled!)
     end
 
-    assert_equal "Dropbox addon is not enabled", error.message
+    assert_equal "Dropbox isn't available right now", error.message
   end
 
-  def test_store_and_consume_dropbox_state_round_trips_pkce_verifier
-    state, verifier = @controller.send(:store_dropbox_state!, recording_id: "rec-1", provider_key: "dropbox")
-    payload = @controller.send(:consume_dropbox_state!, state)
+  def test_ensure_dropbox_enabled_requires_the_dropbox_gem
+    RecordingStudioAttachable.configuration[:dropbox] = { enabled: true }
 
-    assert_equal "rec-1", payload.fetch("recording_id")
-    assert_equal "dropbox", payload.fetch("provider_key")
-    assert_equal verifier, payload.fetch("code_verifier")
-    assert_nil @session.dig("recording_studio_attachable_dropbox", "oauth_state")
-  end
-
-  def test_consume_dropbox_state_rejects_mismatched_values
-    @session["recording_studio_attachable_dropbox"] = {
-      "oauth_state" => { "value" => "expected" }
-    }
-
-    error = assert_raises(RecordingStudioAttachable::Error) do
-      @controller.send(:consume_dropbox_state!, "actual")
+    error = assert_raises(RecordingStudioAttachable::DependencyUnavailableError) do
+      RecordingStudioAttachable::Dropbox::Integration.stub(:gem_loaded?, false) do
+        @controller.send(:ensure_dropbox_enabled!)
+      end
     end
 
-    assert_equal "Dropbox authorization state did not match", error.message
+    assert_equal "Dropbox isn't available right now", error.message
+  end
+
+  def test_ensure_dropbox_chooser_configured_requires_an_app_key
+    RecordingStudioAttachable.configuration[:dropbox] = { enabled: true }
+
+    error = assert_raises(RecordingStudioAttachable::DependencyUnavailableError) do
+      @controller.send(:ensure_dropbox_chooser_configured!)
+    end
+
+    assert_equal "Dropbox Chooser needs an app key", error.message
+  end
+
+  def test_ensure_dropbox_chooser_configured_rejects_dummy_placeholder_values
+    RecordingStudioAttachable.configuration[:dropbox] = {
+      enabled: true,
+      client_id: "dummy-dropbox-client-id"
+    }
+
+    error = assert_raises(RecordingStudioAttachable::DependencyUnavailableError) do
+      @controller.send(:ensure_dropbox_chooser_configured!)
+    end
+
+    assert_equal "Dropbox Chooser needs an app key", error.message
+  end
+
+  def test_dropbox_connected_uses_oauth_connection_not_session
+    @controller.instance_variable_set(:@recording, FakeRecording.new(id: "rec-1", recordable_type: "Workspace"))
+
+    RecordingStudioAttachable::Dropbox::Integration.stub(:connection, nil) do
+      assert_not @controller.send(:dropbox_connected?)
+    end
+
+    connection = DropboxFakes::Connection.new(access_token: "token-1")
+    RecordingStudioAttachable::Dropbox::Integration.stub(:connection, connection) do
+      assert @controller.send(:dropbox_connected?)
+    end
+
+    assert_nil @session["recording_studio_attachable_dropbox"]
+  end
+
+  def test_dependency_unavailable_alert_redirects_to_attachment_upload_path
+    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+    @controller.stub(:find_recording, recording) do
+      @controller.send(:dependency_unavailable_alert, RecordingStudioAttachable::DependencyUnavailableError.new("missing config"))
+    end
+
+    assert_equal "http://test.host/recordings/rec-1/attachment_upload", @response.location
   end
 end

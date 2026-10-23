@@ -47,6 +47,7 @@ class DropboxPickerLauncherTest < Minitest::Test
     assert_equal 0, result.fetch("continueButtonsAfterCold")
     assert_equal true, result.fetch("chooseAfterNextClick")
     assert_equal true, result.fetch("popupOnReadyAuthClick")
+    assert_equal true, result.fetch("postedOauthConnectIntoPopup")
     assert_equal 0, result.fetch("chooseAfterConnectWithoutClick")
     assert_equal 0, result.fetch("continueButtonsAfterConnect")
     assert_equal true, result.fetch("chooseAfterConnectOnSamePage")
@@ -107,6 +108,7 @@ class DropboxPickerLauncherTest < Minitest::Test
     <<~JS
       const chooseCalls = []
       const popupCalls = []
+      const formPosts = []
       const selectionNames = []
       const listeners = new Map()
 
@@ -166,6 +168,20 @@ class DropboxPickerLauncherTest < Minitest::Test
         querySelector() { return null },
         createElement(tag) {
           const node = element(tag)
+          node.type = ""
+          node.name = ""
+          node.value = ""
+          node.method = ""
+          node.action = ""
+          node.target = ""
+          node.submit = function() {
+            const fields = {}
+            this.children.forEach((child) => {
+              if (child.name) fields[child.name] = child.value
+            })
+            formPosts.push({ action: this.action, method: this.method, target: this.target, fields })
+          }
+          node.remove = function() {}
           node.addEventListener = (type, fn) => {
             if (type === "load") node._load = fn
             if (type === "error") node._error = fn
@@ -173,7 +189,10 @@ class DropboxPickerLauncherTest < Minitest::Test
           }
           return node
         },
-        head
+        head,
+        body: {
+          appendChild(child) { return child }
+        }
       }
       globalThis.window = globalThis
 
@@ -249,17 +268,26 @@ class DropboxPickerLauncherTest < Minitest::Test
       const authController = controller()
       authController.fetchProviderBootstrap = async () => ({
         client_id: "app-key",
-        connect_url: "/dropbox/recordings/rec-1/connect?popup=1"
+        connect_url: "/dropbox/recordings/rec-1/connect?popup=1",
+        oauth_connect_url: "/recording_studio_oauth/outbound/dropbox/connect",
+        return_to: "/dropbox/recordings/rec-1/connected?popup=1",
+        authenticity_token: "csrf-token"
       })
       await launcher.prefetch({ controller: authController, bootstrapUrl: "/dropbox/auth" })
       popupCalls.length = 0
+      formPosts.length = 0
       await launcher.launch({
         controller: authController,
         providerKey: "dropbox",
         bootstrapUrl: "/dropbox/auth",
         gesture: true
       })
-      const popupOnReadyAuthClick = popupCalls[0]?.includes("/dropbox/recordings/rec-1/connect")
+      const popupOnReadyAuthClick = popupCalls[0] === "about:blank"
+      const postedOauthConnectIntoPopup = formPosts[0]?.action === "/recording_studio_oauth/outbound/dropbox/connect" &&
+        formPosts[0]?.target === "dropbox-auth" &&
+        formPosts[0]?.fields?.owner === "user" &&
+        formPosts[0]?.fields?.return_to?.includes("/dropbox/recordings/rec-1/connected") &&
+        formPosts[0]?.fields?.authenticity_token === "csrf-token"
 
       const connectThenChooseController = controller()
       const connectThenChooseButton = element("button")
@@ -271,7 +299,13 @@ class DropboxPickerLauncherTest < Minitest::Test
       connectThenChooseController.fetchProviderBootstrap = async () => {
         connectThenChooseBootstraps += 1
         if (connectThenChooseBootstraps === 1) {
-          return { client_id: "app-key", connect_url: "/dropbox/recordings/rec-1/connect?popup=1" }
+          return {
+            client_id: "app-key",
+            connect_url: "/dropbox/recordings/rec-1/connect?popup=1",
+            oauth_connect_url: "/recording_studio_oauth/outbound/dropbox/connect",
+            return_to: "/dropbox/recordings/rec-1/connected?popup=1",
+            authenticity_token: "csrf-token"
+          }
         }
         return { client_id: "app-key", provider_key: "dropbox" }
       }
@@ -343,6 +377,7 @@ class DropboxPickerLauncherTest < Minitest::Test
         continueButtonsAfterCold,
         chooseAfterNextClick,
         popupOnReadyAuthClick,
+        postedOauthConnectIntoPopup,
         chooseAfterConnectWithoutClick,
         continueButtonsAfterConnect,
         chooseAfterConnectOnSamePage,

@@ -659,7 +659,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes initializer_template, 'RecordingStudioGoogleDrive.configuration.scopes = ["https://www.googleapis.com/auth/drive.readonly"]'
     assert_includes initializer_template, "config.dropbox.enabled = true"
     assert_includes initializer_template, "DROPBOX_CLIENT_ID"
-    assert_includes initializer_template, "/recording_studio_attachable/dropbox/oauth/callback"
+    assert_includes initializer_template, "recording_studio_dropbox"
   end
 
   def test_dummy_home_demo_includes_registered_demo_cloud_provider

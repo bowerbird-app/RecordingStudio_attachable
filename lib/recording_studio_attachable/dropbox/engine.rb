@@ -1,10 +1,8 @@
 # frozen_string_literal: true
 
 require "pathname"
+require_relative "integration"
 require_relative "configuration"
-require_relative "oauth_client"
-require_relative "client"
-require_relative "session_access_token"
 require_relative "services/import_selected_files"
 
 module RecordingStudioAttachable
@@ -47,16 +45,13 @@ module RecordingStudioAttachable
         end
 
         def import_path(route_helpers:, recording:)
-          route_helpers.recording_studio_attachable.recording_attachment_imports_path(recording, format: :json)
+          route_helpers.dropbox.recording_imports_path(recording, format: :json)
         end
 
-        def remote_importer(parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil)
-          RecordingStudioAttachable::Adapter::ClientPicker.import_from_session(
-            context: context,
-            attachments: attachments,
-            session_token_class: SessionAccessToken,
-            import_class: Services::ImportSelectedFiles,
+        def remote_importer(parent_recording:, attachments:, actor: nil, impersonator: nil, **)
+          Services::ImportSelectedFiles.call(
             parent_recording: parent_recording,
+            file_ids: Adapter::Selection.from_attachments(attachments),
             actor: actor,
             impersonator: impersonator
           )
@@ -67,5 +62,7 @@ module RecordingStudioAttachable
 end
 
 RecordingStudioAttachable.register_adapter_routes do
+  next unless RecordingStudioAttachable::Dropbox::Integration.gem_loaded?
+
   mount RecordingStudioAttachable::Dropbox::Engine, at: "/dropbox", as: :dropbox
 end

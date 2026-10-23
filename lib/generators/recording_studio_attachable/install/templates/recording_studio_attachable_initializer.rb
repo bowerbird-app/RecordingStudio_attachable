@@ -107,11 +107,11 @@ RecordingStudioAttachable.configure do |config|
   # config.google_drive.api_key = ENV["GOOGLE_DRIVE_API_KEY"] # Browser API key for Google Picker
   # config.google_drive.app_id = ENV["GOOGLE_DRIVE_APP_ID"]   # Google Cloud project number
   #
-  # Dropbox (OAuth redirect URI and scopes files.metadata.read + files.content.read):
+  # Dropbox (optional). Bundle recording_studio_dropbox ~> 0.2 and
+  # recording_studio_oauth >= 0.15.0, < 1.0. Oauth stores tokens. This gem
+  # only needs the Chooser app key:
   # config.dropbox.enabled = true
-  # config.dropbox.client_id = ENV["DROPBOX_CLIENT_ID"]
-  # config.dropbox.client_secret = ENV["DROPBOX_CLIENT_SECRET"]
-  # config.dropbox.redirect_uri = "https://your-app.test/recording_studio_attachable/dropbox/oauth/callback"
+  # config.dropbox.client_id = ENV["DROPBOX_CLIENT_ID"] # Dropbox app key for Chooser
   #
   # Adapter routes live under the engine mount, for example:
   # /recording_studio_attachable/google_drive

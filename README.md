@@ -21,6 +21,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - RecordingStudio Trashable installed if you want restore support for removed attachments
 - RecordingStudio Metrics `>= 0.3.0, < 0.6` (latest GitHub tag `v0.5.0`) for operations-API storage and upload metrics
 - Optional Google Drive import: `recording_studio_google_drive` `>= 0.3.0, < 1.0` and `recording_studio_oauth` `>= 0.15.0, < 1.0`. Attachable does not depend on those gems at runtime.
+- Optional Dropbox import: `recording_studio_dropbox` `~> 0.2` and `recording_studio_oauth` `>= 0.15.0, < 1.0`. Attachable does not depend on those gems at runtime.
 
 ## Quick start
 
@@ -509,7 +510,7 @@ If you are working in trusted internal app code and only want the created record
 
 ### Cloud upload adapters
 
-Google Drive and Dropbox ship as optional adapters. Dropbox still owns its OAuth and session tokens. Google Drive import uses the `recording_studio_google_drive` gem for Drive API calls and Recording Studio Oauth outbound connections for tokens. Core owns the upload-provider registry, the generic `attachments/imports` endpoint, and a shared HTTPS fetch used by adapters that still download over HTTP.
+Google Drive and Dropbox ship as optional adapters. Google Drive import uses the `recording_studio_google_drive` gem for Drive API calls and Recording Studio Oauth outbound connections for tokens. Dropbox import uses the `recording_studio_dropbox` gem for Dropbox API calls and the same Oauth outbound connections for tokens. Core owns the upload-provider registry, the generic `attachments/imports` endpoint, and a shared HTTPS fetch used by adapters that still download over HTTP.
 
 Adapters are **off** until the host turns them on **and** supplies real credentials. Dummy placeholder values do not count. Hosts can enable Drive only, Dropbox only, both, or neither. When an adapter is off or incomplete, it is not registered, nothing from it appears on the upload page, and its endpoints refuse the request.
 
@@ -542,27 +543,27 @@ Connect and reconnect use Oauth's outbound flow. Tokens are not stored in the Ra
 
 #### Dropbox
 
-Create a Dropbox app with scoped access:
+Dropbox stays optional. This gem has no runtime dependency on `recording_studio_dropbox` or `recording_studio_oauth`. The Dropbox engine mounts and the upload-page button registers only when the host bundles the Dropbox gem.
 
-- Redirect URI: `https://your-app.test/recording_studio_attachable/dropbox/oauth/callback`
-- Scopes: `files.metadata.read`, `files.content.read`
+1. Add `recording_studio_dropbox` `~> 0.2` and `recording_studio_oauth` `>= 0.15.0, < 1.0`.
+2. Install and migrate Oauth (`recording_studio_oauth:install` and `recording_studio_oauth:migrations`).
+3. Mount Oauth and set Dropbox app credentials on the Oauth outbound provider (`recording_studio_oauth.outbound.dropbox`). Name the keys. Do not put the values in git.
+4. Enable the Attachable Chooser app key:
 
 ```ruby
 RecordingStudioAttachable.configure do |config|
   config.dropbox.enabled = true
   config.dropbox.client_id = ENV.fetch("DROPBOX_CLIENT_ID")
-  config.dropbox.client_secret = ENV.fetch("DROPBOX_CLIENT_SECRET")
-  config.dropbox.redirect_uri = "https://your-app.test/recording_studio_attachable/dropbox/oauth/callback"
 end
 ```
 
-People sign in to their own Dropbox via OAuth 2.0 with PKCE. The Chooser returns file ids only. The server loads metadata and content through the Dropbox API with the user token. Client-supplied download URLs are ignored.
+`DROPBOX_CLIENT_ID` is the Dropbox app key used by Chooser. Oauth still sends `token_access_type=offline` from the Dropbox gem.
+
+Connect and reconnect use Oauth's outbound flow. Tokens are not stored in the Rails session. Without a connection, or when the Dropbox gem raises `ReconnectRequired`, the import UI shows Connect or Reconnect instead of a 500. Once connected, the upload page still launches Chooser, then copies selected files through `ImportAttachments`. The Chooser returns file ids only. The server loads metadata and content through the Dropbox gem. Client-supplied download URLs are ignored. Routes live at `/recording_studio_attachable/dropbox`.
 
 In the Dropbox app console, add this host to **Chooser / Saver domains** (for example `your-app.test`) so the Chooser can open.
 
 Hosts with a Content Security Policy must allow the Chooser script at `https://www.dropbox.com/static/api/2/dropins.js` (`script-src`). Inline launcher imports use a CSP nonce via `javascript_tag`.
-
-Dropbox OAuth tokens stay in the Rails session. Google Drive tokens do not. Hosts that enable Dropbox (or Dropbox plus Drive) should use a server-side session store (Redis, cache, or Active Record) so the browser’s 4 KB cookie limit is not hit.
 
 #### Adding another provider
 

@@ -56,14 +56,18 @@ class RecordingStudioAttachableTest < Minitest::Test
     dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
 
     assert_not_includes gemspec, "recording_studio_google_drive"
+    assert_not_includes gemspec, "recording_studio_dropbox"
     assert_not_includes gemspec, "recording_studio_oauth"
     assert_includes dummy_gemfile, 'gem "recording_studio_google_drive", github: "bowerbird-app/RecordingStudio_GoogleDrive", tag: "v0.3.0"'
+    assert_includes dummy_gemfile, 'gem "recording_studio_dropbox", github: "bowerbird-app/RecordingStudio_Dropbox", tag: "v0.2.0"'
     assert_includes dummy_gemfile, 'gem "recording_studio_oauth", github: "bowerbird-app/RecordingStudio_Oauth", tag: "v0.15.0"'
   end
 
   def test_root_suite_does_not_load_google_drive_or_register_its_upload_provider
     refute defined?(RecordingStudioGoogleDrive)
+    refute defined?(RecordingStudioDropbox)
     assert_nil RecordingStudioAttachable.configuration.upload_provider(:google_drive)
+    assert_nil RecordingStudioAttachable.configuration.upload_provider(:dropbox)
   end
 
   def test_engine_exists
@@ -635,6 +639,53 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_not_includes upload_view, "javascript_tag(nonce: true, type: \"module\") {"
   end
 
+  def test_dropbox_addon_files_are_wired_through_the_main_engine
+    engine_routes_source = File.read(
+      File.expand_path("../lib/recording_studio_attachable/dropbox/config/routes.rb", __dir__)
+    )
+    engine_source = File.read(File.expand_path("../lib/recording_studio_attachable/dropbox/engine.rb", __dir__))
+    launcher_source = File.read(
+      File.expand_path("../app/javascript/controllers/recording_studio_attachable/dropbox_picker_launcher.js", __dir__)
+    )
+    initializer_template = File.read(
+      File.expand_path(
+        "../lib/generators/recording_studio_attachable/install/templates/recording_studio_attachable_initializer.rb",
+        __dir__
+      )
+    )
+    view_source = File.read(
+      File.expand_path(
+        "../lib/recording_studio_attachable/dropbox/app/views/recording_studio_attachable/dropbox/imports/index.html.erb",
+        __dir__
+      )
+    )
+    connect_form_source = File.read(
+      File.expand_path(
+        "../lib/recording_studio_attachable/dropbox/app/views/recording_studio_attachable/dropbox/connect/_form.html.erb",
+        __dir__
+      )
+    )
+
+    assert_includes engine_source, 'mount RecordingStudioAttachable::Dropbox::Engine, at: "/dropbox", as: :dropbox'
+    assert_dropbox_adapter_routes_mount_only_when_the_gem_is_loaded
+    assert_includes engine_routes_source, 'get "bootstrap", to: "bootstrap#show", as: :bootstrap'
+    assert_includes engine_routes_source, 'get "connect", to: "connect#show", as: :connect'
+    assert_includes engine_routes_source, 'get "connected", to: "connect#complete", as: :connected'
+    assert_includes engine_routes_source, 'delete "connect", to: "connect#destroy", as: :disconnect'
+    assert_includes engine_source, "Adapter::ClientPicker.provider_options"
+    assert_includes engine_source, 'launcher: "dropbox"'
+    assert_includes launcher_source, 'registerUploadProviderLauncher("dropbox"'
+    assert_includes launcher_source, "https://www.dropbox.com/static/api/2/dropins.js"
+    assert_includes launcher_source, "postOauthConnectIntoPopup"
+    assert_includes initializer_template, "recording_studio_dropbox"
+    assert_includes initializer_template, "DROPBOX_CLIENT_ID"
+    assert_includes view_source, 'title: t("recording_studio.attachable.dropbox.title")'
+    assert_includes view_source, "if @show_connect"
+    assert_includes connect_form_source, 't(reconnect ? "recording_studio.attachable.dropbox.reconnect" : "recording_studio.attachable.dropbox.connect")'
+    assert_includes connect_form_source, "form_with url: connect_path, method: :post"
+    assert_includes connect_form_source, 'hidden_field_tag :owner, "user"'
+  end
+
   def test_attachment_file_button_uses_file_only_replace_controls
     button_source = File.read(
       File.expand_path("../app/views/recording_studio_attachable/attachment_file_buttons/_button.html.erb", __dir__)
@@ -681,8 +732,8 @@ class RecordingStudioAttachableTest < Minitest::Test
   private
 
   def assert_google_drive_adapter_routes_mount_only_when_the_gem_is_loaded
-    with_gem = adapter_route_paths(gem_loaded: true)
-    without_gem = adapter_route_paths(gem_loaded: false)
+    with_gem = adapter_route_paths(google_drive: true)
+    without_gem = adapter_route_paths(google_drive: false)
 
     assert with_gem.any? { |path| path.include?("/google_drive") },
            "expected Google Drive routes when the gem is loaded, got #{with_gem.inspect}"
@@ -690,12 +741,24 @@ class RecordingStudioAttachableTest < Minitest::Test
            "expected no Google Drive routes when the gem is missing, got #{without_gem.inspect}"
   end
 
-  def adapter_route_paths(gem_loaded:)
+  def assert_dropbox_adapter_routes_mount_only_when_the_gem_is_loaded
+    with_gem = adapter_route_paths(dropbox: true)
+    without_gem = adapter_route_paths(dropbox: false)
+
+    assert with_gem.any? { |path| path.include?("/dropbox") },
+           "expected Dropbox routes when the gem is loaded, got #{with_gem.inspect}"
+    refute without_gem.any? { |path| path.include?("/dropbox") },
+           "expected no Dropbox routes when the gem is missing, got #{without_gem.inspect}"
+  end
+
+  def adapter_route_paths(google_drive: false, dropbox: false)
     set = ActionDispatch::Routing::RouteSet.new
     set.draw do
-      RecordingStudioAttachable::GoogleDrive::Integration.stub(:gem_loaded?, gem_loaded) do
-        RecordingStudioAttachable.adapter_route_blocks.each do |route_block|
-          instance_exec(&route_block)
+      RecordingStudioAttachable::GoogleDrive::Integration.stub(:gem_loaded?, google_drive) do
+        RecordingStudioAttachable::Dropbox::Integration.stub(:gem_loaded?, dropbox) do
+          RecordingStudioAttachable.adapter_route_blocks.each do |route_block|
+            instance_exec(&route_block)
+          end
         end
       end
     end

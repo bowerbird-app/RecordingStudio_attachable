@@ -1,46 +1,39 @@
 # frozen_string_literal: true
 
+require_relative "integration"
+
 module RecordingStudioAttachable
   module Dropbox
     class Configuration
       include RecordingStudioAttachable::Adapter::Configurable
 
       PLACEHOLDER_PREFIXES = {
-        client_id: ["dummy-dropbox-client-id"],
-        client_secret: ["dummy-dropbox-client-secret"]
+        client_id: ["dummy-dropbox-client-id"]
       }.freeze
 
-      attr_accessor :enabled,
-                    :client_id,
-                    :client_secret,
-                    :redirect_uri,
-                    :scopes
+      attr_accessor :enabled, :client_id, :page_size
 
       def initialize
         @enabled = false
         @client_id = nil
-        @client_secret = nil
-        @redirect_uri = nil
-        @scopes = %w[files.metadata.read files.content.read]
+        @page_size = 25
       end
 
-      def configured?
-        valid_credential?(client_id, :client_id) &&
-          valid_credential?(client_secret, :client_secret) &&
-          redirect_uri.present?
+      def chooser_configured?
+        valid_credential?(client_id, :client_id)
       end
+
+      alias configured? chooser_configured?
 
       def available?
-        enabled? && configured?
+        enabled? && chooser_configured? && Integration.gem_loaded?
       end
 
       def to_h
         {
           enabled: enabled,
           client_id: client_id,
-          client_secret: client_secret,
-          redirect_uri: redirect_uri,
-          scopes: scopes
+          page_size: page_size
         }
       end
     end

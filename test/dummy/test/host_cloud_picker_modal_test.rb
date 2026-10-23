@@ -60,9 +60,7 @@ class HostCloudPickerModalTest < ActionDispatch::IntegrationTest
 
     importer = RecordingStudioAttachable::Dropbox::Services::ImportSelectedFiles
     original_importer_call = importer.method(:call)
-    original_token_fetch = RecordingStudioAttachable::Dropbox::SessionAccessToken.method(:fetch)
 
-    RecordingStudioAttachable::Dropbox::SessionAccessToken.define_singleton_method(:fetch) { |**_| "dropbox-token" }
     importer.define_singleton_method(:call) do |**kwargs|
       captured = kwargs
       imported
@@ -87,14 +85,13 @@ class HostCloudPickerModalTest < ActionDispatch::IntegrationTest
            as: :json
     end
   ensure
-    RecordingStudioAttachable::Dropbox::SessionAccessToken.define_singleton_method(:fetch, original_token_fetch)
     importer.define_singleton_method(:call, original_importer_call)
 
     assert_response :created
     selection = captured.fetch(:file_ids).first
     assert_equal "id:fia-lKYKs5AAAAAAAAAACw", selection.fetch("id")
     assert_equal "kiln.jpg", selection.fetch("name")
-    assert_equal "dropbox-token", captured.fetch(:access_token)
+    assert_nil captured[:access_token]
   end
 
   test "disconnected dropbox and drive bootstrap leave session state for connect" do
@@ -115,14 +112,15 @@ class HostCloudPickerModalTest < ActionDispatch::IntegrationTest
       assert_nil session.dig("recording_studio_attachable_google_drive", "oauth_state")
 
       get "/recording_studio_attachable/dropbox/recordings/#{@root.id}/connect", params: { popup: 1, provider_key: "dropbox" }
-      assert_response :redirect
-      assert_not_nil session.dig("recording_studio_attachable_dropbox", "oauth_state")
+      assert_response :success
+      assert_includes response.body, "recording_studio_oauth"
+      assert_nil session.dig("recording_studio_attachable_dropbox", "oauth_state")
       assert_nil session.dig("recording_studio_attachable_google_drive", "oauth_state")
 
       get "/recording_studio_attachable/google_drive/recordings/#{@root.id}/connect", params: { popup: 1, provider_key: "google_drive" }
       assert_response :success
       assert_includes response.body, "recording_studio_oauth"
-      assert_not_nil session.dig("recording_studio_attachable_dropbox", "oauth_state")
+      assert_nil session.dig("recording_studio_attachable_dropbox", "oauth_state")
       assert_nil session.dig("recording_studio_attachable_google_drive", "oauth_state")
       assert_nil session["access_token"]
       refute_includes response.body, "fake-access-"
@@ -139,9 +137,7 @@ class HostCloudPickerModalTest < ActionDispatch::IntegrationTest
 
     configuration.dropbox.merge!(
       enabled: true,
-      client_id: "dropbox-client-id",
-      client_secret: "dropbox-client-secret",
-      redirect_uri: "http://www.example.com/recording_studio_attachable/dropbox/oauth/callback"
+      client_id: "dropbox-client-id"
     )
     configuration.google_drive.merge!(
       enabled: true,

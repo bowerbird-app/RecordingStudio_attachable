@@ -401,28 +401,26 @@ class ConfigurationTest < Minitest::Test
   def test_dropbox_defaults_are_disabled_and_unconfigured
     assert_not @configuration.dropbox.enabled?
     assert_not @configuration.dropbox.configured?
-    assert_equal %w[files.metadata.read files.content.read], @configuration.dropbox.scopes
+    assert_nil @configuration.dropbox.client_id
   end
 
   def test_merge_updates_dropbox_configuration
     @configuration[:dropbox] = {
       enabled: true,
-      client_id: "dropbox-client-id",
-      client_secret: "dropbox-client-secret",
-      redirect_uri: "https://example.test/recording_studio_attachable/dropbox/oauth/callback"
+      client_id: "dropbox-client-id"
     }
 
     assert @configuration.dropbox.enabled?
     assert @configuration.dropbox.configured?
-    assert @configuration.dropbox.available?
+    RecordingStudioAttachable::Dropbox::Integration.stub(:gem_loaded?, true) do
+      assert @configuration.dropbox.available?
+    end
   end
 
   def test_dropbox_configuration_rejects_dummy_placeholder_values
     @configuration[:dropbox] = {
       enabled: true,
-      client_id: "dummy-dropbox-client-id",
-      client_secret: "dummy-dropbox-client-secret",
-      redirect_uri: "https://example.test/recording_studio_attachable/dropbox/oauth/callback"
+      client_id: "dummy-dropbox-client-id"
     }
 
     assert_not @configuration.dropbox.configured?
@@ -443,13 +441,13 @@ class ConfigurationTest < Minitest::Test
 
     @configuration[:dropbox] = {
       enabled: true,
-      client_id: "dropbox-client-id",
-      client_secret: "dropbox-client-secret",
-      redirect_uri: "https://example.test/recording_studio_attachable/dropbox/oauth/callback"
+      client_id: "dropbox-client-id"
     }
     @configuration.google_drive.enabled = false
 
     assert_not @configuration.google_drive.available?
-    assert @configuration.dropbox.available?
+    RecordingStudioAttachable::Dropbox::Integration.stub(:gem_loaded?, true) do
+      assert @configuration.dropbox.available?
+    end
   end
 end

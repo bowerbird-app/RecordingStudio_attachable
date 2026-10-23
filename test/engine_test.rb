@@ -301,9 +301,7 @@ class EngineTest < Minitest::Test
   def test_dropbox_initializer_registers_provider_when_configured
     RecordingStudioAttachable.configuration[:dropbox] = {
       enabled: true,
-      client_id: "client-id",
-      client_secret: "client-secret",
-      redirect_uri: "https://example.test/recording_studio_attachable/dropbox/oauth/callback"
+      client_id: "client-id"
     }
     after_initialize = nil
     app = Struct.new(:config).new(
@@ -312,8 +310,10 @@ class EngineTest < Minitest::Test
       end
     )
 
-    find_dropbox_initializer("recording_studio_attachable.dropbox.register_upload_provider").block.call(app)
-    after_initialize.call
+    RecordingStudioAttachable::Dropbox::Integration.stub(:gem_loaded?, true) do
+      find_dropbox_initializer("recording_studio_attachable.dropbox.register_upload_provider").block.call(app)
+      after_initialize.call
+    end
 
     provider = RecordingStudioAttachable.configuration.upload_provider(:dropbox)
     assert_not_nil provider
@@ -326,20 +326,17 @@ class EngineTest < Minitest::Test
 
     dropbox_proxy = Object.new
     dropbox_proxy.define_singleton_method(:recording_bootstrap_path) { |recording, format:| "/dropbox/recordings/#{recording.id}/bootstrap.#{format}" }
-    attachable_proxy = Object.new
-    attachable_proxy.define_singleton_method(:recording_attachment_imports_path) { |recording, format:| "/recordings/#{recording.id}/attachments/imports.#{format}" }
+    dropbox_proxy.define_singleton_method(:recording_imports_path) { |recording, format:| "/dropbox/recordings/#{recording.id}/imports.#{format}" }
     route_helpers = Object.new
     route_helpers.define_singleton_method(:dropbox) { dropbox_proxy }
-    route_helpers.define_singleton_method(:recording_studio_attachable) { attachable_proxy }
     view_context = Struct.new(:main_app) do
       delegate :dropbox, to: :main_app
-      delegate :recording_studio_attachable, to: :main_app
     end.new(route_helpers)
     recording = Struct.new(:id).new("rec-1")
     options = provider.button_options(view_context: view_context, recording: recording)
 
     assert_equal "/dropbox/recordings/rec-1/bootstrap.json", options.dig(:data, :provider_bootstrap_url)
-    assert_equal "/recordings/rec-1/attachments/imports.json", options.dig(:data, :provider_import_url)
+    assert_equal "/dropbox/recordings/rec-1/imports.json", options.dig(:data, :provider_import_url)
   end
 
   def test_dropbox_initializer_skips_provider_when_disabled
@@ -364,12 +361,10 @@ class EngineTest < Minitest::Test
     }
     RecordingStudioAttachable.configuration[:dropbox] = {
       enabled: false,
-      client_id: "client-id",
-      client_secret: "client-secret",
-      redirect_uri: "https://example.test/recording_studio_attachable/dropbox/oauth/callback"
+      client_id: "client-id"
     }
 
-    run_adapter_initializers(google_drive_gem: true)
+    run_adapter_initializers(google_drive_gem: true, dropbox_gem: true)
 
     assert_not_nil RecordingStudioAttachable.configuration.upload_provider(:google_drive)
     assert_nil RecordingStudioAttachable.configuration.upload_provider(:dropbox)
@@ -377,7 +372,7 @@ class EngineTest < Minitest::Test
     RecordingStudioAttachable.configuration.dropbox.enabled = true
     RecordingStudioAttachable.configuration.google_drive.enabled = false
     RecordingStudioAttachable.instance_variable_get(:@configuration).instance_variable_set(:@upload_providers, [])
-    run_adapter_initializers(google_drive_gem: true)
+    run_adapter_initializers(google_drive_gem: true, dropbox_gem: true)
 
     assert_nil RecordingStudioAttachable.configuration.upload_provider(:google_drive)
     assert_not_nil RecordingStudioAttachable.configuration.upload_provider(:dropbox)
@@ -404,6 +399,26 @@ class EngineTest < Minitest::Test
     assert_nil RecordingStudioAttachable.configuration.upload_provider(:google_drive)
   end
 
+  def test_dropbox_initializer_skips_provider_when_the_dropbox_gem_is_missing
+    RecordingStudioAttachable.configuration[:dropbox] = {
+      enabled: true,
+      client_id: "client-id"
+    }
+    after_initialize = nil
+    app = Struct.new(:config).new(
+      Object.new.tap do |config|
+        config.define_singleton_method(:after_initialize) { |&block| after_initialize = block }
+      end
+    )
+
+    RecordingStudioAttachable::Dropbox::Integration.stub(:gem_loaded?, false) do
+      find_dropbox_initializer("recording_studio_attachable.dropbox.register_upload_provider").block.call(app)
+      after_initialize.call
+    end
+
+    assert_nil RecordingStudioAttachable.configuration.upload_provider(:dropbox)
+  end
+
   private
 
   def find_initializer(name)
@@ -418,7 +433,7 @@ class EngineTest < Minitest::Test
     RecordingStudioAttachable::Dropbox::Engine.initializers.find { |initializer| initializer.name == name }
   end
 
-  def run_adapter_initializers(google_drive_gem: false)
+  def run_adapter_initializers(google_drive_gem: false, dropbox_gem: false)
     app = Struct.new(:config).new(
       Object.new.tap do |config|
         config.define_singleton_method(:after_initialize) { |&block| block.call }
@@ -427,7 +442,9 @@ class EngineTest < Minitest::Test
     RecordingStudioAttachable::GoogleDrive::Integration.stub(:gem_loaded?, google_drive_gem) do
       find_google_drive_initializer("recording_studio_attachable.google_drive.register_upload_provider").block.call(app)
     end
-    find_dropbox_initializer("recording_studio_attachable.dropbox.register_upload_provider").block.call(app)
+    RecordingStudioAttachable::Dropbox::Integration.stub(:gem_loaded?, dropbox_gem) do
+      find_dropbox_initializer("recording_studio_attachable.dropbox.register_upload_provider").block.call(app)
+    end
   end
 
   def expected_registered_capabilities

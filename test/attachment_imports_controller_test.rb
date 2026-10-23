@@ -197,11 +197,11 @@ module RecordingStudioAttachable
 
       RecordingStudioAttachable.configuration.dropbox.merge!(
         enabled: true,
-        client_id: "dropbox-client-id",
-        client_secret: "dropbox-client-secret",
-        redirect_uri: "https://example.test/recording_studio_attachable/dropbox/oauth/callback"
+        client_id: "dropbox-client-id"
       )
-      RecordingStudioAttachable::Dropbox::Engine.send(:register_upload_provider)
+      RecordingStudioAttachable::Dropbox::Integration.stub(:gem_loaded?, true) do
+        RecordingStudioAttachable::Dropbox::Engine.send(:register_upload_provider)
+      end
 
       with_routing do |set|
         set.draw do
@@ -215,10 +215,6 @@ module RecordingStudioAttachable
           @controller.stub(:authorize_attachment_action!, true) do
             @controller.stub(:capability_options_for, {}) do
               @controller.define_singleton_method(:recording_attachments_path) { |_recording| "/recordings/#{recording.id}/attachments" }
-              @request.session["recording_studio_attachable_dropbox"] = {
-                "tokens" => { "access_token" => "dropbox-token", "expires_at" => Time.current.to_i + 3600 }
-              }
-
               RecordingStudioAttachable::Dropbox::Services::ImportSelectedFiles.stub(:call, lambda { |**kwargs|
                 captured = kwargs
                 result
@@ -250,7 +246,7 @@ module RecordingStudioAttachable
 
       assert_response :created
       assert_equal recording, captured[:parent_recording]
-      assert_equal "dropbox-token", captured[:access_token]
+      assert_nil captured[:access_token]
       selection = captured[:file_ids].first
       assert_equal "id:fia-lKYKs5AAAAAAAAAACw", selection.fetch("id")
       assert_equal "kiln.jpg", selection.fetch("name")

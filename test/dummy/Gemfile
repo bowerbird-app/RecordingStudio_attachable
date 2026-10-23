@@ -3,10 +3,10 @@ source "https://rubygems.org"
 gem "recording_studio_attachable", path: "../.."
 gem "recording_studio_google_drive",
     github: "bowerbird-app/RecordingStudio_GoogleDrive",
-    ref: "e82460659f2afcd6a5f3ab9071c3565d8eaac98d"
+    tag: "v0.4.0"
 gem "recording_studio_dropbox",
     github: "bowerbird-app/RecordingStudio_Dropbox",
-    ref: "2b43df09182fe48152ab0365c7f0851e2cd4ec10"
+    tag: "v0.3.0"
 gem "recording_studio_oauth", github: "bowerbird-app/RecordingStudio_Oauth", tag: "v0.15.1"
 gem "recording_studio_logs", github: "bowerbird-app/RecordingStudio_logs", tag: "v0.4.1"
 gem "recording_studio_site_settings", github: "bowerbird-app/RecordingStudio_site_settings", tag: "v0.2.0"

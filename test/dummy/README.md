@@ -2,7 +2,7 @@
 
 This Rails app exists to validate the Recording Studio Attachable engine inside a realistic authenticated shell.
 
-This checkout also boots Google Drive and Dropbox upload providers on one Attachable host for manual testing. Do not merge that wiring.
+This checkout also boots Google Drive and Dropbox upload providers on one Attachable host.
 
 Use it to verify:
 

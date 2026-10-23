@@ -4,7 +4,6 @@ RecordingStudio.configure do |config|
   config.recordable_types = [
     "Workspace",
     "Page",
-    "User",
     "ChatThread",
     "ChatMessage",
     "RecordingStudioSiteSettings::SiteSetting",

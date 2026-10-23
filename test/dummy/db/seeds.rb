@@ -54,12 +54,6 @@ RecordingStudio::Recording.unscoped.find_or_create_by!(
   recordable: page
 )
 
-RecordingStudio::Recording.unscoped.find_or_create_by!(
-  root_recording_id: root_recording.id,
-  parent_recording_id: root_recording.id,
-  recordable: user
-)
-
 chat_thread_recording = RecordingStudio::Recording.unscoped.find_or_create_by!(
   root_recording_id: root_recording.id,
   parent_recording_id: root_recording.id,
@@ -170,7 +164,7 @@ end
 puts "Seeded: #{admin_email} / #{admin_password}"
 puts "Seeded: Workspace '#{workspace.name}' with root recording ##{root_recording.id}"
 puts "Seeded: Page '#{page.title}' beneath the workspace root recording"
-puts "Seeded: User '#{user.name}' beneath the workspace root recording"
+puts "Seeded: User '#{user.name}' as the signed-in actor with workspace admin access"
 puts "Seeded: Chat thread '#{chat_thread.title}' with #{chat_messages.count} recorded messages"
 puts "Seeded: Kiln canister press kit (#{press_kit.size} images) on the workspace"
 puts "Upload page: /recording_studio_attachable/recordings/#{root_recording.id}/attachments/upload"

@@ -26,4 +26,4 @@ bin/rails db:setup
 bin/dev
 ```
 
-Sign in at `/users/sign_in` with `admin@admin.com` / `Password`. Seeds print the workspace and page upload paths (`/recording_studio_attachable/recordings/<id>/attachments/upload`). The home page also links those paths. The recording id is the workspace root id (home) or the page recording id (page upload).
+Sign in at `/users/sign_in` with `admin@admin.com` / `Password`. Dummy `User` is a mutable Devise actor, not a recordable; seeds grant Accessible admin on the workspace root. Seeds print the workspace and page upload paths (`/recording_studio_attachable/recordings/<id>/attachments/upload`). The home page also links those paths. The recording id is the workspace root id (home) or the page recording id (page upload).

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.1] - 2026-10-23
+
+### Changed
+
+- The dummy app now wires the Google Drive v0.4.0 and Dropbox v0.3.0 upload add-ons with Oauth v0.15.1.
+- The dummy User is a mutable Devise actor rather than a recordable, which fixes sign-out.
+- The dummy bumps bcrypt, devise, msgpack, and brakeman.
+
+No gem code changed.
+
 ## [0.21.0] - 2026-10-23
 
 ### Added

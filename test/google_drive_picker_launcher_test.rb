@@ -29,6 +29,7 @@ class GoogleDrivePickerLauncherTest < Minitest::Test
     result = JSON.parse(stdout)
     assert_equal true, result.fetch("chooseOnReadyClick")
     assert_equal true, result.fetch("popupOnReadyAuthClick")
+    assert_equal true, result.fetch("postedOauthConnectIntoPopup")
     assert_equal true, result.fetch("chooseAfterConnectOnSamePage")
     assert_equal 0, result.fetch("continueButtonsAfterConnect")
     assert_equal 2, result.fetch("bootstrapsAfterRelaunch")
@@ -88,6 +89,7 @@ class GoogleDrivePickerLauncherTest < Minitest::Test
     <<~JS
       const pickerCalls = []
       const popupCalls = []
+      const formPosts = []
 
       function element(tag = "div") {
         const node = {
@@ -175,6 +177,20 @@ class GoogleDrivePickerLauncherTest < Minitest::Test
         querySelector() { return null },
         createElement(tag) {
           const node = element(tag)
+          node.type = ""
+          node.name = ""
+          node.value = ""
+          node.method = ""
+          node.action = ""
+          node.target = ""
+          node.submit = function() {
+            const fields = {}
+            this.children.forEach((child) => {
+              if (child.name) fields[child.name] = child.value
+            })
+            formPosts.push({ action: this.action, method: this.method, target: this.target, fields })
+          }
+          node.remove = function() {}
           node.addEventListener = (type, fn) => {
             if (type === "load") node._load = fn
             if (type === "error") node._error = fn
@@ -182,7 +198,10 @@ class GoogleDrivePickerLauncherTest < Minitest::Test
           }
           return node
         },
-        head
+        head,
+        body: {
+          appendChild(child) { return child }
+        }
       }
       globalThis.window = globalThis
       globalThis.window.location = { origin: "https://example.test" }
@@ -234,17 +253,26 @@ class GoogleDrivePickerLauncherTest < Minitest::Test
       const authController = controller()
       authController.fetchProviderBootstrap = async () => ({
         client_id: "client-id",
-        connect_url: "/google_drive/recordings/rec-1/connect?popup=1"
+        connect_url: "/google_drive/recordings/rec-1/connect?popup=1",
+        oauth_connect_url: "/recording_studio_oauth/outbound/google_drive/connect",
+        return_to: "/google_drive/recordings/rec-1/connected?popup=1",
+        authenticity_token: "csrf-token"
       })
       await launcher.prefetch({ controller: authController, bootstrapUrl: "/drive/auth" })
       popupCalls.length = 0
+      formPosts.length = 0
       await launcher.launch({
         controller: authController,
         providerKey: "google_drive",
         bootstrapUrl: "/drive/auth",
         gesture: true
       })
-      const popupOnReadyAuthClick = popupCalls[0]?.includes("/google_drive/recordings/rec-1/connect")
+      const popupOnReadyAuthClick = popupCalls[0] === "about:blank"
+      const postedOauthConnectIntoPopup = formPosts[0]?.action === "/recording_studio_oauth/outbound/google_drive/connect" &&
+        formPosts[0]?.target === "google_drive-auth" &&
+        formPosts[0]?.fields?.owner === "user" &&
+        formPosts[0]?.fields?.return_to?.includes("/google_drive/recordings/rec-1/connected") &&
+        formPosts[0]?.fields?.authenticity_token === "csrf-token"
 
       const connectThenChooseController = controller()
       const connectThenChooseButton = element("button")
@@ -256,7 +284,13 @@ class GoogleDrivePickerLauncherTest < Minitest::Test
       connectThenChooseController.fetchProviderBootstrap = async () => {
         connectThenChooseBootstraps += 1
         if (connectThenChooseBootstraps === 1) {
-          return { client_id: "client-id", connect_url: "/google_drive/recordings/rec-1/connect?popup=1" }
+          return {
+            client_id: "client-id",
+            connect_url: "/google_drive/recordings/rec-1/connect?popup=1",
+            oauth_connect_url: "/recording_studio_oauth/outbound/google_drive/connect",
+            return_to: "/google_drive/recordings/rec-1/connected?popup=1",
+            authenticity_token: "csrf-token"
+          }
         }
         return {
           access_token: "token-2",
@@ -336,6 +370,7 @@ class GoogleDrivePickerLauncherTest < Minitest::Test
       process.stdout.write(JSON.stringify({
         chooseOnReadyClick,
         popupOnReadyAuthClick,
+        postedOauthConnectIntoPopup,
         chooseAfterConnectOnSamePage,
         continueButtonsAfterConnect,
         popupAfterConnectOnSamePage,

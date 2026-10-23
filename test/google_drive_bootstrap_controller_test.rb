@@ -114,6 +114,51 @@ class GoogleDriveBootstrapControllerTest < ActionController::TestCase
     assert_equal "Google Drive isn't available right now", JSON.parse(@response.body).fetch("error")
   end
 
+  def test_show_returns_direct_oauth_connect_payload_when_reconnect_is_required
+    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+    route_proxy = Object.new
+    route_proxy.define_singleton_method(:recording_imports_path) do |record, **_kwargs|
+      "/google_drive/recordings/#{record.id}/imports.json"
+    end
+    route_proxy.define_singleton_method(:recording_connected_path) do |record, **kwargs|
+      "/google_drive/recordings/#{record.id}/connected?#{kwargs.compact.to_query}"
+    end
+    @controller.define_singleton_method(:google_drive) { route_proxy }
+    @controller.define_singleton_method(:recording_connect_path) do |_record, **kwargs|
+      "/google_drive/recordings/rec-1/connect?#{kwargs.compact.to_query}"
+    end
+    @controller.define_singleton_method(:google_drive_oauth_connect_path) { "/recording_studio_oauth/outbound/google_drive/connect" }
+    @controller.define_singleton_method(:form_authenticity_token) { "csrf-token" }
+
+    with_routing do |set|
+      set.draw do
+        get "/google_drive/recordings/:recording_id/bootstrap(.:format)",
+            to: "recording_studio_attachable/google_drive/bootstrap#show"
+      end
+
+      @routes = set
+
+      RecordingStudio::Recording.stub(:find, recording) do
+        GoogleDriveFakes.with_gem_loaded do
+          RecordingStudioAttachable::GoogleDrive::Integration.stub(:picker_access, ->(*) { raise StandardError, "reconnect" }) do
+            RecordingStudioAttachable::GoogleDrive::Integration.stub(:reconnect_required?, true) do
+              get :show, params: { recording_id: recording.id, format: :json }
+            end
+          end
+        end
+      end
+    end
+
+    assert_response :success
+    payload = JSON.parse(@response.body)
+    assert_includes payload.fetch("connect_url"), "/google_drive/recordings/rec-1/connect"
+    assert_includes payload.fetch("connect_url"), "popup=1"
+    assert_equal "/recording_studio_oauth/outbound/google_drive/connect", payload.fetch("oauth_connect_url")
+    assert_includes payload.fetch("return_to"), "/google_drive/recordings/rec-1/connected"
+    assert_includes payload.fetch("return_to"), "popup=1"
+    assert_equal "csrf-token", payload.fetch("authenticity_token")
+  end
+
   def test_show_preserves_attachment_redirect_params_in_import_url
     recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
     route_proxy = Object.new

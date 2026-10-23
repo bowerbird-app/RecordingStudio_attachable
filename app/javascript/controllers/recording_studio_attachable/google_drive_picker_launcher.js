@@ -127,7 +127,38 @@ function sessionFor(controller, bootstrapUrl) {
 }
 
 function needsAuth(bootstrap) {
-  return Boolean(bootstrap?.connect_url || bootstrap?.auth_url)
+  return Boolean(bootstrap?.oauth_connect_url || bootstrap?.connect_url || bootstrap?.auth_url)
+}
+
+function csrfToken(controller, bootstrap) {
+  if (bootstrap?.authenticity_token) return bootstrap.authenticity_token
+  if (typeof controller.csrfToken === "function") return controller.csrfToken()
+
+  return document.querySelector("meta[name='csrf-token']")?.content || ""
+}
+
+function postOauthConnectIntoPopup(controller, bootstrap, popupName) {
+  const form = document.createElement("form")
+  form.method = "post"
+  form.action = bootstrap.oauth_connect_url
+  form.target = popupName
+
+  const fields = {
+    authenticity_token: csrfToken(controller, bootstrap),
+    owner: "user",
+    return_to: bootstrap.return_to || ""
+  }
+  Object.entries(fields).forEach(([name, value]) => {
+    const input = document.createElement("input")
+    input.type = "hidden"
+    input.name = name
+    input.value = value
+    form.appendChild(input)
+  })
+
+  document.body.appendChild(form)
+  form.submit()
+  form.remove()
 }
 
 function canOpenNow(session) {
@@ -155,9 +186,20 @@ function openPickerNow(controller, providerKey, bootstrap) {
 
 function openWithGesture(controller, providerKey, bootstrap) {
   hideProviderContinueButton(controller)
+  const popupName = `${providerKey}-auth`
+  if (bootstrap.oauth_connect_url) {
+    const popup = controller.openPopup("about:blank", popupName)
+    if (!popup) {
+      throw new Error("The sign-in popup was blocked. Allow popups and try again.")
+    }
+
+    postOauthConnectIntoPopup(controller, bootstrap, popupName)
+    return
+  }
+
   const authUrl = bootstrap.connect_url || bootstrap.auth_url
   if (authUrl) {
-    const popup = controller.openPopup(authUrl, `${providerKey}-auth`)
+    const popup = controller.openPopup(authUrl, popupName)
     if (!popup) {
       throw new Error("The sign-in popup was blocked. Allow popups and try again.")
     }

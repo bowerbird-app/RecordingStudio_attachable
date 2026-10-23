@@ -31,7 +31,7 @@ module RecordingStudioAttachable
       rescue StandardError => e
         raise unless Integration.reconnect_required?(e)
 
-        payload.merge(connect_url: google_drive_popup_connect_url)
+        payload.merge(google_drive_popup_connect_payload)
       end
     end
   end

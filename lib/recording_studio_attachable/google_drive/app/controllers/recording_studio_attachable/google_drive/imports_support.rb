@@ -57,7 +57,7 @@ module RecordingStudioAttachable
       def respond_to_reconnect_error
         message = Copy.t("google_drive.reconnect_to_continue", default: "Reconnect Google Drive to continue")
         respond_to do |format|
-          format.json { render json: { error: message, connect_url: google_drive_popup_connect_url }, status: :unauthorized }
+          format.json { render json: { error: message }.merge(google_drive_popup_connect_payload), status: :unauthorized }
           format.html { render_disconnected(reconnect: true) }
         end
       end

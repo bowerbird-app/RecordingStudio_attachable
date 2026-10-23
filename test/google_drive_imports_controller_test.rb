@@ -348,6 +348,43 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
     assert_includes @response.body, "drive down"
   end
 
+  def test_create_returns_json_unauthorized_with_direct_oauth_connect_payload_when_reconnect_is_required
+    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+    @controller.define_singleton_method(:google_drive_popup_connect_url) { "/google_drive/recordings/rec-1/connect?popup=1" }
+    @controller.define_singleton_method(:google_drive_oauth_connect_path) { "/recording_studio_oauth/outbound/google_drive/connect" }
+    @controller.define_singleton_method(:google_drive_connect_return_path) { |popup:| "/google_drive/recordings/rec-1/connected?popup=#{popup ? 1 : 0}" }
+    @controller.define_singleton_method(:form_authenticity_token) { "csrf-token" }
+
+    with_routing do |set|
+      set.draw do
+        post "/google_drive/recordings/:recording_id/imports(.:format)",
+             to: "recording_studio_attachable/google_drive/imports#create"
+      end
+
+      @routes = set
+
+      RecordingStudio::Recording.stub(:find, recording) do
+        GoogleDriveFakes.with_gem_loaded do
+          RecordingStudioAttachable::GoogleDrive::Integration.stub(:reconnect_required?, true) do
+            RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.stub(:call, ->(*) { raise StandardError, "reconnect" }) do
+              @controller.stub(:protect_against_forgery?, false) do
+                post :create, params: { recording_id: recording.id, file_ids: ["file-1"], format: :json }
+              end
+            end
+          end
+        end
+      end
+    end
+
+    assert_response :unauthorized
+    payload = JSON.parse(@response.body)
+    assert_equal "Reconnect Google Drive to continue", payload.fetch("error")
+    assert_includes payload.fetch("connect_url"), "/google_drive/recordings/rec-1/connect"
+    assert_equal "/recording_studio_oauth/outbound/google_drive/connect", payload.fetch("oauth_connect_url")
+    assert_includes payload.fetch("return_to"), "/google_drive/recordings/rec-1/connected"
+    assert_equal "csrf-token", payload.fetch("authenticity_token")
+  end
+
   def test_create_returns_json_error_when_the_import_service_fails
     recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
     result = RecordingStudioAttachable::Services::BaseService::Result.new(success: false, error: "Select at least one file")

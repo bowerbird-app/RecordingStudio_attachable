@@ -127,6 +127,7 @@ class GoogleDriveImportTest < ActionDispatch::IntegrationTest
     payload = JSON.parse(response.body)
     assert_equal "Reconnect Google Drive to continue", payload.fetch("error")
     assert_includes payload.fetch("connect_url"), google_drive_connect_path
+    assert_direct_oauth_connect_payload(payload)
     assert_nil session["recording_studio_attachable_google_drive"]
   end
 
@@ -149,6 +150,7 @@ class GoogleDriveImportTest < ActionDispatch::IntegrationTest
     payload = JSON.parse(response.body)
     assert_includes payload.fetch("connect_url"), google_drive_connect_path
     assert_includes payload.fetch("connect_url"), "popup=1"
+    assert_direct_oauth_connect_payload(payload)
     refute payload.key?("auth_url")
     assert_nil payload["access_token"]
     assert_nil session["recording_studio_attachable_google_drive"]
@@ -311,6 +313,17 @@ class GoogleDriveImportTest < ActionDispatch::IntegrationTest
 
   def google_drive_disconnect_path
     "/recording_studio_attachable/google_drive/recordings/#{@root.id}/connect"
+  end
+
+  def assert_direct_oauth_connect_payload(payload)
+    assert_equal oauth_outbound_connect_path, payload.fetch("oauth_connect_url")
+    assert_includes payload.fetch("return_to"), google_drive_connected_path
+    assert_includes payload.fetch("return_to"), "popup=1"
+    assert payload.fetch("authenticity_token").present?
+  end
+
+  def google_drive_connected_path
+    "/recording_studio_attachable/google_drive/recordings/#{@root.id}/connected"
   end
 
   def google_drive_connect_path

@@ -83,6 +83,15 @@ module RecordingStudioAttachable
         )
       end
 
+      def google_drive_popup_connect_payload
+        {
+          connect_url: google_drive_popup_connect_url,
+          oauth_connect_url: google_drive_oauth_connect_path,
+          return_to: google_drive_connect_return_path(popup: true),
+          authenticity_token: form_authenticity_token
+        }.compact
+      end
+
       def google_drive_connect_return_path(popup:)
         if popup
           google_drive.recording_connected_path(@recording, popup: 1, **upload_flow_params)

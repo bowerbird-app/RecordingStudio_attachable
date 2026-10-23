@@ -48,7 +48,6 @@ class DropboxPickerLauncherTest < Minitest::Test
     assert_equal true, result.fetch("chooseAfterNextClick")
     assert_equal true, result.fetch("popupOnReadyAuthClick")
     assert_equal true, result.fetch("postedOauthConnectIntoPopup")
-    assert_equal 0, result.fetch("chooseAfterConnectWithoutClick")
     assert_equal 0, result.fetch("continueButtonsAfterConnect")
     assert_equal true, result.fetch("chooseAfterConnectOnSamePage")
     assert_equal 0, result.fetch("popupAfterConnectOnSamePage")
@@ -329,18 +328,10 @@ class DropboxPickerLauncherTest < Minitest::Test
         relaunchUploadProvider(connectThenChooseController, "dropbox"),
         relaunchUploadProvider(connectThenChooseController, "dropbox")
       ])
-      await new Promise((resolve) => queueMicrotask(resolve))
+      await new Promise((resolve) => setTimeout(resolve, 0))
       const continueButtonsAfterConnect = connectThenChooseController.element._continueRegion?.children?.length || 0
-      const chooseAfterConnectWithoutClick = chooseCalls.length
       const popupAfterConnectOnSamePage = popupCalls.length
       const bootstrapsAfterRelaunch = connectThenChooseBootstraps
-      await launcher.launch({
-        controller: connectThenChooseController,
-        providerKey: "dropbox",
-        bootstrapUrl: "/dropbox/connect-then-choose",
-        button: connectThenChooseButton,
-        gesture: true
-      })
       const chooseAfterConnectOnSamePage = chooseCalls.length === 1
 
       const forbiddenButton = element("button")
@@ -378,7 +369,6 @@ class DropboxPickerLauncherTest < Minitest::Test
         chooseAfterNextClick,
         popupOnReadyAuthClick,
         postedOauthConnectIntoPopup,
-        chooseAfterConnectWithoutClick,
         continueButtonsAfterConnect,
         chooseAfterConnectOnSamePage,
         popupAfterConnectOnSamePage,

@@ -16,10 +16,10 @@ class UserSessionTest < ActionDispatch::IntegrationTest
 
     post user_session_path, params: { user: { email: user.email, password: "Password" } }
     assert_response :redirect
+    assert request.env["warden"].authenticated?(:user)
 
     delete destroy_user_session_path
     assert_response :redirect
-    follow_redirect!
-    assert_response :success
+    refute request.env["warden"].authenticated?(:user)
   end
 end

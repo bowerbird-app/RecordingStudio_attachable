@@ -173,7 +173,7 @@ class GoogleDriveConnectControllerTest < ActionController::TestCase
     end
 
     assert_redirected_to "/google_drive/recordings/rec-1/imports"
-    assert_equal "Couldn't disconnect Google Drive.", flash[:alert]
+    assert_equal "Google Drive isn't connected.", flash[:alert]
     assert_nil flash[:notice]
   end
 

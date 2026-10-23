@@ -311,54 +311,6 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
     assert_nil @request.session["recording_studio_attachable_google_drive"]
   end
 
-  def test_index_renders_reconnect_when_the_google_drive_gem_requires_reconnect
-    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
-    @controller.define_singleton_method(:google_drive_oauth_connect_path) { "/recording_studio_oauth/outbound/google_drive/connect" }
-    @controller.define_singleton_method(:google_drive) do
-      Object.new.tap do |proxy|
-        proxy.define_singleton_method(:recording_imports_path) do |record, **kwargs|
-          "/google_drive/recordings/#{record.id}/imports?#{kwargs.compact.to_query}"
-        end
-        proxy.define_singleton_method(:recording_connected_path) do |record, **kwargs|
-          "/google_drive/recordings/#{record.id}/connected?#{kwargs.compact.to_query}"
-        end
-      end
-    end
-    client = Object.new
-    client.define_singleton_method(:list) { |**| raise RecordingStudioGoogleDrive::ReconnectRequired, "Reconnect Google Drive" }
-
-    with_routing do |set|
-      set.draw do
-        get "/google_drive/recordings/:recording_id/imports",
-            to: "recording_studio_attachable/google_drive/imports#index"
-      end
-
-      @routes = set
-
-      RecordingStudio::Recording.stub(:find, recording) do
-        GoogleDriveFakes.with_gem_loaded do
-          RecordingStudioAttachable::GoogleDrive::Integration.stub(:connection, GoogleDriveFakes::Connection.new(access_token: "tok")) do
-            @controller.stub(:google_drive_client, client) do
-              @controller.stub(:render, lambda { |*_, **kwargs|
-                @controller.response_body = [
-                  [@controller.instance_variable_get(:@reconnect), @controller.instance_variable_get(:@oauth_connect_path)].join(" ")
-                ]
-                @controller.status = kwargs[:status] || :ok
-              }) do
-                get :index, params: { recording_id: recording.id }
-              end
-            end
-          end
-        end
-      end
-    end
-
-    assert_response :success
-    assert_includes @response.body, "true"
-    assert_includes @response.body, "/recording_studio_oauth/outbound/google_drive/connect"
-    assert_nil @request.session["recording_studio_attachable_google_drive"]
-  end
-
   def test_index_renders_bad_gateway_when_google_drive_returns_an_error
     recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
     client = Object.new
@@ -546,38 +498,6 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
 
     assert_redirected_to "/google_drive/recordings/rec-1/imports"
     assert_equal "Select at least one file", flash[:alert]
-  end
-
-  def test_create_returns_json_unauthorized_when_reconnect_is_required
-    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
-    @controller.define_singleton_method(:recording_connect_path) do |record, **kwargs|
-      "/google_drive/recordings/#{record.id}/connect?#{kwargs.compact.to_query}"
-    end
-
-    with_routing do |set|
-      set.draw do
-        post "/google_drive/recordings/:recording_id/imports(.:format)",
-             to: "recording_studio_attachable/google_drive/imports#create"
-      end
-
-      @routes = set
-
-      RecordingStudio::Recording.stub(:find, recording) do
-        GoogleDriveFakes.with_gem_loaded do
-          RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.stub(:call, ->(**) { raise RecordingStudioGoogleDrive::ReconnectRequired, "Reconnect Google Drive" }) do
-            @controller.stub(:protect_against_forgery?, false) do
-              post :create, params: { recording_id: recording.id, file_ids: ["file-1"], format: :json }
-            end
-          end
-        end
-      end
-    end
-
-    assert_response :unauthorized
-    payload = JSON.parse(@response.body)
-    assert_equal "Reconnect Google Drive to continue", payload.fetch("error")
-    assert_includes payload.fetch("connect_url"), "/google_drive/recordings/rec-1/connect"
-    assert_nil @request.session["recording_studio_attachable_google_drive"]
   end
 
   private

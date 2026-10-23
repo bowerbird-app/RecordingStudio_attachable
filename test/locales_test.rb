@@ -103,7 +103,7 @@ class LocalesTest < Minitest::Test
     "google_drive.next_page" => "Next page",
     "google_drive.title" => "Google Drive",
     "google_drive.disconnected" => "Disconnected Google Drive.",
-    "google_drive.disconnect_failed" => "Couldn't disconnect Google Drive.",
+    "google_drive.disconnect_failed" => "Google Drive isn't connected.",
     "google_drive.not_enabled" => "Google Drive isn't available right now",
     "google_drive.reconnect" => "Reconnect Google Drive"
   }.freeze

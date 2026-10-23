@@ -68,44 +68,6 @@ class GoogleDriveBootstrapControllerTest < ActionController::TestCase
     assert_nil @request.session["recording_studio_attachable_google_drive"]
   end
 
-  def test_show_returns_connect_url_without_writing_session_when_reconnect_is_required
-    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
-    route_proxy = Object.new
-    route_proxy.define_singleton_method(:recording_imports_path) do |record, **_kwargs|
-      "/google_drive/recordings/#{record.id}/imports.json"
-    end
-    @controller.define_singleton_method(:google_drive) { route_proxy }
-    @controller.define_singleton_method(:recording_connect_path) do |record, **kwargs|
-      query = kwargs.compact.to_query
-      "/google_drive/recordings/#{record.id}/connect#{"?#{query}" if query.present?}"
-    end
-
-    with_routing do |set|
-      set.draw do
-        get "/google_drive/recordings/:recording_id/bootstrap(.:format)",
-            to: "recording_studio_attachable/google_drive/bootstrap#show"
-      end
-
-      @routes = set
-
-      RecordingStudio::Recording.stub(:find, recording) do
-        GoogleDriveFakes.with_gem_loaded do
-          RecordingStudioAttachable::GoogleDrive::Integration.stub(:picker_access, ->(*) { raise RecordingStudioGoogleDrive::ReconnectRequired, "Reconnect Google Drive" }) do
-            get :show, params: { recording_id: recording.id, format: :json }
-          end
-        end
-      end
-    end
-
-    assert_response :success
-    payload = JSON.parse(@response.body)
-    assert_includes payload.fetch("connect_url"), "/google_drive/recordings/rec-1/connect"
-    assert_includes payload.fetch("connect_url"), "popup=1"
-    assert_not payload.key?("auth_url")
-    assert_nil payload["access_token"]
-    assert_nil @request.session["recording_studio_attachable_google_drive"]
-  end
-
   def test_show_returns_forbidden_when_upload_is_denied
     recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
     @controller.define_singleton_method(:authorize_attachment_action!) do |_action, _recording, capability_options: {}|

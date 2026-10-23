@@ -53,8 +53,8 @@ module RecordingStudioAttachable
         def reject_oversized_drive_file!(metadata)
           max_bytes = RecordingStudioAttachable.configuration.max_file_size
           return if max_bytes.blank?
-          return unless metadata.respond_to?(:size)
 
+          # Native Google Docs report nil size, so they're checked by validate_blob! after export.
           size = metadata.size
           return if size.nil?
 

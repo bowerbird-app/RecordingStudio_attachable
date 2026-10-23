@@ -61,6 +61,11 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes dummy_gemfile, 'gem "recording_studio_oauth", github: "bowerbird-app/RecordingStudio_Oauth", tag: "v0.15.0"'
   end
 
+  def test_root_suite_does_not_load_google_drive_or_register_its_upload_provider
+    refute defined?(RecordingStudioGoogleDrive)
+    assert_nil RecordingStudioAttachable.configuration.upload_provider(:google_drive)
+  end
+
   def test_engine_exists
     assert_kind_of Class, RecordingStudioAttachable::Engine
   end

@@ -111,7 +111,7 @@ en:
         title: "Google Drive"
         subtitle: "Import files into recording #%{recording_id} using the built-in addon"
         disconnected: "Disconnected Google Drive."
-        disconnect_failed: "Couldn't disconnect Google Drive."
+        disconnect_failed: "Google Drive isn't connected."
         not_enabled: "Google Drive isn't available right now"
         picker_requires_config: "Google Drive picker needs an API key and app id"
         select_at_least_one: "Select at least one Google Drive file to import"

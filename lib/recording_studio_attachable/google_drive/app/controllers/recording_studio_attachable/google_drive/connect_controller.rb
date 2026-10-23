@@ -51,7 +51,7 @@ module RecordingStudioAttachable
           redirect_to google_drive.recording_imports_path(@recording, upload_flow_params),
                       alert: Copy.t(
                         "google_drive.disconnect_failed",
-                        default: "Couldn't disconnect Google Drive."
+                        default: "Google Drive isn't connected."
                       )
         end
       end

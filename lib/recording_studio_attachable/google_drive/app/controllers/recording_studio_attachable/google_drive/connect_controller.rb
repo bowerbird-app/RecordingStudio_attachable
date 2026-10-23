@@ -19,14 +19,7 @@ module RecordingStudioAttachable
       def complete
         authorize_google_drive_upload!
         ensure_google_drive_enabled!
-
-        render_upload_provider_modal_event(
-          type: "provider-auth-complete",
-          provider_key: "google_drive",
-          modal_id: current_upload_provider_modal_id,
-          reload_url: google_drive_connect_reload_url,
-          close_window: true
-        )
+        render_connect_complete
       rescue RecordingStudioAttachable::DependencyUnavailableError => e
         dependency_unavailable_alert(e)
       end
@@ -40,6 +33,16 @@ module RecordingStudioAttachable
       end
 
       private
+
+      def render_connect_complete
+        render_upload_provider_modal_event(
+          type: "provider-auth-complete",
+          provider_key: "google_drive",
+          modal_id: current_upload_provider_modal_id,
+          reload_url: google_drive_connect_reload_url,
+          close_window: true
+        )
+      end
 
       def redirect_after_disconnect(oauth_disconnect_path)
         if oauth_disconnect_path.present?

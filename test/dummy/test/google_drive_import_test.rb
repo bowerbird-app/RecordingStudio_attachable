@@ -119,7 +119,20 @@ class GoogleDriveImportTest < ActionDispatch::IntegrationTest
   end
 
   def with_drive_client(client, &block)
-    RecordingStudioGoogleDrive::Client.stub(:for, client, &block)
+    with_stub(RecordingStudioGoogleDrive::Client, :for, ->(**) { client }, &block)
+  end
+
+  def with_stub(object, name, callable)
+    singleton = object.singleton_class
+    original = singleton.instance_method(name) if singleton.method_defined?(name) || singleton.private_method_defined?(name)
+    singleton.define_method(name, callable)
+    yield
+  ensure
+    if original
+      singleton.define_method(name, original)
+    elsif singleton.method_defined?(name) || singleton.private_method_defined?(name)
+      singleton.remove_method(name)
+    end
   end
 
   def oauth_outbound_connect_path

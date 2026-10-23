@@ -94,7 +94,9 @@ module RecordingStudioAttachable
       def google_drive_connect_reload_url
         google_drive.recording_imports_path(
           @recording,
-          **upload_flow_params.merge(embed: "modal", provider_key: "google_drive")
+          **upload_flow_params,
+          embed: "modal",
+          provider_key: "google_drive"
         )
       end
 

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-unless defined?(::RecordingStudioGoogleDrive)
+unless defined?(RecordingStudioGoogleDrive)
   module RecordingStudioGoogleDrive
     class Error < StandardError; end
     class ReconnectRequired < Error; end
@@ -9,9 +9,13 @@ unless defined?(::RecordingStudioGoogleDrive)
 end
 
 module GoogleDriveFakes
-  DriveFile = Struct.new(:id, :name, :mime_type, :web_view_link, :folder, :size, keyword_init: true) do
+  DriveFile = Struct.new(:id, :name, :mime_type, :web_view_link, :folder, :byte_size, keyword_init: true) do
     def folder?
       !!folder
+    end
+
+    def size
+      byte_size
     end
   end
 

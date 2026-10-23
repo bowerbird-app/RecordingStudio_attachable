@@ -143,7 +143,7 @@ class GoogleDriveImportSelectedFilesTest < Minitest::Test
         name: "Huge.pdf",
         mime_type: "application/pdf",
         web_view_link: "https://drive.test/#{file_id}",
-        size: 11
+        byte_size: 11
       )
     end
     client.define_singleton_method(:download) do |file_id, resource_key: nil|

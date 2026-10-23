@@ -33,7 +33,11 @@ module MyCloud
       ensure_provider_available!
       MyCloud.disconnect!(current_attachable_actor)
       redirect_to my_cloud.recording_imports_path(@recording, upload_flow_params),
-                  notice: RecordingStudioAttachable::Copy.t("providers.disconnect", default: "Disconnect")
+                  notice: RecordingStudioAttachable::Copy.t(
+                    "providers.disconnected",
+                    provider: provider_label,
+                    default: "Disconnected from #{provider_label}."
+                  )
     rescue RecordingStudioAttachable::DependencyUnavailableError => e
       dependency_unavailable_alert(e)
     end

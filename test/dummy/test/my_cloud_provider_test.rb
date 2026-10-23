@@ -45,6 +45,23 @@ class MyCloudProviderTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Import selected"
   end
 
+  test "browse page renders folder rows and breadcrumbs" do
+    MyCloud.connect!(@user)
+    get "/recording_studio_attachable/my_cloud/recordings/#{@root.id}/imports"
+    assert_response :success
+    assert_includes response.body, "Briefs"
+    assert_includes response.body, "path=folder-1"
+    refute_includes response.body, ">Up<"
+    refute_includes response.body, "Nested brief.png"
+
+    get "/recording_studio_attachable/my_cloud/recordings/#{@root.id}/imports", params: { path: "folder-1" }
+    assert_response :success
+    assert_includes response.body, "Nested brief.png"
+    assert_includes response.body, "Up"
+    assert_includes response.body, "folder-1"
+    refute_includes response.body, "Cloud brief.png"
+  end
+
   test "connect then import copies a remote file" do
     post "/recording_studio_attachable/my_cloud/recordings/#{@root.id}/connect"
     assert_response :redirect

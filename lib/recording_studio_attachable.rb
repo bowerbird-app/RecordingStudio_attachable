@@ -54,7 +54,6 @@ require "recording_studio_attachable/api"
 require "recording_studio_attachable/storage_release"
 require "recording_studio_attachable/storage_limit"
 require "recording_studio_attachable/services/base_service"
-require "recording_studio_attachable/adapter/import_selected_files"
 require "recording_studio_attachable/engine"
 require "recording_studio/capabilities/attachable"
 

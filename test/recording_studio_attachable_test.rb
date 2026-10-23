@@ -577,7 +577,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes library_source, "ActiveSupport.run_load_hooks(:recording_studio_attachable, RecordingStudioAttachable)"
     refute_includes library_source, "Dir["
     assert_includes adapter_source, "def register_adapter_routes(key, &block)"
-    assert_includes adapter_source, "return if adapter_route_blocks.key?(adapter_key)"
+    assert_includes adapter_source, "adapter routes already registered"
     assert_includes engine_source, "recording_studio_attachable.adapter_routes"
     assert_includes initializer_template, ":my_cloud"
     assert_includes initializer_template, "register_adapter_routes(:my_cloud)"

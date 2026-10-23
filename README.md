@@ -411,20 +411,20 @@ Each provider registration supports:
 - `launcher`: browser launcher name for `:client_picker`
 - `launcher_module`: importmap module the upload page pins when the provider is shown
 - `allowed_payload_keys`: keys kept from browser `provider_payload`
-- `remote_importer`: callable hook that materializes queued remote selections into attachments through the shared Attachable result contract
-- `connect`: callable `(recording:, context:)` returning `{ url, method, fields, fallback_url }`
+- `remote_importer`: callable hook that materializes queued remote selections into attachments through the shared Attachable result contract. It is called with keyword arguments only: `parent_recording:`, `attachments:`, `actor:`, `impersonator:`, and `context:`.
+- `connect`: callable receiving keyword arguments only (`recording:`, `context:`) and returning `{ url, method, fields, fallback_url }`
 - `reconnect_error`: callable `(error) -> bool` mapped by the shared import path, in addition to `RecordingStudioAttachable::ReconnectRequired`
 - `modal_title`: optional modal heading for `:modal_page`
 - `icon`, `style`, `size`, `target`: FlatPack button options
 - `visible`: optional callable receiving `view_context:` and `recording:`
 
-The `remote_importer` hook is the public cloud-provider API. It receives:
+The `remote_importer` hook is the public cloud-provider API. It receives keyword arguments only:
 
-- `parent_recording`
-- `attachments`: normalized remote selections from the shared upload queue
-- `actor`
-- `impersonator`
-- `context`: the request/controller context for session-backed provider auth
+- `parent_recording:`
+- `attachments:`: normalized remote selections from the shared upload queue
+- `actor:`
+- `impersonator:`
+- `context:`: the request/controller context for session-backed provider auth
 
 It must return the same `RecordingStudioAttachable::Services::BaseService::Result` shape used by the gem's other service APIs.
 
@@ -441,7 +441,7 @@ For `:client_picker`, the upload page stays in place and calls a registered brow
 Client-picker launchers are registered in JavaScript:
 
 ```js
-import { registerUploadProviderLauncher } from "controllers/recording_studio_attachable/provider_launchers"
+import { registerUploadProviderLauncher } from "recording_studio_attachable/provider_launchers"
 
 registerUploadProviderLauncher("my_cloud", {
   forget(bootstrapUrl) {
@@ -453,7 +453,7 @@ registerUploadProviderLauncher("my_cloud", {
   async launch({ controller, providerKey, bootstrapUrl, gesture }) {
     const bootstrap = await controller.fetchProviderBootstrap(bootstrapUrl)
     // open auth popup or vendor picker inside the click when gesture is true
-    controller.addProviderSelections(providerKey, [{ id: "file-1", resource_key: "rk-1" }])
+    controller.addProviderSelections(providerKey, [{ id: "file-1" }])
   }
 })
 ```
@@ -476,7 +476,7 @@ result = RecordingStudioAttachable::Services::ImportAttachment.call(
   metadata: {
     provider: "my_cloud",
     external_id: remote_file.id,
-    external_url: remote_file.web_view_link
+    external_url: remote_file.url
   }
 )
 
@@ -518,7 +518,7 @@ post recording_studio_attachable.recording_attachment_imports_path(recording), p
         name: remote_file.title,
         metadata: {
           external_id: remote_file.id,
-          external_url: remote_file.web_view_link
+          external_url: remote_file.url
         }
       }
     ]
@@ -570,12 +570,11 @@ Bootstrap JSON is provider-neutral:
 Files are always **copied** into Active Storage. There are no linked attachments.
 
 #### Adding another provider
-#### Adding another provider
 
 1. Ship an isolated engine in the provider gem (controllers inherit `ProviderController`).
-2. Register routes with `RecordingStudioAttachable.register_adapter_routes(:your_key) { mount Your::Engine, at: "/your_key", as: :your_key }`.
+2. Register routes with `RecordingStudioAttachable.register_adapter_routes(:your_key) { mount Your::Engine, at: "/your_key", as: :your_key }`. A second registration for the same key raises.
 3. Call `register_upload_provider` with the contract above (`strategy: :client_picker`, `remote_importer`, `connect`, `allowed_payload_keys`).
-4. Hand `ImportRemoteFiles` payloads `{ download: -> { io:, filename:, content_type: }, filename:, content_type:, byte_size:, name:, description:, metadata: { external_id:, external_url: } }`, or resolve a `RecordingStudioAttachable::RemoteFile` and fetch with `SafeRemoteFetch`.
+4. Hand `ImportRemoteFiles` payloads `{ download: -> { io:, filename:, content_type: }, filename:, content_type:, byte_size:, name:, description:, metadata: { external_id:, external_url: } }`, or resolve a `RecordingStudioAttachable::RemoteFile` and fetch with `SafeRemoteFetch.call(..., max_bytes: configuration.max_file_size)` for URL fetches. Provider downloads must use `SafeRemoteFetch.call(..., max_bytes: configuration.max_file_size)` for URL fetches.
 5. Register a launcher with `registerUploadProviderLauncher("your_key", …)`. Pin that module from the provider gem. The upload page imports it only when the provider is shown.
 
 Do not add a second registry. Do not special-case the new provider in core config, routes, or JS.

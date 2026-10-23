@@ -18,7 +18,9 @@ module RecordingStudioAttachable
       raise ArgumentError, "adapter routes require a block" unless block
 
       adapter_key = key.to_sym
-      return if adapter_route_blocks.key?(adapter_key)
+      if adapter_route_blocks.key?(adapter_key)
+        raise ArgumentError, "adapter routes already registered for #{adapter_key.inspect}"
+      end
 
       adapter_route_blocks[adapter_key] = block
     end

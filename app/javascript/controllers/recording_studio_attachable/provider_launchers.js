@@ -129,7 +129,7 @@ export function createBootstrapCache() {
 }
 
 export function providerNeedsAuth(bootstrap) {
-  return Boolean(bootstrap?.needs_auth || bootstrap?.connect)
+  return Boolean(bootstrap?.needs_auth)
 }
 
 export function csrfToken(controller, bootstrap) {

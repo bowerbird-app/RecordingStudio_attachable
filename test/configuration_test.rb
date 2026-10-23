@@ -232,4 +232,120 @@ class ConfigurationTest < Minitest::Test
     assert_equal %i[small med large poster], @configuration.preprocessed_variants
     assert_equal :subtree, @configuration.default_listing_scope
   end
+
+  def test_merge_ignores_non_enumerable_inputs
+    snapshot = @configuration.to_h
+
+    @configuration.merge!(nil)
+
+    assert_equal snapshot, @configuration.to_h
+  end
+
+  def test_allowed_content_type_supports_wildcards
+    assert @configuration.allowed_content_type?("image/png")
+    assert_not @configuration.allowed_content_type?("text/plain")
+    assert_not @configuration.allowed_content_type?("image/svg+xml")
+    assert @configuration.allowed_content_type?("image/svg+xml", allowed_content_types: ["image/svg+xml"])
+  end
+
+  def test_allowed_content_type_accepts_blank_overrides
+    assert @configuration.allowed_content_type?("text/plain", allowed_content_types: [])
+  end
+
+  def test_attachment_kind_for_uses_classifier
+    assert_equal "image", @configuration.attachment_kind_for("image/jpeg")
+    assert_equal "file", @configuration.attachment_kind_for("application/pdf")
+  end
+
+  def test_attachment_kind_for_accepts_custom_classifier
+    classifier = ->(_content_type) { :IMAGE }
+
+    assert_equal "image", @configuration.attachment_kind_for("text/plain", classifier: classifier)
+  end
+
+  def test_attachment_kind_enabled_normalizes_values
+    assert @configuration.attachment_kind_enabled?("IMAGE", enabled_attachment_kinds: ["image"])
+    assert_not @configuration.attachment_kind_enabled?("audio", enabled_attachment_kinds: ["image"])
+  end
+
+  def test_attachment_kind_enabled_falls_back_to_global_configuration_when_override_is_nil
+    @configuration.enabled_attachment_kinds = %i[file]
+
+    assert @configuration.attachment_kind_enabled?("file", enabled_attachment_kinds: nil)
+    assert_not @configuration.attachment_kind_enabled?("image", enabled_attachment_kinds: nil)
+  end
+
+  def test_upload_provider_returns_nil_for_missing_keys
+    assert_nil @configuration.upload_provider(:missing)
+  end
+
+  def test_normalize_role_maps_aliases_and_custom_roles
+    assert_equal :view, @configuration.normalize_role("Viewing")
+    assert_equal :edit, @configuration.normalize_role(:editor)
+    assert_equal :admin, @configuration.normalize_role(:admin)
+  end
+
+  def test_normalize_auth_roles_symbolizes_actions_and_roles
+    roles = @configuration.normalize_auth_roles("view" => "viewer", upload: "Editor")
+
+    assert_equal({ view: :view, upload: :edit }, roles)
+  end
+
+  def test_storage_limit_blank_values_are_stored_as_nil
+    @configuration.storage_limit = :storage_bytes
+    assert_equal :storage_bytes, @configuration.storage_limit
+
+    @configuration.storage_limit = "  "
+    assert_nil @configuration.storage_limit
+
+    @configuration.merge!(storage_limit: "")
+    assert_nil @configuration.storage_limit
+
+    @configuration.merge!(storage_limit: "archive_bytes")
+    assert_equal "archive_bytes", @configuration[:storage_limit]
+    assert_equal "archive_bytes", @configuration.to_h[:storage_limit]
+  end
+
+  def test_to_h_reflects_current_values
+    @configuration.layout = :application
+    @configuration.enabled_attachment_kinds = %i[file]
+
+    assert_equal(
+      {
+        allowed_content_types: ["image/*", "application/pdf"],
+        max_file_size: 25.megabytes,
+        max_file_count: 20,
+        pending_upload_limit: 20,
+        unattached_blob_ttl: 24.hours,
+        direct_upload_expires_in: 5.minutes,
+        purge_unattached_blobs: false,
+        import_allowed_hosts: [],
+        storage_limit: nil,
+        image_processing_enabled: false,
+        image_processing_max_width: 2560,
+        image_processing_max_height: 2560,
+        image_processing_quality: 0.82,
+        image_variants: {
+          square_small: { resize_to_fill: [128, 128] },
+          square_med: { resize_to_fill: [400, 400] },
+          square_large: { resize_to_fill: [800, 800] },
+          small: { resize_to_limit: [480, 480] },
+          med: { resize_to_limit: [960, 960] },
+          large: { resize_to_limit: [1600, 1600] },
+          xlarge: { resize_to_limit: [2400, 2400] }
+        },
+        url_mode: :rails,
+        direct_url_host: nil,
+        preprocessed_variants: %i[small med large],
+        enabled_attachment_kinds: %i[file],
+        default_listing_scope: :direct,
+        default_kind_filter: :all,
+        layout: :application,
+        upload_presentation: :page,
+        auth_roles: @configuration.auth_roles
+      },
+      @configuration.to_h
+    )
+  end
 end
+

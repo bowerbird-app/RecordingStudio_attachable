@@ -12,22 +12,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `ActiveSupport.run_load_hooks(:recording_studio_attachable, RecordingStudioAttachable)`.
-- Keyed `register_adapter_routes(key, &block)` (first registration wins).
-- Provider contract on `register_upload_provider`: `connect`, `reconnect_error`, `launcher_module`, `allowed_payload_keys`, plus the existing `strategy` / `launcher` / `bootstrap_url` / `import_url` / `remote_importer`.
+- Keyed `register_adapter_routes(key, &block)`. A second registration for the same key raises.
+- Provider contract on `register_upload_provider`: `connect`, `reconnect_error`, `launcher_module`, `allowed_payload_keys`, plus the existing `strategy` / `launcher` / `bootstrap_url` / `import_url` / `remote_importer`. `connect` and `remote_importer` are called with keyword arguments only.
 - Generic `RecordingStudioAttachable::Services::ImportRemoteFiles` and `RecordingStudioAttachable::ReconnectRequired`.
 - `RecordingStudioAttachable::ProviderController` for provider gems.
 - Generic connect JSON `{ provider_key, launcher, import_url, needs_auth, reconnect, connect: { url, method, fields, fallback_url } }`.
-- Partials `providers/_connect_form` and `providers/_remote_file_browser`, and `recording_studio.attachable.providers.*` copy with `%{provider}`.
-- JS helpers from `provider_launchers.js`: `loadScript`, `createBootstrapCache`, `providerNeedsAuth`, `openProviderAuth`, `csrfToken`, pinned as `recording_studio_attachable/provider_launchers`.
+- Partials `providers/_connect_form` and `providers/_remote_file_browser`, and `recording_studio.attachable.providers.*` copy with `%{provider}`. The remote file browser lists `kind: :file|:folder` entries, folder `open_url` rows, and `current_path` / `parent_url` breadcrumbs.
+- JS helpers from `provider_launchers.js`: `loadScript`, `createBootstrapCache`, `providerNeedsAuth`, `openProviderAuth`, `csrfToken`, pinned as `recording_studio_attachable/provider_launchers`. `providerNeedsAuth` is `Boolean(bootstrap.needs_auth)` only; `connect` is the recipe, not the auth signal.
+
+### Changed
+
+- The flat `bootstrap.authenticity_token` alias is deprecated and kept for one release. Prefer `connect.fields.authenticity_token`.
 
 ### Removed
 
-- In-tree cloud provider engines, launchers, locales, install-template snippets, dummy wiring, and session OAuth helpers (`Adapter::OauthClient`, `Adapter::OauthHttp`, `Adapter::Session`, `SessionAccessToken`, `ClientPicker.import_from_session`).
+- Both in-tree engines (Google Drive and Dropbox). `config.google_drive`, `config.dropbox`, and the session OAuth helpers (`Adapter::OauthClient`, `Adapter::OauthHttp`, `Adapter::Session`, `SessionAccessToken`, `ClientPicker.import_from_session`) are removed. Without the add-on gem, `config.google_drive` raises `NoMethodError`.
 
 ### Upgrade Notes
 
 - Bump to `0.21.0`. No migration in this gem.
-- In-tree Google Drive is removed. Hosts that still need those pickers must add `recording_studio_google_drive` `>= 0.4.0` and `recording_studio_dropbox` `>= 0.3.0`.
+- Both in-tree engines (Google Drive and Dropbox) are gone. `config.google_drive`, `config.dropbox`, and the session OAuth helpers are removed. `config.google_drive` raises `NoMethodError` without the add-on gem. Hosts add `recording_studio_google_drive >= 0.4.0` / `recording_studio_dropbox >= 0.3.0`, which own config, routes, and OAuth.
 - Provider gems mount through `register_adapter_routes` and `register_upload_provider`. Attachable no longer names a vendor in config, routes, JS, or locales.
 
 ## [0.20.2] - 2026-10-22

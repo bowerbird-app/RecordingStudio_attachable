@@ -44,7 +44,6 @@ RecordingStudioAttachable.configure do |config|
         fields: { authenticity_token: context.provider_csrf_token },
         fallback_url: helpers.recording_connect_path(recording)
       }
-    end,
-    reconnect_error: ->(error) { error.is_a?(RecordingStudioAttachable::ReconnectRequired) }
+    end
   )
 end

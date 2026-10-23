@@ -4,7 +4,7 @@
 <% connect_url = local_assigns[:connect_url] %>
 <% connect_method = local_assigns.fetch(:connect_method, :post) %>
 <% connect_fields = local_assigns.fetch(:connect_fields, {}) %>
-<% files = Array(local_assigns.fetch(:files, [])) %>
+<% entries = Array(local_assigns[:entries] || local_assigns.fetch(:files, [])) %>
 <% query = local_assigns[:query] %>
 <% next_page_url = local_assigns[:next_page_url] %>
 <% import_url = local_assigns[:import_url] %>
@@ -12,7 +12,24 @@
 <% disconnect_url = local_assigns[:disconnect_url] %>
 <% recording = local_assigns.fetch(:recording) %>
 <% flow_params = local_assigns.fetch(:flow_params, {}) %>
+<% current_path = local_assigns[:current_path] %>
+<% parent_url = local_assigns[:parent_url] %>
+<% path = local_assigns[:path] %>
 <% redirect_params = attachment_redirect_params %>
+<% entry_value = lambda do |entry, *names|
+  names.each do |name|
+    if entry.respond_to?(:[])
+      value = entry[name] || entry[name.to_s] || entry[name.to_sym]
+      next if value.nil?
+
+      return value
+    end
+
+    return entry.public_send(name) if entry.respond_to?(name)
+  end
+  nil
+end %>
+<% folders, files = entries.partition { |entry| entry_value.call(entry, :kind).to_s == "folder" } %>
 
 <% content = capture do %>
   <div class="rounded-xl border border-(--surface-border-color) bg-(--surface-background-color) p-6">
@@ -36,6 +53,7 @@
             <%= hidden_field_tag :provider_modal_id, current_upload_provider_modal_id if current_upload_provider_modal_id.present? %>
             <%= hidden_field_tag :redirect_mode, redirect_params[:redirect_mode] if redirect_params[:redirect_mode].present? %>
             <%= hidden_field_tag :return_to, redirect_params[:return_to] if redirect_params[:return_to].present? %>
+            <%= hidden_field_tag :path, path if path.present? %>
             <div class="min-w-[220px] flex-1">
               <%= render FlatPack::Search::Component.new(
                 name: :query,
@@ -59,6 +77,31 @@
           <% end %>
         </div>
 
+        <% if current_path.present? || parent_url.present? %>
+          <nav class="flex flex-wrap items-center gap-2 text-sm" aria-label="<%= t("recording_studio.attachable.providers.folder_nav", default: "Folder") %>">
+            <% if parent_url.present? %>
+              <%= link_to parent_url, class: "underline text-(--surface-content-color)" do %>
+                <%= t("recording_studio.attachable.providers.parent_folder", default: "Up") %>
+              <% end %>
+            <% end %>
+            <% if current_path.present? %>
+              <span class="text-(--surface-muted-content-color)"><%= current_path %></span>
+            <% end %>
+          </nav>
+        <% end %>
+
+        <% if folders.any? %>
+          <div class="space-y-3">
+            <% folders.each do |folder| %>
+              <% folder_name = entry_value.call(folder, :name) %>
+              <% open_url = entry_value.call(folder, :open_url) %>
+              <%= link_to open_url, class: "flex items-start gap-3 rounded-lg border border-(--surface-border-color) px-4 py-3 text-sm font-semibold text-(--surface-content-color)" do %>
+                <%= folder_name %>
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+
         <% if files.any? %>
           <%= form_with url: import_url, method: :post, class: "space-y-4" do %>
             <%= hidden_field_tag :embed, "modal" if embedded_upload_provider_request? %>
@@ -66,11 +109,12 @@
             <%= hidden_field_tag :provider_modal_id, current_upload_provider_modal_id if current_upload_provider_modal_id.present? %>
             <%= hidden_field_tag :redirect_mode, redirect_params[:redirect_mode] if redirect_params[:redirect_mode].present? %>
             <%= hidden_field_tag :return_to, redirect_params[:return_to] if redirect_params[:return_to].present? %>
+            <%= hidden_field_tag :path, path if path.present? %>
             <div class="space-y-3">
               <% files.each do |file| %>
-                <% file_id = file.respond_to?(:[]) ? (file["id"] || file[:id]) : file.id %>
-                <% file_name = file.respond_to?(:[]) ? (file["name"] || file[:name]) : file.name %>
-                <% file_type = file.respond_to?(:[]) ? (file["mimeType"] || file[:mimeType] || file["content_type"] || file[:content_type]) : (file.content_type if file.respond_to?(:content_type)) %>
+                <% file_id = entry_value.call(file, :id) %>
+                <% file_name = entry_value.call(file, :name) %>
+                <% file_type = entry_value.call(file, :content_type) %>
                 <label class="flex items-start gap-3 rounded-lg border border-(--surface-border-color) px-4 py-3">
                   <%= check_box_tag "file_ids[]", file_id, false, class: "mt-1" %>
                   <span class="min-w-0 flex-1">
@@ -90,7 +134,7 @@
               <% end %>
             </div>
           <% end %>
-        <% else %>
+        <% elsif folders.empty? %>
           <p class="text-sm text-(--surface-muted-content-color)"><%= t("recording_studio.attachable.providers.empty") %></p>
         <% end %>
 

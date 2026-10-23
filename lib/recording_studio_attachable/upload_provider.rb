@@ -209,24 +209,9 @@ module RecordingStudioAttachable
       }.compact
     end
 
+    # `connect` is called with keyword arguments only: `recording:` and `context:`.
     def call_connect(recording:, context:)
-      kwargs = { recording: recording, context: context }
-      parameters = @connect.parameters
-      return @connect.call(**kwargs) if parameters.any? { |type, _name| type == :keyrest }
-
-      keyword_names = parameters.filter_map do |type, name|
-        name if KEYWORD_PARAMETER_TYPES.include?(type)
-      end
-      return @connect.call(**kwargs.slice(*keyword_names)) if keyword_names.any?
-
-      case @connect.arity
-      when 2
-        @connect.call(recording, context)
-      when 1
-        @connect.call(recording)
-      else
-        @connect.call
-      end
+      @connect.call(recording: recording, context: context)
     end
 
     def launch_url(view_context:, recording:, query_params: {})
@@ -298,37 +283,16 @@ module RecordingStudioAttachable
       @system_arguments.except(:data)
     end
 
+    # `remote_importer` is called with keyword arguments only: `parent_recording:`,
+    # `attachments:`, `actor:`, `impersonator:`, and `context:`.
     def call_importer(parent_recording:, attachments:, actor:, impersonator:, context:)
-      kwargs = {
+      @remote_importer.call(
         parent_recording: parent_recording,
         attachments: attachments,
         actor: actor,
         impersonator: impersonator,
         context: context
-      }
-      parameters = @remote_importer.parameters
-
-      return @remote_importer.call(**kwargs) if parameters.any? { |type, _name| type == :keyrest }
-
-      keyword_names = parameters.filter_map do |type, name|
-        name if KEYWORD_PARAMETER_TYPES.include?(type)
-      end
-      return @remote_importer.call(**kwargs.slice(*keyword_names)) if keyword_names.any?
-
-      case @remote_importer.arity
-      when 5
-        @remote_importer.call(parent_recording, attachments, actor, impersonator, context)
-      when 4
-        @remote_importer.call(parent_recording, attachments, actor, impersonator)
-      when 3
-        @remote_importer.call(parent_recording, attachments, actor)
-      when 2
-        @remote_importer.call(parent_recording, attachments)
-      when 1
-        @remote_importer.call(parent_recording)
-      else
-        @remote_importer.call
-      end
+      )
     end
 
     def resolve(value, view_context:, recording:)

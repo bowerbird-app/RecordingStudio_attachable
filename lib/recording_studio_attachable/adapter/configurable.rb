@@ -17,15 +17,6 @@ module RecordingStudioAttachable
       def enabled?
         !!enabled
       end
-
-      private
-
-      def valid_credential?(value, field)
-        normalized = value.to_s.strip
-        return false if normalized.blank?
-
-        Array(self.class::PLACEHOLDER_PREFIXES[field]).exclude?(normalized)
-      end
     end
   end
 end

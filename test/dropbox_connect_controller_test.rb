@@ -71,6 +71,43 @@ class DropboxConnectControllerTest < ActionController::TestCase
     assert_nil @request.session["recording_studio_attachable_dropbox"]
   end
 
+  def test_show_uses_reconnect_when_connection_status_needs_reconnect
+    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+    route_proxy = Object.new
+    route_proxy.define_singleton_method(:recording_imports_path) do |record, **kwargs|
+      "/dropbox/recordings/#{record.id}/imports?#{kwargs.compact.to_query}"
+    end
+    route_proxy.define_singleton_method(:recording_connected_path) do |record, **kwargs|
+      "/dropbox/recordings/#{record.id}/connected?#{kwargs.compact.to_query}"
+    end
+    @controller.define_singleton_method(:dropbox) { route_proxy }
+
+    with_routing do |set|
+      set.draw do
+        get "/dropbox/recordings/:recording_id/connect",
+            to: "recording_studio_attachable/dropbox/connect#show"
+      end
+
+      @routes = set
+
+      RecordingStudio::Recording.stub(:find, recording) do
+        DropboxFakes.with_gem_loaded do
+          RecordingStudioAttachable::Dropbox::Integration.stub(:connection_status, :needs_reconnect) do
+            @controller.stub(:render, lambda { |*_, **kwargs|
+              @controller.response_body = [@controller.instance_variable_get(:@reconnect).to_s]
+              @controller.status = kwargs[:status] || :ok
+            }) do
+              get :show, params: { recording_id: recording.id }
+            end
+          end
+        end
+      end
+    end
+
+    assert_response :success
+    assert_equal "true", @response.body
+  end
+
   def test_complete_renders_provider_auth_complete_without_session_tokens
     recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
 

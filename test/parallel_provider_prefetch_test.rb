@@ -18,6 +18,7 @@ class ParallelProviderPrefetchTest < Minitest::Test
     assert_equal 2, result.fetch("driveFetchesAfterRelaunch")
     assert_equal "/dropbox/connect?popup=1", result.fetch("dropboxPopup")
     assert_equal "/drive/connect?popup=1", result.fetch("drivePopup")
+    assert_equal 0, result.fetch("dropboxChooseWithoutClick")
     assert_equal 0, result.fetch("dropboxContinueAfterConnect")
     assert_equal true, result.fetch("dropboxChooseAfterConnect")
     assert_equal 0, result.fetch("driveContinueAfterConnect")
@@ -237,8 +238,16 @@ class ParallelProviderPrefetchTest < Minitest::Test
         relaunchUploadProvider(dropboxController, "dropbox"),
         relaunchUploadProvider(dropboxController, "dropbox")
       ])
-      await new Promise((resolve) => setTimeout(resolve, 0))
+      await new Promise((resolve) => queueMicrotask(resolve))
       const dropboxContinueAfterConnect = dropboxController.element._continueRegion?.children?.length || 0
+      const dropboxChooseWithoutClick = chooseCalls.length
+      await dropbox.launch({
+        controller: dropboxController,
+        providerKey: "dropbox",
+        bootstrapUrl: "/dropbox/bootstrap",
+        button: dropboxController.providerButtonsByKey.get("dropbox"),
+        gesture: true
+      })
       const dropboxChooseAfterConnect = chooseCalls.length === 1
       const dropboxFetchesAfterRelaunch = dropboxFetches
 
@@ -259,6 +268,7 @@ class ParallelProviderPrefetchTest < Minitest::Test
         dropboxPopup,
         drivePopup,
         dropboxChooseAfterConnect,
+        dropboxChooseWithoutClick,
         dropboxContinueAfterConnect,
         driveChooseAfterConnect,
         driveContinueAfterConnect

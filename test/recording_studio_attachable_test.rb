@@ -679,6 +679,8 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes launcher_source, "postOauthConnectIntoPopup"
     assert_includes initializer_template, "recording_studio_dropbox"
     assert_includes initializer_template, "DROPBOX_CLIENT_ID"
+    assert_includes initializer_template, "RecordingStudioDropbox.register_oauth_provider"
+    assert_includes initializer_template, "%w[files.metadata.read files.content.read]"
     assert_includes view_source, 'title: t("recording_studio.attachable.dropbox.title")'
     assert_includes view_source, "if @show_connect"
     assert_includes connect_form_source, 't(reconnect ? "recording_studio.attachable.dropbox.reconnect" : "recording_studio.attachable.dropbox.connect")'

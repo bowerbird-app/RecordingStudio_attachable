@@ -31,7 +31,7 @@ class DropboxImportsControllerTest < ActionController::TestCase
     RecordingStudioAttachable.instance_variable_set(:@configuration, @original_configuration)
   end
 
-  def test_create_imports_selected_drive_files_through_the_public_service_layer
+  def test_create_imports_selected_dropbox_files_through_the_public_service_layer
     recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
     result = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [Object.new])
     captured = nil
@@ -180,7 +180,7 @@ class DropboxImportsControllerTest < ActionController::TestCase
     assert_equal "/pages/page-1#gallery", JSON.parse(@response.body).fetch("redirect_path")
   end
 
-  def test_index_lists_drive_files_when_connected
+  def test_index_lists_dropbox_files_when_connected
     recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
     page = DropboxFakes::Page.new(
       entries: [
@@ -223,7 +223,7 @@ class DropboxImportsControllerTest < ActionController::TestCase
     assert_nil @request.session["recording_studio_attachable_dropbox"]
   end
 
-  def test_index_lists_the_next_drive_page_when_page_token_is_present
+  def test_index_lists_the_next_dropbox_page_when_page_token_is_present
     recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
     page = DropboxFakes::Page.new(
       entries: [
@@ -268,6 +268,54 @@ class DropboxImportsControllerTest < ActionController::TestCase
     assert_equal "next-page", captured[:cursor]
     assert_equal 25, captured[:page_size]
     assert_equal "file-2 ", @response.body
+  end
+
+  def test_index_searches_dropbox_files_and_passes_the_search_cursor
+    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+    page = DropboxFakes::Page.new(
+      entries: [
+        DropboxFakes::DropboxFile.new(id: "file-3", name: "Match.pdf", path: "/Match.pdf")
+      ],
+      next_cursor: "search-cursor-2"
+    )
+    captured = nil
+    client = Object.new
+    client.define_singleton_method(:search) do |**kwargs|
+      captured = kwargs
+      page
+    end
+
+    with_routing do |set|
+      set.draw do
+        get "/dropbox/recordings/:recording_id/imports",
+            to: "recording_studio_attachable/dropbox/imports#index"
+      end
+
+      @routes = set
+
+      RecordingStudio::Recording.stub(:find, recording) do
+        DropboxFakes.with_gem_loaded do
+          RecordingStudioAttachable::Dropbox::Integration.stub(:connection, DropboxFakes::Connection.new(access_token: "tok")) do
+            @controller.stub(:dropbox_client, client) do
+              @controller.stub(:render, lambda { |*_, **kwargs|
+                files = @controller.instance_variable_get(:@files)
+                token = @controller.instance_variable_get(:@next_page_token)
+                @controller.response_body = ["#{files.map { |file| file['id'] }.join(',')} #{token}"]
+                @controller.status = kwargs[:status] || :ok
+              }) do
+                get :index, params: { recording_id: recording.id, query: "match", page_token: "search-cursor-1" }
+              end
+            end
+          end
+        end
+      end
+    end
+
+    assert_response :success
+    assert_equal "match", captured[:query]
+    assert_equal "search-cursor-1", captured[:cursor]
+    assert_equal 25, captured[:page_size]
+    assert_equal "file-3 search-cursor-2", @response.body
   end
 
   def test_index_renders_connect_state_when_there_is_no_connection

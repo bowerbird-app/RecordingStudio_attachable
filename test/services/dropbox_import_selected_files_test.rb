@@ -61,6 +61,55 @@ class DropboxImportSelectedFilesTest < Minitest::Test
     )
   end
 
+  def test_call_normalizes_hash_selections_and_merges_metadata
+    captured_paths = []
+    client = Object.new
+    client.define_singleton_method(:fetch_file) do |path:|
+      captured_paths << path
+      DropboxFakes::DropboxFile.new(
+        id: "id:#{path}",
+        name: "Brief.pdf",
+        path: "/Brief.pdf"
+      )
+    end
+    client.define_singleton_method(:download) do |path:|
+      DropboxFakes::DownloadedFile.new(
+        body: "pdf-bytes",
+        filename: "Brief.pdf",
+        content_type: "application/pdf"
+      )
+    end
+    captured = nil
+
+    RecordingStudioAttachable::Dropbox::Integration.stub(:client, client) do
+      RecordingStudioAttachable::Services::ImportAttachments.stub(:call, lambda { |**kwargs|
+        captured = kwargs
+        RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [:imported])
+      }) do
+        result = RecordingStudioAttachable::Dropbox::Services::ImportSelectedFiles.call(
+          parent_recording: FakeRecording.new(id: "rec-1", recordable_type: "Workspace"),
+          file_ids: [
+            "",
+            { "id" => "file-1", "name" => "Brief", "description" => "Notes", "metadata" => { "folder" => "inbox" } },
+            { id: "" }
+          ]
+        )
+
+        assert result.success?
+      end
+    end
+
+    assert_equal %w[file-1], captured_paths
+    attachment = captured[:attachments].first
+    assert_equal "Brief", attachment[:name]
+    assert_equal "Notes", attachment[:description]
+    assert_equal "application/pdf", attachment[:content_type]
+    assert_equal(
+      { provider: "dropbox", external_id: "id:file-1", external_url: "/Brief.pdf", "folder" => "inbox" },
+      attachment[:metadata]
+    )
+  end
+
   def test_call_rejects_blank_file_ids
     result = RecordingStudioAttachable::Dropbox::Services::ImportSelectedFiles.call(
       parent_recording: FakeRecording.new(id: "rec-1", recordable_type: "Workspace"),

@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dropbox stays optional. This gem has no runtime dependency on the Dropbox gem. The Dropbox engine mounts and the upload button registers only when the host bundles `recording_studio_dropbox`.
 - Without a connection, or when the Dropbox gem raises `ReconnectRequired`, the import UI shows Connect or Reconnect to Oauth's outbound flow instead of a 500.
 - Dropbox import uses `RecordingStudioDropbox::Client.new(token_provider: OauthToken.new(...))`. Chooser still needs the Dropbox app key on Attachable. Disconnect uses Oauth `DELETE /outbound/connections/:id` with `connection_id_for`.
+- Hosts must call `RecordingStudioDropbox.register_oauth_provider` with read-only scopes `files.metadata.read` and `files.content.read`. The Dropbox gem does not auto-register, and v0.2.0's default scopes include `files.content.write`.
 
 ### Removed
 
@@ -35,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Attachable no longer sets Drive OAuth `scopes`, `include_granted_scopes`, `access_type`, or `prompt`. Keep Drive read-only with `RecordingStudioGoogleDrive.configuration.scopes = ["https://www.googleapis.com/auth/drive.readonly"]`. Oauth still sends `access_type=offline` and `prompt=consent` from the Google Drive gem.
 - Point Connect at Oauth outbound (`POST /recording_studio_oauth/outbound/google_drive/connect`). Disconnect through `DELETE /outbound/connections/:id` using `connection_id_for`. The Attachable Drive callback URL is gone.
 - To keep Dropbox import, add `recording_studio_dropbox` `~> 0.2` and `recording_studio_oauth` `>= 0.15.0, < 1.0`, install and migrate Oauth, and put Dropbox app credentials on `recording_studio_oauth.outbound.dropbox`.
+- Call `RecordingStudioDropbox.register_oauth_provider` yourself with `scopes: %w[files.metadata.read files.content.read]`. The Dropbox gem does not auto-register, and v0.2.0's default includes `files.content.write`.
 - Set `config.dropbox.enabled = true` plus Chooser `client_id` (Dropbox app key). Remove Attachable `client_secret`, `redirect_uri`, `scopes`, and Dropbox session-token handling.
 - Point Connect at Oauth outbound (`POST /recording_studio_oauth/outbound/dropbox/connect`). Disconnect through `DELETE /outbound/connections/:id` using `connection_id_for`. The Attachable Dropbox callback URL is gone. Oauth still sends `token_access_type=offline` from the Dropbox gem.
 

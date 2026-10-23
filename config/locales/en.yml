@@ -133,7 +133,6 @@ en:
         next_page: "Next page"
         title: "Dropbox"
         subtitle: "Import files into recording #%{recording_id} using the built-in addon"
-        disconnected: "Disconnected Dropbox."
         disconnect_failed: "Dropbox isn't connected."
         not_enabled: "Dropbox isn't available right now"
         chooser_requires_config: "Dropbox Chooser needs an app key"

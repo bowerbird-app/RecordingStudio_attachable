@@ -12,5 +12,3 @@ en:
       alt_text_hint: "What a screen reader says."
     google_drive:
       disconnected: "Disconnected Google Drive."
-    dropbox:
-      disconnected: "Disconnected Dropbox."

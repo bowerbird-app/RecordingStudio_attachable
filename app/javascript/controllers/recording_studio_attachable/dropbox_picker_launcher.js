@@ -217,12 +217,6 @@ registerUploadProviderLauncher("dropbox", {
       throw error
     }
     if (session.error) throw session.error
-
-    if (needsAuth(session.bootstrap)) {
-      controller.clearProviderStatus()
-      return
-    }
-
-    return openChooserNow(controller, providerKey)
+    controller.clearProviderStatus()
   }
 })

@@ -48,6 +48,7 @@ class DropboxPickerLauncherTest < Minitest::Test
     assert_equal true, result.fetch("chooseAfterNextClick")
     assert_equal true, result.fetch("popupOnReadyAuthClick")
     assert_equal true, result.fetch("postedOauthConnectIntoPopup")
+    assert_equal 0, result.fetch("chooseAfterConnectWithoutClick")
     assert_equal 0, result.fetch("continueButtonsAfterConnect")
     assert_equal true, result.fetch("chooseAfterConnectOnSamePage")
     assert_equal 0, result.fetch("popupAfterConnectOnSamePage")
@@ -57,6 +58,7 @@ class DropboxPickerLauncherTest < Minitest::Test
     assert_equal true, result.fetch("forbiddenButtonDisabled")
     assert_equal false, result.fetch("forbiddenPrefetchAnnounced")
     assert_equal 0, result.fetch("unhandledRejections")
+    assert_equal true, result.fetch("blockedPopupRejected")
   end
 
   private
@@ -328,10 +330,18 @@ class DropboxPickerLauncherTest < Minitest::Test
         relaunchUploadProvider(connectThenChooseController, "dropbox"),
         relaunchUploadProvider(connectThenChooseController, "dropbox")
       ])
-      await new Promise((resolve) => setTimeout(resolve, 0))
+      await new Promise((resolve) => queueMicrotask(resolve))
       const continueButtonsAfterConnect = connectThenChooseController.element._continueRegion?.children?.length || 0
+      const chooseAfterConnectWithoutClick = chooseCalls.length
       const popupAfterConnectOnSamePage = popupCalls.length
       const bootstrapsAfterRelaunch = connectThenChooseBootstraps
+      await launcher.launch({
+        controller: connectThenChooseController,
+        providerKey: "dropbox",
+        bootstrapUrl: "/dropbox/connect-then-choose",
+        button: connectThenChooseButton,
+        gesture: true
+      })
       const chooseAfterConnectOnSamePage = chooseCalls.length === 1
 
       const forbiddenButton = element("button")
@@ -361,6 +371,28 @@ class DropboxPickerLauncherTest < Minitest::Test
       const forbiddenButtonDisabled = forbiddenButton.disabled === true
       const forbiddenPrefetchAnnounced = forbiddenController._announced
 
+      const blockedController = controller()
+      blockedController.openPopup = () => null
+      blockedController.fetchProviderBootstrap = async () => ({
+        client_id: "app-key",
+        oauth_connect_url: "/recording_studio_oauth/outbound/dropbox/connect",
+        return_to: "/dropbox/recordings/rec-1/connected?popup=1",
+        authenticity_token: "csrf-token"
+      })
+      await launcher.prefetch({ controller: blockedController, bootstrapUrl: "/dropbox/blocked" })
+      let blockedPopupMessage = null
+      try {
+        await launcher.launch({
+          controller: blockedController,
+          providerKey: "dropbox",
+          bootstrapUrl: "/dropbox/blocked",
+          gesture: true
+        })
+      } catch (error) {
+        blockedPopupMessage = error.message
+      }
+      const blockedPopupRejected = blockedPopupMessage === "The sign-in popup was blocked. Allow popups and try again."
+
       process.stdout.write(JSON.stringify({
         chooseOnReadyClick,
         chooserSendsFilename,
@@ -369,6 +401,7 @@ class DropboxPickerLauncherTest < Minitest::Test
         chooseAfterNextClick,
         popupOnReadyAuthClick,
         postedOauthConnectIntoPopup,
+        chooseAfterConnectWithoutClick,
         continueButtonsAfterConnect,
         chooseAfterConnectOnSamePage,
         popupAfterConnectOnSamePage,
@@ -377,7 +410,8 @@ class DropboxPickerLauncherTest < Minitest::Test
         forbiddenPrefetchHandled,
         forbiddenButtonDisabled,
         forbiddenPrefetchAnnounced,
-        unhandledRejections: unhandled.length
+        unhandledRejections: unhandled.length,
+        blockedPopupRejected
       }))
     JS
   end

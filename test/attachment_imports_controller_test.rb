@@ -255,6 +255,76 @@ module RecordingStudioAttachable
       RecordingStudioAttachable.configuration.instance_variable_set(:@upload_providers, original_providers)
     end
 
+    def test_create_returns_dropbox_reconnect_payload_when_remote_import_requires_reconnect
+      @controller = AttachmentImportsController.new
+      recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+      original_providers = RecordingStudioAttachable.configuration.upload_providers.dup
+      original_dropbox = RecordingStudioAttachable.configuration.dropbox.to_h
+      @controller.define_singleton_method(:form_authenticity_token) { "csrf-token" }
+      @controller.define_singleton_method(:dropbox) do
+        Object.new.tap do |proxy|
+          proxy.define_singleton_method(:recording_connect_path) do |record, **kwargs|
+            "/dropbox/recordings/#{record.id}/connect?#{kwargs.compact.to_query}"
+          end
+          proxy.define_singleton_method(:recording_connected_path) do |record, **kwargs|
+            "/dropbox/recordings/#{record.id}/connected?#{kwargs.compact.to_query}"
+          end
+        end
+      end
+
+      RecordingStudioAttachable.configuration.dropbox.merge!(
+        enabled: true,
+        client_id: "dropbox-client-id"
+      )
+      RecordingStudioAttachable::Dropbox::Integration.stub(:gem_loaded?, true) do
+        RecordingStudioAttachable::Dropbox::Engine.send(:register_upload_provider)
+      end
+
+      with_routing do |set|
+        set.draw do
+          post "/recordings/:recording_id/attachments/imports",
+               to: "recording_studio_attachable/attachment_imports#create"
+        end
+
+        @routes = set
+
+        RecordingStudio::Recording.stub(:find, recording) do
+          @controller.stub(:authorize_attachment_action!, true) do
+            @controller.stub(:capability_options_for, {}) do
+              RecordingStudioAttachable::Dropbox::Integration.stub(:reconnect_required?, true) do
+                RecordingStudioAttachable::Dropbox::Integration.stub(:request_error?, false) do
+                  RecordingStudioAttachable::Dropbox::Services::ImportSelectedFiles.stub(:call, ->(*) { raise StandardError, "reconnect" }) do
+                    @controller.stub(:protect_against_forgery?, false) do
+                      post :create,
+                           params: {
+                             recording_id: recording.id,
+                             attachment_import: {
+                               provider_key: "dropbox",
+                               attachments: [{ provider_payload: { id: "file-1" } }]
+                             }
+                           },
+                           as: :json
+                    end
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+
+      assert_response :unprocessable_entity
+      payload = JSON.parse(@response.body)
+      assert_equal "Reconnect Dropbox to continue", payload.fetch("error")
+      errors = payload.fetch("errors")
+      assert_includes errors.fetch("connect_url"), "/dropbox/recordings/rec-1/connect"
+      assert_includes errors.fetch("return_to"), "/dropbox/recordings/rec-1/connected"
+      assert_equal "csrf-token", errors.fetch("authenticity_token")
+    ensure
+      RecordingStudioAttachable.configuration.dropbox.merge!(original_dropbox)
+      RecordingStudioAttachable.configuration.instance_variable_set(:@upload_providers, original_providers)
+    end
+
     def test_create_rejects_unknown_provider_keys
       @controller = AttachmentImportsController.new
       recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")

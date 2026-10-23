@@ -548,7 +548,19 @@ Dropbox stays optional. This gem has no runtime dependency on `recording_studio_
 1. Add `recording_studio_dropbox` `~> 0.2` and `recording_studio_oauth` `>= 0.15.0, < 1.0`.
 2. Install and migrate Oauth (`recording_studio_oauth:install` and `recording_studio_oauth:migrations`).
 3. Mount Oauth and set Dropbox app credentials on the Oauth outbound provider (`recording_studio_oauth.outbound.dropbox`). Name the keys. Do not put the values in git.
-4. Enable the Attachable Chooser app key:
+4. Register the Dropbox Oauth provider. The Dropbox gem does not auto-register. Pass read-only scopes; v0.2.0's default includes `files.content.write`:
+
+```ruby
+if defined?(RecordingStudioDropbox)
+  RecordingStudioDropbox.register_oauth_provider(
+    client_id: ENV.fetch("DROPBOX_CLIENT_ID"),
+    client_secret: ENV.fetch("DROPBOX_CLIENT_SECRET"),
+    scopes: %w[files.metadata.read files.content.read]
+  )
+end
+```
+
+5. Enable the Attachable Chooser app key:
 
 ```ruby
 RecordingStudioAttachable.configure do |config|

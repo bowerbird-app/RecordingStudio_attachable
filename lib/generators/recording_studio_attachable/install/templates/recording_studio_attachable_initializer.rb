@@ -109,7 +109,16 @@ RecordingStudioAttachable.configure do |config|
   #
   # Dropbox (optional). Bundle recording_studio_dropbox ~> 0.2 and
   # recording_studio_oauth >= 0.15.0, < 1.0. Oauth stores tokens. This gem
-  # only needs the Chooser app key:
+  # only needs the Chooser app key. The Dropbox gem does not auto-register
+  # the Oauth provider; pass read-only scopes because v0.2.0's default
+  # includes files.content.write:
+  if defined?(RecordingStudioDropbox)
+    RecordingStudioDropbox.register_oauth_provider(
+      client_id: ENV["DROPBOX_CLIENT_ID"],
+      client_secret: ENV["DROPBOX_CLIENT_SECRET"],
+      scopes: %w[files.metadata.read files.content.read]
+    )
+  end
   # config.dropbox.enabled = true
   # config.dropbox.client_id = ENV["DROPBOX_CLIENT_ID"] # Dropbox app key for Chooser
   #

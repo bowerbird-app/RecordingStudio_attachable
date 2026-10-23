@@ -660,6 +660,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes initializer_template, "config.dropbox.enabled = true"
     assert_includes initializer_template, "DROPBOX_CLIENT_ID"
     assert_includes initializer_template, "recording_studio_dropbox"
+    assert_includes initializer_template, "RecordingStudioDropbox.register_oauth_provider"
+    assert_includes initializer_template, "%w[files.metadata.read files.content.read]"
   end
 
   def test_dummy_home_demo_includes_registered_demo_cloud_provider

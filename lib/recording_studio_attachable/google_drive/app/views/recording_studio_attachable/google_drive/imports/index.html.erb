@@ -27,7 +27,7 @@
             <%= render FlatPack::Button::Component.new(text: t("recording_studio.attachable.google_drive.search"), style: :secondary, size: :md, type: "submit") %>
           <% end %>
 
-          <%= form_with url: google_drive.recording_disconnect_path(@recording), method: :delete, class: "inline-flex" do %>
+          <%= form_with url: google_drive.recording_disconnect_path(@recording), method: :delete, authenticity_token: form_authenticity_token, class: "inline-flex" do %>
             <%= hidden_field_tag :embed, "modal" if embedded_upload_provider_request? %>
             <%= hidden_field_tag :provider_key, current_upload_provider_key if current_upload_provider_key.present? %>
             <%= hidden_field_tag :provider_modal_id, current_upload_provider_modal_id if current_upload_provider_modal_id.present? %>

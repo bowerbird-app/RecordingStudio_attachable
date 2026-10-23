@@ -156,19 +156,13 @@ class GoogleDriveImportTest < ActionDispatch::IntegrationTest
       with_drive_client(listing_client) do
         get google_drive_imports_path
         assert_response :success
-
-        delete google_drive_disconnect_path, params: { authenticity_token: authenticity_token },
-                                            headers: { "X-CSRF-Token" => authenticity_token }
-        assert_response :temporary_redirect
-        assert_includes response.redirect_url, oauth_outbound_connection_path(connection)
-        follow_redirect!
-        follow_redirect!
+        disconnect_through_oauth!(connection)
       end
 
       assert_response :success
       assert_equal google_drive_imports_path, URI.parse(request.original_url).path
       assert_equal "revoked", connection.reload.status
-      assert_includes flash[:notice].to_s, "Disconnected"
+      assert_equal "Connection removed.", flash[:notice]
       assert_nil flash[:alert]
     end
   end
@@ -188,13 +182,7 @@ class GoogleDriveImportTest < ActionDispatch::IntegrationTest
       with_drive_client(listing_client) do
         get google_drive_imports_path
         assert_response :success
-
-        delete google_drive_disconnect_path, params: { authenticity_token: authenticity_token },
-                                            headers: { "X-CSRF-Token" => authenticity_token }
-        assert_response :temporary_redirect
-        assert_includes response.redirect_url, oauth_outbound_connection_path(connection)
-        follow_redirect!
-        follow_redirect!
+        disconnect_through_oauth!(connection)
       end
 
       assert_response :success
@@ -206,6 +194,19 @@ class GoogleDriveImportTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+  def disconnect_through_oauth!(connection)
+    token = authenticity_token
+    delete google_drive_disconnect_path, params: { authenticity_token: token },
+                                        headers: { "X-CSRF-Token" => token }
+    assert_response :temporary_redirect
+    assert_includes response.redirect_url, oauth_outbound_connection_path(connection)
+    follow_redirect!(
+      headers: { "X-CSRF-Token" => token },
+      params: { authenticity_token: token }
+    )
+    follow_redirect!
+  end
 
   def follow_connect!(owner: "user", root_recording_id: nil, return_to: google_drive_imports_path)
     get google_drive_imports_path

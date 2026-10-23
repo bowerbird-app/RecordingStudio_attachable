@@ -6,7 +6,7 @@ source "https://rubygems.org"
 gemspec
 
 gem "flat_pack", github: "bowerbird-app/flatpack", tag: "v0.1.213"
-gem "puma"
+gem "puma", "~> 7.2.1"
 gem "recording_studio", github: "bowerbird-app/RecordingStudio", tag: "v4.5.0"
 gem "recording_studio_metrics",
     github: "bowerbird-app/RecordingStudio_metrics",

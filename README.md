@@ -535,7 +535,7 @@ If you are working in trusted internal app code and only want the created record
 
 ### Cloud upload adapters
 
-Provider gems are optional. This gem has no runtime dependency on them. Core owns the upload-provider registry, keyed adapter routes, `ProviderController`, generic connect JSON, the shared `attachments/imports` endpoint, `ImportRemoteFiles`, and a shared HTTPS fetch.
+Provider gems are optional. This gem has no runtime dependency on them. Hosts that still need Google Drive or Dropbox add `recording_studio_google_drive >= 0.4.0` / `recording_studio_dropbox >= 0.3.0`. Core owns the upload-provider registry, keyed adapter routes, `ProviderController`, generic connect JSON, the shared `attachments/imports` endpoint, `ImportRemoteFiles`, and a shared HTTPS fetch.
 
 A provider gem mounts with:
 

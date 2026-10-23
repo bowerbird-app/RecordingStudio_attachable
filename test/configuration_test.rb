@@ -348,4 +348,3 @@ class ConfigurationTest < Minitest::Test
     )
   end
 end
-

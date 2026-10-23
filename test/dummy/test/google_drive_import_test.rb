@@ -32,6 +32,15 @@ class GoogleDriveImportTest < ActionDispatch::IntegrationTest
     assert_equal ["https://www.googleapis.com/auth/drive.readonly"], RecordingStudioGoogleDrive.configuration.scopes
   end
 
+  test "dummy google drive oauth uses the fake provider when credentials are absent" do
+    config = RecordingStudioGoogleDrive.configuration
+
+    assert_equal "/fake_oauth/authorize", config.authorize_url
+    assert_equal "/fake_oauth/token", config.token_url
+    assert_equal FakeOauth::CLIENT_ID, config.client_id
+    assert_equal FakeOauth, config.http
+  end
+
   test "imports index shows connect when there is no Google Drive connection" do
     get google_drive_imports_path
 

@@ -9,6 +9,14 @@ Use it to verify:
 - `/recording_studio_attachable` mounted engine routes
 - Recording Studio core default layout plus FlatPack sidebar, login, and Stimulus upload UI
 - built-in optional Google Drive addon wiring on the main dummy upload page
+- dummy Google Drive OAuth: by default the outbound `:google_drive` provider uses the local fake login (`/fake_oauth/authorize`, client id `dummy-fake-drive`). Tests always stay on that fake path. To try real Google Drive in development, set these Rails credential keys (values stay in the secret store, not git):
+
+      attachable:
+        google_drive:
+          client_id:
+          client_secret:
+
+  The Google OAuth redirect URI is `<host>/recording_studio_oauth/outbound/callback`. With those keys present, the dummy registers Google's authorize URL (`https://accounts.google.com/o/oauth2/v2/auth`) and token URL (`https://oauth2.googleapis.com/token`), the existing Drive scopes, and offline access with a consent prompt so a refresh token comes back.
 - docs for `url_mode`, `direct_url_host`, and `preprocessed_variants` on the Config, Resizing, and URL modes pages
 - a host-added `:poster` image variant (and no explicit `preprocessed_variants`) so the default preprocess set (`small`/`med`/`large` plus host-added names) is what `/url_modes` demos; `:xlarge` stays unprocessed for the Rails-path fallback row
 - twenty press kit JPGs under `db/seed_images/`, portrait, square, and landscape, re-imported when Active Storage blobs are missing from the current Disk service

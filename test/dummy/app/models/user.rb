@@ -8,8 +8,6 @@ class User < ApplicationRecord
     root: false,
     allowed_parent_types: ["Workspace"]
   )
-  # Devise updates users (remember token, password).
-  skip_callback :update, :before, :raise_immutable_error
 
   validates :name, presence: true
 

@@ -72,76 +72,56 @@ RecordingStudioAttachable.configure do |config|
     download: :view
   }
 
-  # Optional: addon gems can register extra upload sources on the upload page.
+  # Optional: a provider gem registers itself. Hosts add the gem and, if the gem
+  # does not auto-register, call register_upload_provider with the contract below.
   # config.register_upload_provider(
-  #   :google_drive,
-  #   label: "Google Drive",
+  #   :my_cloud,
+  #   label: "My Cloud",
   #   icon: "cloud",
   #   strategy: :client_picker,
-  #   launcher: "google_drive",
-  #   bootstrap_url: ->(route_helpers:, recording:) { route_helpers.google_drive.recording_bootstrap_path(recording, format: :json) },
-  #   remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|
-  #     # `attachments` arrives as normalized remote selections from the shared
-  #     # upload queue. Each entry includes `provider_payload`, optional name /
-  #     # description overrides, and provider-stamped metadata.
-  #     YourProvider::Services::ImportSelectedFiles.call(
+  #   launcher: "my_cloud",
+  #   launcher_module: "my_cloud/picker_launcher",
+  #   bootstrap_url: ->(route_helpers:, recording:) {
+  #     route_helpers.my_cloud.recording_bootstrap_path(recording, format: :json)
+  #   },
+  #   import_url: ->(route_helpers:, recording:) {
+  #     route_helpers.my_cloud.recording_imports_path(recording, format: :json)
+  #   },
+  #   allowed_payload_keys: %w[id],
+  #   remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, **|
+  #     RecordingStudioAttachable::Services::ImportRemoteFiles.call(
   #       parent_recording: parent_recording,
-  #       file_ids: attachments.map { |payload| payload.fetch(:provider_payload) },
+  #       provider_key: :my_cloud,
   #       actor: actor,
-  #       impersonator: impersonator
+  #       impersonator: impersonator,
+  #       payloads: attachments.map { |payload|
+  #         {
+  #           download: -> { { io: StringIO.new(""), filename: "file.bin", content_type: "application/octet-stream" } },
+  #           filename: payload.dig(:provider_payload, "id"),
+  #           metadata: { external_id: payload.dig(:provider_payload, "id") }
+  #         }
+  #       }
   #     )
+  #   end,
+  #   connect: ->(recording:, context:) {
+  #     {
+  #       url: "/my_cloud/connect",
+  #       method: "post",
+  #       fields: { authenticity_token: context.provider_csrf_token },
+  #       fallback_url: "/my_cloud/connect"
+  #     }
+  #   },
+  #   reconnect_error: ->(error) { error.is_a?(RecordingStudioAttachable::ReconnectRequired) }
+  # )
+  #
+  # A provider gem mounts with:
+  # ActiveSupport.on_load(:recording_studio_attachable) do
+  #   RecordingStudioAttachable.register_adapter_routes(:my_cloud) do
+  #     mount MyCloud::Engine, at: "/my_cloud", as: :my_cloud
   #   end
-  # )
+  # end
   #
-  # Built-in cloud adapters are off until you enable them and supply credentials.
-  # An adapter is registered and shown only when enabled AND fully configured.
-  #
-  # Google Drive (optional). Bundle recording_studio_google_drive >= 0.3.0, < 1.0
-  # and recording_studio_oauth >= 0.15.0, < 1.0. Oauth stores tokens. This gem
-  # only needs Picker keys. Drive scopes live on the Google Drive gem and stay
-  # read-only:
-  if defined?(RecordingStudioGoogleDrive)
-    RecordingStudioGoogleDrive.configuration.scopes = ["https://www.googleapis.com/auth/drive.readonly"]
-  end
-  # config.google_drive.enabled = true
-  # config.google_drive.api_key = ENV["GOOGLE_DRIVE_API_KEY"] # Browser API key for Google Picker
-  # config.google_drive.app_id = ENV["GOOGLE_DRIVE_APP_ID"]   # Google Cloud project number
-  #
-  # Dropbox (optional). Bundle recording_studio_dropbox ~> 0.2 and
-  # recording_studio_oauth >= 0.15.0, < 1.0. Oauth stores tokens. This gem
-  # only needs the Chooser app key. Call register_oauth_provider below; the
-  # Dropbox gem does not auto-register.
-  # config.dropbox.enabled = true
-  # config.dropbox.client_id = ENV["DROPBOX_CLIENT_ID"] # Dropbox app key for Chooser
-  #
-  # Adapter routes live under the engine mount, for example:
-  # /recording_studio_attachable/google_drive
-  # /recording_studio_attachable/dropbox
-  #
-  # Then, inside your provider controller or service, call:
-  # RecordingStudioAttachable::Services::ImportAttachment.call(
-  #   parent_recording: recording,
-  #   io: downloaded_file,
-  #   filename: remote_file.name,
-  #   content_type: remote_file.mime_type,
-  #   # The declared type is kept. The bytes are sniffed and a mismatch is rejected.
-  #   source: "google_drive",
-  #   metadata: { provider: "google_drive", external_id: remote_file.id }
-  # )
-  #
-  # Or register a browser launcher with
-  # `registerUploadProviderLauncher("provider_name", launcher)` and have it
-  # fetch `bootstrap_url`, open any auth popup it needs, then add normalized
-  # provider selections into the shared upload queue. The queue posts to
-  # `recording_attachment_imports_path(recording)` and invokes your provider's
-  # `remote_importer` hook during finalization.
-end
-
-# Pass read-only scopes; v0.2.0's default includes files.content.write.
-if defined?(RecordingStudioDropbox)
-  RecordingStudioDropbox.register_oauth_provider(
-    client_id: ENV.fetch("DROPBOX_CLIENT_ID", nil),
-    client_secret: ENV.fetch("DROPBOX_CLIENT_SECRET", nil),
-    scopes: %w[files.metadata.read files.content.read]
-  )
+  # Provider controllers inherit RecordingStudioAttachable::ProviderController
+  # and set `self.upload_provider_key = :my_cloud`. Pin the gem's launcher, and
+  # import helpers from "recording_studio_attachable/provider_launchers".
 end

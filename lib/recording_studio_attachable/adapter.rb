@@ -10,11 +10,17 @@ module RecordingStudioAttachable
     end
 
     def adapter_route_blocks
-      @adapter_route_blocks ||= []
+      @adapter_route_blocks ||= {}
     end
 
-    def register_adapter_routes(&block)
-      adapter_route_blocks << block
+    def register_adapter_routes(key, &block)
+      raise ArgumentError, "adapter route key is required" if key.blank?
+      raise ArgumentError, "adapter routes require a block" unless block
+
+      adapter_key = key.to_sym
+      return if adapter_route_blocks.key?(adapter_key)
+
+      adapter_route_blocks[adapter_key] = block
     end
   end
 

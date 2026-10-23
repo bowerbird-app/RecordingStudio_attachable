@@ -14,15 +14,6 @@ RecordingStudioAttachable.configure do |config|
   config.image_variants = {
     poster: { resize_to_limit: [1280, 720] }
   }
-  config.google_drive.enabled = true
-  config.google_drive.api_key = ENV["DUMMY_GOOGLE_PICKER_API_KEY"].presence ||
-                                ENV.fetch("DUMMY_GOOGLE_DRIVE_API_KEY", "dummy-google-drive-api-key")
-  config.google_drive.app_id = ENV["DUMMY_GOOGLE_CLOUD_PROJECT_NUMBER"].presence ||
-                               ENV.fetch("DUMMY_GOOGLE_DRIVE_APP_ID", "dummy-google-drive-app-id")
-
-  config.dropbox.enabled = true
-  config.dropbox.client_id = ENV.fetch("DUMMY_DROPBOX_CLIENT_ID", "dummy-dropbox-client-id")
-
   config.register_upload_provider(
     :demo_cloud,
     label: "Demo cloud import",

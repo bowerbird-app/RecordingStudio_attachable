@@ -5,13 +5,6 @@ Rails.application.routes.draw do
   mount RecordingStudio::Engine, at: "/recording_studio"
   mount RecordingStudioAttachable::Engine, at: "/recording_studio_attachable"
   mount RecordingStudioApi::Engine, at: "/recording_studio_api"
-  mount RecordingStudioOauth::Engine, at: "/recording_studio_oauth"
-
-  RecordingStudioOauth::ProtectedResourceRegistry.draw_origin_well_known(self)
-
-  get "fake_oauth/authorize", to: "fake_oauth#authorize"
-  post "fake_oauth/token", to: "fake_oauth#token"
-  post "fake_oauth/revoke", to: "fake_oauth#revoke"
   get "APIdocs/:version/openapi.json",
       to: "recording_studio_api/scalar_docs#openapi",
       defaults: { api_key: "public", engine_mount_path: "/recording_studio_api" },

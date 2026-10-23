@@ -35,7 +35,7 @@ class ImportAttachmentsTest < Minitest::Test
     parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: FakeRecording.new(id: "root-1"))
     attachments = [
       { io: StringIO.new("<svg>1</svg>"), filename: "one.svg", content_type: "image/png", metadata: { provider: "demo_cloud" } },
-      { io: StringIO.new("<svg>2</svg>"), filename: "two.svg", content_type: "image/png", source: "dropbox" }
+      { io: StringIO.new("<svg>2</svg>"), filename: "two.svg", content_type: "image/png", source: "extra_cloud" }
     ]
     captured_uploads = []
     captured_creates = []
@@ -69,8 +69,8 @@ class ImportAttachmentsTest < Minitest::Test
     assert_equal 2, captured_uploads.length
     assert_equal({ provider: "demo_cloud", source: "demo_cloud", batch_id: "batch-1" }, captured_uploads.first[:metadata])
     assert_equal "signed-one", captured_uploads.first[:signed_blob_id]
-    assert_equal({ source: "dropbox", batch_id: "batch-1" }, captured_uploads.last[:metadata])
-    assert_equal "dropbox", captured_uploads.last[:metadata][:source]
+    assert_equal({ source: "extra_cloud", batch_id: "batch-1" }, captured_uploads.last[:metadata])
+    assert_equal "extra_cloud", captured_uploads.last[:metadata][:source]
     assert_equal false, captured_creates.first[:identify]
     assert_equal false, captured_creates.last[:identify]
     assert_equal "one.svg", captured_creates.first[:filename]

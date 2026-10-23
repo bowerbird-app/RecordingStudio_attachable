@@ -20,13 +20,15 @@ class HostCloudPickerModalTest < ActionDispatch::IntegrationTest
     Current.actor = @user
     @root = RecordingStudio.root_recording_for(@workspace)
     grant_workspace_access!(@root)
+    MyCloud.reset!
   end
 
   teardown do
     Current.actor = nil if defined?(Current)
+    MyCloud.reset!
   end
 
-  test "page editor with dropbox enabled renders the gallery modal" do
+  test "page editor with my_cloud registered renders the gallery modal" do
     page = Page.find_or_create_by!(title: "Home page")
     RecordingStudio::Recording.unscoped.find_or_create_by!(
       root_recording_id: @root.id,
@@ -34,126 +36,62 @@ class HostCloudPickerModalTest < ActionDispatch::IntegrationTest
       recordable: page
     )
 
-    with_cloud_adapters_configured do
-      get edit_page_path(page)
-      assert_response :success
-      assert_includes response.body, "recording-studio-attachable--attachment-image-picker"
-      assert_includes response.body, "controllers/recording_studio_attachable/dropbox_picker_launcher"
-      assert_includes response.body, "attachments/imports"
-    end
+    get edit_page_path(page)
+    assert_response :success
+    assert_includes response.body, "recording-studio-attachable--attachment-image-picker"
+    assert_includes response.body, "my_cloud/picker_launcher"
+    assert_includes response.body, "attachments/imports"
   end
 
-  test "chat demo with dropbox enabled renders the gallery modal" do
+  test "chat demo with my_cloud registered renders the gallery modal" do
     ChatThread.find_or_create_by!(title: "Workspace conversation")
 
-    with_cloud_adapters_configured do
-      get chat_demo_path
-      assert_response :success
-      assert_includes response.body, "recording-studio-attachable--attachment-image-picker"
-      assert_includes response.body, "controllers/recording_studio_attachable/dropbox_picker_launcher"
-    end
+    get chat_demo_path
+    assert_response :success
+    assert_includes response.body, "recording-studio-attachable--attachment-image-picker"
+    assert_includes response.body, "my_cloud/picker_launcher"
   end
 
-  test "dropbox chooser selection imports through the host attachments endpoint" do
-    captured = nil
-    imported = RecordingStudioAttachable::Services::BaseService::Result.new(success: true, value: [])
+  test "client picker selection imports through the host attachments endpoint" do
+    MyCloud.connect!(@user)
 
-    importer = RecordingStudioAttachable::Dropbox::Services::ImportSelectedFiles
-    original_importer_call = importer.method(:call)
-
-    importer.define_singleton_method(:call) do |**kwargs|
-      captured = kwargs
-      imported
-    end
-
-    with_cloud_adapters_configured do
-      post recording_studio_attachable.recording_attachment_imports_path(@root),
-           params: {
-             attachment_import: {
-               provider_key: "dropbox",
-               attachments: [
-                 {
-                   name: "kiln.jpg",
-                   description: "",
-                   provider_key: "dropbox",
-                   provider_payload: { id: "id:fia-lKYKs5AAAAAAAAAACw" },
-                   content_type: ""
-                 }
-               ]
-             }
-           },
-           as: :json
-    end
-  ensure
-    importer.define_singleton_method(:call, original_importer_call)
+    post recording_studio_attachable.recording_attachment_imports_path(@root),
+         params: {
+           attachment_import: {
+             provider_key: "my_cloud",
+             attachments: [
+               {
+                 name: "kiln.jpg",
+                 description: "",
+                 provider_key: "my_cloud",
+                 provider_payload: { id: "file-1" },
+                 content_type: ""
+               }
+             ]
+           }
+         },
+         as: :json
 
     assert_response :created
-    selection = captured.fetch(:file_ids).first
-    assert_equal "id:fia-lKYKs5AAAAAAAAAACw", selection.fetch("id")
-    assert_equal "kiln.jpg", selection.fetch("name")
-    assert_nil captured[:access_token]
   end
 
-  test "disconnected dropbox and drive bootstrap leave session state for connect" do
-    with_cloud_adapters_configured do
-      get "/recording_studio_attachable/dropbox/recordings/#{@root.id}/bootstrap.json"
-      assert_response :success
-      dropbox_payload = JSON.parse(response.body)
-      assert dropbox_payload["connect_url"].present?
-      refute dropbox_payload.key?("auth_url")
+  test "disconnected bootstrap returns a generic connect payload" do
+    get "/recording_studio_attachable/my_cloud/recordings/#{@root.id}/bootstrap.json"
+    assert_response :success
+    payload = JSON.parse(response.body)
+    assert_equal "my_cloud", payload.fetch("provider_key")
+    assert payload.fetch("needs_auth")
+    assert payload.dig("connect", "url").present?
+    refute payload.key?("auth_url")
+    refute payload.key?("connect_url")
 
-      get "/recording_studio_attachable/google_drive/recordings/#{@root.id}/bootstrap.json"
-      assert_response :success
-      drive_payload = JSON.parse(response.body)
-      assert drive_payload["connect_url"].present?
-      refute drive_payload.key?("auth_url")
-
-      assert_nil session.dig("recording_studio_attachable_dropbox", "oauth_state")
-      assert_nil session.dig("recording_studio_attachable_google_drive", "oauth_state")
-
-      get "/recording_studio_attachable/dropbox/recordings/#{@root.id}/connect", params: { popup: 1, provider_key: "dropbox" }
-      assert_response :success
-      assert_includes response.body, "recording_studio_oauth"
-      assert_nil session.dig("recording_studio_attachable_dropbox", "oauth_state")
-      assert_nil session.dig("recording_studio_attachable_google_drive", "oauth_state")
-
-      get "/recording_studio_attachable/google_drive/recordings/#{@root.id}/connect", params: { popup: 1, provider_key: "google_drive" }
-      assert_response :success
-      assert_includes response.body, "recording_studio_oauth"
-      assert_nil session.dig("recording_studio_attachable_dropbox", "oauth_state")
-      assert_nil session.dig("recording_studio_attachable_google_drive", "oauth_state")
-      assert_nil session["access_token"]
-      refute_includes response.body, "fake-access-"
-    end
+    get "/recording_studio_attachable/my_cloud/recordings/#{@root.id}/connect",
+        params: { popup: 1, provider_key: "my_cloud" }
+    assert_response :success
+    assert_includes response.body, "Connect My Cloud"
   end
 
   private
-
-  def with_cloud_adapters_configured
-    configuration = RecordingStudioAttachable.configuration
-    original_providers = configuration.upload_providers.dup
-    original_dropbox = configuration.dropbox.to_h
-    original_drive = configuration.google_drive.to_h
-
-    configuration.dropbox.merge!(
-      enabled: true,
-      client_id: "dropbox-client-id"
-    )
-    configuration.google_drive.merge!(
-      enabled: true,
-      api_key: "google-drive-api-key",
-      app_id: "google-drive-app-id"
-    )
-
-    RecordingStudioAttachable::Dropbox::Engine.send(:register_upload_provider)
-    RecordingStudioAttachable::GoogleDrive::Engine.send(:register_upload_provider)
-
-    yield
-  ensure
-    configuration.dropbox.merge!(original_dropbox)
-    configuration.google_drive.merge!(original_drive)
-    configuration.instance_variable_set(:@upload_providers, original_providers)
-  end
 
   def grant_workspace_access!(root)
     original = RecordingStudioAccessible.configuration.access_management_authorizer

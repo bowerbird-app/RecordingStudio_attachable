@@ -67,9 +67,129 @@ export function showProviderContinueButton(controller, sourceButton, label, onCl
   region.appendChild(button)
 }
 
+export function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src='${src}']`)
+    if (existing) {
+      if (existing.dataset.loaded === "true" || existing.readyState === "complete" || existing.readyState === "loaded") {
+        resolve()
+        return
+      }
+
+      existing.addEventListener("load", resolve, { once: true })
+      existing.addEventListener("error", () => reject(new Error(`Could not load ${src}`)), { once: true })
+      return
+    }
+
+    const script = document.createElement("script")
+    script.src = src
+    script.async = true
+    script.defer = true
+    script.addEventListener("load", () => {
+      script.dataset.loaded = "true"
+      resolve()
+    }, { once: true })
+    script.addEventListener("error", () => reject(new Error(`Could not load ${src}`)), { once: true })
+    document.head.appendChild(script)
+  })
+}
+
+export function createBootstrapCache() {
+  const sessions = new Map()
+
+  return {
+    forget(bootstrapUrl) {
+      if (bootstrapUrl) sessions.delete(bootstrapUrl)
+    },
+    get(bootstrapUrl) {
+      return sessions.get(bootstrapUrl)
+    },
+    sessionFor(bootstrapUrl, start) {
+      let session = sessions.get(bootstrapUrl)
+      if (session?.error) {
+        sessions.delete(bootstrapUrl)
+        session = null
+      }
+      if (session) return session
+
+      session = { ready: false, bootstrap: null, error: null, promise: null }
+      session.promise = Promise.resolve(start()).then((bootstrap) => {
+        session.bootstrap = bootstrap
+        session.ready = true
+        return session
+      }).catch((error) => {
+        session.error = error
+        sessions.delete(bootstrapUrl)
+        throw error
+      })
+      sessions.set(bootstrapUrl, session)
+      return session
+    }
+  }
+}
+
+export function providerNeedsAuth(bootstrap) {
+  return Boolean(bootstrap?.needs_auth || bootstrap?.connect)
+}
+
+export function csrfToken(controller, bootstrap) {
+  const fields = bootstrap?.connect?.fields
+  if (fields?.authenticity_token) return fields.authenticity_token
+  if (bootstrap?.authenticity_token) return bootstrap.authenticity_token
+  if (typeof controller?.csrfToken === "function") return controller.csrfToken()
+
+  return document.querySelector("meta[name='csrf-token']")?.content || ""
+}
+
+export function openProviderAuth(controller, bootstrap, providerKey) {
+  const connect = bootstrap?.connect
+  if (!connect?.url) return false
+
+  const popupName = `${providerKey}-auth`
+  const popup = controller.openPopup("about:blank", popupName)
+  if (!popup) {
+    if (connect.fallback_url) {
+      window.location.assign(connect.fallback_url)
+      return true
+    }
+
+    throw new Error("The sign-in popup was blocked. Allow popups and try again.")
+  }
+
+  postConnectIntoPopup(connect, popupName, csrfToken(controller, bootstrap))
+  return true
+}
+
+function postConnectIntoPopup(connect, popupName, token) {
+  const form = document.createElement("form")
+  form.method = (connect.method || "post").toLowerCase()
+  form.action = connect.url
+  form.target = popupName
+
+  const fields = { ...(connect.fields || {}) }
+  if (token && fields.authenticity_token == null) fields.authenticity_token = token
+
+  Object.entries(fields).forEach(([name, value]) => {
+    const input = document.createElement("input")
+    input.type = "hidden"
+    input.name = name
+    input.value = value == null ? "" : String(value)
+    form.appendChild(input)
+  })
+
+  document.body.appendChild(form)
+  form.submit()
+  form.remove()
+}
+
 if (typeof window !== "undefined") {
   window.RecordingStudioAttachableUploadProviders = {
     register: registerUploadProviderLauncher,
-    get: getUploadProviderLauncher
+    get: getUploadProviderLauncher,
+    loadScript,
+    createBootstrapCache,
+    providerNeedsAuth,
+    openProviderAuth,
+    csrfToken
   }
 }

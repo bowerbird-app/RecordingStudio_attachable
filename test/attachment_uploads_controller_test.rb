@@ -75,9 +75,9 @@ module RecordingStudioAttachable
       @controller = AttachmentUploadsController.new
       recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
       provider = RecordingStudioAttachable::UploadProvider.new(
-        key: :google_drive,
-        label: "Google Drive",
-        url: "/imports/google_drive"
+        key: :my_cloud,
+        label: "My Cloud",
+        url: "/imports/my_cloud"
       )
 
       with_routing do |set|
@@ -125,7 +125,7 @@ module RecordingStudioAttachable
       end
 
       assert_response :success
-      assert_equal "Google Drive", @response.body
+      assert_equal "My Cloud", @response.body
     end
 
     def test_show_assigns_replacement_image_processing_options

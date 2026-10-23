@@ -1,0 +1,132 @@
+<% provider_label = local_assigns.fetch(:provider_label) %>
+<% reconnect = local_assigns.fetch(:reconnect, false) %>
+<% show_connect = local_assigns.fetch(:show_connect, false) %>
+<% connect_url = local_assigns[:connect_url] %>
+<% connect_method = local_assigns.fetch(:connect_method, :post) %>
+<% connect_fields = local_assigns.fetch(:connect_fields, {}) %>
+<% files = Array(local_assigns.fetch(:files, [])) %>
+<% query = local_assigns[:query] %>
+<% next_page_url = local_assigns[:next_page_url] %>
+<% import_url = local_assigns[:import_url] %>
+<% search_url = local_assigns[:search_url] %>
+<% disconnect_url = local_assigns[:disconnect_url] %>
+<% recording = local_assigns.fetch(:recording) %>
+<% flow_params = local_assigns.fetch(:flow_params, {}) %>
+<% redirect_params = attachment_redirect_params %>
+
+<% content = capture do %>
+  <div class="rounded-xl border border-(--surface-border-color) bg-(--surface-background-color) p-6">
+    <% if show_connect %>
+      <%= render "recording_studio_attachable/providers/connect_form",
+                 provider_label: provider_label,
+                 reconnect: reconnect,
+                 auto_submit: local_assigns.fetch(:auto_submit, false),
+                 connect_url: connect_url,
+                 method: connect_method,
+                 fields: connect_fields %>
+    <% else %>
+      <div class="space-y-6">
+        <div class="flex flex-wrap items-center gap-3">
+          <%= form_with url: search_url, method: :get, class: "flex min-w-[260px] flex-1 flex-wrap items-center gap-3" do %>
+            <% flow_params.each do |name, value| %>
+              <%= hidden_field_tag name, value if value.present? %>
+            <% end %>
+            <%= hidden_field_tag :embed, "modal" if embedded_upload_provider_request? %>
+            <%= hidden_field_tag :provider_key, current_upload_provider_key if current_upload_provider_key.present? %>
+            <%= hidden_field_tag :provider_modal_id, current_upload_provider_modal_id if current_upload_provider_modal_id.present? %>
+            <%= hidden_field_tag :redirect_mode, redirect_params[:redirect_mode] if redirect_params[:redirect_mode].present? %>
+            <%= hidden_field_tag :return_to, redirect_params[:return_to] if redirect_params[:return_to].present? %>
+            <div class="min-w-[220px] flex-1">
+              <%= render FlatPack::Search::Component.new(
+                name: :query,
+                value: query,
+                placeholder: t("recording_studio.attachable.providers.search_placeholder", provider: provider_label),
+                aria: { label: t("recording_studio.attachable.providers.search_aria", provider: provider_label) }
+              ) %>
+            </div>
+            <%= render FlatPack::Button::Component.new(text: t("recording_studio.attachable.providers.search"), style: :secondary, size: :md, type: "submit") %>
+          <% end %>
+
+          <% if disconnect_url.present? %>
+            <%= form_with url: disconnect_url, method: :delete, authenticity_token: form_authenticity_token, class: "inline-flex" do %>
+              <%= hidden_field_tag :embed, "modal" if embedded_upload_provider_request? %>
+              <%= hidden_field_tag :provider_key, current_upload_provider_key if current_upload_provider_key.present? %>
+              <%= hidden_field_tag :provider_modal_id, current_upload_provider_modal_id if current_upload_provider_modal_id.present? %>
+              <%= hidden_field_tag :redirect_mode, redirect_params[:redirect_mode] if redirect_params[:redirect_mode].present? %>
+              <%= hidden_field_tag :return_to, redirect_params[:return_to] if redirect_params[:return_to].present? %>
+              <%= render FlatPack::Button::Component.new(text: t("recording_studio.attachable.providers.disconnect"), style: :secondary, size: :md) %>
+            <% end %>
+          <% end %>
+        </div>
+
+        <% if files.any? %>
+          <%= form_with url: import_url, method: :post, class: "space-y-4" do %>
+            <%= hidden_field_tag :embed, "modal" if embedded_upload_provider_request? %>
+            <%= hidden_field_tag :provider_key, current_upload_provider_key if current_upload_provider_key.present? %>
+            <%= hidden_field_tag :provider_modal_id, current_upload_provider_modal_id if current_upload_provider_modal_id.present? %>
+            <%= hidden_field_tag :redirect_mode, redirect_params[:redirect_mode] if redirect_params[:redirect_mode].present? %>
+            <%= hidden_field_tag :return_to, redirect_params[:return_to] if redirect_params[:return_to].present? %>
+            <div class="space-y-3">
+              <% files.each do |file| %>
+                <% file_id = file.respond_to?(:[]) ? (file["id"] || file[:id]) : file.id %>
+                <% file_name = file.respond_to?(:[]) ? (file["name"] || file[:name]) : file.name %>
+                <% file_type = file.respond_to?(:[]) ? (file["mimeType"] || file[:mimeType] || file["content_type"] || file[:content_type]) : (file.content_type if file.respond_to?(:content_type)) %>
+                <label class="flex items-start gap-3 rounded-lg border border-(--surface-border-color) px-4 py-3">
+                  <%= check_box_tag "file_ids[]", file_id, false, class: "mt-1" %>
+                  <span class="min-w-0 flex-1">
+                    <span class="block truncate text-sm font-semibold text-(--surface-content-color)"><%= file_name %></span>
+                    <span class="block text-xs text-(--surface-muted-content-color)"><%= file_type %></span>
+                  </span>
+                </label>
+              <% end %>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3">
+              <%= render FlatPack::Button::Component.new(text: t("recording_studio.attachable.providers.import_selected"), style: :primary, size: :md, type: "submit", icon: "cloud") %>
+              <% unless embedded_upload_provider_request? %>
+                <%= link_to recording_studio_attachable.recording_attachment_upload_path(recording, redirect_params), class: "inline-flex" do %>
+                  <%= render FlatPack::Button::Component.new(text: t("recording_studio.attachable.providers.back_to_upload"), style: :secondary, size: :md) %>
+                <% end %>
+              <% end %>
+            </div>
+          <% end %>
+        <% else %>
+          <p class="text-sm text-(--surface-muted-content-color)"><%= t("recording_studio.attachable.providers.empty") %></p>
+        <% end %>
+
+        <% if next_page_url.present? %>
+          <div>
+            <%= link_to next_page_url, class: "inline-flex" do %>
+              <%= render FlatPack::Button::Component.new(text: t("recording_studio.attachable.providers.next_page"), style: :secondary, size: :md) %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
+<% if embedded_upload_provider_request? %>
+  <div class="h-full p-4">
+    <%= content %>
+  </div>
+<% else %>
+  <div class="mx-auto flex w-full max-w-5xl flex-col gap-6">
+    <%= render FlatPack::PageNav::Component.new(
+      back_icon: "arrow-left",
+      back_label: t("recording_studio.attachable.navigation.back"),
+      anchor_url: attachment_page_nav_anchor_url(
+        fallback: recording_studio_attachable.recording_attachment_upload_path(recording, redirect_params)
+      ),
+      anchor_label: t("recording_studio.attachable.navigation.return_to_source")
+    ) %>
+
+    <%= render FlatPack::PageTitle::Component.new(
+      title: t("recording_studio.attachable.providers.title", provider: provider_label),
+      subtitle: t("recording_studio.attachable.providers.subtitle"),
+      variant: :h1
+    ) %>
+
+    <%= content %>
+  </div>
+<% end %>

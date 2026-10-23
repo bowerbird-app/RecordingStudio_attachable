@@ -23,7 +23,7 @@ class ImportAttachmentPayloadsTest < Minitest::Test
       end
 
       attr_accessor :captured
-    end.new(:google_drive)
+    end.new(:my_cloud)
     captured_local = nil
     request_context = Struct.new(:session).new({})
 
@@ -39,7 +39,7 @@ class ImportAttachmentPayloadsTest < Minitest::Test
           context: request_context,
           attachments: [
             { signed_blob_id: "blob-1", name: "Local file" },
-            { provider_key: "google_drive", provider_payload: { id: "file-1" }, name: "Drive file" }
+            { provider_key: "my_cloud", provider_payload: { id: "file-1" }, name: "Cloud file" }
           ]
         )
 
@@ -54,7 +54,7 @@ class ImportAttachmentPayloadsTest < Minitest::Test
     assert_equal :actor, provider.captured[:actor]
     assert_equal :impersonator, provider.captured[:impersonator]
     assert_same request_context, provider.captured[:context]
-    assert_equal [{ provider_key: "google_drive", provider_payload: { id: "file-1" }, name: "Drive file" }], provider.captured[:attachments]
+    assert_equal [{ provider_key: "my_cloud", provider_payload: { id: "file-1" }, name: "Cloud file" }], provider.captured[:attachments]
   end
 
   def test_call_uses_provider_key_as_default_source_for_signed_blob_payloads
@@ -68,14 +68,14 @@ class ImportAttachmentPayloadsTest < Minitest::Test
       result = RecordingStudioAttachable::Services::ImportAttachmentPayloads.call(
         parent_recording: parent,
         attachments: [
-          { provider_key: "google_drive", signed_blob_id: "blob-1", name: "Drive handoff" }
+          { provider_key: "my_cloud", signed_blob_id: "blob-1", name: "Cloud handoff" }
         ]
       )
 
       assert result.success?
     end
 
-    assert_equal "google_drive", captured[:default_source]
+    assert_equal "my_cloud", captured[:default_source]
   end
 
   private

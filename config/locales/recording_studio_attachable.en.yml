@@ -10,5 +10,3 @@ en:
         other: "Used in %{count} places"
       trash_in_use: "Trashing this photo hides it everywhere it appears. You can bring it back."
       alt_text_hint: "What a screen reader says."
-    google_drive:
-      disconnected: "Disconnected Google Drive."

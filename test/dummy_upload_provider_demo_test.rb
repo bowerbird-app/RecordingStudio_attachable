@@ -11,11 +11,6 @@ class DummyUploadProviderDemoTest < Minitest::Test
     assert_includes initializer, "config.image_processing_max_width = 1200"
     assert_includes initializer, "config.image_processing_max_height = 1200"
     assert_includes initializer, "config.image_processing_quality = 0.75"
-    assert_includes initializer, "config.google_drive.enabled = true"
-    assert_includes initializer, "DUMMY_GOOGLE_PICKER_API_KEY"
-    assert_includes initializer, "DUMMY_GOOGLE_CLOUD_PROJECT_NUMBER"
-    assert_includes initializer, "DUMMY_GOOGLE_DRIVE_API_KEY"
-    assert_includes initializer, "DUMMY_GOOGLE_DRIVE_APP_ID"
     assert_includes initializer, "config.register_upload_provider("
     assert_includes initializer, ":demo_cloud"
     assert_includes initializer, 'label: "Demo cloud import"'

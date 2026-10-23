@@ -336,13 +336,13 @@ class SafeRemoteFetchTest < Minitest::Test
           uri: "https://api.example.test/start",
           allowed_hosts: ["api.example.test"],
           http_method: :post,
-          body: "dropbox-arg"
+          body: "remote-arg"
         )
       end
     end
 
     assert_equal "POST", requests.first.fetch(:method)
-    assert_equal "dropbox-arg", requests.first.fetch(:body)
+    assert_equal "remote-arg", requests.first.fetch(:body)
     assert_equal "GET", requests.second.fetch(:method)
     assert_nil requests.second.fetch(:body)
   end
@@ -361,7 +361,7 @@ class SafeRemoteFetchTest < Minitest::Test
             uri: "https://api.example.test/start",
             allowed_hosts: ["api.example.test"],
             http_method: :post,
-            body: "dropbox-arg"
+            body: "remote-arg"
           )
         end
 

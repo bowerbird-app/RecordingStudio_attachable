@@ -11,9 +11,9 @@ class UploadProviderModalEventPageTest < Minitest::Test
     payload = {
       namespace: "recording-studio-attachable",
       type: "provider-auth-complete",
-      providerKey: "google_drive",
+      providerKey: "my_cloud",
       modalId: "modal-1",
-      redirectPath: "/google_drive/recordings/rec-1/imports"
+      redirectPath: "/my_cloud/recordings/rec-1/imports"
     }
     html = RecordingStudioAttachable::ApplicationController.new.send(
       :upload_provider_modal_event_page,
@@ -32,7 +32,7 @@ class UploadProviderModalEventPageTest < Minitest::Test
     literal = payload_line.delete_prefix("const payload = ").delete_suffix(";")
     parsed = JSON.parse(literal)
     assert_equal "provider-auth-complete", parsed.fetch("type")
-    assert_equal "google_drive", parsed.fetch("providerKey")
+    assert_equal "my_cloud", parsed.fetch("providerKey")
     assert_equal "modal-1", parsed.fetch("modalId")
 
     check_rendered_script_with_node(script) if node_available?

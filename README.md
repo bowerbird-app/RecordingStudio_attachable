@@ -20,8 +20,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
 - RecordingStudio Metrics `>= 0.3.0, < 0.6` (latest GitHub tag `v0.5.0`) for operations-API storage and upload metrics
-- Optional Google Drive import: `recording_studio_google_drive` `>= 0.3.0, < 1.0` and `recording_studio_oauth` `>= 0.15.0, < 1.0`. Attachable does not depend on those gems at runtime.
-- Optional Dropbox import: `recording_studio_dropbox` `~> 0.2` and `recording_studio_oauth` `>= 0.15.0, < 1.0`. Attachable does not depend on those gems at runtime.
+- Optional cloud import: a separate provider gem that registers with `register_upload_provider`. Attachable does not depend on provider gems at runtime.
 
 ## Quick start
 
@@ -360,22 +359,43 @@ The public import services remain the provider integration layer.
 ```ruby
 RecordingStudioAttachable.configure do |config|
   config.register_upload_provider(
-    :google_drive,
-    label: "Google Drive",
+    :my_cloud,
+    label: "My Cloud",
     icon: "cloud",
     strategy: :client_picker,
-    launcher: "google_drive",
+    launcher: "my_cloud",
+    launcher_module: "my_cloud/picker_launcher",
     bootstrap_url: ->(route_helpers:, recording:) do
-      route_helpers.google_drive.recording_bootstrap_path(recording, format: :json)
+      route_helpers.my_cloud.recording_bootstrap_path(recording, format: :json)
     end,
-    remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|
-      MyAddon::Drive::ImportSelectedFiles.call(
+    import_url: ->(route_helpers:, recording:) do
+      route_helpers.my_cloud.recording_imports_path(recording, format: :json)
+    end,
+    allowed_payload_keys: %w[id],
+    remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, **|
+      RecordingStudioAttachable::Services::ImportRemoteFiles.call(
         parent_recording: parent_recording,
-        file_ids: attachments.map { |payload| payload.fetch(:provider_payload) },
+        provider_key: :my_cloud,
         actor: actor,
-        impersonator: impersonator
+        impersonator: impersonator,
+        payloads: attachments.map { |payload|
+          {
+            download: -> { { io: downloaded_io, filename: "file.bin", content_type: "application/octet-stream" } },
+            filename: payload.dig(:provider_payload, "id"),
+            metadata: { external_id: payload.dig(:provider_payload, "id") }
+          }
+        }
       )
-    end
+    end,
+    connect: ->(recording:, context:) {
+      {
+        url: "/my_cloud/connect",
+        method: "post",
+        fields: { authenticity_token: context.provider_csrf_token },
+        fallback_url: "/my_cloud/connect"
+      }
+    },
+    reconnect_error: ->(error) { error.is_a?(RecordingStudioAttachable::ReconnectRequired) }
   )
 end
 ```
@@ -387,8 +407,13 @@ Each provider registration supports:
 - `strategy`: `:link`, `:modal_page`, or `:client_picker`
 - `url`: string or callable for `:link`
 - `bootstrap_url`: JSON bootstrap endpoint for `:client_picker`
+- `import_url`: shared import endpoint for `:client_picker`
 - `launcher`: browser launcher name for `:client_picker`
+- `launcher_module`: importmap module the upload page pins when the provider is shown
+- `allowed_payload_keys`: keys kept from browser `provider_payload`
 - `remote_importer`: callable hook that materializes queued remote selections into attachments through the shared Attachable result contract
+- `connect`: callable `(recording:, context:)` returning `{ url, method, fields, fallback_url }`
+- `reconnect_error`: callable `(error) -> bool` mapped by the shared import path, in addition to `RecordingStudioAttachable::ReconnectRequired`
 - `modal_title`: optional modal heading for `:modal_page`
 - `icon`, `style`, `size`, `target`: FlatPack button options
 - `visible`: optional callable receiving `view_context:` and `recording:`
@@ -411,16 +436,16 @@ For modal-page providers, the shared browser contract is:
 - addon screens can complete auth in a popup and post a `provider-auth-complete` message back to the upload page
 - addon screens can post a `provider-import-complete` message with a `redirectPath` when the import succeeds
 
-For `:client_picker`, the upload page stays in place and calls a registered browser launcher. Prefetch loads picker config only and does not write OAuth state, so Dropbox and Drive can warm up together without clobbering a cookie session. A click opens connect or the vendor picker. Google Drive connect uses Recording Studio Oauth outbound connections. Dropbox still creates OAuth state in the session. After OAuth completes, the cached bootstrap is dropped and fetched again. Drive then opens the Picker on its own. Dropbox waits for the next click on the same Dropbox button so `choose()` stays inside a user gesture. Chooser selections send the file id and filename; the shared imports endpoint copies the file through Dropbox’s API using the session token. Neither flow adds a second Choose from… button. Drive also refetches when the picker `access_token` is within 30 seconds of expiry. A `403` or `422` bootstrap disables the provider button after a click; prefetch failures stay quiet.
+For `:client_picker`, the upload page stays in place and calls a registered browser launcher. Prefetch loads picker config only. A click opens connect (generic `{ url, method, fields, fallback_url }`) or the vendor picker. After auth completes, the cached bootstrap is dropped and fetched again. Selections post to `recording_attachment_imports_path(recording)`. A `403` or `422` bootstrap disables the provider button after a click; prefetch failures stay quiet.
 
 Client-picker launchers are registered in JavaScript:
 
 ```js
 import { registerUploadProviderLauncher } from "controllers/recording_studio_attachable/provider_launchers"
 
-registerUploadProviderLauncher("google_drive", {
+registerUploadProviderLauncher("my_cloud", {
   forget(bootstrapUrl) {
-    // drop the cached bootstrap so relaunch after OAuth sees a connected session
+    // drop the cached bootstrap so relaunch after auth sees a connected session
   },
   prefetch({ controller, bootstrapUrl }) {
     return controller.fetchProviderBootstrap(bootstrapUrl)
@@ -446,10 +471,10 @@ result = RecordingStudioAttachable::Services::ImportAttachment.call(
   actor: Current.actor,
   impersonator: Current.impersonator,
   name: remote_file.title,
-  description: "Imported from Google Drive",
-  source: "google_drive",
+  description: "Imported from My Cloud",
+  source: "my_cloud",
   metadata: {
-    provider: "google_drive",
+    provider: "my_cloud",
     external_id: remote_file.id,
     external_url: remote_file.web_view_link
   }
@@ -469,12 +494,12 @@ Multipart file imports:
 ```ruby
 post recording_studio_attachable.recording_attachment_imports_path(recording), params: {
   attachment_import: {
-    provider_key: "google_drive",
+    provider_key: "my_cloud",
     attachments: [
       {
         file: downloaded_file,
         name: remote_file.title,
-        description: "Imported from Google Drive"
+        description: "Imported from My Cloud"
       }
     ]
   }
@@ -486,7 +511,7 @@ Signed blob finalization with provider metadata. The blob comes from this gem's 
 ```ruby
 post recording_studio_attachable.recording_attachment_imports_path(recording), params: {
   attachment_import: {
-    provider_key: "google_drive",
+    provider_key: "my_cloud",
     attachments: [
       {
         signed_blob_id: RecordingStudioAttachable::DirectUpload.sign(blob),
@@ -510,81 +535,48 @@ If you are working in trusted internal app code and only want the created record
 
 ### Cloud upload adapters
 
-Google Drive and Dropbox ship as optional adapters. Google Drive import uses the `recording_studio_google_drive` gem for Drive API calls and Recording Studio Oauth outbound connections for tokens. Dropbox import uses the `recording_studio_dropbox` gem for Dropbox API calls and the same Oauth outbound connections for tokens. Core owns the upload-provider registry, the generic `attachments/imports` endpoint, and a shared HTTPS fetch used by adapters that still download over HTTP.
+Provider gems are optional. This gem has no runtime dependency on them. Core owns the upload-provider registry, keyed adapter routes, `ProviderController`, generic connect JSON, the shared `attachments/imports` endpoint, `ImportRemoteFiles`, and a shared HTTPS fetch.
 
-Adapters are **off** until the host turns them on **and** supplies real credentials. Dummy placeholder values do not count. Hosts can enable Drive only, Dropbox only, both, or neither. When an adapter is off or incomplete, it is not registered, nothing from it appears on the upload page, and its endpoints refuse the request.
+A provider gem mounts with:
+
+```ruby
+ActiveSupport.on_load(:recording_studio_attachable) do
+  RecordingStudioAttachable.register_adapter_routes(:my_cloud) do
+    mount MyCloud::Engine, at: "/my_cloud", as: :my_cloud
+  end
+end
+```
+
+Provider controllers inherit `RecordingStudioAttachable::ProviderController` and set `self.upload_provider_key = :my_cloud`. Pin the gem's launcher, and import helpers from `recording_studio_attachable/provider_launchers` (`loadScript`, `createBootstrapCache`, `providerNeedsAuth`, `openProviderAuth`, `csrfToken`).
+
+Bootstrap JSON is provider-neutral:
+
+```json
+{
+  "provider_key": "my_cloud",
+  "launcher": "my_cloud",
+  "import_url": "/my_cloud/imports",
+  "needs_auth": true,
+  "reconnect": false,
+  "connect": {
+    "url": "/my_cloud/connect",
+    "method": "post",
+    "fields": { "authenticity_token": "..." },
+    "fallback_url": "/my_cloud/connect"
+  }
+}
+```
 
 Files are always **copied** into Active Storage. There are no linked attachments.
 
-#### Google Drive
-
-Google Drive stays optional. This gem has no runtime dependency on `recording_studio_google_drive` or `recording_studio_oauth`. The Drive engine mounts and the upload-page button registers only when the host bundles the Google Drive gem.
-
-1. Add `recording_studio_google_drive` `>= 0.3.0, < 1.0` and `recording_studio_oauth` `>= 0.15.0, < 1.0`.
-2. Install and migrate Oauth (`recording_studio_oauth:install` and `recording_studio_oauth:migrations`).
-3. Mount Oauth and set Google app credentials on the Oauth outbound provider (`recording_studio_oauth.outbound.google_drive`). Name the keys. Do not put the values in git.
-4. Enable the Attachable picker keys:
-
-```ruby
-RecordingStudioAttachable.configure do |config|
-  config.google_drive.enabled = true
-  config.google_drive.api_key = ENV.fetch("GOOGLE_DRIVE_API_KEY")
-  config.google_drive.app_id = ENV.fetch("GOOGLE_DRIVE_APP_ID")
-end
-
-if defined?(RecordingStudioGoogleDrive)
-  RecordingStudioGoogleDrive.configuration.scopes = ["https://www.googleapis.com/auth/drive.readonly"]
-end
-```
-
-`GOOGLE_DRIVE_API_KEY` must be a browser API key for the same Google Cloud project, and `GOOGLE_DRIVE_APP_ID` is the Google Cloud project number used by Google Picker.
-
-Connect and reconnect use Oauth's outbound flow. Tokens are not stored in the Rails session. Without a connection, or when the Google Drive gem raises `ReconnectRequired`, the import UI shows Connect or Reconnect instead of a 500. Once connected, the upload page still launches Google Picker, then copies selected files through `ImportAttachments`. Bootstrap JSON may include a short-lived picker `access_token` and `expires_at`; that token is read from Oauth, not written to the session. Native Docs/Sheets/Slides export to PDF, PNG, or CSV as before. Routes live at `/recording_studio_attachable/google_drive`.
-
-#### Dropbox
-
-Dropbox stays optional. This gem has no runtime dependency on `recording_studio_dropbox` or `recording_studio_oauth`. The Dropbox engine mounts and the upload-page button registers only when the host bundles the Dropbox gem.
-
-1. Add `recording_studio_dropbox` `~> 0.2` and `recording_studio_oauth` `>= 0.15.0, < 1.0`.
-2. Install and migrate Oauth (`recording_studio_oauth:install` and `recording_studio_oauth:migrations`).
-3. Mount Oauth and set Dropbox app credentials on the Oauth outbound provider (`recording_studio_oauth.outbound.dropbox`). Name the keys. Do not put the values in git.
-4. Register the Dropbox Oauth provider. The Dropbox gem does not auto-register. Pass read-only scopes; v0.2.0's default includes `files.content.write`:
-
-```ruby
-if defined?(RecordingStudioDropbox)
-  RecordingStudioDropbox.register_oauth_provider(
-    client_id: ENV.fetch("DROPBOX_CLIENT_ID"),
-    client_secret: ENV.fetch("DROPBOX_CLIENT_SECRET"),
-    scopes: %w[files.metadata.read files.content.read]
-  )
-end
-```
-
-5. Enable the Attachable Chooser app key:
-
-```ruby
-RecordingStudioAttachable.configure do |config|
-  config.dropbox.enabled = true
-  config.dropbox.client_id = ENV.fetch("DROPBOX_CLIENT_ID")
-end
-```
-
-`DROPBOX_CLIENT_ID` is the Dropbox app key used by Chooser. Oauth still sends `token_access_type=offline` from the Dropbox gem.
-
-Connect and reconnect use Oauth's outbound flow. Tokens are not stored in the Rails session. Without a connection, or when the Dropbox gem raises `ReconnectRequired`, the import UI shows Connect or Reconnect instead of a 500. Once connected, the upload page still launches Chooser, then copies selected files through `ImportAttachments`. The Chooser returns file ids only. The server loads metadata and content through the Dropbox gem. Client-supplied download URLs are ignored. Routes live at `/recording_studio_attachable/dropbox`.
-
-In the Dropbox app console, add this host to **Chooser / Saver domains** (for example `your-app.test`) so the Chooser can open.
-
-Hosts with a Content Security Policy must allow the Chooser script at `https://www.dropbox.com/static/api/2/dropins.js` (`script-src`). Inline launcher imports use a CSP nonce via `javascript_tag`.
-
+#### Adding another provider
 #### Adding another provider
 
-1. Add a self-contained adapter directory (engine, routes, config object, OAuth, resolve, launcher JS).
-2. Register the config with `RecordingStudioAttachable.register_adapter_configuration(:your_key, Your::Configuration)`.
-3. Mount routes with `RecordingStudioAttachable.register_adapter_routes { mount Your::Engine, at: "/your_key", as: :your_key }`.
-4. When `enabled?` and `configured?`, `register_upload_provider` on the existing registry (`strategy: :client_picker`, `remote_importer`, `allowed_payload_keys`).
-5. Resolve a selection to a `RecordingStudioAttachable::RemoteFile` (HTTPS URI, allowed hosts, headers, filename, content type, size, external id). Fetch with `RecordingStudioAttachable::SafeRemoteFetch`, then `ImportAttachments`.
-6. Register a launcher with `registerUploadProviderLauncher("your_key", …)` in `your_key_picker_launcher.js`. The upload page imports that module only when the provider is shown.
+1. Ship an isolated engine in the provider gem (controllers inherit `ProviderController`).
+2. Register routes with `RecordingStudioAttachable.register_adapter_routes(:your_key) { mount Your::Engine, at: "/your_key", as: :your_key }`.
+3. Call `register_upload_provider` with the contract above (`strategy: :client_picker`, `remote_importer`, `connect`, `allowed_payload_keys`).
+4. Hand `ImportRemoteFiles` payloads `{ download: -> { io:, filename:, content_type: }, filename:, content_type:, byte_size:, name:, description:, metadata: { external_id:, external_url: } }`, or resolve a `RecordingStudioAttachable::RemoteFile` and fetch with `SafeRemoteFetch`.
+5. Register a launcher with `registerUploadProviderLauncher("your_key", …)`. Pin that module from the provider gem. The upload page imports it only when the provider is shown.
 
 Do not add a second registry. Do not special-case the new provider in core config, routes, or JS.
 
@@ -744,7 +736,7 @@ Override it per button or per collection editor:
 - The modal body is a lazy turbo frame. The first open loads `attachments/upload?embed=upload_modal&frame_id=...` without a layout, page nav, or title. The page and the modal render `attachment_uploads/_uploader`. Hosts need Turbo (`@hotwired/turbo-rails`) on the page.
 - After a successful upload the uploader dispatches a bubbling `attachable:uploaded` event (`event.detail.attachments`, `event.detail.redirectPath`) instead of redirecting. It clears its queue and closes the modal. The button then reloads `target:` when that id is a turbo frame on the page. Otherwise it re-visits the current page with Turbo, or reloads it when Turbo is missing.
 - The standalone page still redirects to `return_to` after upload.
-- Providers with `strategy: :modal_page` are left out of the modal, because that modal page cannot open inside the upload modal. Link providers open at the top level (`data-turbo-frame="_top"`). Client pickers such as Google Drive and Dropbox stay on the uploader.
+- Providers with `strategy: :modal_page` are left out of the modal, because that modal page cannot open inside the upload modal. Link providers open at the top level (`data-turbo-frame="_top"`). Client pickers stay on the uploader.
 - `upload_button:` takes `true` or a hash with `presentation:`, `label:`, and `target:`. Leave it out and the editor renders no Add button. The collection button always adds.
 
 Wrap the editor in a turbo frame and pass that frame's id as `target:` when the list should refresh in place:
@@ -813,7 +805,7 @@ Dummy credentials (`test/dummy/config/credentials.yml.enc`) are encrypted with t
 
 - the dummy app is a validation shell, not a production template
 - CI installs the dummy app bundle and runs dummy-app migrations before the root checks
-- the dummy app pins RecordingStudio `v4.7.0`, Recording Studio Accessible `v0.15.0`, Recording Studio Orderable `v0.3.0`, Recording Studio API `v0.11.4`, RecordingStudio Google Drive `v0.3.0`, and RecordingStudio Oauth `v0.15.0`
+- the dummy app pins RecordingStudio `v4.7.0`, Recording Studio Accessible `v0.15.0`, Recording Studio Orderable `v0.3.0`, and Recording Studio API `v0.11.4`
 - make sure engine, Active Storage, and Recording Studio tables are migrated in the dummy app before validating upload flows locally
 - `bin/rails db:seed` attaches a twenty-shot Kiln canister press kit to the workspace. The shots mix portrait, square, and landscape frames. Edit images uses those files. Seeds also remove the colour-block stand-ins `window.jpg`, `dock.jpg`, and `pier.jpg` when they are still on the workspace.
 - set `DUMMY_ACTIVE_STORAGE_SERVICE=amazon` plus `DUMMY_AWS_ACCESS_KEY_ID`, `DUMMY_AWS_SECRET_ACCESS_KEY`, `DUMMY_AWS_REGION`, and `DUMMY_AWS_BUCKET` to exercise S3-backed uploads in the dummy app; `DUMMY_AWS_BUCKET` may be either the plain bucket name or a bucket ARN

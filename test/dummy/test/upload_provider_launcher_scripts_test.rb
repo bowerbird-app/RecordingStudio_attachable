@@ -56,36 +56,36 @@ class UploadProviderLauncherScriptsTest < ActionDispatch::IntegrationTest
     configuration = RecordingStudioAttachable.configuration
     original_providers = configuration.upload_providers.dup
     configuration.register_upload_provider(
-      :google_drive,
-      label: "Google Drive",
-      url: "/google-drive-bootstrap",
+      :my_cloud,
+      label: "My Cloud",
+      url: "/my-cloud-bootstrap",
       strategy: :client_picker,
-      launcher: "google_drive",
-      launcher_module: "controllers/recording_studio_attachable/google_drive_picker_launcher",
+      launcher: "my_cloud",
+      launcher_module: "my_cloud/picker_launcher",
       remote_importer: ->(**) {}
     )
     configuration.register_upload_provider(
-      :dropbox,
-      label: "Dropbox",
-      url: "/dropbox-bootstrap",
+      :extra_cloud,
+      label: "Extra Cloud",
+      url: "/extra-cloud-bootstrap",
       strategy: :client_picker,
-      launcher: "dropbox",
-      launcher_module: "controllers/recording_studio_attachable/dropbox_picker_launcher",
+      launcher: "extra_cloud",
+      launcher_module: "extra_cloud/picker_launcher",
       remote_importer: ->(**) {}
     )
     yield
   ensure
-    configuration.instance_variable_set(:@upload_providers, original_providers)
+    configuration.upload_providers = original_providers
   end
 
   def assert_unescaped_launcher_imports(html)
-    assert_includes html, %(import "controllers/recording_studio_attachable/google_drive_picker_launcher")
-    assert_includes html, %(import "controllers/recording_studio_attachable/dropbox_picker_launcher")
-    refute_match(/import &quot;controllers\/recording_studio_attachable\//, html)
+    assert_includes html, %(import "my_cloud/picker_launcher")
+    assert_includes html, %(import "extra_cloud/picker_launcher")
+    refute_match(/import &quot;/, html)
 
     scripts = html.scan(%r{<script\b[^>]*type="module"[^>]*>.*?</script>}m)
-    launcher_scripts = scripts.select { |script| script.include?(%(import "controllers/recording_studio_attachable/)) }
-    assert_operator launcher_scripts.size, :>=, 2, "expected Drive and Dropbox launcher scripts"
+    launcher_scripts = scripts.select { |script| script.include?(%(import "my_cloud/picker_launcher")) || script.include?(%(import "extra_cloud/picker_launcher")) }
+    assert_operator launcher_scripts.size, :>=, 2, "expected both launcher scripts"
 
     launcher_scripts.each do |script|
       refute_includes script, "&quot;"

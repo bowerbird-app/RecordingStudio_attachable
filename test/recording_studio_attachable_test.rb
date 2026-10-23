@@ -51,23 +51,16 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes dummy_gemfile, 'tag: "v0.3.1"'
   end
 
-  def test_google_drive_and_oauth_stay_optional_host_gems
+  def test_provider_gems_are_not_runtime_dependencies
     gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
     dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
 
-    assert_not_includes gemspec, "recording_studio_google_drive"
-    assert_not_includes gemspec, "recording_studio_dropbox"
-    assert_not_includes gemspec, "recording_studio_oauth"
-    assert_includes dummy_gemfile, 'gem "recording_studio_google_drive", github: "bowerbird-app/RecordingStudio_GoogleDrive", tag: "v0.3.0"'
-    assert_includes dummy_gemfile, 'gem "recording_studio_dropbox", github: "bowerbird-app/RecordingStudio_Dropbox", tag: "v0.2.0"'
-    assert_includes dummy_gemfile, 'gem "recording_studio_oauth", github: "bowerbird-app/RecordingStudio_Oauth", tag: "v0.15.0"'
+    refute_includes gemspec, "register_upload_provider"
+    refute_includes dummy_gemfile, "recording_studio_oauth"
   end
 
-  def test_root_suite_does_not_load_google_drive_or_register_its_upload_provider
-    refute defined?(RecordingStudioGoogleDrive)
-    refute defined?(RecordingStudioDropbox)
-    assert_nil RecordingStudioAttachable.configuration.upload_provider(:google_drive)
-    assert_nil RecordingStudioAttachable.configuration.upload_provider(:dropbox)
+  def test_root_suite_does_not_register_host_provider_gems
+    assert_nil RecordingStudioAttachable.configuration.upload_provider(:my_cloud)
   end
 
   def test_engine_exists
@@ -91,10 +84,10 @@ class RecordingStudioAttachableTest < Minitest::Test
     end
     RecordingStudioAttachable.instance_variable_set(:@configuration, configuration)
 
-    result = RecordingStudioAttachable.register_upload_provider(:google_drive, label: "Google Drive")
+    result = RecordingStudioAttachable.register_upload_provider(:my_cloud, label: "My Cloud")
 
     assert_equal :provider, result
-    assert_equal [[:google_drive], { label: "Google Drive" }], captured
+    assert_equal [[:my_cloud], { label: "My Cloud" }], captured
   ensure
     RecordingStudioAttachable.instance_variable_set(:@configuration, original_configuration)
   end
@@ -552,140 +545,55 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_not_includes view_source, "Parent recording id"
   end
 
-  def test_core_has_no_provider_specific_references
-    core_files = [
-      File.expand_path("../lib/recording_studio_attachable.rb", __dir__),
-      File.expand_path("../lib/recording_studio_attachable/configuration.rb", __dir__),
-      File.expand_path("../lib/recording_studio_attachable/engine.rb", __dir__),
-      File.expand_path("../config/routes.rb", __dir__),
-      File.expand_path("../app/javascript/controllers/recording_studio_attachable/upload_controller.js", __dir__),
-      File.expand_path("../app/javascript/controllers/recording_studio_attachable/attachment_image_picker_controller.js", __dir__)
-    ]
-
-    core_files.each do |path|
-      source = File.read(path)
-      assert_no_match(/google_drive|dropbox/i, source, "#{path} should not name a cloud adapter")
-    end
-  end
-
-  def test_google_drive_addon_files_are_wired_through_the_main_engine
+  def test_provider_hooks_are_wired_through_the_main_engine
     library_source = File.read(File.expand_path("../lib/recording_studio_attachable.rb", __dir__))
-    routes_source = File.read(File.expand_path("../config/routes.rb", __dir__))
+    adapter_source = File.read(File.expand_path("../lib/recording_studio_attachable/adapter.rb", __dir__))
+    engine_source = File.read(File.expand_path("../lib/recording_studio_attachable/engine.rb", __dir__))
     initializer_template = File.read(
       File.expand_path(
         "../lib/generators/recording_studio_attachable/install/templates/recording_studio_attachable_initializer.rb",
         __dir__
       )
     )
-    engine_routes_source = File.read(
-      File.expand_path("../lib/recording_studio_attachable/google_drive/config/routes.rb", __dir__)
-    )
-    engine_source = File.read(File.expand_path("../lib/recording_studio_attachable/google_drive/engine.rb", __dir__))
     launcher_source = File.read(
-      File.expand_path("../app/javascript/controllers/recording_studio_attachable/google_drive_picker_launcher.js", __dir__)
+      File.expand_path("../app/javascript/controllers/recording_studio_attachable/provider_launchers.js", __dir__)
     )
-    view_source = File.read(
-      File.expand_path(
-        "../lib/recording_studio_attachable/google_drive/app/views/recording_studio_attachable/google_drive/imports/index.html.erb",
-        __dir__
-      )
+    connect_form = File.read(
+      File.expand_path("../app/views/recording_studio_attachable/providers/_connect_form.html.erb", __dir__)
     )
-    connect_form_source = File.read(
-      File.expand_path(
-        "../lib/recording_studio_attachable/google_drive/app/views/recording_studio_attachable/google_drive/connect/_form.html.erb",
-        __dir__
-      )
+    browser = File.read(
+      File.expand_path("../app/views/recording_studio_attachable/providers/_remote_file_browser.html.erb", __dir__)
+    )
+    provider_controller = File.read(
+      File.expand_path("../app/controllers/recording_studio_attachable/provider_controller.rb", __dir__)
     )
     upload_view = File.read(
       File.expand_path("../app/views/recording_studio_attachable/attachment_uploads/_uploader.html.erb", __dir__)
     )
-
-    assert_includes library_source, "recording_studio_attachable/*/engine.rb"
-    assert_includes routes_source, "adapter_route_blocks"
-    assert_includes engine_source, 'mount RecordingStudioAttachable::GoogleDrive::Engine, at: "/google_drive", as: :google_drive'
-    assert_google_drive_adapter_routes_mount_only_when_the_gem_is_loaded
-    assert_includes engine_routes_source, 'get "bootstrap", to: "bootstrap#show", as: :bootstrap'
-    assert_includes engine_routes_source, 'get "connect", to: "connect#show", as: :connect'
-    assert_includes engine_routes_source, 'get "connected", to: "connect#complete", as: :connected'
-    assert_includes engine_routes_source, 'delete "connect", to: "connect#destroy", as: :disconnect'
-    picker_source = File.read(
-      File.expand_path("../lib/recording_studio_attachable/adapter/client_picker.rb", __dir__)
+    generator = File.read(
+      File.expand_path("../lib/generators/recording_studio_attachable/install/install_generator.rb", __dir__)
     )
-    assert_includes engine_source, "Adapter::ClientPicker.provider_options"
-    assert_includes engine_source, 'launcher: "google_drive"'
-    assert_includes picker_source, "strategy: :client_picker"
-    assert_includes launcher_source, 'registerUploadProviderLauncher("google_drive"'
-    assert_includes launcher_source, "https://apis.google.com/js/api.js"
-    assert_includes launcher_source, "prefetch({ controller, bootstrapUrl, button })"
-    assert_includes launcher_source, "if (gesture && canOpenNow(session))"
-    assert_includes initializer_template, "strategy: :client_picker"
-    assert_includes initializer_template, "remote_importer: lambda do |parent_recording:, attachments:, actor: nil, impersonator: nil, context: nil|"
-    assert_includes initializer_template, "payload.fetch(:provider_payload)"
-    assert_includes initializer_template, "GOOGLE_DRIVE_API_KEY"
-    assert_includes initializer_template, "GOOGLE_DRIVE_APP_ID"
-    assert_includes initializer_template, 'RecordingStudioGoogleDrive.configuration.scopes = ["https://www.googleapis.com/auth/drive.readonly"]'
-    assert_includes initializer_template, "config.dropbox.enabled = true"
-    assert_includes view_source, 'title: t("recording_studio.attachable.google_drive.title")'
-    assert_includes view_source, "if @show_connect"
-    assert_includes connect_form_source, 't(reconnect ? "recording_studio.attachable.google_drive.reconnect" : "recording_studio.attachable.google_drive.connect")'
-    assert_includes connect_form_source, "form_with url: connect_path, method: :post"
-    assert_includes connect_form_source, 'hidden_field_tag :owner, "user"'
-    assert_includes view_source, 't("recording_studio.attachable.google_drive.import_selected")'
-    assert_includes view_source, "google_drive.recording_disconnect_path(@recording)"
-    assert_includes view_source, "recording_studio_attachable.recording_attachment_upload_path(@recording, redirect_params)"
-    assert_includes view_source, 'hidden_field_tag :embed, "modal" if embedded_upload_provider_request?'
+
+    assert_includes library_source, "ActiveSupport.run_load_hooks(:recording_studio_attachable, RecordingStudioAttachable)"
+    refute_includes library_source, "Dir["
+    assert_includes adapter_source, "def register_adapter_routes(key, &block)"
+    assert_includes adapter_source, "return if adapter_route_blocks.key?(adapter_key)"
+    assert_includes engine_source, "recording_studio_attachable.adapter_routes"
+    assert_includes initializer_template, ":my_cloud"
+    assert_includes initializer_template, "register_adapter_routes(:my_cloud)"
+    assert_includes initializer_template, "RecordingStudioAttachable::ProviderController"
+    assert_includes initializer_template, "Services::ImportRemoteFiles.call"
+    assert_includes launcher_source, "export function loadScript"
+    assert_includes launcher_source, "export function createBootstrapCache"
+    assert_includes launcher_source, "export function providerNeedsAuth"
+    assert_includes launcher_source, "export function openProviderAuth"
+    assert_includes launcher_source, "export function csrfToken"
+    assert_includes connect_form, 't("recording_studio.attachable.providers.connect_help"'
+    assert_includes browser, 'render "recording_studio_attachable/providers/connect_form"'
+    assert_includes provider_controller, "class_attribute :upload_provider_key"
     assert_includes upload_view, "upload_provider_launcher_modules"
     assert_includes upload_view, 'javascript_tag(%(import #{module_path.to_json}), type: "module", nonce: true)'
-    assert_not_includes upload_view, "javascript_tag(nonce: true, type: \"module\") {"
-  end
-
-  def test_dropbox_addon_files_are_wired_through_the_main_engine
-    engine_routes_source = File.read(
-      File.expand_path("../lib/recording_studio_attachable/dropbox/config/routes.rb", __dir__)
-    )
-    engine_source = File.read(File.expand_path("../lib/recording_studio_attachable/dropbox/engine.rb", __dir__))
-    launcher_source = File.read(
-      File.expand_path("../app/javascript/controllers/recording_studio_attachable/dropbox_picker_launcher.js", __dir__)
-    )
-    initializer_template = File.read(
-      File.expand_path(
-        "../lib/generators/recording_studio_attachable/install/templates/recording_studio_attachable_initializer.rb",
-        __dir__
-      )
-    )
-    view_source = File.read(
-      File.expand_path(
-        "../lib/recording_studio_attachable/dropbox/app/views/recording_studio_attachable/dropbox/imports/index.html.erb",
-        __dir__
-      )
-    )
-    connect_form_source = File.read(
-      File.expand_path(
-        "../lib/recording_studio_attachable/dropbox/app/views/recording_studio_attachable/dropbox/connect/_form.html.erb",
-        __dir__
-      )
-    )
-
-    assert_includes engine_source, 'mount RecordingStudioAttachable::Dropbox::Engine, at: "/dropbox", as: :dropbox'
-    assert_dropbox_adapter_routes_mount_only_when_the_gem_is_loaded
-    assert_includes engine_routes_source, 'get "bootstrap", to: "bootstrap#show", as: :bootstrap'
-    assert_includes engine_routes_source, 'get "connect", to: "connect#show", as: :connect'
-    assert_includes engine_routes_source, 'get "connected", to: "connect#complete", as: :connected'
-    assert_includes engine_routes_source, 'delete "connect", to: "connect#destroy", as: :disconnect'
-    assert_includes engine_source, "Adapter::ClientPicker.provider_options"
-    assert_includes engine_source, 'launcher: "dropbox"'
-    assert_includes launcher_source, 'registerUploadProviderLauncher("dropbox"'
-    assert_includes launcher_source, "https://www.dropbox.com/static/api/2/dropins.js"
-    assert_includes launcher_source, "postOauthConnectIntoPopup"
-    assert_includes initializer_template, "recording_studio_dropbox"
-    assert_includes initializer_template, "DROPBOX_CLIENT_ID"
-    assert_includes initializer_template, "RecordingStudioDropbox.register_oauth_provider"
-    assert_includes initializer_template, "%w[files.metadata.read files.content.read]"
-    assert_includes view_source, 'title: t("recording_studio.attachable.dropbox.title")'
-    assert_includes view_source, "if @show_connect"
-    assert_includes connect_form_source, 't(reconnect ? "recording_studio.attachable.dropbox.reconnect" : "recording_studio.attachable.dropbox.connect")'
-    assert_includes connect_form_source, "form_with url: connect_path, method: :post"
-    assert_includes connect_form_source, 'hidden_field_tag :owner, "user"'
+    assert_includes generator, 'pin "recording_studio_attachable/provider_launchers"'
   end
 
   def test_attachment_file_button_uses_file_only_replace_controls
@@ -729,41 +637,5 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes controller_source, "this.fileInputTarget.click()"
     assert_includes controller_source, "if (this.autoSubmitValue) {"
     assert_includes controller_source, "this.element.requestSubmit()"
-  end
-
-  private
-
-  def assert_google_drive_adapter_routes_mount_only_when_the_gem_is_loaded
-    with_gem = adapter_route_paths(google_drive: true)
-    without_gem = adapter_route_paths(google_drive: false)
-
-    assert with_gem.any? { |path| path.include?("/google_drive") },
-           "expected Google Drive routes when the gem is loaded, got #{with_gem.inspect}"
-    refute without_gem.any? { |path| path.include?("/google_drive") },
-           "expected no Google Drive routes when the gem is missing, got #{without_gem.inspect}"
-  end
-
-  def assert_dropbox_adapter_routes_mount_only_when_the_gem_is_loaded
-    with_gem = adapter_route_paths(dropbox: true)
-    without_gem = adapter_route_paths(dropbox: false)
-
-    assert with_gem.any? { |path| path.include?("/dropbox") },
-           "expected Dropbox routes when the gem is loaded, got #{with_gem.inspect}"
-    refute without_gem.any? { |path| path.include?("/dropbox") },
-           "expected no Dropbox routes when the gem is missing, got #{without_gem.inspect}"
-  end
-
-  def adapter_route_paths(google_drive: false, dropbox: false)
-    set = ActionDispatch::Routing::RouteSet.new
-    set.draw do
-      RecordingStudioAttachable::GoogleDrive::Integration.stub(:gem_loaded?, google_drive) do
-        RecordingStudioAttachable::Dropbox::Integration.stub(:gem_loaded?, dropbox) do
-          RecordingStudioAttachable.adapter_route_blocks.each do |route_block|
-            instance_exec(&route_block)
-          end
-        end
-      end
-    end
-    set.routes.map { |route| route.path.spec.to_s }
   end
 end

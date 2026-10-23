@@ -17,14 +17,6 @@ module RecordingStudioAttachable
         )
       end
 
-      def import_from_session(context:, attachments:, session_token_class:, import_class:, **import_args)
-        import_class.call(
-          file_ids: Selection.from_attachments(attachments),
-          access_token: session_token_class.fetch(session: context.session),
-          **import_args
-        )
-      end
-
       def picker_urls(attrs)
         path = attrs.fetch(:bootstrap_path)
         { url: path, bootstrap_url: path, import_url: attrs.fetch(:import_path) }

@@ -23,10 +23,6 @@ module RecordingStudioAttachable
           app_id: google_drive_configuration.app_id,
           import_url: google_drive.recording_imports_path(@recording, format: :json, **attachment_redirect_params)
         }
-        if gem_client_id.present?
-          payload[:client_id] = gem_client_id
-          payload[:scopes] = gem_scopes
-        end
 
         token, expires_at = Integration.picker_access(root: google_drive_root, actor: current_attachable_actor)
         payload[:access_token] = token
@@ -36,18 +32,6 @@ module RecordingStudioAttachable
         raise unless Integration.reconnect_required?(e)
 
         payload.merge(connect_url: google_drive_popup_connect_url)
-      end
-
-      def gem_client_id
-        return unless defined?(::RecordingStudioGoogleDrive)
-
-        ::RecordingStudioGoogleDrive.configuration.client_id
-      end
-
-      def gem_scopes
-        return [] unless defined?(::RecordingStudioGoogleDrive)
-
-        Array(::RecordingStudioGoogleDrive.configuration.scopes)
       end
     end
   end

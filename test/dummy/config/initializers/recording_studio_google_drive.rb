@@ -9,4 +9,5 @@ RecordingStudioGoogleDrive.configure do |config|
   config.client_id = FakeOauth::CLIENT_ID
   config.client_secret = FakeOauth::CLIENT_SECRET
   config.http = FakeOauth
+  config.scopes = ["https://www.googleapis.com/auth/drive.readonly"]
 end

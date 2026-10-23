@@ -223,6 +223,53 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
     assert_nil @request.session["recording_studio_attachable_google_drive"]
   end
 
+  def test_index_lists_the_next_drive_page_when_page_token_is_present
+    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+    page = GoogleDriveFakes::Page.new(
+      entries: [
+        GoogleDriveFakes::DriveFile.new(id: "file-2", name: "Notes.pdf", mime_type: "application/pdf", web_view_link: "https://drive.test/file-2")
+      ],
+      next_cursor: nil
+    )
+    captured = nil
+    client = Object.new
+    client.define_singleton_method(:list) do |**kwargs|
+      captured = kwargs
+      page
+    end
+
+    with_routing do |set|
+      set.draw do
+        get "/google_drive/recordings/:recording_id/imports",
+            to: "recording_studio_attachable/google_drive/imports#index"
+      end
+
+      @routes = set
+
+      RecordingStudio::Recording.stub(:find, recording) do
+        GoogleDriveFakes.with_gem_loaded do
+          RecordingStudioAttachable::GoogleDrive::Integration.stub(:connection, GoogleDriveFakes::Connection.new(access_token: "tok")) do
+            @controller.stub(:google_drive_client, client) do
+              @controller.stub(:render, lambda { |*_, **kwargs|
+                files = @controller.instance_variable_get(:@files)
+                token = @controller.instance_variable_get(:@next_page_token)
+                @controller.response_body = ["#{files.map { |file| file['id'] }.join(',')} #{token}"]
+                @controller.status = kwargs[:status] || :ok
+              }) do
+                get :index, params: { recording_id: recording.id, page_token: "next-page" }
+              end
+            end
+          end
+        end
+      end
+    end
+
+    assert_response :success
+    assert_equal "next-page", captured[:cursor]
+    assert_equal 25, captured[:page_size]
+    assert_equal "file-2 ", @response.body
+  end
+
   def test_index_renders_connect_state_when_there_is_no_connection
     recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
     @controller.define_singleton_method(:google_drive_oauth_connect_path) { "/recording_studio_oauth/outbound/google_drive/connect" }
@@ -278,7 +325,7 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
       end
     end
     client = Object.new
-    client.define_singleton_method(:list) { |**| raise StandardError, "needs reconnect" }
+    client.define_singleton_method(:list) { |**| raise RecordingStudioGoogleDrive::ReconnectRequired, "Reconnect Google Drive" }
 
     with_routing do |set|
       set.draw do
@@ -291,16 +338,14 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
       RecordingStudio::Recording.stub(:find, recording) do
         GoogleDriveFakes.with_gem_loaded do
           RecordingStudioAttachable::GoogleDrive::Integration.stub(:connection, GoogleDriveFakes::Connection.new(access_token: "tok")) do
-            RecordingStudioAttachable::GoogleDrive::Integration.stub(:reconnect_required?, true) do
-              @controller.stub(:google_drive_client, client) do
-                @controller.stub(:render, lambda { |*_, **kwargs|
-                  @controller.response_body = [
-                    [@controller.instance_variable_get(:@reconnect), @controller.instance_variable_get(:@oauth_connect_path)].join(" ")
-                  ]
-                  @controller.status = kwargs[:status] || :ok
-                }) do
-                  get :index, params: { recording_id: recording.id }
-                end
+            @controller.stub(:google_drive_client, client) do
+              @controller.stub(:render, lambda { |*_, **kwargs|
+                @controller.response_body = [
+                  [@controller.instance_variable_get(:@reconnect), @controller.instance_variable_get(:@oauth_connect_path)].join(" ")
+                ]
+                @controller.status = kwargs[:status] || :ok
+              }) do
+                get :index, params: { recording_id: recording.id }
               end
             end
           end
@@ -441,6 +486,34 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
     assert_equal "Google Drive isn't available right now", JSON.parse(@response.body).fetch("error")
   end
 
+  def test_index_redirects_back_to_upload_page_when_google_drive_is_misconfigured
+    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+    RecordingStudioAttachable.configuration.google_drive.enabled = false
+    upload_proxy = Object.new
+    upload_proxy.define_singleton_method(:recording_attachment_upload_path) do |record, options = {}|
+      suffix = options.compact.to_query
+      path = "/recordings/#{record.id}/attachments/upload"
+      suffix.present? ? "#{path}?#{suffix}" : path
+    end
+    @controller.define_singleton_method(:recording_studio_attachable) { upload_proxy }
+
+    with_routing do |set|
+      set.draw do
+        get "/google_drive/recordings/:recording_id/imports",
+            to: "recording_studio_attachable/google_drive/imports#index"
+      end
+
+      @routes = set
+
+      RecordingStudio::Recording.stub(:find, recording) do
+        get :index, params: { recording_id: recording.id, redirect_mode: "return_to", return_to: "/pages/page-1" }
+      end
+    end
+
+    assert_redirected_to "/recordings/rec-1/attachments/upload?redirect_mode=return_to&return_to=%2Fpages%2Fpage-1"
+    assert_equal "Google Drive isn't available right now", flash[:alert]
+  end
+
   def test_create_redirects_back_to_imports_when_html_import_service_fails
     recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
     result = RecordingStudioAttachable::Services::BaseService::Result.new(success: false, error: "Select at least one file")
@@ -491,11 +564,9 @@ class GoogleDriveImportsControllerTest < ActionController::TestCase
 
       RecordingStudio::Recording.stub(:find, recording) do
         GoogleDriveFakes.with_gem_loaded do
-          RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.stub(:call, ->(**) { raise StandardError, "needs reconnect" }) do
-            RecordingStudioAttachable::GoogleDrive::Integration.stub(:reconnect_required?, true) do
-              @controller.stub(:protect_against_forgery?, false) do
-                post :create, params: { recording_id: recording.id, file_ids: ["file-1"], format: :json }
-              end
+          RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.stub(:call, ->(**) { raise RecordingStudioGoogleDrive::ReconnectRequired, "Reconnect Google Drive" }) do
+            @controller.stub(:protect_against_forgery?, false) do
+              post :create, params: { recording_id: recording.id, file_ids: ["file-1"], format: :json }
             end
           end
         end

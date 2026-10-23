@@ -79,7 +79,6 @@ module RecordingStudioAttachable
         @reconnect = reconnect
         @oauth_connect_path = google_drive_oauth_connect_path
         @oauth_return_to = google_drive_connect_return_path(popup: embedded_upload_provider_request?)
-        @authorization_path = google_drive_popup_connect_url if embedded_upload_provider_request?
         render :index
       end
 

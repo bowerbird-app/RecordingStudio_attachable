@@ -84,6 +84,13 @@ class GoogleDriveConnectControllerTest < ActionController::TestCase
 
       RecordingStudio::Recording.stub(:find, recording) do
         GoogleDriveFakes.with_gem_loaded do
+          @controller.define_singleton_method(:google_drive) do
+            Object.new.tap do |proxy|
+              proxy.define_singleton_method(:recording_imports_path) do |record, **kwargs|
+                "/google_drive/recordings/#{record.id}/imports?#{kwargs.compact.to_query}"
+              end
+            end
+          end
           get :complete, params: { recording_id: recording.id, popup: 1, provider_key: "google_drive" }
         end
       end
@@ -92,8 +99,109 @@ class GoogleDriveConnectControllerTest < ActionController::TestCase
     assert_response :success
     assert_includes @response.body, "provider-auth-complete"
     assert_includes @response.body, "google_drive"
+    assert_includes @response.body, "reloadUrl"
+    assert_includes @response.body, "/google_drive/recordings/rec-1/imports"
+    assert_includes @response.body, "embed=modal"
     assert_includes @response.body, "window.close()"
     assert_nil @request.session["recording_studio_attachable_google_drive"]
+  end
+
+  def test_destroy_disconnects_through_oauth_and_redirects_to_the_documented_route
+    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+    route_proxy = Object.new
+    route_proxy.define_singleton_method(:recording_imports_path) do |record, options = {}|
+      suffix = options.compact.to_query
+      path = "/google_drive/recordings/#{record.id}/imports"
+      suffix.present? ? "#{path}?#{suffix}" : path
+    end
+    @controller.define_singleton_method(:google_drive) { route_proxy }
+    @controller.define_singleton_method(:google_drive_oauth_disconnect_path) do |connection_id|
+      "/recording_studio_oauth/outbound/connections/#{connection_id}?return_to=%2Fgoogle_drive%2Frecordings%2Frec-1%2Fimports"
+    end
+
+    with_routing do |set|
+      set.draw do
+        delete "/google_drive/recordings/:recording_id/connect",
+               to: "recording_studio_attachable/google_drive/connect#destroy"
+      end
+
+      @routes = set
+
+      RecordingStudio::Recording.stub(:find, recording) do
+        GoogleDriveFakes.with_gem_loaded do
+          RecordingStudioAttachable::GoogleDrive::Integration.stub(:connection_id_for, "conn-1") do
+            @controller.stub(:protect_against_forgery?, false) do
+              delete :destroy, params: { recording_id: recording.id, redirect_mode: "return_to", return_to: "/pages/page-1" }
+            end
+          end
+        end
+      end
+    end
+
+    assert_response :temporary_redirect
+    assert_redirected_to "/recording_studio_oauth/outbound/connections/conn-1?return_to=%2Fgoogle_drive%2Frecordings%2Frec-1%2Fimports"
+    assert_nil flash[:notice]
+  end
+
+  def test_destroy_flashes_failure_when_there_is_no_connection_to_disconnect
+    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+    route_proxy = Object.new
+    route_proxy.define_singleton_method(:recording_imports_path) do |record, options = {}|
+      suffix = options.compact.to_query
+      path = "/google_drive/recordings/#{record.id}/imports"
+      suffix.present? ? "#{path}?#{suffix}" : path
+    end
+    @controller.define_singleton_method(:google_drive) { route_proxy }
+
+    with_routing do |set|
+      set.draw do
+        delete "/google_drive/recordings/:recording_id/connect",
+               to: "recording_studio_attachable/google_drive/connect#destroy"
+      end
+
+      @routes = set
+
+      RecordingStudio::Recording.stub(:find, recording) do
+        GoogleDriveFakes.with_gem_loaded do
+          RecordingStudioAttachable::GoogleDrive::Integration.stub(:connection_id_for, nil) do
+            @controller.stub(:protect_against_forgery?, false) do
+              delete :destroy, params: { recording_id: recording.id }
+            end
+          end
+        end
+      end
+    end
+
+    assert_redirected_to "/google_drive/recordings/rec-1/imports"
+    assert_equal "Couldn't disconnect Google Drive.", flash[:alert]
+    assert_nil flash[:notice]
+  end
+
+  def test_destroy_returns_forbidden_when_upload_is_denied
+    recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+    @controller.define_singleton_method(:authorize_attachment_action!) do |_action, _recording, capability_options: {}|
+      raise RecordingStudioAttachable::Authorization::NotAuthorizedError, "Not authorized to upload attachments for Workspace"
+    end
+
+    with_routing do |set|
+      set.draw do
+        delete "/google_drive/recordings/:recording_id/connect",
+               to: "recording_studio_attachable/google_drive/connect#destroy"
+      end
+
+      @routes = set
+
+      RecordingStudio::Recording.stub(:find, recording) do
+        GoogleDriveFakes.with_gem_loaded do
+          @controller.stub(:protect_against_forgery?, false) do
+            delete :destroy, params: { recording_id: recording.id, format: :json }
+          end
+        end
+      end
+    end
+
+    assert_response :forbidden
+    assert_equal "Not authorized to upload attachments for Workspace", JSON.parse(@response.body).fetch("error")
   end
 
   private

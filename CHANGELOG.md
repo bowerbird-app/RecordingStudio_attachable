@@ -11,20 +11,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Google Drive import uses `recording_studio_google_drive` `>= 0.2.0, < 1.0` for Drive API calls and `recording_studio_oauth` `>= 0.14.1, < 1.0` outbound connections for tokens. Attachable no longer owns a Drive HTTP client, OAuth client, or session tokens.
+- Google Drive import uses `recording_studio_google_drive` `>= 0.3.0, < 1.0` for Drive API calls and `recording_studio_oauth` `>= 0.15.0, < 1.0` outbound connections for tokens. Attachable no longer owns a Drive HTTP client, OAuth client, or session tokens.
 - Google Drive stays optional. This gem has no runtime dependency on those gems. The Drive engine mounts and the upload button registers only when the host bundles the Google Drive gem.
 - Without a connection, or when the Google Drive gem raises `ReconnectRequired`, the import UI shows Connect or Reconnect to Oauth's outbound flow instead of a 500.
+- Connect vs reconnect labels use `RecordingStudioOauth.connection_status`. Import uses `Client.for`. Picker tokens use `RecordingStudioGoogleDrive.picker_access_token`. Disconnect uses Oauth `DELETE /outbound/connections/:id` with `connection_id_for`.
 
 ### Removed
 
 - Attachable Google Drive `Client`, `OAuthClient`, `SessionAccessToken`, and the Drive OAuth callback controller.
+- Attachable Google Drive `scopes`, `include_granted_scopes`, `access_type`, and `prompt` settings.
 
 ### Upgrade Notes
 
 - Bump to `0.21.0`. No migration in this gem.
-- To keep Google Drive import, add `recording_studio_google_drive` `>= 0.2.0, < 1.0` and `recording_studio_oauth` `>= 0.14.1, < 1.0`, install and migrate Oauth, and put Google app credentials on `recording_studio_oauth.outbound.google_drive`.
+- To keep Google Drive import, add `recording_studio_google_drive` `>= 0.3.0, < 1.0` and `recording_studio_oauth` `>= 0.15.0, < 1.0`, install and migrate Oauth, and put Google app credentials on `recording_studio_oauth.outbound.google_drive`.
 - Set `config.google_drive.enabled = true` plus Picker `api_key` and `app_id`. Remove Attachable `client_id`, `client_secret`, `redirect_uri`, and Drive session-token handling.
-- Point Connect at Oauth outbound (`POST /recording_studio_oauth/outbound/google_drive/connect`). The Attachable Drive callback URL is gone.
+- Attachable no longer sets Drive OAuth `scopes`, `include_granted_scopes`, `access_type`, or `prompt`. Keep Drive read-only with `RecordingStudioGoogleDrive.configuration.scopes = ["https://www.googleapis.com/auth/drive.readonly"]`. Oauth still sends `access_type=offline` and `prompt=consent` from the Google Drive gem.
+- Point Connect at Oauth outbound (`POST /recording_studio_oauth/outbound/google_drive/connect`). Disconnect through `DELETE /outbound/connections/:id` using `connection_id_for`. The Attachable Drive callback URL is gone.
 
 ## [0.20.2] - 2026-10-22
 

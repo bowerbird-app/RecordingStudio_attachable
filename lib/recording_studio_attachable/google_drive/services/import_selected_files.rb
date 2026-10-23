@@ -32,6 +32,7 @@ module RecordingStudioAttachable
           file_id = selection.fetch("id")
           resource_key = selection["resource_key"]
           metadata = adapter_client.fetch_file(file_id, resource_key: resource_key)
+          reject_oversized_drive_file!(metadata)
           downloaded_file = adapter_client.download(file_id, resource_key: resource_key)
           io = StringIO.new(downloaded_file.body)
           downloaded << io
@@ -47,6 +48,17 @@ module RecordingStudioAttachable
               external_url: metadata.web_view_link
             }.compact.merge(selection.fetch("metadata", {}))
           }
+        end
+
+        def reject_oversized_drive_file!(metadata)
+          max_bytes = RecordingStudioAttachable.configuration.max_file_size
+          return if max_bytes.blank?
+          return unless metadata.respond_to?(:size)
+
+          size = metadata.size
+          return if size.nil?
+
+          raise ArgumentError, "Remote file exceeds maximum file size" if size > max_bytes
         end
 
         def build_client

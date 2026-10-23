@@ -7,7 +7,7 @@ class FakeOauth
   CLIENT_ID = "dummy-fake-drive"
   CLIENT_SECRET = "dummy-fake-drive-secret"
   FAIL_REFRESH = "fail-refresh"
-  SCOPE = "https://www.googleapis.com/auth/drive"
+  SCOPE = "https://www.googleapis.com/auth/drive.readonly"
 
   class << self
     def call(url, params)

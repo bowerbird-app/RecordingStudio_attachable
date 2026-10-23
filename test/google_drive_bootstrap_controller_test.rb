@@ -90,10 +90,8 @@ class GoogleDriveBootstrapControllerTest < ActionController::TestCase
 
       RecordingStudio::Recording.stub(:find, recording) do
         GoogleDriveFakes.with_gem_loaded do
-          RecordingStudioAttachable::GoogleDrive::Integration.stub(:picker_access, ->(*) { raise StandardError, "needs reconnect" }) do
-            RecordingStudioAttachable::GoogleDrive::Integration.stub(:reconnect_required?, true) do
-              get :show, params: { recording_id: recording.id, format: :json }
-            end
+          RecordingStudioAttachable::GoogleDrive::Integration.stub(:picker_access, ->(*) { raise RecordingStudioGoogleDrive::ReconnectRequired, "Reconnect Google Drive" }) do
+            get :show, params: { recording_id: recording.id, format: :json }
           end
         end
       end

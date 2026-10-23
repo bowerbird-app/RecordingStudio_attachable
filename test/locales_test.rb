@@ -102,9 +102,8 @@ class LocalesTest < Minitest::Test
     "google_drive.empty" => "No Google Drive files matched the current search.",
     "google_drive.next_page" => "Next page",
     "google_drive.title" => "Google Drive",
-    "google_drive.connected" => "Connected Google Drive.",
     "google_drive.disconnected" => "Disconnected Google Drive.",
-    "google_drive.session_expired" => "Google Drive session expired. Reconnect to continue.",
+    "google_drive.disconnect_failed" => "Couldn't disconnect Google Drive.",
     "google_drive.not_enabled" => "Google Drive isn't available right now",
     "google_drive.reconnect" => "Reconnect Google Drive"
   }.freeze
@@ -216,16 +215,16 @@ class LocalesTest < Minitest::Test
       I18n.backend.store_translations(
         :en,
         {
-          "recording_studio_attachable" => { "google_drive" => { "connected" => "LEGACY Connected" } },
-          "recording_studio" => { "attachable" => { "google_drive" => { "connected" => "NESTED Connected" } } }
+          "recording_studio_attachable" => { "google_drive" => { "disconnected" => "LEGACY Disconnected" } },
+          "recording_studio" => { "attachable" => { "google_drive" => { "disconnected" => "NESTED Disconnected" } } }
         }
       )
 
-      assert_equal "LEGACY Connected",
+      assert_equal "LEGACY Disconnected",
                    RecordingStudioAttachable::Copy.legacy_t(
-                     "google_drive.connected",
-                     "google_drive.connected",
-                     default: "Connected Google Drive."
+                     "google_drive.disconnected",
+                     "google_drive.disconnected",
+                     default: "Disconnected Google Drive."
                    )
     end
   end
@@ -234,14 +233,14 @@ class LocalesTest < Minitest::Test
     with_isolated_backend do
       I18n.backend.store_translations(
         :en,
-        { "recording_studio" => { "attachable" => { "google_drive" => { "connected" => "NESTED Connected" } } } }
+        { "recording_studio" => { "attachable" => { "google_drive" => { "disconnected" => "NESTED Disconnected" } } } }
       )
 
-      assert_equal "NESTED Connected",
+      assert_equal "NESTED Disconnected",
                    RecordingStudioAttachable::Copy.legacy_t(
-                     "google_drive.connected",
-                     "google_drive.connected",
-                     default: "Connected Google Drive."
+                     "google_drive.disconnected",
+                     "google_drive.disconnected",
+                     default: "Disconnected Google Drive."
                    )
     end
   end

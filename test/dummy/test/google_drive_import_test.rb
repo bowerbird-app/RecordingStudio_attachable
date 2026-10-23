@@ -28,6 +28,10 @@ class GoogleDriveImportTest < ActionDispatch::IntegrationTest
     FakeOauth.reset!
   end
 
+  test "dummy google drive import stays on drive.readonly scopes" do
+    assert_equal ["https://www.googleapis.com/auth/drive.readonly"], RecordingStudioGoogleDrive.configuration.scopes
+  end
+
   test "imports index shows connect when there is no Google Drive connection" do
     get google_drive_imports_path
 
@@ -114,12 +118,8 @@ class GoogleDriveImportTest < ActionDispatch::IntegrationTest
     follow_redirect!
   end
 
-  def with_drive_client(client)
-    original = RecordingStudioGoogleDrive::Client.method(:for)
-    RecordingStudioGoogleDrive::Client.define_singleton_method(:for) { |**| client }
-    yield
-  ensure
-    RecordingStudioGoogleDrive::Client.define_singleton_method(:for, original)
+  def with_drive_client(client, &block)
+    RecordingStudioGoogleDrive::Client.stub(:for, client, &block)
   end
 
   def oauth_outbound_connect_path

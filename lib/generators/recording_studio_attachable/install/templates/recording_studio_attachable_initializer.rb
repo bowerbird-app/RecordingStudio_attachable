@@ -96,9 +96,13 @@ RecordingStudioAttachable.configure do |config|
   # Built-in cloud adapters are off until you enable them and supply credentials.
   # An adapter is registered and shown only when enabled AND fully configured.
   #
-  # Google Drive (optional). Bundle recording_studio_google_drive >= 0.2.0, < 1.0
-  # and recording_studio_oauth >= 0.14.1, < 1.0. Oauth stores tokens. This gem
-  # only needs Picker keys:
+  # Google Drive (optional). Bundle recording_studio_google_drive >= 0.3.0, < 1.0
+  # and recording_studio_oauth >= 0.15.0, < 1.0. Oauth stores tokens. This gem
+  # only needs Picker keys. Drive scopes live on the Google Drive gem and stay
+  # read-only:
+  if defined?(RecordingStudioGoogleDrive)
+    RecordingStudioGoogleDrive.configuration.scopes = ["https://www.googleapis.com/auth/drive.readonly"]
+  end
   # config.google_drive.enabled = true
   # config.google_drive.api_key = ENV["GOOGLE_DRIVE_API_KEY"] # Browser API key for Google Picker
   # config.google_drive.app_id = ENV["GOOGLE_DRIVE_APP_ID"]   # Google Cloud project number

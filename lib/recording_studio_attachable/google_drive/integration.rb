@@ -33,8 +33,28 @@ module RecordingStudioAttachable
         )
       end
 
+      def connection_status(root:, actor:)
+        return :missing unless oauth_loaded?
+
+        ::RecordingStudioOauth.connection_status(
+          provider: provider_key,
+          root: root,
+          actor: actor
+        )
+      end
+
+      def connection_id_for(root:, actor:)
+        return unless oauth_loaded?
+
+        ::RecordingStudioOauth.connection_id_for(
+          provider: provider_key,
+          root: root,
+          actor: actor
+        )
+      end
+
       def picker_access(root:, actor:)
-        token = ::RecordingStudioGoogleDrive::TokenStore.new(root: root, actor: actor).access_token
+        token = ::RecordingStudioGoogleDrive.picker_access_token(root: root, actor: actor)
         expires_at = connection(root: root, actor: actor)&.expires_at
         [token, expires_at]
       end
@@ -52,23 +72,6 @@ module RecordingStudioAttachable
         return false unless ::RecordingStudioGoogleDrive.const_defined?(name, false)
 
         error.is_a?(::RecordingStudioGoogleDrive.const_get(name))
-      end
-
-      def live_connection(root:, actor:)
-        return unless oauth_loaded? && defined?(::RecordingStudioOauth::OutboundConnection)
-
-        scope = ::RecordingStudioOauth::OutboundConnection.live.for_provider(provider_key)
-        owned = actor_connection(scope, actor)
-        return owned if owned
-        return if root.nil? || !root.respond_to?(:id)
-
-        scope.find_by(root_recording_id: root.id)
-      end
-
-      def actor_connection(scope, actor)
-        return if actor.nil? || !actor.respond_to?(:id)
-
-        scope.find_by(owner_actor_type: actor.class.name, owner_actor_id: actor.id)
       end
     end
   end

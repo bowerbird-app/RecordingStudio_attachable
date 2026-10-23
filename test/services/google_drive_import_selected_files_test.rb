@@ -130,4 +130,40 @@ class GoogleDriveImportSelectedFilesTest < Minitest::Test
     assert_equal [:fetch, "file-1", "resource-key-1"], calls.first
     assert_equal [:download, "file-1", "resource-key-1"], calls.last
   end
+
+  def test_call_rejects_an_oversize_file_before_download
+    original_max = RecordingStudioAttachable.configuration.max_file_size
+    RecordingStudioAttachable.configuration.max_file_size = 10
+    calls = []
+    client = Object.new
+    client.define_singleton_method(:fetch_file) do |file_id, resource_key: nil|
+      calls << [:fetch, file_id, resource_key]
+      GoogleDriveFakes::DriveFile.new(
+        id: file_id,
+        name: "Huge.pdf",
+        mime_type: "application/pdf",
+        web_view_link: "https://drive.test/#{file_id}",
+        size: 11
+      )
+    end
+    client.define_singleton_method(:download) do |file_id, resource_key: nil|
+      calls << [:download, file_id, resource_key]
+      GoogleDriveFakes::DownloadedFile.new(body: "payload", filename: "Huge.pdf", content_type: "application/pdf")
+    end
+
+    RecordingStudioAttachable::GoogleDrive::Integration.stub(:client, client) do
+      result = RecordingStudioAttachable::GoogleDrive::Services::ImportSelectedFiles.call(
+        parent_recording: FakeRecording.new(id: "rec-1", recordable_type: "Workspace"),
+        file_ids: ["file-1"],
+        actor: :actor
+      )
+
+      assert result.failure?
+      assert_equal "Remote file exceeds maximum file size", result.error
+    end
+
+    assert_equal [[:fetch, "file-1", nil]], calls
+  ensure
+    RecordingStudioAttachable.configuration.max_file_size = original_max
+  end
 end

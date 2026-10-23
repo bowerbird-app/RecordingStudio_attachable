@@ -19,8 +19,8 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - Recording Studio 4.2.0 or newer installed in the host app
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
-- RecordingStudio Metrics `>= 0.3.0, < 1.0` (latest GitHub tag `v0.5.0`) for operations-API storage and upload metrics
-- Optional Google Drive import: `recording_studio_google_drive` `>= 0.2.0, < 1.0` and `recording_studio_oauth` `>= 0.14.1, < 1.0`. Attachable does not depend on those gems at runtime.
+- RecordingStudio Metrics `>= 0.3.0, < 0.6` (latest GitHub tag `v0.5.0`) for operations-API storage and upload metrics
+- Optional Google Drive import: `recording_studio_google_drive` `>= 0.3.0, < 1.0` and `recording_studio_oauth` `>= 0.15.0, < 1.0`. Attachable does not depend on those gems at runtime.
 
 ## Quick start
 
@@ -519,7 +519,7 @@ Files are always **copied** into Active Storage. There are no linked attachments
 
 Google Drive stays optional. This gem has no runtime dependency on `recording_studio_google_drive` or `recording_studio_oauth`. The Drive engine mounts and the upload-page button registers only when the host bundles the Google Drive gem.
 
-1. Add `recording_studio_google_drive` `>= 0.2.0, < 1.0` and `recording_studio_oauth` `>= 0.14.1, < 1.0`.
+1. Add `recording_studio_google_drive` `>= 0.3.0, < 1.0` and `recording_studio_oauth` `>= 0.15.0, < 1.0`.
 2. Install and migrate Oauth (`recording_studio_oauth:install` and `recording_studio_oauth:migrations`).
 3. Mount Oauth and set Google app credentials on the Oauth outbound provider (`recording_studio_oauth.outbound.google_drive`). Name the keys. Do not put the values in git.
 4. Enable the Attachable picker keys:
@@ -529,6 +529,10 @@ RecordingStudioAttachable.configure do |config|
   config.google_drive.enabled = true
   config.google_drive.api_key = ENV.fetch("GOOGLE_DRIVE_API_KEY")
   config.google_drive.app_id = ENV.fetch("GOOGLE_DRIVE_APP_ID")
+end
+
+if defined?(RecordingStudioGoogleDrive)
+  RecordingStudioGoogleDrive.configuration.scopes = ["https://www.googleapis.com/auth/drive.readonly"]
 end
 ```
 
@@ -796,7 +800,7 @@ Dummy credentials (`test/dummy/config/credentials.yml.enc`) are encrypted with t
 
 - the dummy app is a validation shell, not a production template
 - CI installs the dummy app bundle and runs dummy-app migrations before the root checks
-- the dummy app pins RecordingStudio `v4.7.0`, Recording Studio Accessible `v0.15.0`, Recording Studio Orderable `v0.3.0`, Recording Studio API `v0.11.4`, RecordingStudio Google Drive `v0.2.0`, and RecordingStudio Oauth `v0.14.1`
+- the dummy app pins RecordingStudio `v4.7.0`, Recording Studio Accessible `v0.15.0`, Recording Studio Orderable `v0.3.0`, Recording Studio API `v0.11.4`, RecordingStudio Google Drive `v0.3.0`, and RecordingStudio Oauth `v0.15.0`
 - make sure engine, Active Storage, and Recording Studio tables are migrated in the dummy app before validating upload flows locally
 - `bin/rails db:seed` attaches a twenty-shot Kiln canister press kit to the workspace. The shots mix portrait, square, and landscape frames. Edit images uses those files. Seeds also remove the colour-block stand-ins `window.jpg`, `dock.jpg`, and `pier.jpg` when they are still on the workspace.
 - set `DUMMY_ACTIVE_STORAGE_SERVICE=amazon` plus `DUMMY_AWS_ACCESS_KEY_ID`, `DUMMY_AWS_SECRET_ACCESS_KEY`, `DUMMY_AWS_REGION`, and `DUMMY_AWS_BUCKET` to exercise S3-backed uploads in the dummy app; `DUMMY_AWS_BUCKET` may be either the plain bucket name or a bucket ARN

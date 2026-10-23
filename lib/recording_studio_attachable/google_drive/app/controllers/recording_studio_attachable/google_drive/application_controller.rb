@@ -49,17 +49,12 @@ module RecordingStudioAttachable
         Integration.connection(root: google_drive_root, actor: current_attachable_actor)
       end
 
-      def google_drive_live_connection
-        Integration.live_connection(root: google_drive_root, actor: current_attachable_actor)
-      end
-
       def google_drive_connected?
         google_drive_connection.present?
       end
 
       def google_drive_reconnect?
-        live = google_drive_live_connection
-        live.present? && live.respond_to?(:needs_reconnect?) && live.needs_reconnect?
+        Integration.connection_status(root: google_drive_root, actor: current_attachable_actor) == :needs_reconnect
       end
 
       def google_drive_oauth_connect_path
@@ -67,6 +62,15 @@ module RecordingStudioAttachable
 
         ::RecordingStudioOauth::Engine.routes.url_helpers.outbound_connect_path(
           provider: Integration.provider_key
+        )
+      end
+
+      def google_drive_oauth_disconnect_path(connection_id)
+        return if connection_id.blank? || !Integration.oauth_loaded?
+
+        ::RecordingStudioOauth::Engine.routes.url_helpers.outbound_connection_path(
+          connection_id,
+          return_to: google_drive.recording_imports_path(@recording, upload_flow_params)
         )
       end
 
@@ -87,14 +91,16 @@ module RecordingStudioAttachable
         end
       end
 
-      def disconnect_google_drive!
-        connection = google_drive_live_connection
-        return if connection.nil? || !defined?(::RecordingStudioOauth::Services::DisconnectOutboundConnection)
-
-        ::RecordingStudioOauth::Services::DisconnectOutboundConnection.call(
-          connection: connection,
-          actor: current_attachable_actor
+      def google_drive_connect_reload_url
+        google_drive.recording_imports_path(
+          @recording,
+          **upload_flow_params.merge(embed: "modal", provider_key: "google_drive")
         )
+      end
+
+      def disconnect_google_drive
+        connection_id = Integration.connection_id_for(root: google_drive_root, actor: current_attachable_actor)
+        google_drive_oauth_disconnect_path(connection_id)
       end
 
       def dependency_unavailable_alert(error)

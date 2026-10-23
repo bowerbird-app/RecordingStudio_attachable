@@ -57,8 +57,8 @@ class RecordingStudioAttachableTest < Minitest::Test
 
     assert_not_includes gemspec, "recording_studio_google_drive"
     assert_not_includes gemspec, "recording_studio_oauth"
-    assert_includes dummy_gemfile, 'gem "recording_studio_google_drive", github: "bowerbird-app/RecordingStudio_GoogleDrive", tag: "v0.2.0"'
-    assert_includes dummy_gemfile, 'gem "recording_studio_oauth", github: "bowerbird-app/RecordingStudio_Oauth", tag: "v0.14.1"'
+    assert_includes dummy_gemfile, 'gem "recording_studio_google_drive", github: "bowerbird-app/RecordingStudio_GoogleDrive", tag: "v0.3.0"'
+    assert_includes dummy_gemfile, 'gem "recording_studio_oauth", github: "bowerbird-app/RecordingStudio_Oauth", tag: "v0.15.0"'
   end
 
   def test_engine_exists
@@ -593,8 +593,8 @@ class RecordingStudioAttachableTest < Minitest::Test
 
     assert_includes library_source, "recording_studio_attachable/*/engine.rb"
     assert_includes routes_source, "adapter_route_blocks"
-    assert_includes engine_source, "Integration.gem_loaded?"
     assert_includes engine_source, 'mount RecordingStudioAttachable::GoogleDrive::Engine, at: "/google_drive", as: :google_drive'
+    assert_google_drive_adapter_routes_mount_only_when_the_gem_is_loaded
     assert_includes engine_routes_source, 'get "bootstrap", to: "bootstrap#show", as: :bootstrap'
     assert_includes engine_routes_source, 'get "connect", to: "connect#show", as: :connect'
     assert_includes engine_routes_source, 'get "connected", to: "connect#complete", as: :connected'
@@ -614,6 +614,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes initializer_template, "payload.fetch(:provider_payload)"
     assert_includes initializer_template, "GOOGLE_DRIVE_API_KEY"
     assert_includes initializer_template, "GOOGLE_DRIVE_APP_ID"
+    assert_includes initializer_template, 'RecordingStudioGoogleDrive.configuration.scopes = ["https://www.googleapis.com/auth/drive.readonly"]'
     assert_includes initializer_template, "config.dropbox.enabled = true"
     assert_includes view_source, 'title: t("recording_studio.attachable.google_drive.title")'
     assert_includes view_source, "if @show_connect"
@@ -670,5 +671,29 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes controller_source, "this.fileInputTarget.click()"
     assert_includes controller_source, "if (this.autoSubmitValue) {"
     assert_includes controller_source, "this.element.requestSubmit()"
+  end
+
+  private
+
+  def assert_google_drive_adapter_routes_mount_only_when_the_gem_is_loaded
+    with_gem = adapter_route_paths(gem_loaded: true)
+    without_gem = adapter_route_paths(gem_loaded: false)
+
+    assert with_gem.any? { |path| path.include?("/google_drive") },
+           "expected Google Drive routes when the gem is loaded, got #{with_gem.inspect}"
+    refute without_gem.any? { |path| path.include?("/google_drive") },
+           "expected no Google Drive routes when the gem is missing, got #{without_gem.inspect}"
+  end
+
+  def adapter_route_paths(gem_loaded:)
+    set = ActionDispatch::Routing::RouteSet.new
+    set.draw do
+      RecordingStudioAttachable::GoogleDrive::Integration.stub(:gem_loaded?, gem_loaded) do
+        RecordingStudioAttachable.adapter_route_blocks.each do |route_block|
+          instance_exec(&route_block)
+        end
+      end
+    end
+    set.routes.map { |route| route.path.spec.to_s }
   end
 end

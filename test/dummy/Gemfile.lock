@@ -8,8 +8,8 @@ GIT
 
 GIT
   remote: https://github.com/bowerbird-app/RecordingStudio_Dropbox.git
-  revision: 98d235f5f1c4853ff550610ffa5f6a70fa94e240
-  ref: 98d235f5f1c4853ff550610ffa5f6a70fa94e240
+  revision: 0a3146a4ffdc35058d2d1a474972b0134dedd10b
+  ref: 0a3146a4ffdc35058d2d1a474972b0134dedd10b
   specs:
     recording_studio_dropbox (0.3.0)
       rails (~> 8.1.0)
@@ -18,8 +18,8 @@ GIT
 
 GIT
   remote: https://github.com/bowerbird-app/RecordingStudio_GoogleDrive.git
-  revision: a4ba1ceb795d690ca49b2f5efc6456b00fe7cdbc
-  ref: a4ba1ceb795d690ca49b2f5efc6456b00fe7cdbc
+  revision: 87c019b549a6e5a7d3efe80f57b43d0261208c45
+  ref: 87c019b549a6e5a7d3efe80f57b43d0261208c45
   specs:
     recording_studio_google_drive (0.4.0)
       rails (~> 8.1.0)

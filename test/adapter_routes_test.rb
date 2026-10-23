@@ -3,6 +3,16 @@
 require "test_helper"
 
 class AdapterRoutesTest < Minitest::Test
+  def setup
+    @existing_adapter_route_keys = RecordingStudioAttachable.adapter_route_blocks.keys.dup
+  end
+
+  def teardown
+    RecordingStudioAttachable.adapter_route_blocks.reject! do |key, _block|
+      @existing_adapter_route_keys.exclude?(key)
+    end
+  end
+
   def test_register_adapter_routes_is_keyed_and_raises_on_a_second_registration
     first = proc { "first" }
     second = proc { "second" }

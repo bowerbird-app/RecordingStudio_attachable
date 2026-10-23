@@ -2,12 +2,14 @@
 
 require_relative "attachment_file_buttons_helper"
 require_relative "attachment_collections_helper"
+require_relative "providers_helper"
 
 module RecordingStudioAttachable
   # rubocop:disable Metrics/ModuleLength -- helpers include JS i18n payloads for upload/picker
   module ApplicationHelper
     include AttachmentFileButtonsHelper
     include AttachmentCollectionsHelper
+    include ProvidersHelper
 
     def authorized_attachment_preview_path(recording, variant_name)
       attachment = recording&.recordable

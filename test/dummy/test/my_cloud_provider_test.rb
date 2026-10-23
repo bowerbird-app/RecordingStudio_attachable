@@ -47,18 +47,20 @@ class MyCloudProviderTest < ActionDispatch::IntegrationTest
 
   test "browse page renders folder rows and breadcrumbs" do
     MyCloud.connect!(@user)
-    get "/recording_studio_attachable/my_cloud/recordings/#{@root.id}/imports"
+    imports_path = "/recording_studio_attachable/my_cloud/recordings/#{@root.id}/imports"
+
+    get imports_path
     assert_response :success
     assert_includes response.body, "Briefs"
     assert_includes response.body, "path=folder-1"
-    refute_includes response.body, ">Up<"
+    assert_select "nav[aria-label=?] a", "Folder", count: 0
     refute_includes response.body, "Nested brief.png"
 
-    get "/recording_studio_attachable/my_cloud/recordings/#{@root.id}/imports", params: { path: "folder-1" }
+    get imports_path, params: { path: "folder-1" }
     assert_response :success
     assert_includes response.body, "Nested brief.png"
-    assert_includes response.body, "Up"
-    assert_includes response.body, "folder-1"
+    assert_select "nav[aria-label=?] a[href=?]", "Folder", imports_path
+    assert_select "nav[aria-label=?] span", "Folder", text: "folder-1"
     refute_includes response.body, "Cloud brief.png"
   end
 

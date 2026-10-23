@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bump to `0.21.0`. No migration in this gem.
 - Both in-tree engines (Google Drive and Dropbox) are gone. `config.google_drive`, `config.dropbox`, and the session OAuth helpers are removed. `config.google_drive` raises `NoMethodError` without the add-on gem. Hosts add `recording_studio_google_drive >= 0.4.0` / `recording_studio_dropbox >= 0.3.0`, which own config, routes, and OAuth.
 - Provider gems mount through `register_adapter_routes` and `register_upload_provider`. Attachable no longer names a vendor in config, routes, JS, or locales.
+- `connect` and `remote_importer` are now called with all keywords. `remote_importer` callables must accept `parent_recording:`, `attachments:`, `actor:`, `impersonator:`, `context:` (or `**`). `connect` must accept `recording:`, `context:` (or `**`). Positional or partial-keyword lambdas that worked on 0.20.x now raise `ArgumentError`.
 
 ## [0.20.2] - 2026-10-22
 

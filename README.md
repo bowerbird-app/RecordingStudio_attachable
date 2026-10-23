@@ -567,6 +567,15 @@ Bootstrap JSON is provider-neutral:
 }
 ```
 
+The `providers/_remote_file_browser` partial takes:
+
+- `provider_label`, `recording`
+- `reconnect`, `show_connect`, `auto_submit`, `connect_url`, `connect_method`, `connect_fields`
+- `entries` or `files`: `kind: :file|:folder`; folders need `open_url`; files need `id`, `name`, `content_type`
+- `current_path`, `parent_url`, `path` (hidden on the search and import forms)
+- `query`, `search_url`, `import_url`, `disconnect_url`, `next_page_url`
+- `flow_params`
+
 Files are always **copied** into Active Storage. There are no linked attachments.
 
 #### Adding another provider
@@ -574,7 +583,7 @@ Files are always **copied** into Active Storage. There are no linked attachments
 1. Ship an isolated engine in the provider gem (controllers inherit `ProviderController`).
 2. Register routes with `RecordingStudioAttachable.register_adapter_routes(:your_key) { mount Your::Engine, at: "/your_key", as: :your_key }`. A second registration for the same key raises.
 3. Call `register_upload_provider` with the contract above (`strategy: :client_picker`, `remote_importer`, `connect`, `allowed_payload_keys`).
-4. Hand `ImportRemoteFiles` payloads `{ download: -> { io:, filename:, content_type: }, filename:, content_type:, byte_size:, name:, description:, metadata: { external_id:, external_url: } }`, or resolve a `RecordingStudioAttachable::RemoteFile` and fetch with `SafeRemoteFetch.call(..., max_bytes: configuration.max_file_size)` for URL fetches. Provider downloads must use `SafeRemoteFetch.call(..., max_bytes: configuration.max_file_size)` for URL fetches.
+4. Hand `ImportRemoteFiles` payloads `{ download: -> { io:, filename:, content_type: }, filename:, content_type:, byte_size:, name:, description:, metadata: { external_id:, external_url: } }`, or resolve a `RecordingStudioAttachable::RemoteFile` and fetch with `SafeRemoteFetch.call(..., max_bytes: configuration.max_file_size)` for URL fetches.
 5. Register a launcher with `registerUploadProviderLauncher("your_key", …)`. Pin that module from the provider gem. The upload page imports it only when the provider is shown.
 
 Do not add a second registry. Do not special-case the new provider in core config, routes, or JS.

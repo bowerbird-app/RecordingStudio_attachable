@@ -1,3 +1,12 @@
+<%#
+  Locals:
+  - provider_label (required), recording (required)
+  - reconnect, show_connect, auto_submit, connect_url, connect_method, connect_fields
+  - entries or files: kind :file|:folder; folders need open_url; files need id, name, content_type
+  - current_path, parent_url, path (hidden on search and import forms)
+  - query, search_url, import_url, disconnect_url, next_page_url
+  - flow_params
+%>
 <% provider_label = local_assigns.fetch(:provider_label) %>
 <% reconnect = local_assigns.fetch(:reconnect, false) %>
 <% show_connect = local_assigns.fetch(:show_connect, false) %>
@@ -16,20 +25,7 @@
 <% parent_url = local_assigns[:parent_url] %>
 <% path = local_assigns[:path] %>
 <% redirect_params = attachment_redirect_params %>
-<% entry_value = lambda do |entry, *names|
-  names.each do |name|
-    if entry.respond_to?(:[])
-      value = entry[name] || entry[name.to_s] || entry[name.to_sym]
-      next if value.nil?
-
-      return value
-    end
-
-    return entry.public_send(name) if entry.respond_to?(name)
-  end
-  nil
-end %>
-<% folders, files = entries.partition { |entry| entry_value.call(entry, :kind).to_s == "folder" } %>
+<% folders, files = entries.partition { |entry| remote_file_entry_value(entry, :kind).to_s == "folder" } %>
 
 <% content = capture do %>
   <div class="rounded-xl border border-(--surface-border-color) bg-(--surface-background-color) p-6">
@@ -93,8 +89,8 @@ end %>
         <% if folders.any? %>
           <div class="space-y-3">
             <% folders.each do |folder| %>
-              <% folder_name = entry_value.call(folder, :name) %>
-              <% open_url = entry_value.call(folder, :open_url) %>
+              <% folder_name = remote_file_entry_value(folder, :name) %>
+              <% open_url = remote_file_entry_value(folder, :open_url) %>
               <%= link_to open_url, class: "flex items-start gap-3 rounded-lg border border-(--surface-border-color) px-4 py-3 text-sm font-semibold text-(--surface-content-color)" do %>
                 <%= folder_name %>
               <% end %>
@@ -112,9 +108,9 @@ end %>
             <%= hidden_field_tag :path, path if path.present? %>
             <div class="space-y-3">
               <% files.each do |file| %>
-                <% file_id = entry_value.call(file, :id) %>
-                <% file_name = entry_value.call(file, :name) %>
-                <% file_type = entry_value.call(file, :content_type) %>
+                <% file_id = remote_file_entry_value(file, :id) %>
+                <% file_name = remote_file_entry_value(file, :name) %>
+                <% file_type = remote_file_entry_value(file, :content_type) %>
                 <label class="flex items-start gap-3 rounded-lg border border-(--surface-border-color) px-4 py-3">
                   <%= check_box_tag "file_ids[]", file_id, false, class: "mt-1" %>
                   <span class="min-w-0 flex-1">

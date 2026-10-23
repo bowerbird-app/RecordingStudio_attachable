@@ -34,6 +34,8 @@ class UploadModalTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "<html"
     assert_includes response.body, 'data-recording-studio-attachable--upload-success-behavior-value="redirect"'
     assert_includes response.body, "Choose files"
+    assert_includes response.body, "Google Drive"
+    assert_includes response.body, "Dropbox"
     assert_includes response.body, 'type="file" multiple'
     assert_includes response.body, 'data-recording-studio-attachable--upload-target="dropzone"'
     assert_includes response.body, 'data-recording-studio-attachable--upload-target="progressTemplate"'

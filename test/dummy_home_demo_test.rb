@@ -89,6 +89,7 @@ class DummyHomeDemoTest < Minitest::Test
     chat_message_model = File.read(File.expand_path("dummy/app/models/chat_message.rb", __dir__))
     chat_message_attachment_model = File.read(File.expand_path("dummy/app/models/chat_message_attachment.rb", __dir__))
     recording_studio_initializer = File.read(File.expand_path("dummy/config/initializers/recording_studio.rb", __dir__))
+    user_model = File.read(File.expand_path("dummy/app/models/user.rb", __dir__))
     seeds = File.read(File.expand_path("dummy/db/seeds.rb", __dir__))
     schema = File.read(File.expand_path("dummy/db/schema.rb", __dir__))
 
@@ -143,6 +144,10 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes chat_message_attachment_model, "validates :attachment_recording_id, uniqueness: { scope: :chat_message_id }"
     assert_includes recording_studio_initializer, '"ChatThread"'
     assert_includes recording_studio_initializer, '"ChatMessage"'
+    refute_includes recording_studio_initializer, '"User"'
+    refute_includes user_model, "recording_studio_recordable"
+    assert_includes user_model, "devise :database_authenticatable"
+    refute_includes seeds, "recordable: user"
     refute_includes recording_studio_initializer, '"Gallery"'
     refute_includes recording_studio_initializer, '"RecordingStudioAttachable::Library"'
     refute_includes recording_studio_initializer, '"RecordingStudioAttachable::Placement"'
@@ -671,9 +676,18 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes initializer, 'label: "Demo cloud import"'
     assert_includes page_model, "max_file_size: 25.megabytes"
     assert_includes workspace_model, "max_file_size: 25.megabytes"
+    google_drive_initializer = File.read(File.expand_path("dummy/config/initializers/recording_studio_google_drive.rb", __dir__))
+    dropbox_initializer = File.read(File.expand_path("dummy/config/initializers/recording_studio_dropbox.rb", __dir__))
+    dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
+
     assert_includes routes, "as: :demo_upload_provider"
-    refute_includes routes, "RecordingStudioOauth::Engine"
-    refute_includes routes, "fake_oauth"
+    assert_includes routes, "mount RecordingStudioOauth::Engine, at: \"/recording_studio_oauth\""
+    assert_includes routes, "fake_oauth"
+    assert_includes routes, "fake_dropbox_oauth"
+    assert_includes dummy_gemfile, 'github: "bowerbird-app/RecordingStudio_GoogleDrive"'
+    assert_includes dummy_gemfile, 'github: "bowerbird-app/RecordingStudio_Dropbox"'
+    assert_includes google_drive_initializer, "RecordingStudioGoogleDrive.configure"
+    assert_includes dropbox_initializer, "RecordingStudioDropbox.configure"
   end
 
   def test_dummy_schema_includes_active_storage_tables_for_direct_uploads

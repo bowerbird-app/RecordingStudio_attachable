@@ -4,7 +4,7 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.21.0", RecordingStudioAttachable::VERSION
+    assert_equal "0.21.1", RecordingStudioAttachable::VERSION
   end
 
   def test_recording_studio_dependency_is_4_2_or_newer
@@ -56,7 +56,14 @@ class RecordingStudioAttachableTest < Minitest::Test
     dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
 
     refute_includes gemspec, "register_upload_provider"
-    refute_includes dummy_gemfile, "recording_studio_oauth"
+    refute_includes gemspec, "recording_studio_oauth"
+    refute_includes gemspec, "recording_studio_google_drive"
+    refute_includes gemspec, "recording_studio_dropbox"
+    assert_includes dummy_gemfile, 'gem "recording_studio_google_drive"'
+    assert_includes dummy_gemfile, 'tag: "v0.4.0"'
+    assert_includes dummy_gemfile, 'gem "recording_studio_dropbox"'
+    assert_includes dummy_gemfile, 'tag: "v0.3.0"'
+    assert_includes dummy_gemfile, 'gem "recording_studio_oauth", github: "bowerbird-app/RecordingStudio_Oauth", tag: "v0.15.1"'
   end
 
   def test_root_suite_does_not_register_host_provider_gems

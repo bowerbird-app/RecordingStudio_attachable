@@ -37,8 +37,8 @@ class DummyRecordingStudioIntegrationTest < ActiveSupport::TestCase
     assert_not RecordingStudio.root_allowed?("ChatMessage")
     assert_equal ["ChatThread"], RecordingStudio.declared_allowed_parent_types_for("ChatMessage")
 
-    assert_not RecordingStudio.root_allowed?("User")
-    assert_equal ["Workspace"], RecordingStudio.declared_allowed_parent_types_for("User")
+    refute_includes RecordingStudio.configuration.recordable_types, "User"
+    refute User.respond_to?(:recording_studio_recordable_options)
 
     assert_not RecordingStudio.root_allowed?("RecordingStudioAttachable::Attachment")
     assert_equal [], RecordingStudio.declared_allowed_parent_types_for("RecordingStudioAttachable::Attachment")
@@ -112,9 +112,7 @@ class DummyRecordingStudioIntegrationTest < ActiveSupport::TestCase
   end
 
   def load_user_recordable!
-    return if defined?(User) && User.respond_to?(:recording_studio_recordable_options)
-
-    Object.send(:remove_const, :User) if Object.const_defined?(:User)
+    return if defined?(User)
 
     ApplicationRecord.class_eval do
       def self.devise(*); end unless respond_to?(:devise)
@@ -127,7 +125,6 @@ class DummyRecordingStudioIntegrationTest < ActiveSupport::TestCase
     %w[
       Workspace
       Page
-      User
       ChatThread
       ChatMessage
       RecordingStudioAttachable::Attachment

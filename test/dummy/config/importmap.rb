@@ -11,6 +11,10 @@ pin_all_from RecordingStudioAttachable::Engine.root.join("app/javascript/control
   to: "controllers/recording_studio_attachable"
 pin "recording_studio_attachable/provider_launchers",
   to: "controllers/recording_studio_attachable/provider_launchers.js"
+pin "recording_studio_google_drive/google_drive_picker_launcher",
+  to: "recording_studio_google_drive/google_drive_picker_launcher.js"
+pin "recording_studio_dropbox/dropbox_picker_launcher",
+  to: "recording_studio_dropbox/dropbox_picker_launcher.js"
 pin "my_cloud/picker_launcher", to: "my_cloud/picker_launcher.js"
 pin "page_html_preview_addon", to: "page_html_preview_addon.js"
 pin "recording_studio_attachable/tiptap/attachment_image_addon",

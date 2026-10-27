@@ -56,7 +56,7 @@
             <div class="absolute inset-0 flex items-stretch justify-stretch" data-recording-studio-attachable--image-fallback-target="skeleton">
               <%= render FlatPack::Skeleton::Component.new(variant: :rectangle, shimmer: true, width: "100%", height: "100%", class: "h-full w-full rounded-none") %>
             </div>
-            <%= image_tag preview_path, alt: @attachment.name, class: "h-full w-full object-cover opacity-0 transition-opacity duration-200", data: { recording_studio_attachable__image_fallback_target: "image", action: "load->recording-studio-attachable--image-fallback#showImage error->recording-studio-attachable--image-fallback#showFallback" } %>
+            <%= image_tag preview_path, alt: @attachment.name, class: "absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-200", data: { recording_studio_attachable__image_fallback_target: "image", action: "load->recording-studio-attachable--image-fallback#showImage error->recording-studio-attachable--image-fallback#showFallback" } %>
             <div class="absolute inset-0 hidden items-center justify-center bg-(--surface-background-color)" data-recording-studio-attachable--image-fallback-target="fallback">
               <div class="flex flex-col items-center justify-center gap-3 px-4 text-center">
                 <div class="flex h-16 w-16 items-center justify-center rounded-full bg-(--surface-background-color) text-(--surface-content-color) shadow-sm ring-1 ring-(--surface-border-color)">
@@ -95,7 +95,7 @@
           <%= render FlatPack::TextInput::Component.new(name: "attachment[name]", label: t("recording_studio.attachable.attachments.name"), value: @attachment.name, required: true) %>
           <%= render FlatPack::TextInput::Component.new(name: "attachment[caption]", label: t("recording_studio.attachable.attachments.caption"), value: @attachment.caption) %>
           <%= render FlatPack::TextInput::Component.new(name: "attachment[credit]", label: t("recording_studio.attachable.attachments.credit"), value: @attachment.credit) %>
-          <%= render FlatPack::Tooltip::Component.new(text: t("recording_studio_attachable.attachments.alt_text_hint")) do %>
+          <%= render FlatPack::Tooltip::Component.new(text: t("recording_studio_attachable.attachments.alt_text_hint"), class: "w-full flex-col") do %>
             <%= render FlatPack::TextInput::Component.new(name: "attachment[alt_text]", label: t("recording_studio.attachable.attachments.alt_text"), value: @attachment.alt_text) %>
           <% end %>
 

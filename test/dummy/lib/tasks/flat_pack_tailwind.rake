@@ -12,6 +12,14 @@ namespace :flat_pack do
     FileUtils.rm_rf(target_path)
     FileUtils.mkdir_p(target_path.dirname)
     FileUtils.cp_r(source_path, target_path)
+
+    studio_spec = Gem::Specification.find_by_name("recording_studio")
+    studio_views = Pathname.new(studio_spec.gem_dir).join("app/views")
+    studio_target = Rails.root.join("tmp/tailwind/recording_studio_views")
+
+    FileUtils.rm_rf(studio_target)
+    FileUtils.mkdir_p(studio_target)
+    FileUtils.cp_r("#{studio_views}/.", studio_target)
   end
 end
 

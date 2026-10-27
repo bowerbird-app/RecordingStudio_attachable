@@ -20,6 +20,11 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes application_layout, 'stylesheet_link_tag "flat_pack/application"'
     assert_includes application_layout, 'stylesheet_link_tag "flat_pack/rich_text"'
     assert_includes application_layout, 'stylesheet_link_tag "flat_pack/content_editor"'
+    tailwind_source = File.read(File.expand_path("dummy/app/assets/tailwind/application.css", __dir__))
+    assert_includes tailwind_source, '@source "../../../../app/views/**/*.erb";'
+    assert_not_includes tailwind_source, '@source "../../../../../app/views/**/*.erb";'
+    assert_includes tailwind_source, '@source "../../../tmp/tailwind/flat_pack_components";'
+    assert_includes tailwind_source, '@source "../../../tmp/tailwind/recording_studio_views";'
     assert_includes sidebar_layout, 'stylesheet_link_tag "flat_pack/application"'
     assert_includes sidebar_layout, 'stylesheet_link_tag "flat_pack/rich_text"'
     assert_includes sidebar_layout, 'stylesheet_link_tag "flat_pack/content_editor"'

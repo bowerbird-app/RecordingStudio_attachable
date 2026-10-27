@@ -9,6 +9,7 @@ class AttachmentBrowserViewsTest < Minitest::Test
     assert_includes source, 'name: "attachment[caption]"'
     assert_includes source, 'name: "attachment[credit]"'
     assert_includes source, 'name: "attachment[alt_text]"'
+    assert_includes source, 'class: "w-full flex-col"'
     assert_includes source, "place_labels"
     assert_includes source, "used_in"
     assert_includes source, "trash_in_use"

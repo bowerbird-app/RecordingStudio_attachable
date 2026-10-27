@@ -1,16 +1,13 @@
+<% content_for :title, "Chat demo" %>
+<% content_for :subtitle, "Reuse the attachment picker inside a FlatPack chat composer and send uploaded images as messages." %>
+<% flat_pack_page_nav(
+  round: true,
+  style: :default,
+  back_tooltip: "Go back",
+  anchor_href: root_path,
+  anchor_tooltip: "Close"
+) %>
 <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
-    <%= render FlatPack::PageNav::Component.new(
-      back_icon: "chevron-left",
-      back_label: "Go back",
-      anchor_url: root_path,
-      anchor_label: "Close"
-    ) %>
-
-  <%= render FlatPack::PageTitle::Component.new(
-    title: "Chat demo",
-    subtitle: "Reuse the attachment picker inside a FlatPack chat composer and send uploaded images as messages.",
-    variant: :h1
-  ) %>
 
   <% if @root_recording.present? %>
     <% chat_modal_id = "chat-demo-image-picker" %>
@@ -23,7 +20,7 @@
       <% end %>
     <% end %>
   <% else %>
-    <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
+    <%= render FlatPack::Card::Component.new do |card| %>
       <% card.body do %>
         <div class="space-y-3">
           <%= render FlatPack::SectionTitle::Component.new(

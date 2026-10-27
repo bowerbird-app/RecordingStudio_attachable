@@ -10,6 +10,13 @@ require "active_storage/engine"
 require "i18n"
 require "yaml"
 require "recording_studio_attachable"
+
+# Unit tests load engine controllers without booting Rails, so the layout
+# helper is not on the autoload path yet. A booted app loads it normally.
+require File.join(
+  Gem.loaded_specs.fetch("recording_studio").full_gem_path,
+  "app/helpers/recording_studio/layout_helper"
+)
 require "base64"
 require "stringio"
 

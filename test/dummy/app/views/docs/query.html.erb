@@ -1,9 +1,6 @@
+<% content_for :title, "Query" %>
+<% content_for :subtitle, "Find whichever recordable type you care about, then filter to parent recordings that have matching attachments." %>
 <div class="mx-auto flex w-full max-w-4xl flex-col gap-6">
-  <%= render FlatPack::PageTitle::Component.new(
-    title: "Query",
-    subtitle: "Find whichever recordable type you care about, then filter to parent recordings that have matching attachments.",
-    variant: :h1
-  ) %>
 
   <%= render FlatPack::SectionTitle::Component.new(
     title: "Any recordable type with images",

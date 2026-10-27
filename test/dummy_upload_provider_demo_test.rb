@@ -28,12 +28,13 @@ class DummyUploadProviderDemoTest < Minitest::Test
     assert_includes controller, 'filename: "demo-cloud-import.png"'
     assert_includes controller, 'content_type: "image/png"'
     assert_includes controller, 'source: "demo_cloud"'
-    assert_includes view, 'title: "Demo cloud import"'
-    assert_includes view, 'subtitle: "Reference provider flow for recording ##{@recording.id}"'
+    assert_includes view, 'content_for :title, "Demo cloud import"'
+    assert_includes view, 'content_for :subtitle, "Reference provider flow for recording ##{@recording.id}"'
     assert_includes view, "This dummy page uses the public provider import API"
     assert_includes view, 'text: "Import sample image"'
     assert_includes view, "recording_studio_attachable.recording_attachment_upload_path(@recording)"
     assert_includes view, 'text: "Back to upload page"'
-    assert_match(/<div class="mx-auto flex w-full max-w-4xl flex-col gap-6">\s*<%= render FlatPack::PageNav::Component.new\(/m, view)
+    assert_includes view, "flat_pack_page_nav("
+    assert_includes view, "anchor_href: recording_studio_attachable.recording_attachment_upload_path(@recording)"
   end
 end

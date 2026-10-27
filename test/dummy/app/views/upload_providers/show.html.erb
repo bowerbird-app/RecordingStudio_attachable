@@ -1,16 +1,14 @@
+<% content_for :title, "Demo cloud import" %>
+<% content_for :subtitle, "Reference provider flow for recording ##{@recording.id}" %>
+<% flat_pack_page_nav(
+  round: true,
+  style: :default,
+  back_icon: "chevron-left",
+  back_tooltip: "Go back",
+  anchor_href: recording_studio_attachable.recording_attachment_upload_path(@recording),
+  anchor_tooltip: "Close"
+) %>
 <div class="mx-auto flex w-full max-w-4xl flex-col gap-6">
-    <%= render FlatPack::PageNav::Component.new(
-      back_icon: "chevron-left",
-      back_label: "Go back",
-      anchor_url: recording_studio_attachable.recording_attachment_upload_path(@recording),
-      anchor_label: "Close"
-    ) %>
-
-  <%= render FlatPack::PageTitle::Component.new(
-    title: "Demo cloud import",
-    subtitle: "Reference provider flow for recording ##{@recording.id}",
-    variant: :h1
-  ) %>
 
   <div class="rounded-xl border border-[var(--surface-border-color)] bg-[var(--surface-background-color)] p-6">
     <div class="space-y-4">

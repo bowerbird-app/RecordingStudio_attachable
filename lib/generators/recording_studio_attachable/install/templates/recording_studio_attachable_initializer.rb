@@ -57,8 +57,10 @@ RecordingStudioAttachable.configure do |config|
   # config.image_variants = { poster: { resize_to_limit: [1280, 720] } }
   # config.preprocessed_variants = %i[small med large poster]
 
-  # Use the gem's blank layout by default, or set a host app layout like "application".
-  config.layout = :blank
+  # Leave layout unset so pages use RecordingStudio.configuration.layout, then
+  # "recording_studio/default_layout". Set a layout name, false, or a callable
+  # that takes controller: to override this surface only.
+  # config.layout = "application"
 
   # How Add buttons open the standard upload page: :page (navigate) or :modal
   # (a FlatPack modal on the current page). Buttons and editors can override it.

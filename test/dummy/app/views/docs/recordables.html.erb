@@ -1,9 +1,6 @@
+<% content_for :title, "Recordable types" %>
+<% content_for :subtitle, "Configured Recording Studio recordable types with recording and model counts from the dummy app." %>
 <div class="mx-auto flex w-full max-w-4xl flex-col gap-6">
-  <%= render FlatPack::PageTitle::Component.new(
-    title: "Recordable types",
-    subtitle: "Configured Recording Studio recordable types with recording and model counts from the dummy app.",
-    variant: :h1
-  ) %>
 
   <%= render FlatPack::List::Component.new(divider: true, class: "rounded-xl border border-[var(--surface-border-color)] bg-[var(--surface-background-color)] p-4") do %>
     <% @recordable_types.each do |recordable_type| %>

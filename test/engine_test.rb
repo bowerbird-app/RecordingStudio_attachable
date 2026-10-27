@@ -91,7 +91,7 @@ class EngineTest < Minitest::Test
 
     RecordingStudioAttachable::Engine.send(:load_x_config, app)
 
-    assert_equal :blank, RecordingStudioAttachable.configuration.layout
+    assert_nil RecordingStudioAttachable.configuration.layout
   end
 
   def test_log_config_warning_uses_warn_without_a_logger

@@ -1,9 +1,6 @@
+<% content_for :title, "URL modes" %>
+<% content_for :subtitle, "Rails mode keeps authorized engine paths. Direct mode builds public custom-domain links from blob keys for a dummy host." %>
 <div class="mx-auto flex w-full max-w-4xl flex-col gap-8">
-  <%= render FlatPack::PageTitle::Component.new(
-    title: "URL modes",
-    subtitle: "Rails mode keeps authorized engine paths. Direct mode builds public custom-domain links from blob keys for a dummy host.",
-    variant: :h1
-  ) %>
 
   <section class="space-y-3">
     <%= render FlatPack::SectionTitle::Component.new(

@@ -37,14 +37,17 @@ module RecordingStudioAttachable
                   :enabled_attachment_kinds,
                   :default_listing_scope,
                   :default_kind_filter,
-                  :layout,
                   :auth_roles,
                   :classify_attachment_kind,
                   :authorize_with,
                   :direct_url_host,
                   :attachment_place_labels
 
-    attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode, :upload_presentation, :import_allowed_hosts
+    attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode, :upload_presentation, :import_allowed_hosts, :layout
+
+    def layout=(value)
+      @layout = RecordingStudio::Layout.accept(value)
+    end
 
     def initialize
       assign_defaults
@@ -277,7 +280,7 @@ module RecordingStudioAttachable
       @enabled_attachment_kinds = %i[image file]
       @default_listing_scope = :direct
       @default_kind_filter = :all
-      @layout = :blank
+      @layout = nil
       @auth_roles = default_auth_roles
       @classify_attachment_kind = default_attachment_kind_classifier
       @authorize_with = nil

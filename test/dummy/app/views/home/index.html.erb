@@ -1,11 +1,7 @@
+<% content_for :title, "Attachment demo" %>
+<% content_for :subtitle, "Workspace uploads accept images and files. Page uploads accept images only." %>
 <div class="mx-auto flex w-full max-w-4xl flex-col gap-8">
-  <%= render FlatPack::PageTitle::Component.new(
-    title: "Attachment demo",
-    subtitle: "Workspace uploads accept images and files. Page uploads accept images only.",
-    variant: :h1
-  ) %>
-
-  <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
+  <%= render FlatPack::Card::Component.new do |card| %>
     <% card.body do %>
       <div class="space-y-4">
         <%= render FlatPack::SectionTitle::Component.new(
@@ -28,7 +24,7 @@
   <% end %>
 
   <section>
-    <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
+    <%= render FlatPack::Card::Component.new do |card| %>
       <% card.body do %>
         <div class="space-y-4">
           <%= render FlatPack::SectionTitle::Component.new(
@@ -53,7 +49,7 @@
   </section>
 
   <section>
-    <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
+    <%= render FlatPack::Card::Component.new do |card| %>
       <% card.body do %>
         <div class="space-y-4">
           <%= render FlatPack::SectionTitle::Component.new(
@@ -75,7 +71,7 @@
   </section>
 
   <section>
-    <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
+    <%= render FlatPack::Card::Component.new do |card| %>
       <% card.body do %>
         <div class="space-y-4">
           <%= render FlatPack::SectionTitle::Component.new(

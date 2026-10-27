@@ -4,36 +4,36 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.21.1", RecordingStudioAttachable::VERSION
+    assert_equal "0.22.0", RecordingStudioAttachable::VERSION
   end
 
-  def test_recording_studio_dependency_is_4_2_or_newer
+  def test_recording_studio_dependency_is_6_1_or_newer
     spec = Gem.loaded_specs.fetch("recording_studio")
     gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
 
-    assert spec.version >= Gem::Version.new("4.2.0"),
-           "expected recording_studio >= 4.2.0, got #{spec.version}"
-    assert_includes gemspec, 'spec.add_dependency "recording_studio", "~> 4.2"'
+    assert spec.version >= Gem::Version.new("6.1.0"),
+           "expected recording_studio >= 6.1.0, got #{spec.version}"
+    assert_includes gemspec, 'spec.add_dependency "recording_studio", ">= 6.1.0"'
   end
 
-  def test_flat_pack_dependency_is_0_1_213_or_newer
+  def test_flat_pack_dependency_is_0_1_315_or_newer
     spec = Gem.loaded_specs.fetch("flat_pack")
     gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
     root_gemfile = File.read(File.expand_path("../Gemfile", __dir__))
     dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
     root_lock = File.read(File.expand_path("../Gemfile.lock", __dir__))
     dummy_lock = File.read(File.expand_path("dummy/Gemfile.lock", __dir__))
-    pin = 'gem "flat_pack", github: "bowerbird-app/flatpack", tag: "v0.1.213"'
+    pin = 'gem "flat_pack", github: "bowerbird-app/flatpack", ref: "1fcbafe94f8eb118f0a22182f63f5110fcc97a56"'
 
-    assert spec.version >= Gem::Version.new("0.1.213"),
-           "expected flat_pack >= 0.1.213, got #{spec.version}"
-    assert_includes gemspec, 'spec.add_dependency "flat_pack", ">= 0.1.213"'
+    assert spec.version >= Gem::Version.new("0.1.315"),
+           "expected flat_pack >= 0.1.315, got #{spec.version}"
+    assert_includes gemspec, 'spec.add_dependency "flat_pack", ">= 0.1.315"'
     assert_includes root_gemfile, pin
     assert_includes dummy_gemfile, pin
-    assert_includes root_lock, "flat_pack (0.1.213)"
-    assert_includes root_lock, "tag: v0.1.213"
-    assert_includes dummy_lock, "flat_pack (0.1.213)"
-    assert_includes dummy_lock, "tag: v0.1.213"
+    assert_includes root_lock, "flat_pack (0.1.319)"
+    assert_includes root_lock, "1fcbafe94f8eb118f0a22182f63f5110fcc97a56"
+    assert_includes dummy_lock, "flat_pack (0.1.319)"
+    assert_includes dummy_lock, "1fcbafe94f8eb118f0a22182f63f5110fcc97a56"
   end
 
   def test_metrics_dependency_is_0_3_through_pre_1
@@ -110,16 +110,13 @@ class RecordingStudioAttachableTest < Minitest::Test
     view_source = %w[new _uploader].map do |name|
       File.read(File.expand_path("../app/views/recording_studio_attachable/attachment_uploads/#{name}.html.erb", __dir__))
     end.join("\n")
-    blank_layout_source = File.read(
-      File.expand_path("../app/views/layouts/recording_studio_attachable/blank.html.erb", __dir__)
-    )
     upload_controller_source = File.read(
       File.expand_path("../app/javascript/controllers/recording_studio_attachable/upload_controller.js", __dir__)
     )
 
-    assert_includes view_source, "FlatPack::PageNav::Component"
-    assert_includes view_source, "anchor_url: attachment_page_nav_anchor_url(fallback: recording_attachments_path(@recording))"
-    assert_includes view_source, "FlatPack::PageTitle::Component"
+    assert_includes view_source, "flat_pack_page_nav("
+    assert_includes view_source, "anchor_href: attachment_page_nav_anchor_url(fallback: recording_attachments_path(@recording))"
+    assert_includes view_source, "content_for :title, t(\"recording_studio.attachable.upload.title\")"
     assert_includes view_source, "FlatPack::Button::Component"
     assert_includes view_source, "recording_direct_uploads_path"
     assert_includes view_source, "image-processing-max-height-value"
@@ -128,7 +125,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, 't("recording_studio.attachable.upload.remove")'
     assert_includes view_source, "style: :ghost"
     assert_includes view_source, "size: :md"
-    assert_includes view_source, 'title: t("recording_studio.attachable.upload.title")'
+    assert_includes view_source, 'content_for :title, t("recording_studio.attachable.upload.title")'
     assert_includes view_source, 't("recording_studio.attachable.upload.subtitle"'
     assert_includes view_source, 't("recording_studio.attachable.upload.drag_and_drop")'
     assert_includes view_source, 'icon: "upload"'
@@ -155,12 +152,6 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes upload_controller_source, "fillNode.style.width = `${percentage}%`"
     assert_includes view_source, 'data-recording-studio-attachable--upload-target="progressTemplate"'
     assert_includes view_source, 'label: t("recording_studio.attachable.upload.progress")'
-    assert_includes blank_layout_source, "FlatPack::Alert::Component.new(description: notice, style: :success)"
-    assert_includes blank_layout_source, 'title: t("recording_studio.attachable.layout.error")'
-    assert_not_includes blank_layout_source, "body: notice"
-    assert_not_includes blank_layout_source, "body: alert"
-    assert_not_includes blank_layout_source, 'title: "Notice"'
-    assert_not_includes blank_layout_source, 'title: "Saved"'
     picker_controller_source = File.read(
       File.expand_path("../app/javascript/controllers/recording_studio_attachable/attachment_image_picker_controller.js", __dir__)
     )
@@ -234,13 +225,14 @@ class RecordingStudioAttachableTest < Minitest::Test
     theme_variables_path = File.expand_path("../test/dummy/app/assets/tailwind/flat_pack_variables.css", __dir__)
     File.read(theme_variables_path)
 
-    assert_includes view_source, 'class="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6"'
-    assert_includes view_source, "FlatPack::PageNav::Component"
-    assert_includes view_source, 'back_label: t("recording_studio.attachable.navigation.back")'
-    assert_includes view_source, 'back_icon: "arrow-left"'
-    assert_includes view_source, "anchor_url: attachment_page_nav_anchor_url(fallback: main_app.root_path)"
-    assert_includes view_source, 'anchor_label: t("recording_studio.attachable.navigation.return_to_source")'
-    assert_match(/FlatPack::PageNav::Component.*FlatPack::PageTitle::Component/m, view_source)
+    assert_includes view_source, 'class="flex flex-col gap-6"'
+    assert_includes view_source, "flat_pack_page_nav("
+    assert_includes view_source, 'back_tooltip: t("recording_studio.attachable.navigation.back")'
+    assert_includes view_source, "anchor_href: attachment_page_nav_anchor_url(fallback: main_app.root_path)"
+    assert_includes view_source, 'anchor_tooltip: t("recording_studio.attachable.navigation.return_to_source")'
+    assert_includes view_source, "content_for :title, @attachment.name"
+    assert_includes view_source, "register_page_nav("
+    assert_not_includes view_source, "FlatPack::PageTitle::Component"
     assert_includes configuration_source, "DEFAULT_IMAGE_VARIANTS = {"
     assert_includes configuration_source, "square_small: { resize_to_fill: [128, 128] }"
     assert_includes configuration_source, "square_med: { resize_to_fill: [400, 400] }"
@@ -393,9 +385,9 @@ class RecordingStudioAttachableTest < Minitest::Test
       File.expand_path("../app/views/recording_studio_attachable/recording_attachments/_list.html.erb", __dir__)
     )
 
-    assert_includes view_source, "FlatPack::PageNav::Component"
-    assert_includes view_source, "anchor_url: attachment_page_nav_anchor_url(fallback: main_app.root_path)"
-    assert_includes view_source, 'title: t("recording_studio.attachable.library.title")'
+    assert_includes view_source, "flat_pack_page_nav("
+    assert_includes view_source, "anchor_href: attachment_page_nav_anchor_url(fallback: main_app.root_path)"
+    assert_includes view_source, 'content_for :title, t("recording_studio.attachable.library.title")'
     assert_includes view_source, "view: @view_mode"
     assert_includes view_source, "FlatPack::Button::Pill::Component.new("
     assert_includes view_source, "href: recording_attachments_path(@recording, navigation_params.merge(listing_params.merge(view: :grid)))"

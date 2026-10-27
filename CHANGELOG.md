@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Mounted screens use the Recording Studio 6.1 layout. `RecordingStudioAttachable.configuration.layout` defaults to `nil`. `nil` follows `RecordingStudio.configuration.layout`, then `"recording_studio/default_layout"`.
 - Engine and dummy views set `content_for :title` / `:subtitle`, `flat_pack_page_nav`, and `register_page_nav`. Page headings render once, from the layout. Download and trash on the attachment page sit in the top nav. The library upload action does too.
 - The gem no longer ships `layouts/recording_studio_attachable/blank`.
+- Library grid cards, the attachment preview, and the empty library use `FlatPack::Card` media and `FlatPack::EmptyState`. The description field uses `FlatPack::TextArea`.
+- Dummy Tailwind `@source` for engine views is five `../` segments, from `test/dummy/app/assets/tailwind/application.css` to the repo root.
 
 ### Upgrade Notes
 

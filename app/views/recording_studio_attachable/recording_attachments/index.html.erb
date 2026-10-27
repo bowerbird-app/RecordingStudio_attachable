@@ -114,20 +114,12 @@
 
           <%= render FlatPack::Card::Component.new(border: :default, shadow: :none) do |card| %>
             <% card.body do %>
-              <div class="flex flex-col items-center justify-center gap-4 px-6 py-12 text-center">
-                <div class="flex h-16 w-16 items-center justify-center rounded-full bg-(--surface-muted-background-color) text-(--surface-muted-content-color)">
-                  <svg viewBox="0 0 24 24" aria-hidden="true" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="m21 21-4.35-4.35" />
-                    <circle cx="11" cy="11" r="6" />
-                  </svg>
-                </div>
-                <%= render FlatPack::PageTitle::Component.new(
-                  title: @query.present? ? t("recording_studio.attachable.library.empty_search_title") : t("recording_studio.attachable.library.empty_title"),
-                  subtitle: @query.present? ? nil : t("recording_studio.attachable.library.empty_subtitle"),
-                  variant: :h3,
-                  class: "mb-0 pb-0"
-                ) %>
-              </div>
+              <%= render FlatPack::EmptyState::Component.new(
+                title: @query.present? ? t("recording_studio.attachable.library.empty_search_title") : t("recording_studio.attachable.library.empty_title"),
+                description: @query.present? ? nil : t("recording_studio.attachable.library.empty_subtitle"),
+                icon: "magnifying-glass",
+                size: :md
+              ) %>
             <% end %>
           <% end %>
         <% end %>

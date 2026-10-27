@@ -259,7 +259,11 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, 'data-recording-studio-attachable--image-fallback-target="skeleton"'
     assert_includes view_source, 'FlatPack::Skeleton::Component.new(variant: :rectangle, shimmer: true, width: "100%", height: "100%", class: "h-full w-full rounded-none")'
     assert_includes view_source, "image_tag preview_path, alt: @attachment.name"
-    assert_includes view_source, "overflow-hidden rounded-xl border border-(--surface-border-color) bg-(--surface-muted-background-color)"
+    assert_includes view_source, "FlatPack::Card::Component.new(padding: :none)"
+    assert_includes view_source, 'card.media aspect_ratio: "1/1", padding: :none, class: "relative bg-(--surface-muted-background-color)"'
+    assert_includes view_source, 'icon: "exclamation-triangle"'
+    assert_includes view_source, "FlatPack::TextArea::Component.new("
+    assert_includes view_source, 'name: "attachment[description]"'
     assert_not_includes view_source, "FlatPack::Card::Component.new(style: :outlined, html_options: { id: \"edit-attachment\" })"
     assert_not_includes view_source, 'title: "Edit attachment"'
     assert_not_includes view_source, 'subtitle: "Update the attachment metadata."'
@@ -402,7 +406,8 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, '<%= hidden_field_tag :view, @view_mode, data: { recording_studio_attachable__view_mode_target: "viewInput" } %>'
     assert_includes view_source, "FlatPack::Search::Component.new("
     assert_includes view_source, 'placeholder: t("recording_studio.attachable.library.search_placeholder")'
-    assert_includes view_source, '<circle cx="11" cy="11" r="6" />'
+    assert_includes view_source, 'icon: "magnifying-glass"'
+    assert_includes view_source, "FlatPack::EmptyState::Component.new("
     assert_includes attachments_page_source, "view_mode = local_assigns.fetch(:view_mode)"
     assert_includes attachments_page_source, "list_view = view_mode == :list"
     assert_includes attachments_page_source, "if list_view"
@@ -411,7 +416,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes attachments_page_source, "loading_variant: list_view ? :inline : :cards"
     assert_includes attachments_page_source, "view: view_mode"
     assert_includes grid_partial_source, 'FlatPack::Grid::Component.new(cols: 2, class: "items-stretch gap-6 lg:grid-cols-5", data: { pagination_content: true })'
-    assert_includes grid_partial_source, "card.media padding: :none"
+    assert_includes grid_partial_source, 'card.media aspect_ratio: "4/3", padding: :none, class: "relative bg-(--surface-muted-background-color)"'
     assert_includes grid_partial_source, "clickable: true"
     assert_includes grid_partial_source, "href: attachment_path(attachment_recording, navigation_params)"
     assert_not_includes grid_partial_source, "card.body do"
@@ -423,10 +428,11 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes grid_partial_source, 'data-recording-studio-attachable--image-fallback-target="fallback"'
     assert_includes grid_partial_source, 't("recording_studio.attachable.attachments.preview_unavailable")'
     assert_includes grid_partial_source, 't("recording_studio.attachable.attachments.image_fallback")'
-    assert_includes grid_partial_source, 'class="relative aspect-[4/3] overflow-hidden bg-(--surface-muted-background-color)"'
+    assert_includes grid_partial_source, "FlatPack::EmptyState::Component.new("
+    assert_includes grid_partial_source, 'icon: "exclamation-triangle"'
+    assert_includes grid_partial_source, 'icon: "document-text"'
+    assert_includes grid_partial_source, 'class: "h-full w-full px-2! py-2!"'
     assert_includes grid_partial_source, 't("recording_studio.attachable.attachments.file_fallback")'
-    assert_includes grid_partial_source, 'class="aspect-[4/3] flex items-center justify-center bg-(--surface-background-color)"'
-    assert_includes grid_partial_source, 'class="text-xs font-semibold uppercase tracking-[0.18em] text-(--surface-muted-content-color)"'
     assert_includes grid_partial_source, "preview_path = authorized_attachment_preview_path(attachment_recording, :med)"
     assert_includes grid_partial_source, "image_tag preview_path"
     assert_includes grid_partial_source, "attachment_path(attachment_recording, navigation_params)"

@@ -14,3 +14,5 @@ Accepted layout values are `nil`, `false`, a layout name, or a callable invoked 
 Sibling gems that still require `recording_studio` below 6 are widened by `test/support/widen_recording_studio_requirement.rb`, which both Gemfiles load before Bundler evaluates gemspecs. The dummy app pins Trashable `v0.12.0`, which already allows Recording Studio 6.1.0.
 
 Gem pages set `content_for :title` and `:subtitle`, `flat_pack_page_nav` for back and close, and `register_page_nav` for page actions. The layout draws the shell. Modal and Turbo-frame responses still pass `layout: false`.
+
+Library grid cards use `card.media(aspect_ratio: "4/3")`. The attachment page uses `card.media(aspect_ratio: "1/1")`. Broken previews, non-image files, and the empty library render `FlatPack::EmptyState`. The description field is `FlatPack::TextArea`.

@@ -21,8 +21,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes application_layout, 'stylesheet_link_tag "flat_pack/rich_text"'
     assert_includes application_layout, 'stylesheet_link_tag "flat_pack/content_editor"'
     tailwind_source = File.read(File.expand_path("dummy/app/assets/tailwind/application.css", __dir__))
-    assert_includes tailwind_source, '@source "../../../../app/views/**/*.erb";'
-    assert_not_includes tailwind_source, '@source "../../../../../app/views/**/*.erb";'
+    assert_includes tailwind_source, '@source "../../../../../app/views/**/*.erb";'
+    assert_not_includes tailwind_source, '@source "../../../../app/views/**/*.erb";'
     assert_includes tailwind_source, '@source "../../../tmp/tailwind/flat_pack_components";'
     assert_includes tailwind_source, '@source "../../../tmp/tailwind/recording_studio_views";'
     assert_includes sidebar_layout, 'stylesheet_link_tag "flat_pack/application"'
@@ -527,7 +527,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes listing_view, '<%= hidden_field_tag :view, @view_mode, data: { recording_studio_attachable__view_mode_target: "viewInput" } %>'
     assert_includes listing_view, 't("recording_studio.attachable.library.empty_search_title")'
     assert_includes listing_view, 't("recording_studio.attachable.library.empty_title")'
-    assert_includes listing_view, '<circle cx="11" cy="11" r="6" />'
+    assert_includes listing_view, 'icon: "magnifying-glass"'
+    assert_includes listing_view, "FlatPack::EmptyState::Component.new("
     assert_includes grid_partial, "href: attachment_path(attachment_recording, navigation_params)"
     assert_includes grid_partial, 'data-controller="recording-studio-attachable--image-fallback"'
     assert_includes grid_partial, 'data-recording-studio-attachable--image-fallback-target="skeleton"'

@@ -7,8 +7,8 @@
 /* Dummy app views. */
 @source "../../views/**/*.erb";
 
-/* This gem's views. The repo root is four levels up. */
-@source "../../../../app/views/**/*.erb";
+/* This gem's views. The repo root is five levels up from this file. */
+@source "../../../../../app/views/**/*.erb";
 
 /* FlatPack components and Recording Studio views, copied by flat_pack:sync_tailwind_sources. */
 @source "../../../tmp/tailwind/flat_pack_components";

@@ -56,7 +56,7 @@ class ConfigurationTest < Minitest::Test
     assert_not @configuration.preprocessed_variants_explicit?
     assert_equal :direct, @configuration.default_listing_scope
     assert_equal :all, @configuration.default_kind_filter
-    assert_equal :blank, @configuration.layout
+    assert_nil @configuration.layout
     assert_empty @configuration.upload_providers
     assert_equal :view, @configuration.auth_role_for(:view)
     assert_equal :edit, @configuration.auth_role_for(:upload)
@@ -307,7 +307,7 @@ class ConfigurationTest < Minitest::Test
   end
 
   def test_to_h_reflects_current_values
-    @configuration.layout = :application
+    @configuration.layout = "application"
     @configuration.enabled_attachment_kinds = %i[file]
 
     assert_equal(
@@ -340,7 +340,7 @@ class ConfigurationTest < Minitest::Test
         enabled_attachment_kinds: %i[file],
         default_listing_scope: :direct,
         default_kind_filter: :all,
-        layout: :application,
+        layout: "application",
         upload_presentation: :page,
         auth_roles: @configuration.auth_roles
       },

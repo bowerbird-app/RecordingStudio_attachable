@@ -2,8 +2,6 @@
 
 module RecordingStudioAttachable
   class RecordingAttachmentsController < ApplicationController
-    layout :layout_for_index
-
     def index
       @recording = find_recording
       capability_options = capability_options_for(@recording)
@@ -43,8 +41,10 @@ module RecordingStudioAttachable
       @kind.to_sym == :files ? :list : :grid
     end
 
-    def layout_for_index
-      false if action_name == "index" && @append_only
+    def recording_studio_resolved_layout
+      return false if action_name == "index" && @append_only
+
+      super
     end
   end
 end

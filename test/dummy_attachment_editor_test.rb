@@ -16,7 +16,7 @@ class DummyAttachmentEditorTest < Minitest::Test
     refute_includes controller, "UsesDefaultLayout"
     assert_includes controller, "RecordingStudio.root_recording_for(Workspace.first!)"
     assert_includes controller, "@return_to = attachment_editor_path"
-    assert_includes view, 'title: "Edit images"'
+    assert_includes view, 'content_for :title, "Edit images"'
     assert_includes view, "attachment_collection_editor("
     assert_includes view, "association: :images"
     assert_includes view, "fields: [:caption, :credit, :alt_text]"

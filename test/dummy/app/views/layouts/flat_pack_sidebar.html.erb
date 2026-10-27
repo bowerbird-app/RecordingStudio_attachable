@@ -15,12 +15,12 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
 
-    <%= stylesheet_link_tag "application.css", "data-turbo-track": "reload" %>
-    <%= stylesheet_link_tag "tailwind.css", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "flat_pack/variables", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "flat_pack/application", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "flat_pack/rich_text", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "flat_pack/content_editor", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "tailwind.css", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "application.css", "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
 
@@ -37,7 +37,15 @@
       <% end %>
 
       <% layout.main do %>
-        <div class="min-h-0 p-6">
+        <div class="min-h-0 flex flex-col gap-6 p-6">
+          <%= flat_pack_page_nav_tag %>
+          <% if content_for?(:title) %>
+            <%= render FlatPack::PageTitle::Component.new(
+              title: content_for(:title),
+              subtitle: content_for(:subtitle).presence,
+              variant: :h1
+            ) %>
+          <% end %>
           <%= yield %>
         </div>
       <% end %>

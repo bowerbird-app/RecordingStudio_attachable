@@ -56,7 +56,8 @@ class DummyDocsTest < Minitest::Test
     controller_source = File.read(File.expand_path("dummy/app/controllers/docs_controller.rb", __dir__))
 
     assert_includes config_source, "FlatPack::CodeBlock::Component"
-    assert_includes controller_source, "config.layout = :blank"
+    assert_includes controller_source, 'config.layout = "application"'
+    assert_includes controller_source, "recording_studio/default_layout"
     assert_includes controller_source, "config.image_processing_enabled = true"
     assert_includes controller_source, "config.image_processing_max_width = 2560"
     assert_includes controller_source, "config.image_variants = {"
@@ -64,7 +65,7 @@ class DummyDocsTest < Minitest::Test
     assert_includes controller_source, "config.url_mode = :rails"
     assert_includes controller_source, "config.direct_url_host"
     assert_includes controller_source, "config.preprocessed_variants"
-    assert_includes controller_source, 'host app layout like "application"'
+    assert_includes controller_source, "callable"
     assert_includes controller_source, "Browse the attachment library and manage uploads with bulk remove actions."
   end
 
@@ -85,7 +86,7 @@ class DummyDocsTest < Minitest::Test
     plugins_source = File.read(File.expand_path("dummy/app/views/docs/plugins.html.erb", __dir__))
     controller_source = File.read(File.expand_path("dummy/app/controllers/docs_controller.rb", __dir__))
 
-    assert_includes plugins_source, 'title: "Plugins"'
+    assert_includes plugins_source, 'content_for :title, "Plugins"'
     assert_includes plugins_source, "FlatPack::SectionTitle::Component"
     assert_includes plugins_source, "FlatPack::CodeBlock::Component"
     assert_includes plugins_source, "FlatPack::List::Component"
@@ -108,7 +109,7 @@ class DummyDocsTest < Minitest::Test
     picker_source = File.read(File.expand_path("dummy/app/views/docs/picker.html.erb", __dir__))
     controller_source = File.read(File.expand_path("dummy/app/controllers/docs_controller.rb", __dir__))
 
-    assert_includes picker_source, 'title: "Picker"'
+    assert_includes picker_source, 'content_for :title, "Picker"'
     assert_includes picker_source, 'title: "How it works"'
     assert_includes picker_source, 'title: "Attachment payload"'
     assert_includes picker_source, 'title: "Integration notes"'
@@ -128,12 +129,12 @@ class DummyDocsTest < Minitest::Test
     controller_source = File.read(File.expand_path("dummy/app/controllers/docs_controller.rb", __dir__))
     resizing_subtitle = "subtitle: \"Named delivery variants are stored in Active Storage. Preprocess common sizes after upload, or let Rails mode process them on the first preview request.\""
 
-    assert_includes resizing_source, 'title: "Resizing"'
+    assert_includes resizing_source, 'content_for :title, "Resizing"'
     assert_includes resizing_source, 'title: "Browser-side resizing"'
     assert_includes resizing_source, 'title: "Size variants"'
     assert_includes resizing_source, 'title: "URL modes"'
     assert_includes resizing_source, resizing_subtitle
-    assert_includes resizing_source, "FlatPack::PageTitle::Component"
+    assert_not_includes resizing_source, "FlatPack::PageTitle::Component"
     assert_includes resizing_source, "FlatPack::SectionTitle::Component"
     assert_includes resizing_source, "FlatPack::CodeBlock::Component"
     assert_includes controller_source, "def resizing"
@@ -158,7 +159,7 @@ class DummyDocsTest < Minitest::Test
     controller_source = File.read(File.expand_path("dummy/app/controllers/docs_controller.rb", __dir__))
     initializer = File.read(File.expand_path("dummy/config/initializers/recording_studio_attachable.rb", __dir__))
 
-    assert_includes url_modes_source, 'title: "URL modes"'
+    assert_includes url_modes_source, 'content_for :title, "URL modes"'
     assert_includes url_modes_source, 'title: "Live direct URLs"'
     assert_includes url_modes_source, "mode: :direct"
     assert_includes url_modes_source, "poster: { resize_to_limit: [1280, 720] }"
@@ -203,7 +204,7 @@ class DummyDocsTest < Minitest::Test
     assert_includes controller_source, 'title: "Upload"'
     assert_includes controller_source, 'title: "Attachment picker modal"'
     assert_includes controller_source, 'title: "Attachment details"'
-    assert_includes controller_source, 'title: "Blank layout"'
+    assert_includes controller_source, 'title: "Default layout"'
     assert_includes controller_source, "icon: :grid"
     assert_includes controller_source, "icon: :plus"
     assert_includes controller_source, "icon: :eye"
@@ -232,7 +233,7 @@ class DummyDocsTest < Minitest::Test
     recordables_source = File.read(File.expand_path("dummy/app/views/docs/recordables.html.erb", __dir__))
     controller_source = File.read(File.expand_path("dummy/app/controllers/docs_controller.rb", __dir__))
 
-    assert_includes recordables_source, 'title: "Recordable types"'
+    assert_includes recordables_source, 'content_for :title, "Recordable types"'
     assert_includes recordables_source, "FlatPack::List::Component"
     assert_includes recordables_source, "pluralize(recordable_type[:recordings_count], \"recording\")"
     assert_includes recordables_source, "pluralize(recordable_type[:recordables_count], \"recordable record\")"
@@ -245,7 +246,7 @@ class DummyDocsTest < Minitest::Test
     query_source = File.read(File.expand_path("dummy/app/views/docs/query.html.erb", __dir__))
     controller_source = File.read(File.expand_path("dummy/app/controllers/docs_controller.rb", __dir__))
 
-    assert_includes query_source, 'title: "Query"'
+    assert_includes query_source, 'content_for :title, "Query"'
     assert_includes query_source, 'title: "Any recordable type with images"'
     assert_includes query_source, "FlatPack::SectionTitle::Component"
     assert_includes query_source, "FlatPack::CodeBlock::Component"

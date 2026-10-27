@@ -78,8 +78,9 @@ class InstallGeneratorTest < Minitest::Test
       )
     )
 
-    assert_includes initializer_template, "config.layout = :blank"
-    assert_includes initializer_template, 'host app layout like "application"'
+    assert_includes initializer_template, 'config.layout = "application"'
+    assert_includes initializer_template, "recording_studio/default_layout"
+    assert_not_includes initializer_template, "config.layout = :blank"
   end
 
   def test_install_docs_describe_recording_studio_4_hierarchy_setup
@@ -90,7 +91,7 @@ class InstallGeneratorTest < Minitest::Test
       )
     )
 
-    assert_includes install_docs, "Recording Studio 4.2.0+"
+    assert_includes install_docs, "Recording Studio 6.1.0+"
     assert_includes install_docs, "recording_studio_recordable"
     assert_includes install_docs, "allowed_parent_types"
     assert_includes install_docs, "RecordingStudioAttachable::Attachment"

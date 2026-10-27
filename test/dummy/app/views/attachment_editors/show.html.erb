@@ -1,5 +1,5 @@
+<% content_for :title, "Edit images" %>
 <div class="flex w-full flex-col gap-6">
-  <%= render FlatPack::PageTitle::Component.new(title: "Edit images", variant: :h1) %>
 
   <%= turbo_frame_tag "attachment-editor-images" do %>
     <%= attachment_collection_editor(

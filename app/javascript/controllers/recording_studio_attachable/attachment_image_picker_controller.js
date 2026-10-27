@@ -697,7 +697,7 @@ export default class extends Controller {
       button.addEventListener("click", () => this.selectAttachment(attachment))
 
       const media = document.createElement("div")
-      media.className = "relative aspect-4/3 overflow-hidden bg-(--surface-muted-background-color)"
+      media.className = "relative aspect-[4/3] overflow-hidden bg-(--surface-muted-background-color)"
 
       if (attachment.thumbnail_url) {
         const image = document.createElement("img")

@@ -29,32 +29,27 @@
            @recording.recordable_type.demodulize
          end %>
 
-    <%= render FlatPack::PageNav::Component.new(
-      back_icon: "arrow-left",
-      back_label: t("recording_studio.attachable.navigation.back"),
-      anchor_url: attachment_page_nav_anchor_url(fallback: main_app.root_path),
-      anchor_label: t("recording_studio.attachable.navigation.return_to_source")
+    <% content_for :title, t("recording_studio.attachable.library.title") %>
+    <% content_for :subtitle, parent_recordable_name %>
+    <% flat_pack_page_nav(
+      round: true,
+      style: :default,
+      back_tooltip: t("recording_studio.attachable.navigation.back"),
+      anchor_href: attachment_page_nav_anchor_url(fallback: main_app.root_path),
+      anchor_tooltip: t("recording_studio.attachable.navigation.return_to_source")
     ) %>
-
-    <%= render FlatPack::PageTitle::Component.new(
-      title: t("recording_studio.attachable.library.title"),
-      subtitle: parent_recordable_name,
-      variant: :h1
-    ) %>
+    <% if @can_upload %>
+      <% register_page_nav(
+        t("recording_studio.attachable.library.upload"),
+        recording_attachment_upload_path(@recording, navigation_params),
+        role: :primary,
+        icon: "upload",
+        data: { turbo_frame: "_top" }
+      ) %>
+    <% end %>
 
     <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div class="flex flex-wrap items-center gap-3">
-        <% if @can_upload %>
-          <%= render FlatPack::Button::Component.new(
-            text: t("recording_studio.attachable.library.upload"),
-            style: :primary,
-            size: :md,
-            icon: "upload",
-            href: recording_attachment_upload_path(@recording, navigation_params),
-            data: { turbo_frame: "_top" }
-          ) %>
-        <% end %>
-
         <% if @attachments.any? %>
           <%= render FlatPack::Button::Pill::Component.new(
             items: [
@@ -117,22 +112,14 @@
             view_mode: @view_mode %>
         <% else %>
 
-          <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
+          <%= render FlatPack::Card::Component.new(border: :default, shadow: :none) do |card| %>
             <% card.body do %>
-              <div class="flex flex-col items-center justify-center gap-4 px-6 py-12 text-center">
-                <div class="flex h-16 w-16 items-center justify-center rounded-full bg-(--surface-muted-background-color) text-(--surface-muted-content-color)">
-                  <svg viewBox="0 0 24 24" aria-hidden="true" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="m21 21-4.35-4.35" />
-                    <circle cx="11" cy="11" r="6" />
-                  </svg>
-                </div>
-                <%= render FlatPack::PageTitle::Component.new(
-                  title: @query.present? ? t("recording_studio.attachable.library.empty_search_title") : t("recording_studio.attachable.library.empty_title"),
-                  subtitle: @query.present? ? nil : t("recording_studio.attachable.library.empty_subtitle"),
-                  variant: :h3,
-                  class: "mb-0 pb-0"
-                ) %>
-              </div>
+              <%= render FlatPack::EmptyState::Component.new(
+                title: @query.present? ? t("recording_studio.attachable.library.empty_search_title") : t("recording_studio.attachable.library.empty_title"),
+                description: @query.present? ? nil : t("recording_studio.attachable.library.empty_subtitle"),
+                icon: "magnifying-glass",
+                size: :md
+              ) %>
             <% end %>
           <% end %>
         <% end %>

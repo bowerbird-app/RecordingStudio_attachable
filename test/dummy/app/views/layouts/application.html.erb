@@ -18,14 +18,13 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
 
-    <%# Load app styles, utility classes, then FlatPack assets directly.
-      FlatPack's application.css currently ships raw relative @imports, which Propshaft serves without rewriting. %>
-    <%= stylesheet_link_tag "application.css", "data-turbo-track": "reload" %>
-    <%= stylesheet_link_tag "tailwind.css", "data-turbo-track": "reload" %>
+    <%# Flatpack tokens load before Tailwind so the host sheet can use them. %>
     <%= stylesheet_link_tag "flat_pack/variables", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "flat_pack/application", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "flat_pack/rich_text", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "flat_pack/content_editor", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "tailwind.css", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "application.css", "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
 
@@ -33,7 +32,17 @@
     <%= render "layouts/icon_sprite" %>
 
     <main class="flex min-h-screen items-center justify-center p-6">
-      <%= yield %>
+      <div class="flex w-full flex-col gap-6">
+        <%= flat_pack_page_nav_tag %>
+        <% if content_for?(:title) %>
+          <%= render FlatPack::PageTitle::Component.new(
+            title: content_for(:title),
+            subtitle: content_for(:subtitle).presence,
+            variant: :h1
+          ) %>
+        <% end %>
+        <%= yield %>
+      </div>
     </main>
   </body>
 </html>

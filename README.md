@@ -16,7 +16,8 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - Ruby 3.3+
 - Rails 8.1+
 - Active Storage installed in the host app
-- Recording Studio 4.2.0 or newer installed in the host app
+- Recording Studio 6.1.0 or newer installed in the host app
+- Flatpack 0.1.315 or newer (`FlatPack::VERSION` 0.1.319 at commit `1fcbafe94f8eb118f0a22182f63f5110fcc97a56`)
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
 - RecordingStudio Metrics `>= 0.3.0, < 0.6` (latest GitHub tag `v0.5.0`) for operations-API storage and upload metrics
@@ -57,7 +58,7 @@ class Page < ApplicationRecord
 end
 ```
 
-Recording Studio 4 requires every configured host-app recordable to declare whether it can be a root and, for non-root domain recordables, which parent types are allowed.
+Recording Studio requires every configured host-app recordable to declare whether it can be a root and, for non-root domain recordables, which parent types are allowed.
 
 Do not enable `:attachable` on a shared root (`shared: true`). Attachments are capability-owned children, so enable the capability on domain recordables beneath that shared root instead.
 
@@ -162,7 +163,7 @@ RecordingStudioAttachable.configure do |config|
   # config.image_variants = { poster: { resize_to_limit: [1280, 720] } }
   # config.preprocessed_variants = %i[small med large poster]
 
-  config.layout = :blank
+  # config.layout = "application"
   config.auth_roles = {
     view: :view,
     upload: :edit,
@@ -651,19 +652,21 @@ With `config.url_mode = :direct` and `config.direct_url_host` set, helpers and `
 
 ### Layouts
 
-Gem views use the bundled blank layout by default:
+Leave `config.layout` unset. Pages then use `RecordingStudio.configuration.layout`, and if that is also unset, `"recording_studio/default_layout"`.
 
-- centered container
-- no top nav
-- no sidebar
-
-If you want the gem views to render inside your host app shell instead, set `config.layout` to your app layout name:
+Set `config.layout` when this gem should use a different shell:
 
 ```ruby
 RecordingStudioAttachable.configure do |config|
   config.layout = "application"
+  # config.layout = false
+  # config.layout = ->(controller:) { controller.params[:embed] == "modal" ? false : "application" }
 end
 ```
+
+`false` renders no layout. A callable is invoked as `call(controller:)` and must return a layout name, `nil`, or `false`. A symbol such as `:blank` raises `ArgumentError`.
+
+Gem views set `content_for :title` and `:subtitle`, call `flat_pack_page_nav` for back and close, and `register_page_nav` for page actions. They do not draw the page shell.
 
 ## Authorization and lifecycle behavior
 
@@ -801,7 +804,7 @@ Save starts as the default button and is only as wide as its label. Change a cap
 
 `preview:` chooses the picture in the list and on Slides. The default `:square` uses the `square_med` crop. `preview: :natural` uses the `med` variant and keeps the file's proportions. On the list the picture stays about 208px wide beside the fields. On Slides the picture bleeds to the card edges. It stays tall enough for the previous and next controls, and it is capped in height. The fields span the width under it. Clicking those previews still opens the original file. Grid ignores `preview:` and always uses the natural `med` preview. `preview:` is not in the signed save token. An unknown value raises.
 
-FlatPack is the default UI system for the engine and the dummy app (pinned to `v0.1.213` in the root Gemfile and the dummy app; gem requires `>= 0.1.213`).
+FlatPack is the default UI system for the engine and the dummy app (Gemfile ref `1fcbafe94f8eb118f0a22182f63f5110fcc97a56`, `FlatPack::VERSION` 0.1.319; gem requires `>= 0.1.315`).
 
 ## Development
 

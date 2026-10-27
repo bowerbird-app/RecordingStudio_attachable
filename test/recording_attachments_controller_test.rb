@@ -47,7 +47,7 @@ module RecordingStudioAttachable
             @controller.stub(:capability_options_for, {}) do
               RecordingStudioAttachable::Queries::ForRecording.stub(:new, ->(**_kwargs) { query }) do
                 RecordingStudioAttachable::Authorization.stub(:allowed?, false) do
-                  @controller.define_singleton_method(:default_render) { render plain: layout_for_index.inspect }
+                  @controller.define_singleton_method(:default_render) { render plain: recording_studio_resolved_layout.inspect }
 
                   get :index, params: { recording_id: recording.id, kind: "all", append_only: true }
                 end

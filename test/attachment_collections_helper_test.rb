@@ -30,7 +30,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, "aspect-square"
     assert_includes html, 'class="h-full w-full object-cover"'
     refute_includes html, "max-h-72"
-    assert_equal 2, html.scan("bg-[var(--card-background-color)]").size
+    assert_equal 2, html.scan("[background:var(--card-background-default)]").size
     assert_includes html, 'alt="Pier"'
     assert_includes html, 'data-modal-id="attachment-image-image-1"'
     assert_includes html, 'src="/attachments/image-1/file"'
@@ -169,7 +169,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, 'data-controller="flat-pack--carousel"'
     assert_equal 2, html.scan('data-flat-pack--carousel-target="slide"').size
     assert_equal 2, html.scan('collection-display-target="card"').size
-    assert_equal 4, html.scan("bg-[var(--card-background-color)]").size
+    assert_equal 4, html.scan("[background:var(--card-background-default)]").size
     assert_includes html, 'data-recording-studio-attachable--collection-display-target="carousel" hidden'
     assert_includes html, 'aria-label="Previous slide"'
     assert_includes html, 'aria-label="Next slide"'
@@ -298,7 +298,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes slide_form, ">PNG<"
     assert_includes slide_form, "1280 × 720"
     assert_includes slide_form, "200 KB"
-    assert_includes slide_form, "px-2.5"
+    assert_includes slide_form, "px-[var(--badge-padding-x-sm)]"
     assert_includes slide_form, "px-14"
     assert_operator slide_form.index("image-1.png"), :<, caption
     assert_operator slide_form.index(">PNG<"), :<, caption
@@ -336,7 +336,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, 'src="/attachments/image-2/preview/square_med" alt="Thumbnail 1"'
     assert_includes html, 'src="/attachments/image-1/preview/square_med" alt="Thumbnail 2"'
     assert_operator html.index("flat-pack--carousel"), :<, html.index('value="image-1"')
-    assert_equal 2, html.scan("bg-[var(--card-background-color)]").size
+    assert_equal 2, html.scan("[background:var(--card-background-default)]").size
     assert_includes html, "aspect-square w-full overflow-hidden rounded-lg"
     assert_includes html, "aspect-ratio: 1/1"
     assert_includes html, 'data-flat-pack--carousel-side-preview-value="false"'
@@ -627,17 +627,22 @@ class AttachmentCollectionsHelperTest < Minitest::Test
       app/components/flat_pack/base_component.rb
       app/components/flat_pack/shared/icon_component.rb
       app/components/flat_pack/button/pill_style.rb
+      app/components/flat_pack/button/icon_options.rb
       app/components/flat_pack/button/component.rb
       app/components/flat_pack/shared/pad_text_sizes.rb
+      app/components/flat_pack/shared/slide_indicator.rb
       app/components/flat_pack/button/pill/component.rb
       app/components/flat_pack/form_field/control_styles.rb
       app/components/flat_pack/form_field/component.rb
+      app/components/flat_pack/clipboard/quick_copy.rb
       app/components/flat_pack/text_input/component.rb
       app/components/flat_pack/tooltip/component.rb
       app/components/flat_pack/badge/component.rb
       app/components/flat_pack/grid/component.rb
+      app/components/flat_pack/pane_scroll.rb
       app/components/flat_pack/modal/component.rb
       app/components/flat_pack/carousel/component.rb
+      app/components/flat_pack/card/background.rb
       app/components/flat_pack/card/media/component.rb
       app/components/flat_pack/card/header/component.rb
       app/components/flat_pack/card/body/component.rb

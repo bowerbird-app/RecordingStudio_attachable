@@ -22,30 +22,6 @@ class ApplicationControllerTest < Minitest::Test
     RecordingStudioAttachable.configuration.layout = @original_layout
   end
 
-  def test_blank_layout_is_default
-    RecordingStudioAttachable.configuration.layout = :blank
-
-    assert_equal "recording_studio_attachable/blank", @controller.send(:recording_studio_attachable_layout)
-  end
-
-  def test_legacy_blank_upload_alias_still_uses_blank_layout
-    RecordingStudioAttachable.configuration.layout = :blank_upload
-
-    assert_equal "recording_studio_attachable/blank", @controller.send(:recording_studio_attachable_layout)
-  end
-
-  def test_custom_layout_can_be_provided_by_host_app
-    RecordingStudioAttachable.configuration.layout = "application"
-
-    assert_equal "application", @controller.send(:recording_studio_attachable_layout)
-  end
-
-  def test_nil_layout_falls_back_to_blank_layout
-    RecordingStudioAttachable.configuration.layout = nil
-
-    assert_equal "recording_studio_attachable/blank", @controller.send(:recording_studio_attachable_layout)
-  end
-
   def test_current_attachable_actor_prefers_current_actor
     current = ensure_current_class
     current.define_singleton_method(:actor) { :current_actor }
@@ -178,7 +154,7 @@ class ApplicationControllerTest < Minitest::Test
     recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
 
     @controller.stub(:capability_options_for, {}) do
-      assert_equal :blank, @controller.send(:configured_attachable_option, recording, :layout)
+      assert_nil @controller.send(:configured_attachable_option, recording, :layout)
     end
   end
 

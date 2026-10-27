@@ -260,7 +260,7 @@ The file `test/dummy/app/assets/tailwind/application.css` configures Tailwind:
 @source "../../../../../app/views/**/*.erb";
 ```
 
-> **Note:** The relative path `../../../../../app/views/**/*.erb` points from the dummy app up to the engine's `app/views` folder so Tailwind can detect classes used in engine templates. Host applications will use the gem path instead.
+> **Note:** The relative path `../../../../../app/views/**/*.erb` points from `test/dummy/app/assets/tailwind/application.css` up to the engine's `app/views` folder so Tailwind can detect classes used in engine templates. Five `../` segments reach the repo root. Host applications will use the gem path instead.
 
 ------------------------------------------------------------
 5.3 Auto-Rebuild in Development

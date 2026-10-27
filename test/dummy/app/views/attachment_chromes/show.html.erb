@@ -1,11 +1,13 @@
-<% recording_studio_page_nav(page_nav_anchor_url: root_path, page_nav_back_url: root_path) if respond_to?(:recording_studio_page_nav) %>
-
+<% content_for :title, @page.title %>
+<% content_for :subtitle, "Single-file attachable parent. Host owns the Turbo frames; Attachable supplies the file button and preview URL." %>
+<% flat_pack_page_nav(
+  round: true,
+  style: :default,
+  back_tooltip: "Go back",
+  anchor_href: root_path,
+  anchor_tooltip: "Close"
+) %>
 <div id="attachment-chromes-demo" class="flex w-full flex-col gap-10">
-  <%= render FlatPack::PageTitle::Component.new(
-    title: @page.title,
-    subtitle: "Single-file attachable parent. Host owns the Turbo frames; Attachable supplies the file button and preview URL.",
-    variant: :h1
-  ) %>
 
   <section class="flex flex-col gap-3">
     <h2 class="text-base font-medium text-(--surface-content-color)">Avatar + file button</h2>

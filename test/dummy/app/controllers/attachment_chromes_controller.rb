@@ -1,5 +1,5 @@
 class AttachmentChromesController < ApplicationController
-  include UsesDefaultLayout
+  recording_studio_layout { nil }
 
   def show
     @page = Page.first!

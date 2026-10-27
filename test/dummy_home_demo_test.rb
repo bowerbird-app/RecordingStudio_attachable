@@ -3,23 +3,28 @@
 require "test_helper"
 
 class DummyHomeDemoTest < Minitest::Test
-  def test_dummy_layouts_load_flat_pack_application_after_tailwind
+  def test_dummy_layouts_load_flat_pack_before_tailwind
     application_layout = File.read(File.expand_path("dummy/app/views/layouts/application.html.erb", __dir__))
     sidebar_layout = File.read(File.expand_path("dummy/app/views/layouts/flat_pack_sidebar.html.erb", __dir__))
 
     assert_includes application_layout, '<html data-theme="rounded">'
     assert_includes sidebar_layout, '<html data-theme="rounded"'
-    assert_includes sidebar_layout, '<div class="min-h-0 p-6">'
+    assert_includes sidebar_layout, '<div class="min-h-0 flex flex-col gap-6 p-6">'
     assert_not_includes sidebar_layout, '<main class="h-full overflow-auto p-6">'
     assert_not_includes sidebar_layout, 'class="h-full overflow-hidden overscroll-none"'
     assert_not_includes sidebar_layout, 'class="m-0 h-full overflow-hidden overscroll-none'
-    assert_operator application_layout.index('stylesheet_link_tag "tailwind.css"'), :<,
-                    application_layout.index('stylesheet_link_tag "flat_pack/variables"')
-    assert_operator sidebar_layout.index('stylesheet_link_tag "tailwind.css"'), :<,
-                    sidebar_layout.index('stylesheet_link_tag "flat_pack/variables"')
+    assert_operator application_layout.index('stylesheet_link_tag "flat_pack/variables"'), :<,
+                    application_layout.index('stylesheet_link_tag "tailwind.css"')
+    assert_operator sidebar_layout.index('stylesheet_link_tag "flat_pack/variables"'), :<,
+                    sidebar_layout.index('stylesheet_link_tag "tailwind.css"')
     assert_includes application_layout, 'stylesheet_link_tag "flat_pack/application"'
     assert_includes application_layout, 'stylesheet_link_tag "flat_pack/rich_text"'
     assert_includes application_layout, 'stylesheet_link_tag "flat_pack/content_editor"'
+    tailwind_source = File.read(File.expand_path("dummy/app/assets/tailwind/application.css", __dir__))
+    assert_includes tailwind_source, '@source "../../../../../app/views/**/*.erb";'
+    assert_not_includes tailwind_source, '@source "../../../../app/views/**/*.erb";'
+    assert_includes tailwind_source, '@source "../../../tmp/tailwind/flat_pack_components";'
+    assert_includes tailwind_source, '@source "../../../tmp/tailwind/recording_studio_views";'
     assert_includes sidebar_layout, 'stylesheet_link_tag "flat_pack/application"'
     assert_includes sidebar_layout, 'stylesheet_link_tag "flat_pack/rich_text"'
     assert_includes sidebar_layout, 'stylesheet_link_tag "flat_pack/content_editor"'
@@ -28,9 +33,9 @@ class DummyHomeDemoTest < Minitest::Test
   def test_dummy_home_page_has_root_and_page_demo_actions
     home_view = File.read(File.expand_path("dummy/app/views/home/index.html.erb", __dir__))
 
-    assert_includes home_view, 'title: "Attachment demo"'
-    assert_includes home_view, 'subtitle: "Workspace uploads accept images and files. Page uploads accept images only."'
-    assert_operator home_view.scan("FlatPack::Card::Component.new(style: :default)").length, :>=, 2
+    assert_includes home_view, 'content_for :title, "Attachment demo"'
+    assert_includes home_view, 'content_for :subtitle, "Workspace uploads accept images and files. Page uploads accept images only."'
+    assert_operator home_view.scan("FlatPack::Card::Component.new").length, :>=, 2
     assert_operator home_view.scan("<% card.body do %>").length, :>=, 2
     assert_includes home_view, 'title: "Workspace"'
     assert_includes home_view, 'subtitle: "Upload images, PDFs, and text files to the workspace library."'
@@ -226,33 +231,32 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes controller, "@page_attachment_create_path = recording_studio_attachable.recording_attachment_imports_path("
     assert_includes controller, 'redirect_mode: "return_to"'
     assert_includes controller, "return_to: page_path(@page)"
-    assert_includes show_view, "FlatPack::PageNav::Component.new("
+    assert_includes show_view, "flat_pack_page_nav("
     assert_includes show_view, 'back_icon: "chevron-left"'
-    assert_includes show_view, 'back_label: "Go back"'
-    assert_includes show_view, "anchor_url: request.referer.presence || root_path"
-    assert_includes show_view, "title: @page.title"
-    assert_includes show_view, 'subtitle: "Review the inline page content and related page actions."'
+    assert_includes show_view, 'back_tooltip: "Go back"'
+    assert_includes show_view, "anchor_href: request.referer.presence || root_path"
+    assert_includes show_view, "content_for :title, @page.title"
+    assert_includes show_view, 'content_for :subtitle, "Review the inline page content and related page actions."'
+    assert_includes show_view, 'register_page_nav "Edit inline"'
     assert_includes show_view, 'class="page-inline-content prose max-w-none text-(--surface-content-color)"'
     assert_includes show_view, "<%= sanitize("
     assert_includes show_view, '@page.body.presence || "<p>No page content yet.</p>"'
     assert_includes show_view, "attributes: %w[href src alt title data-display data-align]"
     assert_includes show_view, '.page-inline-content img[data-display="small"] {'
     assert_includes show_view, '.page-inline-content img[data-align="right"] {'
-    assert_includes show_view, 'text: "Edit inline"'
+    assert_includes show_view, 'register_page_nav "Edit inline"'
     assert_not_includes show_view, 'text: "Back to home"'
     assert_not_includes show_view, "FlatPack::Card::Component.new(style: :default)"
     assert_includes controller, 'redirect_to edit_page_path(@page), notice: "Page updated."'
     assert_includes importmap, 'pin "page_html_preview_addon"'
     assert_includes importmap, 'pin "recording_studio_attachable/tiptap/attachment_image_addon"'
-    assert_includes view, "FlatPack::PageTitle::Component.new("
-    assert_includes view, "FlatPack::PageNav::Component.new("
-    assert_includes view, 'back_label: "Go back"'
+    assert_includes view, 'content_for :title, "Edit inline"'
+    assert_includes view, "flat_pack_page_nav("
+    assert_includes view, 'back_tooltip: "Go back"'
     assert_includes view, 'back_icon: "chevron-left"'
-    assert_includes view, "anchor_url: request.referer.presence || root_path"
-    assert_includes view, 'title: "Edit inline"'
-    assert_includes view, 'subtitle: "Update page copy and formatted content for the inline recording demo."'
-    assert_includes view, "href: page_path(@page)"
-    assert_includes view, 'text: "View"'
+    assert_includes view, "anchor_href: request.referer.presence || root_path"
+    assert_includes view, 'content_for :subtitle, "Update page copy and formatted content for the inline recording demo."'
+    assert_includes view, 'register_page_nav "View", page_path(@page), role: :secondary'
     assert_includes view, "FlatPack::TextInput::Component.new("
     assert_includes view, 'name: "page[title]"'
     assert_includes view, "FlatPack::TextArea::Component.new("
@@ -394,7 +398,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes controller, "RecordingStudio::Recording.unscoped.find_or_create_by!(recordable: message)"
     assert_includes controller, 'redirect_to chat_demo_path, alert: "Add a message or choose at least one image."'
     assert_includes controller, 'redirect_to chat_demo_path, notice: "Chat demo reset."'
-    assert_includes view, 'title: "Chat demo"'
+    assert_includes view, 'content_for :title, "Chat demo"'
     assert_includes view, "FlatPack::Chat::Layout::Component.new("
     assert_includes view, 'turbo_frame_tag "chat-demo-panel"'
     assert_includes view, "variant: :single"
@@ -497,11 +501,11 @@ class DummyHomeDemoTest < Minitest::Test
       File.expand_path("../app/views/recording_studio_attachable/recording_attachments/_list.html.erb", __dir__)
     )
 
-    assert_includes listing_view, "FlatPack::PageNav::Component"
-    assert_includes listing_view, "anchor_url: attachment_page_nav_anchor_url(fallback: main_app.root_path)"
-    assert_includes listing_view, 'title: t("recording_studio.attachable.library.title")'
+    assert_includes listing_view, "flat_pack_page_nav("
+    assert_includes listing_view, "anchor_href: attachment_page_nav_anchor_url(fallback: main_app.root_path)"
+    assert_includes listing_view, 'content_for :title, t("recording_studio.attachable.library.title")'
     assert_includes listing_view, "parent_recordable.respond_to?(:title) && parent_recordable.title.present?"
-    assert_includes listing_view, "subtitle: parent_recordable_name"
+    assert_includes listing_view, "content_for :subtitle, parent_recordable_name"
     assert_includes listing_view, 't("recording_studio.attachable.library.upload")'
     assert_includes listing_view, "view: @view_mode"
     assert_includes listing_view, "FlatPack::Button::Pill::Component.new("
@@ -509,7 +513,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes listing_view, "href: recording_attachments_path(@recording, navigation_params.merge(listing_params.merge(view: :list)))"
     assert_includes listing_view, 'data-controller="recording-studio-attachable--view-mode"'
     assert_includes listing_view, 'turbo_frame: "recording-attachments-results"'
-    assert_includes listing_view, "size: :md"
+    assert_includes listing_view, "role: :primary"
     assert_not_includes listing_view, ">View<"
     assert_not_includes listing_view, 'icon: "list-bullet"'
     assert_includes listing_view, 'turbo_action: "advance"'
@@ -523,7 +527,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes listing_view, '<%= hidden_field_tag :view, @view_mode, data: { recording_studio_attachable__view_mode_target: "viewInput" } %>'
     assert_includes listing_view, 't("recording_studio.attachable.library.empty_search_title")'
     assert_includes listing_view, 't("recording_studio.attachable.library.empty_title")'
-    assert_includes listing_view, '<circle cx="11" cy="11" r="6" />'
+    assert_includes listing_view, 'icon: "magnifying-glass"'
+    assert_includes listing_view, "FlatPack::EmptyState::Component.new("
     assert_includes grid_partial, "href: attachment_path(attachment_recording, navigation_params)"
     assert_includes grid_partial, 'data-controller="recording-studio-attachable--image-fallback"'
     assert_includes grid_partial, 'data-recording-studio-attachable--image-fallback-target="skeleton"'
@@ -596,28 +601,19 @@ class DummyHomeDemoTest < Minitest::Test
   def test_dummy_layouts_reference_propshaft_resolvable_css_assets
     application_layout = File.read(File.expand_path("dummy/app/views/layouts/application.html.erb", __dir__))
     sidebar_layout = File.read(File.expand_path("dummy/app/views/layouts/flat_pack_sidebar.html.erb", __dir__))
-    blank_layout = File.read(File.expand_path("../app/views/layouts/recording_studio_attachable/blank.html.erb", __dir__))
-
-    [application_layout, sidebar_layout, blank_layout].each do |layout|
+    [application_layout, sidebar_layout].each do |layout|
       assert_includes layout, 'stylesheet_link_tag "application.css"'
       assert_includes layout, 'stylesheet_link_tag "flat_pack/variables"'
       assert_includes layout, 'stylesheet_link_tag "flat_pack/application"'
       assert_includes layout, 'stylesheet_link_tag "flat_pack/rich_text"'
       assert_includes layout, 'stylesheet_link_tag "flat_pack/content_editor"'
       assert_includes layout, 'stylesheet_link_tag "tailwind.css"'
-      assert_operator layout.index('stylesheet_link_tag "tailwind.css"'), :<,
-                      layout.index('stylesheet_link_tag "flat_pack/variables"')
+      assert_operator layout.index('stylesheet_link_tag "flat_pack/variables"'), :<,
+                      layout.index('stylesheet_link_tag "tailwind.css"')
     end
 
-    assert_includes application_layout, 'stylesheet_link_tag "flat_pack/variables"'
-    assert_includes sidebar_layout, 'stylesheet_link_tag "flat_pack/variables"'
-    assert_includes blank_layout, 'stylesheet_link_tag "flat_pack/variables"'
-    assert_includes blank_layout, 'class="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-6 py-10"'
-    assert_not_includes blank_layout, "overflow-y-auto overscroll-y-contain"
-    assert_not_includes blank_layout, "h-screen overflow-hidden"
-
-    assert_includes blank_layout, "style: :danger"
-    assert_not_includes blank_layout, "style: :error"
+    assert_includes application_layout, "flat_pack_page_nav_tag"
+    assert_includes sidebar_layout, "flat_pack_page_nav_tag"
   end
 
   def test_dummy_javascript_boot_enables_turbo_drive_and_active_storage
@@ -749,8 +745,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes tree_helper, '"document-text"'
     assert_includes tree_helper, "elsif recordable.respond_to?(:body) && recordable.body.present?"
     assert_includes tree_helper, "recordable.body.to_s.truncate(60)"
-    assert_includes tree_view, 'title: "Recording tree"'
-    assert_includes tree_view, "render FlatPack::Card::Component.new(style: :default) do |card|"
+    assert_includes tree_view, 'content_for :title, "Recording tree"'
+    assert_includes tree_view, "render FlatPack::Card::Component.new do |card|"
     assert_includes tree_view, "card.body do"
     assert_includes tree_view, "render FlatPack::Tree::Component.new do |tree|"
     assert_includes tree_view, "build_recording_tree_nodes(tree, @root_recordings, @recording_children)"

@@ -1,20 +1,15 @@
+<% content_for :title, @page.title %>
+<% content_for :subtitle, "Review the inline page content and related page actions." %>
+<% flat_pack_page_nav(
+  round: true,
+  style: :default,
+  back_icon: "chevron-left",
+  back_tooltip: "Go back",
+  anchor_href: request.referer.presence || root_path,
+  anchor_tooltip: "Close"
+) %>
+<% register_page_nav "Edit inline", edit_page_path(@page), role: :primary %>
 <div class="mx-auto flex w-full max-w-4xl flex-col gap-6">
-    <%= render FlatPack::PageNav::Component.new(
-      back_icon: "chevron-left",
-      back_label: "Go back",
-      anchor_url: request.referer.presence || root_path,
-      anchor_label: "Close"
-    ) %>
-
-  <%= render FlatPack::PageTitle::Component.new(
-    title: @page.title,
-    subtitle: "Review the inline page content and related page actions.",
-    variant: :h1
-  ) %>
-
-  <div class="flex flex-wrap gap-3">
-    <%= render FlatPack::Button::Component.new(text: "Edit inline", style: :primary, size: :md, href: edit_page_path(@page)) %>
-  </div>
 
   <div class="page-inline-content prose max-w-none text-(--surface-content-color)">
     <%= sanitize(

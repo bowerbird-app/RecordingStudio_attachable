@@ -1,20 +1,15 @@
+<% content_for :title, "Edit inline" %>
+<% content_for :subtitle, "Update page copy and formatted content for the inline recording demo." %>
+<% flat_pack_page_nav(
+  round: true,
+  style: :default,
+  back_icon: "chevron-left",
+  back_tooltip: "Go back",
+  anchor_href: request.referer.presence || root_path,
+  anchor_tooltip: "Close"
+) %>
+<% register_page_nav "View", page_path(@page), role: :secondary %>
 <div class="mx-auto flex w-full max-w-4xl flex-col gap-6">
-    <%= render FlatPack::PageNav::Component.new(
-      back_icon: "chevron-left",
-      back_label: "Go back",
-      anchor_url: request.referer.presence || root_path,
-      anchor_label: "Close"
-    ) %>
-
-  <%= render FlatPack::PageTitle::Component.new(
-    title: "Edit inline",
-    subtitle: "Update page copy and formatted content for the inline recording demo.",
-    variant: :h1
-  ) %>
-
-  <div class="flex flex-wrap gap-3">
-    <%= render FlatPack::Button::Component.new(text: "View", style: :secondary, size: :md, href: page_path(@page)) %>
-  </div>
 
   <%= form_with model: @page, class: "space-y-4" do %>
     <%= render FlatPack::TextInput::Component.new(

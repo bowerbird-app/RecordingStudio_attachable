@@ -203,7 +203,7 @@ class DocsController < ApplicationController
     ]
 
     @setup_next_steps = [
-      "Review the generated recording_studio_attachable initializer if you need a host-app layout instead of the blank layout.",
+        "Review the generated recording_studio_attachable initializer if you need a host layout instead of Recording Studio's default layout.",
       "Visit the upload flow in the dummy app to confirm direct uploads and authorization behave as expected.",
       "Make sure Active Storage, Recording Studio, and this gem's migrations are all applied before debugging missing attachments."
     ]
@@ -250,8 +250,10 @@ class DocsController < ApplicationController
         # config.image_variants = { poster: { resize_to_limit: [1280, 720] } }
         # config.preprocessed_variants = %i[small med large poster]
 
-        # Use the gem's blank layout, or point at a host app layout like "application".
-        config.layout = :blank
+        # Leave layout unset so pages use RecordingStudio.configuration.layout, then
+        # "recording_studio/default_layout". Set a layout name, false, or a callable
+        # that takes controller: to override this surface only.
+        # config.layout = "application"
 
         # Map attachable actions to the roles your authorization adapter understands.
         config.auth_roles = {
@@ -599,10 +601,10 @@ class DocsController < ApplicationController
         icon: :eye
       },
       {
-        title: "Blank layout",
-        path: "layouts/recording_studio_attachable/blank.html.erb",
-        description: "Render gem pages inside a centered shell with no host-app top nav or sidebar.",
-        example: "Use it when the attachment flow should stay isolated from the host application's chrome.",
+        title: "Default layout",
+        path: "recording_studio/default_layout",
+        description: "Gem pages render in Recording Studio's default layout unless config.layout overrides it.",
+        example: "Leave config.layout unset, or set a layout name, false, or a callable that takes controller:.",
         icon: :layout
       }
     ]

@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-10-27
+
+### Changed
+
+- Requires `recording_studio >= 6.1.0` (git tag `v6.1.0`) and `flat_pack >= 0.1.315` (development pin commit `1fcbafe94f8eb118f0a22182f63f5110fcc97a56`, `FlatPack::VERSION` `0.1.319`). `view_component` resolves to `4.19.0` (`>= 4.14, < 5` from Flatpack).
+- Mounted screens use the Recording Studio 6.1 layout. `RecordingStudioAttachable.configuration.layout` defaults to `nil`. `nil` follows `RecordingStudio.configuration.layout`, then `"recording_studio/default_layout"`.
+- Engine and dummy views set `content_for :title` / `:subtitle`, `flat_pack_page_nav`, and `register_page_nav`. Page headings render once, from the layout. Download and trash on the attachment page sit in the top nav. The library upload action does too.
+- The gem no longer ships `layouts/recording_studio_attachable/blank`.
+- Library grid cards, the attachment preview, and the empty library use `FlatPack::Card` media and `FlatPack::EmptyState`. The description field uses `FlatPack::TextArea`.
+- Dummy Tailwind `@source` for engine views is five `../` segments, from `test/dummy/app/assets/tailwind/application.css` to the repo root.
+
+### Upgrade Notes
+
+- Bump to `0.22.0`. Pin `recording_studio` to tag `v6.1.0` and `flat_pack` to ref `1fcbafe94f8eb118f0a22182f63f5110fcc97a56` (or tag `v0.1.315` or newer). Lock `view_component` at `4.19.0`.
+- Remove `config.layout = :blank` and `config.layout = :blank_upload`. Leave `config.layout` unset, or set a layout name, `false`, or a callable invoked as `call(controller:)`. A symbol raises `ArgumentError`.
+- Remove `include RecordingStudio::UsesDefaultLayout`, `layout "recording_studio/default_layout"`, and `recording_studio_page_nav`. This gem calls `recording_studio_layout { RecordingStudioAttachable.configuration.layout }` on its base controller.
+- Move the visible page heading to `content_for :title` (and `content_for :subtitle` when the page has one) if you override these views. Put back and close on `flat_pack_page_nav`. Put page actions on `register_page_nav`, or `recording_studio_page_nav_right` when the control is a form.
+- If a sibling gemspec still requires `recording_studio` below 6, load `test/support/widen_recording_studio_requirement.rb` before Bundler evaluates gemspecs. The dummy app does this. Trashable `v0.12.0` already allows Recording Studio 6.1.0.
+- No migration. Upload checks, Accessible authorization, signed blobs, import host allowlists, and Trashable removal are unchanged.
+
 ## [0.21.1] - 2026-10-23
 
 ### Changed

@@ -4,7 +4,7 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.22.0", RecordingStudioAttachable::VERSION
+    assert_equal "0.22.1", RecordingStudioAttachable::VERSION
   end
 
   def test_recording_studio_dependency_is_6_1_or_newer

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-10-28
+
+### Changed
+
+- Stop tracking SimpleCov output under `test/coverage/` and `test/dummy/coverage/`. Ignore any `coverage/` directory.
+- Remove leftover gem-template docs in `docs/gem_template/` and the `bin/rename_gem` script.
+- Remove the stray `test/dummy/.github/workflows/ci.yml` workflow.
+- Remove unused dummy `hello_controller.js`.
+- README Metrics range now matches the gemspec: `recording_studio_metrics >= 0.3.0, < 1.0`.
+- Document and test `authorize_provider_upload!` and `DirectUpload.prepare!`. Behavior is unchanged.
+
+### Upgrade Notes
+
+- Bump to `0.22.1`. No migration. No behavior change.
+
 ## [0.22.0] - 2026-10-27
 
 ### Changed
@@ -580,7 +595,9 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.1...HEAD
+[0.22.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.0...v0.22.1
+[0.22.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.21.1...v0.22.0
 [0.16.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.14.1...v0.15.0
 [0.11.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.10.0...v0.11.0

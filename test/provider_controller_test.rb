@@ -75,6 +75,7 @@ class ProviderControllerTest < Minitest::Test
 
   def test_authorize_provider_upload_rejects_a_missing_recording
     @controller.params = ActionController::Parameters.new(recording_id: "missing")
+    RecordingStudio::Recording.define_singleton_method(:find) { |_id| raise NotImplementedError }
 
     RecordingStudio::Recording.stub(:find, ->(_id) { raise ActiveRecord::RecordNotFound }) do
       assert_raises(ActiveRecord::RecordNotFound) do

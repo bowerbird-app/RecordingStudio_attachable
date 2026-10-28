@@ -9,7 +9,7 @@ The migration described here has already been completed in this repository. The 
 ## What changed
 
 1. Removed repository access entries from `.devcontainer/devcontainer.json`.
-2. Updated template-reference docs such as `CODESPACES.md` and `PRIVATE_GEMS.md`.
+2. Updated contributor setup notes for Codespaces and private gems (those template docs were later removed).
 3. Updated Copilot instructions to point at local documentation.
 4. Replaced the old `makeup_artist` dependency with `flat_pack` in the dummy app.
 

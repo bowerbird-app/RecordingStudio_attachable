@@ -37,6 +37,8 @@ class RenameVerificationTest < Minitest::Test
     refute Dir.exist?(File.join(@root, "lib", "gem_template"))
     refute Dir.exist?(File.join(@root, "app", "controllers", "gem_template"))
     refute Dir.exist?(File.join(@root, "app", "views", "gem_template"))
+    refute Dir.exist?(File.join(@root, "docs", "gem_template"))
+    refute File.exist?(File.join(@root, "bin", "rename_gem"))
   end
 
   private

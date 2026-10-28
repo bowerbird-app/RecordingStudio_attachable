@@ -96,6 +96,8 @@ class InstallGeneratorTest < Minitest::Test
     assert_includes install_docs, "allowed_parent_types"
     assert_includes install_docs, "RecordingStudioAttachable::Attachment"
     assert_includes install_docs, ":attachable"
+    assert_includes install_docs, ">= 0.3.0, < 1.0"
+    assert_not_includes install_docs, "< 0.6"
     assert_not_includes install_docs, "Register `RecordingStudioAttachable::Attachment` in `RecordingStudio.configure`"
   end
 end

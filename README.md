@@ -20,7 +20,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - Flatpack 0.1.315 or newer (`FlatPack::VERSION` 0.1.319 at commit `1fcbafe94f8eb118f0a22182f63f5110fcc97a56`)
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
-- RecordingStudio Metrics `>= 0.3.0, < 0.6` (latest GitHub tag `v0.5.0`) for operations-API storage and upload metrics
+- RecordingStudio Metrics `>= 0.3.0, < 1.0` (development Gemfile tag `v0.5.0`) for operations-API storage and upload metrics
 - Optional cloud import: a separate provider gem that registers with `register_upload_provider`. Attachable does not depend on provider gems at runtime.
 
 ## Quick start
@@ -106,6 +106,18 @@ mount RecordingStudioAttachable::Engine, at: "/recording_studio_attachable"
 ### 5. Wire direct uploads
 
 Browser uploads POST to this engine's recording direct-upload route (`recordings/:id/attachments/direct_uploads`), not `/rails/active_storage/direct_uploads`. That route checks the upload role, content type, size, pending-upload cap, and storage capacity, then returns a signed id bound to that recording and actor.
+
+`RecordingStudioAttachable::DirectUpload.prepare!` is the method that route (and the operations API create-upload action) call. It creates an unattached Active Storage blob tagged for this gem, bound to that parent recording and actor.
+
+It allows the call when all of these are true:
+
+- `actor` is present
+- `content_type` is allowed for that recording (`allowed_content_types`, including per-recordable overrides)
+- `byte_size` is an integer of zero or more and does not exceed `max_file_size`
+- the actor is under `pending_upload_limit` unattached tagged blobs for that root
+- the root still has storage capacity when `storage_limit` is set
+
+It raises `ArgumentError` when any of those fail (blank actor, disallowed type, invalid or oversized `byte_size`, too many pending uploads). If the blob is created and storage capacity is then refused, the blob is dropped and the storage error is re-raised. The signed id from a Rails `/rails/active_storage/direct_uploads` blob is not issued here and is refused later at attach time.
 
 The install generator also wires the Active Storage importmap pin, starts Active Storage in `app/javascript/application.js`, and eager-loads the engine Stimulus controllers from `app/javascript/controllers/index.js`.
 
@@ -548,7 +560,7 @@ ActiveSupport.on_load(:recording_studio_attachable) do
 end
 ```
 
-Provider controllers inherit `RecordingStudioAttachable::ProviderController` and set `self.upload_provider_key = :my_cloud`. Pin the gem's launcher, and import helpers from `recording_studio_attachable/provider_launchers` (`loadScript`, `createBootstrapCache`, `providerNeedsAuth`, `openProviderAuth`, `csrfToken`).
+Provider controllers inherit `RecordingStudioAttachable::ProviderController` and set `self.upload_provider_key = :my_cloud`. Call `authorize_provider_upload!` at the start of bootstrap, connect, browse, and import actions. That helper loads the parent recording and requires the current actor to pass attachable `:upload` authorization (the `upload` auth role, `:edit` by default). It raises `ActiveRecord::RecordNotFound` when the recording is missing, `RecordingStudioAttachable::Authorization::CapabilityNotEnabledError` when `:attachable` is not enabled for the owner type, and `RecordingStudioAttachable::Authorization::NotAuthorizedError` when the actor cannot upload. Pin the gem's launcher, and import helpers from `recording_studio_attachable/provider_launchers` (`loadScript`, `createBootstrapCache`, `providerNeedsAuth`, `openProviderAuth`, `csrfToken`).
 
 Bootstrap JSON is provider-neutral:
 

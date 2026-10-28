@@ -4,7 +4,14 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.22.0", RecordingStudioAttachable::VERSION
+    assert_equal "0.22.1", RecordingStudioAttachable::VERSION
+  end
+
+  def test_readme_documents_prepare_and_provider_upload_authorization
+    readme = File.read(File.expand_path("../README.md", __dir__))
+
+    assert_includes readme, "DirectUpload.prepare!"
+    assert_includes readme, "authorize_provider_upload!"
   end
 
   def test_recording_studio_dependency_is_6_1_or_newer
@@ -39,6 +46,7 @@ class RecordingStudioAttachableTest < Minitest::Test
   def test_metrics_dependency_is_0_3_through_pre_1
     spec = Gem.loaded_specs.fetch("recording_studio_metrics")
     gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
+    readme = File.read(File.expand_path("../README.md", __dir__))
     root_gemfile = File.read(File.expand_path("../Gemfile", __dir__))
     dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
 
@@ -47,6 +55,8 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert spec.version < Gem::Version.new("1.0.0"),
            "expected recording_studio_metrics < 1.0, got #{spec.version}"
     assert_includes gemspec, 'spec.add_dependency "recording_studio_metrics", ">= 0.3.0", "< 1.0"'
+    assert_includes readme, "RecordingStudio Metrics `>= 0.3.0, < 1.0`"
+    refute_includes readme, "RecordingStudio Metrics `>= 0.3.0, < 0.6`"
     assert_includes root_gemfile, 'tag: "v0.5.0"'
     assert_includes dummy_gemfile, 'tag: "v0.3.1"'
   end

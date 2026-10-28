@@ -77,6 +77,86 @@ class DirectUploadTest < Minitest::Test
     RecordingStudioAttachable::DirectUpload.sniff!(blob, { allowed_content_types: ["text/plain"] })
   end
 
+  def test_prepare_creates_a_bound_blob_and_rejects_a_blank_actor
+    recording = recording_double("parent-1")
+    actor = Struct.new(:id).new("actor-1")
+    created = nil
+    blob = prepared_blob
+
+    ActiveStorage::Blob.stub(:create_before_direct_upload!, lambda { |**attributes|
+      created = attributes
+      blob
+    }) do
+      RecordingStudioAttachable::StorageLimit.stub(:with_storage_capacity!, ->(_root, _incoming, &block) { block.call }) do
+        result = RecordingStudioAttachable::DirectUpload.prepare!(**prepare_attrs(recording, actor))
+
+        assert_equal blob, result
+        assert_equal "photo.png", created[:filename]
+        assert_equal 12, created[:byte_size]
+        assert_equal "checksum", created[:checksum]
+        assert_equal "image/png", created[:content_type]
+        assert_equal "1", created.dig(:metadata, RecordingStudioAttachable::DirectUpload::TAG)
+        assert_equal "parent-1", created.dig(:metadata, "parent_recording_id")
+        assert_equal "actor-1", created.dig(:metadata, "actor_id")
+      end
+    end
+
+    error = assert_raises(ArgumentError) do
+      RecordingStudioAttachable::DirectUpload.prepare!(**prepare_attrs(recording, nil))
+    end
+    assert_includes error.message, "Actor is required"
+  end
+
+  def test_prepare_rejects_disallowed_type_size_and_a_full_pending_queue
+    recording = recording_double("parent-1")
+    actor = Struct.new(:id).new("actor-1")
+    attrs = prepare_attrs(recording, actor)
+
+    ActiveStorage::Blob.stub(:create_before_direct_upload!, ->(**) { flunk "created a blob" }) do
+      type_error = assert_raises(ArgumentError) do
+        RecordingStudioAttachable::DirectUpload.prepare!(**attrs, content_type: "application/zip")
+      end
+      size_error = assert_raises(ArgumentError) do
+        RecordingStudioAttachable::DirectUpload.prepare!(**attrs, byte_size: 26.megabytes)
+      end
+      negative_error = assert_raises(ArgumentError) do
+        RecordingStudioAttachable::DirectUpload.prepare!(**attrs, byte_size: -1)
+      end
+      pending_error = RecordingStudioAttachable::DirectUpload.stub(:pending_count, 20) do
+        assert_raises(ArgumentError) do
+          RecordingStudioAttachable::DirectUpload.prepare!(**attrs)
+        end
+      end
+
+      assert_includes type_error.message, "not allowed"
+      assert_includes size_error.message, "maximum file size"
+      assert_includes negative_error.message, "zero or more"
+      assert_includes pending_error.message, "pending"
+    end
+  end
+
+  def test_prepare_drops_the_blob_when_storage_capacity_is_refused
+    recording = recording_double("parent-1")
+    actor = Struct.new(:id).new("actor-1")
+    blob = prepared_blob
+
+    ActiveStorage::Blob.stub(:create_before_direct_upload!, blob) do
+      RecordingStudioAttachable::StorageLimit.stub(
+        :with_storage_capacity!,
+        ->(*) { raise RecordingStudioAttachable::StorageLimitError, "Storage is full" }
+      ) do
+        RecordingStudioAttachable::StorageLimit.stub(:discard_unattached!, ->(blobs) { blobs.each(&:purge) }) do
+          error = assert_raises(RecordingStudioAttachable::StorageLimitError) do
+            RecordingStudioAttachable::DirectUpload.prepare!(**prepare_attrs(recording, actor))
+          end
+
+          assert_equal "Storage is full", error.message
+          assert_equal true, blob.purged
+        end
+      end
+    end
+  end
+
   def test_svg_is_refused_unless_the_allow_list_names_it
     assert_not RecordingStudioAttachable.configuration.allowed_content_type?("image/svg+xml")
     blob = issued_blob(recording_double("parent-1"), Struct.new(:id).new("actor-1"))
@@ -103,10 +183,32 @@ class DirectUploadTest < Minitest::Test
     )
   end
 
+  def prepare_attrs(recording, actor)
+    {
+      recording: recording,
+      actor: actor,
+      filename: "photo.png",
+      byte_size: 12,
+      checksum: "checksum",
+      content_type: "image/png"
+    }
+  end
+
+  def prepared_blob
+    blob = Object.new
+    blob.define_singleton_method(:persisted?) { true }
+    blob.define_singleton_method(:purged) { @purged == true }
+    blob.define_singleton_method(:purge) { @purged = true }
+    blob
+  end
+
   def ensure_blob!
     ActiveStorage.const_set(:Blob, Class.new) unless defined?(ActiveStorage::Blob)
-    return if ActiveStorage::Blob.respond_to?(:find_signed!)
+    unless ActiveStorage::Blob.respond_to?(:find_signed!)
+      ActiveStorage::Blob.define_singleton_method(:find_signed!) { |*, **| raise NotImplementedError }
+    end
+    return if ActiveStorage::Blob.respond_to?(:create_before_direct_upload!)
 
-    ActiveStorage::Blob.define_singleton_method(:find_signed!) { |*, **| raise NotImplementedError }
+    ActiveStorage::Blob.define_singleton_method(:create_before_direct_upload!) { |**| raise NotImplementedError }
   end
 end

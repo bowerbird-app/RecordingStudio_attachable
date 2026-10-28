@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remove the stray `test/dummy/.github/workflows/ci.yml` workflow.
 - Remove unused dummy `hello_controller.js`.
 - README Metrics range now matches the gemspec: `recording_studio_metrics >= 0.3.0, < 1.0`.
-- Document and test `authorize_provider_upload!` and `DirectUpload.prepare!`. Behavior is unchanged.
+- Document `authorize_provider_upload!` and `DirectUpload.prepare!`. Unit tests cover `DirectUpload.prepare!`. Dummy My Cloud bootstrap requests cover `authorize_provider_upload!` allow and reject. Behavior is unchanged.
 
 ### Upgrade Notes
 

@@ -37,6 +37,38 @@ class MyCloudProviderTest < ActionDispatch::IntegrationTest
     )
   end
 
+  test "bootstrap json allows an actor who can upload" do
+    get "/recording_studio_attachable/my_cloud/recordings/#{@root.id}/bootstrap.json"
+
+    assert_response :success
+    payload = JSON.parse(response.body)
+    assert_equal "my_cloud", payload.fetch("provider_key")
+  end
+
+  test "bootstrap json rejects an actor who cannot upload" do
+    outsider = User.create!(
+      email: "outsider-#{SecureRandom.hex(4)}@example.com",
+      password: "Password123!",
+      password_confirmation: "Password123!",
+      name: "Outsider"
+    )
+    sign_in outsider
+
+    get "/recording_studio_attachable/my_cloud/recordings/#{@root.id}/bootstrap.json"
+
+    assert_response :forbidden
+    payload = JSON.parse(response.body)
+    assert_includes payload.fetch("error"), "upload"
+  end
+
+  test "bootstrap json rejects a missing recording" do
+    get "/recording_studio_attachable/my_cloud/recordings/#{SecureRandom.uuid}/bootstrap.json"
+
+    assert_response :not_found
+    payload = JSON.parse(response.body)
+    assert_includes payload.fetch("error"), "Not found"
+  end
+
   test "browse page uses the generic remote file browser" do
     MyCloud.connect!(@user)
     get "/recording_studio_attachable/my_cloud/recordings/#{@root.id}/imports"

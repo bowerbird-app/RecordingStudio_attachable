@@ -114,13 +114,13 @@ class DirectUploadTest < Minitest::Test
 
     ActiveStorage::Blob.stub(:create_before_direct_upload!, ->(**) { flunk "created a blob" }) do
       type_error = assert_raises(ArgumentError) do
-        RecordingStudioAttachable::DirectUpload.prepare!(**attrs.merge(content_type: "application/zip"))
+        RecordingStudioAttachable::DirectUpload.prepare!(**attrs, content_type: "application/zip")
       end
       size_error = assert_raises(ArgumentError) do
-        RecordingStudioAttachable::DirectUpload.prepare!(**attrs.merge(byte_size: 26.megabytes))
+        RecordingStudioAttachable::DirectUpload.prepare!(**attrs, byte_size: 26.megabytes)
       end
       negative_error = assert_raises(ArgumentError) do
-        RecordingStudioAttachable::DirectUpload.prepare!(**attrs.merge(byte_size: -1))
+        RecordingStudioAttachable::DirectUpload.prepare!(**attrs, byte_size: -1)
       end
       pending_error = RecordingStudioAttachable::DirectUpload.stub(:pending_count, 20) do
         assert_raises(ArgumentError) do

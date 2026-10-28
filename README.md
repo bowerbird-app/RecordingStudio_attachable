@@ -20,7 +20,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - Flatpack 0.1.315 or newer (`FlatPack::VERSION` 0.1.319 at commit `1fcbafe94f8eb118f0a22182f63f5110fcc97a56`)
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
-- RecordingStudio Metrics `>= 0.3.0, < 0.6` (latest GitHub tag `v0.5.0`) for operations-API storage and upload metrics
+- RecordingStudio Metrics `>= 0.3.0, < 1.0` (CI tested with GitHub tag `v0.5.0`) for operations-API storage and upload metrics
 - Optional cloud import: a separate provider gem that registers with `register_upload_provider`. Attachable does not depend on provider gems at runtime.
 
 ## Quick start
@@ -257,6 +257,8 @@ RecordingStudioApi.register_recordable_type_api(
 A type that leaves those names off `capability_actions` does not show the actions in OpenAPI. Calling one returns the Recording Studio API's unsupported-action response.
 
 `create_upload` takes `filename`, `byte_size`, `checksum`, and `content_type`. The checksum is the base64 MD5 of the bytes. The response is `signed_blob_id`, `upload` (`url` and `headers`), and `expires_at`. PUT the bytes to `upload.url` with `upload.headers`. The signed id uses the `:attachable_upload` purpose and expires after `config.direct_upload_expires_in` (default 5 minutes). It is bound to the parent recording and the actor that asked for it. `attach` accepts it once, and only while the blob is still unattached. The file bytes are sniffed and must match the declared content type.
+
+Browser and API `create_upload` both call `RecordingStudioAttachable::DirectUpload.prepare!(recording:, actor:, filename:, byte_size:, checksum:, content_type:)`. That method creates the Active Storage blob before the client PUT. It requires an actor. It refuses a content type the parent does not allow, a negative size, a file over `max_file_size`, and a pending queue at `config.pending_upload_limit`. A storage-limit refusal drops the blob.
 
 `config.pending_upload_limit` (default 20) caps unattached uploads this gem issued for that actor on that root. `image/*` does not allow `image/svg+xml`. Name `image/svg+xml` in the allow list when a host wants SVG. File responses stream the bytes. PNG, JPEG, GIF, WebP, and PDF can be inline. Anything else is downloaded. Responses send `Content-Security-Policy: sandbox` and `X-Content-Type-Options: nosniff`.
 
@@ -548,7 +550,7 @@ ActiveSupport.on_load(:recording_studio_attachable) do
 end
 ```
 
-Provider controllers inherit `RecordingStudioAttachable::ProviderController` and set `self.upload_provider_key = :my_cloud`. Pin the gem's launcher, and import helpers from `recording_studio_attachable/provider_launchers` (`loadScript`, `createBootstrapCache`, `providerNeedsAuth`, `openProviderAuth`, `csrfToken`).
+Provider controllers inherit `RecordingStudioAttachable::ProviderController` and set `self.upload_provider_key = :my_cloud`. Call `authorize_provider_upload!` on connect, browse, and import actions. That helper loads the parent recording and authorizes the `:upload` action with that recording's attachable capability options. A caller without upload access cannot start a provider flow. Pin the gem's launcher, and import helpers from `recording_studio_attachable/provider_launchers` (`loadScript`, `createBootstrapCache`, `providerNeedsAuth`, `openProviderAuth`, `csrfToken`).
 
 Bootstrap JSON is provider-neutral:
 

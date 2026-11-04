@@ -656,6 +656,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
       app/components/flat_pack/card/title/component.rb
       app/components/flat_pack/card/component.rb
     ].each do |path|
+      # Skip if Card is already loaded; a second require raises superclass mismatch.
       next if path.end_with?("card/component.rb") && defined?(FlatPack::Card::Component)
 
       require File.join(root, path)

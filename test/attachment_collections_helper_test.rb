@@ -626,10 +626,6 @@ class AttachmentCollectionsHelperTest < Minitest::Test
       lib/flat_pack/button/style_registry.rb
       app/components/flat_pack/base_component.rb
       app/components/flat_pack/shared/icon_component.rb
-      app/components/flat_pack/shared/inline_svg.rb
-      app/components/flat_pack/shared/breakpoints.rb
-      app/components/flat_pack/shared/control_size.rb
-      app/components/flat_pack/shared/frame_height.rb
       app/components/flat_pack/button/pill_style.rb
       app/components/flat_pack/button/icon_options.rb
       app/components/flat_pack/button/component.rb
@@ -642,7 +638,6 @@ class AttachmentCollectionsHelperTest < Minitest::Test
       app/components/flat_pack/text_input/component.rb
       app/components/flat_pack/tooltip/component.rb
       app/components/flat_pack/badge/component.rb
-      app/components/flat_pack/shared/flex.rb
       app/components/flat_pack/grid/component.rb
       app/components/flat_pack/pane_scroll.rb
       app/components/flat_pack/modal/component.rb
@@ -652,15 +647,8 @@ class AttachmentCollectionsHelperTest < Minitest::Test
       app/components/flat_pack/card/header/component.rb
       app/components/flat_pack/card/body/component.rb
       app/components/flat_pack/card/footer/component.rb
-      app/components/flat_pack/heading/component.rb
-      app/components/flat_pack/card/title/component.rb
       app/components/flat_pack/card/component.rb
-    ].each do |path|
-      # Skip if Card is already loaded; a second require raises superclass mismatch.
-      next if path.end_with?("card/component.rb") && defined?(FlatPack::Card::Component)
-
-      require File.join(root, path)
-    end
+    ].each { |path| FlatPackComponentLoad.require_component(root, path) }
   end
 
   def orderable_parent(children)

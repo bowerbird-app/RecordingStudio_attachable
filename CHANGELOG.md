@@ -7,23 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.22.2] - 2026-11-04
-
-### Changed
-
-- Development pins Recording Studio `v6.3.0`, Flatpack `v0.1.341`, and Metrics `v0.7.2`. The dummy app pins Trashable `v0.12.2`, Admin `v2.5.1`, and Cache `v0.6.2`. Dummy Metrics, Logs, and API stay on the previous tags because newer ones do not resolve together.
-- Dummy lockfile uses Addressable 2.9.2 and Rack 3.2.8.
-- Gemfile comments name this gem, not the template. Codespaces and agent docs use attachable paths.
-
-### Removed
-
-- Leftover `UPDATE_SUMMARY.md` and `MIGRATION_NOTES.md`.
-
-### Upgrade Notes
-
-- Bump to `0.22.2`. No migration. No behavior change.
-
-## [0.22.1] - 2026-10-28
+## [0.22.1] - 2026-11-05
 
 ### Changed
 
@@ -33,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remove unused dummy `hello_controller.js`.
 - README Metrics range now matches the gemspec: `recording_studio_metrics >= 0.3.0, < 1.0`.
 - Document `authorize_provider_upload!` and `DirectUpload.prepare!`. Unit tests cover `DirectUpload.prepare!`. Dummy My Cloud bootstrap requests cover `authorize_provider_upload!` allow and reject. Behavior is unchanged.
+- Development pins Recording Studio `v6.3.0`, Flatpack `v0.1.341`, and Metrics `v0.7.2`. The dummy app pins Trashable `v0.12.2`, Admin `v2.5.1`, Cache `v0.6.2`, Site Settings `v0.5.4`, and Accessible `v0.18.1`. Dummy Metrics, Logs, and API stay on the previous tags because newer ones do not resolve together.
+- Dummy lockfile uses Addressable 2.9.2 and Rack 3.2.8.
 
 ### Upgrade Notes
 
@@ -611,8 +597,7 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.2...HEAD
-[0.22.2]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.1...v0.22.2
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.0...HEAD
 [0.22.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.21.1...v0.22.0
 [0.16.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.15.0...v0.16.0

@@ -4,7 +4,7 @@ source "https://rubygems.org"
 
 require_relative "test/support/widen_recording_studio_requirement"
 
-# Specify your gem's dependencies in recording_studio_attachable.gemspec
+# Specify your gem's dependencies in gem_template.gemspec
 gemspec
 
 gem "flat_pack", github: "bowerbird-app/flatpack", tag: "v0.1.341"

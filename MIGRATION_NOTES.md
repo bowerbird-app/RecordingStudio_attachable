@@ -27,4 +27,4 @@ FlatPack is now the default UI system for both the engine and the dummy app. If 
 
 ## Layout
 
-`config.layout` follows Recording Studio 6.1. Leave it unset to use `RecordingStudio.configuration.layout`, then `"recording_studio/default_layout"`. `:blank` is not a layout name. Upgrade steps are in the 0.22.0 notes in `CHANGELOG.md`. The current host contract is in the Layouts section of `README.md`.
+`config.layout` follows Recording Studio 6.3. Leave it unset to use `RecordingStudio.configuration.layout`, then `"recording_studio/default_layout"`. `:blank` is not a layout name. Upgrade steps are in the 0.22.0 notes in `CHANGELOG.md`. The current host contract is in the Layouts section of `README.md`.

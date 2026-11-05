@@ -648,7 +648,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
       app/components/flat_pack/card/body/component.rb
       app/components/flat_pack/card/footer/component.rb
       app/components/flat_pack/card/component.rb
-    ].each { |path| require File.join(root, path) }
+    ].each { |path| FlatPackComponentLoad.require_component(root, path) }
   end
 
   def orderable_parent(children)

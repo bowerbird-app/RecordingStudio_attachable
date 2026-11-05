@@ -10,6 +10,7 @@ require "active_storage/engine"
 require "i18n"
 require "yaml"
 require "recording_studio_attachable"
+require_relative "support/flat_pack_component_load"
 
 # Unit tests load engine controllers without booting Rails, so the layout
 # helper is not on the autoload path yet. A booted app loads it normally.

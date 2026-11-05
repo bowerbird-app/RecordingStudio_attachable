@@ -23,17 +23,17 @@ class RecordingStudioAttachableTest < Minitest::Test
     dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
     root_lock = File.read(File.expand_path("../Gemfile.lock", __dir__))
     dummy_lock = File.read(File.expand_path("dummy/Gemfile.lock", __dir__))
-    pin = 'gem "flat_pack", github: "bowerbird-app/flatpack", ref: "1fcbafe94f8eb118f0a22182f63f5110fcc97a56"'
+    pin = 'gem "flat_pack", github: "bowerbird-app/flatpack", tag: "v0.1.341"'
 
     assert spec.version >= Gem::Version.new("0.1.315"),
            "expected flat_pack >= 0.1.315, got #{spec.version}"
     assert_includes gemspec, 'spec.add_dependency "flat_pack", ">= 0.1.315"'
     assert_includes root_gemfile, pin
     assert_includes dummy_gemfile, pin
-    assert_includes root_lock, "flat_pack (0.1.319)"
-    assert_includes root_lock, "1fcbafe94f8eb118f0a22182f63f5110fcc97a56"
-    assert_includes dummy_lock, "flat_pack (0.1.319)"
-    assert_includes dummy_lock, "1fcbafe94f8eb118f0a22182f63f5110fcc97a56"
+    assert_includes root_lock, "tag: v0.1.341"
+    assert_includes dummy_lock, "tag: v0.1.341"
+    assert_includes root_lock, "flat_pack (0.1.341)"
+    assert_includes dummy_lock, "flat_pack (0.1.341)"
   end
 
   def test_metrics_dependency_is_0_3_through_pre_1
@@ -47,7 +47,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert spec.version < Gem::Version.new("1.0.0"),
            "expected recording_studio_metrics < 1.0, got #{spec.version}"
     assert_includes gemspec, 'spec.add_dependency "recording_studio_metrics", ">= 0.3.0", "< 1.0"'
-    assert_includes root_gemfile, 'tag: "v0.5.0"'
+    assert_includes root_gemfile, 'tag: "v0.7.2"'
     assert_includes dummy_gemfile, 'tag: "v0.3.1"'
   end
 
@@ -64,6 +64,8 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes dummy_gemfile, 'gem "recording_studio_dropbox"'
     assert_includes dummy_gemfile, 'tag: "v0.3.0"'
     assert_includes dummy_gemfile, 'gem "recording_studio_oauth", github: "bowerbird-app/RecordingStudio_Oauth", tag: "v0.15.1"'
+    assert_includes dummy_gemfile, 'gem "recording_studio_site_settings", github: "bowerbird-app/RecordingStudio_site_settings", tag: "v0.5.4"'
+    assert_includes dummy_gemfile, 'gem "recording_studio_accessible", github: "bowerbird-app/RecordingStudio_accessible", tag: "v0.18.1"'
   end
 
   def test_root_suite_does_not_register_host_provider_gems

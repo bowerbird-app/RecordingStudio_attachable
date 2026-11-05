@@ -4,7 +4,7 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.22.2", RecordingStudioAttachable::VERSION
+    assert_equal "0.22.1", RecordingStudioAttachable::VERSION
   end
 
   def test_recording_studio_dependency_is_6_1_or_newer
@@ -30,6 +30,8 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes gemspec, 'spec.add_dependency "flat_pack", ">= 0.1.315"'
     assert_includes root_gemfile, pin
     assert_includes dummy_gemfile, pin
+    assert_includes root_lock, "tag: v0.1.341"
+    assert_includes dummy_lock, "tag: v0.1.341"
     assert_includes root_lock, "flat_pack (0.1.341)"
     assert_includes dummy_lock, "flat_pack (0.1.341)"
   end
@@ -62,6 +64,8 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes dummy_gemfile, 'gem "recording_studio_dropbox"'
     assert_includes dummy_gemfile, 'tag: "v0.3.0"'
     assert_includes dummy_gemfile, 'gem "recording_studio_oauth", github: "bowerbird-app/RecordingStudio_Oauth", tag: "v0.15.1"'
+    assert_includes dummy_gemfile, 'gem "recording_studio_site_settings", github: "bowerbird-app/RecordingStudio_site_settings", tag: "v0.5.4"'
+    assert_includes dummy_gemfile, 'gem "recording_studio_accessible", github: "bowerbird-app/RecordingStudio_accessible", tag: "v0.18.1"'
   end
 
   def test_root_suite_does_not_register_host_provider_gems

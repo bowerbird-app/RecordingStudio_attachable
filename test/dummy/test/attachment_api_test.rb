@@ -198,14 +198,15 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     create_upload = workspace_action(document, "create_upload")
     attach = workspace_action(document, "attach")
     import_attachment = workspace_action(document, "import_attachment")
-    assert_equal "Prepare a direct upload", create_upload.fetch("summary")
-    assert_includes create_upload.fetch("description"), "upload URL plus a signed_blob_id"
-    assert_includes create_upload.fetch("description"), "adds nothing to this record yet"
-    assert_equal "Attach already-uploaded files", attach.fetch("summary")
-    assert_includes attach.fetch("description"), "RecordingStudio Attachable"
-    assert_includes attach.fetch("description"), "create_upload"
-    assert_equal "Fetch a file from a URL and attach it", import_attachment.fetch("summary")
-    assert_includes import_attachment.fetch("description"), "Fetches a file from a URL"
+    upload_copy = "Step 1 of 2. Step 2 is Attach, or Add File or Add Image for a press kit Files or Images section. Use this when you have the file yourself. Send filename, byte_size, checksum and content_type, and you get back an upload URL and a signed_blob_id. PUT the file to that URL, then send the signed_blob_id to step 2. For a press kit Files or Images section, step 2 is Add File or Add Image. For any other record, it's Attach. This step adds nothing to the record yet. The parent record must already exist."
+    attach_copy = "Step 2 of 2. Step 1 is Upload: call Upload, PUT the file to its URL, then send the signed_blob_id here. Links one signed_blob_id, or several in attachments, to this record as plain attachments. For a press kit Files or Images section, use Add File or Add Image instead, so the file shows up as an item in that section. The parent record must already exist."
+    import_copy = "One step, no upload needed. Use this when the file is already online at a URL. It downloads the file and attaches it to this record as a plain attachment in a single call, so there's no Upload, PUT or signed_blob_id. The parent record must already exist."
+    assert_equal upload_copy, create_upload.fetch("summary")
+    assert_equal upload_copy, create_upload.fetch("description")
+    assert_equal attach_copy, attach.fetch("summary")
+    assert_equal attach_copy, attach.fetch("description")
+    assert_equal import_copy, import_attachment.fetch("summary")
+    assert_equal import_copy, import_attachment.fetch("description")
     refute_equal create_upload.fetch("summary"), attach.fetch("summary")
     refute_equal attach.fetch("summary"), import_attachment.fetch("summary")
   end
@@ -217,18 +218,18 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
       assert_equal :member, action.scope
       assert_equal :edit, action.required_role
       assert_equal "Upload", action.openapi.fetch(:title)
-      assert_equal "Prepare a direct upload", action.openapi.fetch(:summary)
-      assert_includes action.openapi.fetch(:description), "adds nothing to this record yet"
+      assert_equal "Step 1 of 2. Step 2 is Attach, or Add File or Add Image for a press kit Files or Images section. Use this when you have the file yourself. Send filename, byte_size, checksum and content_type, and you get back an upload URL and a signed_blob_id. PUT the file to that URL, then send the signed_blob_id to step 2. For a press kit Files or Images section, step 2 is Add File or Add Image. For any other record, it's Attach. This step adds nothing to the record yet. The parent record must already exist.", action.openapi.fetch(:summary)
+      assert_equal "Step 1 of 2. Step 2 is Attach, or Add File or Add Image for a press kit Files or Images section. Use this when you have the file yourself. Send filename, byte_size, checksum and content_type, and you get back an upload URL and a signed_blob_id. PUT the file to that URL, then send the signed_blob_id to step 2. For a press kit Files or Images section, step 2 is Add File or Add Image. For any other record, it's Attach. This step adds nothing to the record yet. The parent record must already exist.", action.openapi.fetch(:description)
       attach = RecordingStudioApi.capability_action(:attach, api: api)
       assert attach
       assert_equal "Attach", attach.openapi.fetch(:title)
-      assert_equal "Attach already-uploaded files", attach.openapi.fetch(:summary)
-      assert_includes attach.openapi.fetch(:description), "RecordingStudio Attachable"
+      assert_equal "Step 2 of 2. Step 1 is Upload: call Upload, PUT the file to its URL, then send the signed_blob_id here. Links one signed_blob_id, or several in attachments, to this record as plain attachments. For a press kit Files or Images section, use Add File or Add Image instead, so the file shows up as an item in that section. The parent record must already exist.", attach.openapi.fetch(:summary)
+      assert_equal "Step 2 of 2. Step 1 is Upload: call Upload, PUT the file to its URL, then send the signed_blob_id here. Links one signed_blob_id, or several in attachments, to this record as plain attachments. For a press kit Files or Images section, use Add File or Add Image instead, so the file shows up as an item in that section. The parent record must already exist.", attach.openapi.fetch(:description)
       import_attachment = RecordingStudioApi.capability_action(:import_attachment, api: api)
       assert import_attachment
       assert_equal "Import", import_attachment.openapi.fetch(:title)
-      assert_equal "Fetch a file from a URL and attach it", import_attachment.openapi.fetch(:summary)
-      assert_includes import_attachment.openapi.fetch(:description), "Fetches a file from a URL"
+      assert_equal "One step, no upload needed. Use this when the file is already online at a URL. It downloads the file and attaches it to this record as a plain attachment in a single call, so there's no Upload, PUT or signed_blob_id. The parent record must already exist.", import_attachment.openapi.fetch(:summary)
+      assert_equal "One step, no upload needed. Use this when the file is already online at a URL. It downloads the file and attaches it to this record as a plain attachment in a single call, so there's no Upload, PUT or signed_blob_id. The parent record must already exist.", import_attachment.openapi.fetch(:description)
     end
   end
 

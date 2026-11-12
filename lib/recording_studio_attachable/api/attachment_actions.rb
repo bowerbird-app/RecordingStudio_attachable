@@ -7,26 +7,44 @@ module RecordingStudioAttachable
 
       CREATE_UPLOAD_OPENAPI = {
         title: "Upload",
-        summary: "Prepare a direct upload",
+        summary:
+          "Step 1 of 2. Step 2 is Attach, or Add File or Add Image for a press kit Files or Images " \
+          "section. Use this when you have the file yourself. Send filename, byte_size, checksum and " \
+          "content_type, and you get back an upload URL and a signed_blob_id. PUT the file to that " \
+          "URL, then send the signed_blob_id to step 2. For a press kit Files or Images section, " \
+          "step 2 is Add File or Add Image. For any other record, it's Attach. This step adds " \
+          "nothing to the record yet. The parent record must already exist.",
         description:
-          "Prepares a direct upload and returns an upload URL plus a signed_blob_id. " \
-          "PUT the file to that URL. It adds nothing to this record yet. " \
-          "The parent record must already exist."
+          "Step 1 of 2. Step 2 is Attach, or Add File or Add Image for a press kit Files or Images " \
+          "section. Use this when you have the file yourself. Send filename, byte_size, checksum and " \
+          "content_type, and you get back an upload URL and a signed_blob_id. PUT the file to that " \
+          "URL, then send the signed_blob_id to step 2. For a press kit Files or Images section, " \
+          "step 2 is Add File or Add Image. For any other record, it's Attach. This step adds " \
+          "nothing to the record yet. The parent record must already exist."
       }.freeze
       ATTACH_OPENAPI = {
         title: "Attach",
-        summary: "Attach already-uploaded files",
+        summary:
+          "Step 2 of 2. Step 1 is Upload: call Upload, PUT the file to its URL, then send the " \
+          "signed_blob_id here. Links one signed_blob_id, or several in attachments, to this record " \
+          "as plain attachments. For a press kit Files or Images section, use Add File or Add Image " \
+          "instead, so the file shows up as an item in that section. The parent record must already exist.",
         description:
-          "Links already-uploaded blobs to this record. Send one signed_blob_id, or a batch in attachments. " \
-          "Call create_upload and PUT the file first. The parent record must already exist. " \
-          "This action comes from RecordingStudio Attachable."
+          "Step 2 of 2. Step 1 is Upload: call Upload, PUT the file to its URL, then send the " \
+          "signed_blob_id here. Links one signed_blob_id, or several in attachments, to this record " \
+          "as plain attachments. For a press kit Files or Images section, use Add File or Add Image " \
+          "instead, so the file shows up as an item in that section. The parent record must already exist."
       }.freeze
       IMPORT_ATTACHMENT_OPENAPI = {
         title: "Import",
-        summary: "Fetch a file from a URL and attach it",
+        summary:
+          "One step, no upload needed. Use this when the file is already online at a URL. " \
+          "It downloads the file and attaches it to this record as a plain attachment in a single call, " \
+          "so there's no Upload, PUT or signed_blob_id. The parent record must already exist.",
         description:
-          "Fetches a file from a URL and attaches it to this record. The parent record must already exist. " \
-          "This path does not return an upload URL or signed_blob_id."
+          "One step, no upload needed. Use this when the file is already online at a URL. " \
+          "It downloads the file and attaches it to this record as a plain attachment in a single call, " \
+          "so there's no Upload, PUT or signed_blob_id. The parent record must already exist."
       }.freeze
 
       def register!(api)

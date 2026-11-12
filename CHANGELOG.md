@@ -11,6 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Dummy `AttachmentsMetricsTest` restores admin resolvers and `Current.actor` after each example, so later tests are not left unauthorized.
 
+## [0.22.3] - 2026-11-12
+
+### Changed
+
+- OpenAPI summary and description for Upload, Attach, and Import now tell an AI agent which step each action is, when to use it, and that the parent record must already exist. MCP describe shows the summary. Titles stay Upload, Attach, and Import.
+- Upload names step 2 as Attach, or Add File or Add Image for a press kit Files or Images section. Attach names step 1 as Upload, then PUT, then send the signed_blob_id. Import copy is unchanged.
+
+### Upgrade Notes
+
+- Bump to `0.22.3`. Docs-only. No behavior change.
+
 ## [0.22.2] - 2026-11-12
 
 ### Changed
@@ -611,7 +622,9 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.3...HEAD
+[0.22.3]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.2...v0.22.3
+[0.22.2]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.1...v0.22.2
 [0.22.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.21.1...v0.22.0
 [0.16.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.15.0...v0.16.0

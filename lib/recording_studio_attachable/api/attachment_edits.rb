@@ -113,7 +113,7 @@ module RecordingStudioAttachable
         def revise_openapi
           {
             title: "Attachment - Revise",
-            summary: "Attachment - Revise",
+            summary: "Change the caption or alt text on this file.",
             description: "Change the caption or alt text on this file."
           }
         end
@@ -121,7 +121,7 @@ module RecordingStudioAttachable
         def replace_openapi
           {
             title: "Attachment - Replace",
-            summary: "Attachment - Replace",
+            summary: "Swap this file for one you already uploaded.",
             description: "Swap this file for one you already uploaded."
           }
         end
@@ -129,7 +129,7 @@ module RecordingStudioAttachable
         def remove_openapi
           {
             title: "Attachment - Remove",
-            summary: "Attachment - Remove",
+            summary: "Take this file off the page.",
             description: "Take this file off the page."
           }
         end

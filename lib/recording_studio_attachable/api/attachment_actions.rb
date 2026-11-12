@@ -110,6 +110,7 @@ module RecordingStudioAttachable
         def presentation(source)
           source.slice(:name, :description, :caption, :credit, :alt_text)
         end
+        public :presentation
       end
 
       class ImportAttachment
@@ -328,6 +329,7 @@ module RecordingStudioAttachable
           { type: :string, required: false, allow_blank: true }
         end
       end
+      public_class_method :optional_string
     end
   end
 end

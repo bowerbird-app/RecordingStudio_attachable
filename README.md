@@ -270,7 +270,7 @@ The disk service builds that URL from the current request host. This gem include
 
 `import_attachment` takes `url`, and optional `name` and `description`. Set `config.import_allowed_hosts` to the HTTPS hosts the host app trusts. Private addresses, non-HTTPS URLs, and any other host are rejected. The fetch uses `SafeRemoteFetch`.
 
-`revise_attachment`, `replace_attachment`, and `remove_attachment` wrap the same Recording methods the screens use. Call them on the parent recording and pass `attachment_recording_id` (the child `id` from `attach`). Each handler authorizes with `access_grant.authorize!` through Recording Studio Accessible, using the revise role for caption and file swaps and the remove role to take a file off.
+`revise_attachment`, `replace_attachment`, and `remove_attachment` wrap the same services the screens use. Call them on the parent recording and pass `attachment_recording_id` (the child `id` from `attach`). Recording Studio API authorizes the parent recording with each action's `required_role` through Accessible. Revise and replace use the revise role. Remove uses the remove role.
 
 `revise_attachment` takes optional `name`, `description`, `caption`, `credit`, and `alt_text`, and writes through `Recording#revise_attachment_metadata`.
 

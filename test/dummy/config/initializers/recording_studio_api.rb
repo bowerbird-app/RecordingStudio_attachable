@@ -37,14 +37,6 @@ RecordingStudioApi.register_recordable_type_api(
   output_keys: %i[title]
 )
 
-RecordingStudioApi.register_recordable_type_api(
-  "RecordingStudioAttachable::Attachment",
-  operations: %i[show],
-  serializer: ->(attachment, **) { { name: attachment.name, caption: attachment.caption, alt_text: attachment.alt_text } },
-  output_keys: %i[name caption alt_text],
-  capability_actions: %i[revise_attachment replace_attachment remove_attachment]
-)
-
 RecordingStudioAttachable::Api.register!(apis: [:public, :operations])
 
 RecordingStudio.enable_capability(:trashable, on: "RecordingStudioAttachable::Attachment") if defined?(RecordingStudioTrashable)

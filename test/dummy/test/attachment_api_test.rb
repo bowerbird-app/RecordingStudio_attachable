@@ -240,6 +240,20 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     assert_includes json.dig("error", "message"), "attachment_recording_id"
   end
 
+  test "revise_attachment rejects an unknown attachment id" do
+    call(:post, "/workspaces/#{@root.id}/actions/revise_attachment", @editor_token, attachment_recording_id: SecureRandom.uuid, caption: "Front")
+    assert_response :unprocessable_entity
+    assert_equal "invalid_input", json.dig("error", "code")
+    assert_includes json.dig("error", "message"), "not an attachment"
+  end
+
+  test "revise_attachment rejects a page id as attachment_recording_id" do
+    call(:post, "/workspaces/#{@root.id}/actions/revise_attachment", @editor_token, attachment_recording_id: @page.id, caption: "Front")
+    assert_response :unprocessable_entity
+    assert_equal "invalid_input", json.dig("error", "code")
+    assert_includes json.dig("error", "message"), "not an attachment"
+  end
+
   test "replace_attachment swaps the file through a signed blob id" do
     child = attach_png("Door")
     next_bytes = png_bytes
@@ -265,6 +279,7 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     call(:post, "/workspaces/#{@root.id}/actions/replace_attachment", @editor_token, attachment_recording_id: child.fetch("id"), signed_blob_id: "forged")
     assert_response :unprocessable_entity
     assert_equal "invalid_input", json.dig("error", "code")
+    assert_includes json.dig("error", "message"), "mismatched digest"
   end
 
   test "remove_attachment removes for an admin and denies an editor through Accessible" do

@@ -226,7 +226,7 @@ The upload, attach, and import actions are capability actions on the parent reco
 RecordingStudioAttachable::Api.register!(apis: [:public, :operations])
 ```
 
-Configure a named API before you pass it. `register!` reads `config.auth_role_for(:upload)` at that moment. `import_attachment` uses `config.auth_roles[:import]` when that key exists, and `:upload` otherwise.
+Configure a named API before you pass it. `register!` reads `config.auth_role_for(:upload)` at that moment. `import_attachment` uses `config.auth_roles[:import]` when that key exists, and `:upload` otherwise. `revise_attachment` and `replace_attachment` use `:revise` when that key exists. `remove_attachment` uses `:remove` when that key exists.
 
 3. Allow the actions on each parent type. Registration alone does not expose them.
 
@@ -234,7 +234,7 @@ Configure a named API before you pass it. `register!` reads `config.auth_role_fo
 RecordingStudioApi.register_recordable_type_api(
   "Workspace",
   operations: %i[index show],
-  capability_actions: %i[create_upload attach import_attachment]
+  capability_actions: %i[create_upload attach import_attachment revise_attachment replace_attachment remove_attachment]
 )
 ```
 
@@ -244,13 +244,13 @@ A press kit gem does the same on its image and file sections:
 RecordingStudioApi.register_recordable_type_api(
   "RecordingStudioPresskits::Images",
   operations: %i[index show],
-  capability_actions: %i[update_image reorder_images remove_image create_upload attach import_attachment]
+  capability_actions: %i[update_image reorder_images remove_image create_upload attach import_attachment revise_attachment replace_attachment remove_attachment]
 )
 
 RecordingStudioApi.register_recordable_type_api(
   "RecordingStudioPresskits::Files",
   operations: %i[index show],
-  capability_actions: %i[update_file reorder_files remove_file create_upload attach import_attachment]
+  capability_actions: %i[update_file reorder_files remove_file create_upload attach import_attachment revise_attachment replace_attachment remove_attachment]
 )
 ```
 
@@ -270,7 +270,15 @@ The disk service builds that URL from the current request host. This gem include
 
 `import_attachment` takes `url`, and optional `name` and `description`. Set `config.import_allowed_hosts` to the HTTPS hosts the host app trusts. Private addresses, non-HTTPS URLs, and any other host are rejected. The fetch uses `SafeRemoteFetch`.
 
-Validation failures are `422` `invalid_input`. A caller without the upload role is `403`.
+`revise_attachment`, `replace_attachment`, and `remove_attachment` wrap the same services the screens use. Call them on the parent recording and pass `attachment_recording_id` (the child `id` from `attach`). Recording Studio API authorizes the parent recording with each action's `required_role` through Accessible. Revise and replace use the revise role. Remove uses the remove role.
+
+`revise_attachment` takes optional `name`, `description`, `caption`, `credit`, and `alt_text`, and writes through `Recording#revise_attachment_metadata`.
+
+`replace_attachment` takes `signed_blob_id` from `create_upload`, the same signed blob `attach` uses, and writes through `Recording#replace_attachment_file`.
+
+`remove_attachment` writes through `Recording#remove_attachment`. Trashable is optional. When that mixin is on the attachment, the recording goes to trash. When it is not, the recording is destroyed.
+
+Validation failures are `422` `invalid_input`. A caller without the upload role is `403`. Revise and replace use the revise role (`:edit` by default). Remove uses the remove role (`:admin` by default).
 
 Browser clients that PUT straight to S3 need a CORS rule on the bucket. Allow `PUT` from the app origin, and allow the headers `Content-Type`, `Content-MD5`, and `Content-Disposition`. A server or other non-browser client sends those headers itself and does not need the CORS rule.
 

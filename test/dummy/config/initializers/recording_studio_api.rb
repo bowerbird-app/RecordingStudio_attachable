@@ -27,7 +27,7 @@ RecordingStudioApi.register_recordable_type_api(
   operations: %i[index show],
   serializer: ->(workspace, **) { { name: workspace.name } },
   output_keys: %i[name],
-  capability_actions: %i[create_upload attach import_attachment]
+  capability_actions: %i[create_upload attach import_attachment revise_attachment replace_attachment remove_attachment]
 )
 
 RecordingStudioApi.register_recordable_type_api(

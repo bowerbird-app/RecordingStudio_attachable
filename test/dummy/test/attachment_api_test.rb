@@ -191,6 +191,9 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     paths = JSON.parse(response.body).fetch("paths").keys
     assert paths.any? { |path| path.include?("/workspaces/") && path.include?("create_upload") }
     assert paths.any? { |path| path.include?("/workspaces/") && path.include?("import_attachment") }
+    assert paths.any? { |path| path.include?("/workspaces/") && path.include?("revise_attachment") }
+    assert paths.any? { |path| path.include?("/workspaces/") && path.include?("replace_attachment") }
+    assert paths.any? { |path| path.include?("/workspaces/") && path.include?("remove_attachment") }
     refute paths.any? { |path| path.include?("/pages/") && path.include?("create_upload") }
     refute paths.any? { |path| path.include?("/pages/") && path.include?("attach") }
   end
@@ -203,7 +206,108 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
       assert_equal :edit, action.required_role
       assert RecordingStudioApi.capability_action(:attach, api: api)
       assert RecordingStudioApi.capability_action(:import_attachment, api: api)
+      revise = RecordingStudioApi.capability_action(:revise_attachment, api: api)
+      assert_equal :edit, revise.required_role
+      assert_equal "Attachment - Revise", revise.openapi.fetch(:title)
+      assert_equal :edit, RecordingStudioApi.capability_action(:replace_attachment, api: api).required_role
+      assert_equal :admin, RecordingStudioApi.capability_action(:remove_attachment, api: api).required_role
     end
+  end
+
+  test "revise_attachment updates caption and alt text" do
+    child = attach_png("Door")
+    revised = call(:post, "/workspaces/#{@root.id}/actions/revise_attachment", @editor_token, attachment_recording_id: child.fetch("id"), caption: "Front door", alt_text: "A blue door")
+    assert_response :success, response.body
+    assert_equal "Door", revised.fetch("name")
+
+    recording = RecordingStudio::Recording.find(child.fetch("id"))
+    assert_equal "Front door", recording.recordable.caption
+    assert_equal "A blue door", recording.recordable.alt_text
+    assert recording.events.exists?(action: "attachment_metadata_revised")
+  end
+
+  test "revise_attachment denies a viewer through Accessible" do
+    child = attach_png("Door")
+    call(:post, "/workspaces/#{@root.id}/actions/revise_attachment", @viewer_token, attachment_recording_id: child.fetch("id"), caption: "Nope")
+    assert_response :forbidden
+    assert_equal "forbidden", json.dig("error", "code")
+  end
+
+  test "revise_attachment rejects a missing attachment id" do
+    call(:post, "/workspaces/#{@root.id}/actions/revise_attachment", @editor_token, caption: "Front")
+    assert_response :unprocessable_entity
+    assert_equal "invalid_input", json.dig("error", "code")
+    assert_includes json.dig("error", "message"), "attachment_recording_id"
+  end
+
+  test "revise_attachment rejects an unknown attachment id" do
+    call(:post, "/workspaces/#{@root.id}/actions/revise_attachment", @editor_token, attachment_recording_id: SecureRandom.uuid, caption: "Front")
+    assert_response :unprocessable_entity
+    assert_equal "invalid_input", json.dig("error", "code")
+    assert_includes json.dig("error", "message"), "not an attachment"
+  end
+
+  test "revise_attachment rejects a page id as attachment_recording_id" do
+    call(:post, "/workspaces/#{@root.id}/actions/revise_attachment", @editor_token, attachment_recording_id: @page.id, caption: "Front")
+    assert_response :unprocessable_entity
+    assert_equal "invalid_input", json.dig("error", "code")
+    assert_includes json.dig("error", "message"), "not an attachment"
+  end
+
+  test "replace_attachment swaps the file through a signed blob id" do
+    child = attach_png("Door")
+    next_bytes = png_bytes
+    ticket = upload_ticket("new.png", "image/png", next_bytes)
+    put_upload(ticket, next_bytes)
+
+    replaced = call(:post, "/workspaces/#{@root.id}/actions/replace_attachment", @editor_token, attachment_recording_id: child.fetch("id"), signed_blob_id: ticket.fetch("signed_blob_id"))
+    assert_response :success, response.body
+    recording = RecordingStudio::Recording.find(replaced.fetch("id"))
+    assert_equal "image/png", recording.recordable.content_type
+    assert recording.events.exists?(action: "attachment_file_replaced")
+  end
+
+  test "replace_attachment denies a viewer through Accessible" do
+    child = attach_png("Door")
+    call(:post, "/workspaces/#{@root.id}/actions/replace_attachment", @viewer_token, attachment_recording_id: child.fetch("id"), signed_blob_id: "forged")
+    assert_response :forbidden
+    assert_equal "forbidden", json.dig("error", "code")
+  end
+
+  test "replace_attachment rejects a forged signed blob id" do
+    child = attach_png("Door")
+    call(:post, "/workspaces/#{@root.id}/actions/replace_attachment", @editor_token, attachment_recording_id: child.fetch("id"), signed_blob_id: "forged")
+    assert_response :unprocessable_entity
+    assert_equal "invalid_input", json.dig("error", "code")
+    assert_includes json.dig("error", "message"), "mismatched digest"
+  end
+
+  test "remove_attachment removes for an admin and denies an editor through Accessible" do
+    child = attach_png("Door")
+    owner_token = token_for(@owner_access)
+    removed = call(:post, "/workspaces/#{@root.id}/actions/remove_attachment", owner_token, attachment_recording_id: child.fetch("id"))
+    assert_response :success, response.body
+    recording = RecordingStudio::Recording.unscoped.find(child.fetch("id"))
+    assert recording.trashed_at.present?
+    assert_equal child.fetch("id"), removed.fetch("id")
+
+    leftover = attach_png("Stay")
+    call(:post, "/workspaces/#{@root.id}/actions/remove_attachment", @editor_token, attachment_recording_id: leftover.fetch("id"))
+    assert_response :forbidden
+    assert_equal "forbidden", json.dig("error", "code")
+  end
+
+  test "remove_attachment denies a viewer through Accessible" do
+    child = attach_png("Door")
+    call(:post, "/workspaces/#{@root.id}/actions/remove_attachment", @viewer_token, attachment_recording_id: child.fetch("id"))
+    assert_response :forbidden
+    assert_equal "forbidden", json.dig("error", "code")
+  end
+
+  test "remove_attachment rejects a missing attachment id" do
+    call(:post, "/workspaces/#{@root.id}/actions/remove_attachment", token_for(@owner_access), {})
+    assert_response :unprocessable_entity
+    assert_equal "invalid_input", json.dig("error", "code")
   end
 
   private
@@ -285,6 +389,15 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
 
   def upload_ticket(filename, content_type, bytes)
     call(:post, "/workspaces/#{@root.id}/actions/create_upload", @editor_token, upload_params(filename, content_type, bytes))
+  end
+
+  def attach_png(name)
+    bytes = png_bytes
+    created = upload_ticket("photo.png", "image/png", bytes)
+    put_upload(created, bytes)
+    attached = call(:post, "/workspaces/#{@root.id}/actions/attach", @editor_token, signed_blob_id: created.fetch("signed_blob_id"), name: name)
+    assert_response :success, response.body
+    attached
   end
 
   def put_upload(ticket, bytes)

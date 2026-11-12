@@ -5,10 +5,18 @@ require_relative "../../app/services/recording_studio_attachable/services/applic
 require_relative "../../app/services/recording_studio_attachable/services/record_attachment_upload"
 require_relative "../../app/services/recording_studio_attachable/services/record_attachment_uploads"
 require_relative "../../app/services/recording_studio_attachable/services/import_attachment"
+require_relative "../../app/services/recording_studio_attachable/services/revise_attachment_metadata"
+require_relative "../../app/services/recording_studio_attachable/services/replace_attachment_file"
+require_relative "../../app/services/recording_studio_attachable/services/remove_attachment"
 
 class AttachmentActionsTest < Minitest::Test
-  FakeContext = Struct.new(:recording, :params, :actor, keyword_init: true)
-  FakeRecording = Struct.new(:id, :recordable_type, :root_recording, keyword_init: true)
+  FakeContext = Struct.new(:recording, :params, :actor, :access_grant, keyword_init: true)
+  FakeRecording = Struct.new(:id, :recordable_type, :root_recording, :parent_recording, keyword_init: true)
+  AllowGrant = Struct.new(:actor, keyword_init: true) do
+    def authorize!(**)
+      nil
+    end
+  end
   FakeBlob = Struct.new(:id, :persisted, :purged, keyword_init: true) do
     def persisted?
       persisted
@@ -65,6 +73,9 @@ class AttachmentActionsTest < Minitest::Test
 
     assert_equal :admin, RecordingStudioAttachable::Api.role_for(:import_attachment)
     assert_equal :edit, RecordingStudioAttachable::Api.role_for(:create_upload)
+    assert_equal :edit, RecordingStudioAttachable::Api.role_for(:revise_attachment)
+    assert_equal :edit, RecordingStudioAttachable::Api.role_for(:replace_attachment)
+    assert_equal :admin, RecordingStudioAttachable::Api.role_for(:remove_attachment)
   end
 
   def test_create_upload_returns_a_direct_upload_ticket
@@ -223,6 +234,87 @@ class AttachmentActionsTest < Minitest::Test
     end
   end
 
+  def test_revise_attachment_updates_caption_and_alt_when_authorized
+    attachment = attachment_recording
+    captured = nil
+    success = Struct.new(:success?, :value, :error, :errors).new(true, attachment, nil, [])
+    RecordingStudioAttachable::Services::ReviseAttachmentMetadata.stub(:call, lambda { |**kwargs|
+      captured = kwargs
+      success
+    }) do
+      RecordingStudioAttachable::Api::AttachmentActions::Payload.stub(:one, { id: "att-1", name: "Door" }) do
+        result = revise.call(parent_context(attachment, { caption: "Front", alt_text: "Doorway" }))
+        assert_equal "att-1", result[:id]
+      end
+    end
+
+    assert_equal attachment, captured[:attachment_recording]
+    assert_equal :actor, captured[:actor]
+    assert_equal "Front", captured[:caption]
+    assert_equal "Doorway", captured[:alt_text]
+  end
+
+  def test_revise_attachment_rejects_a_parent_recording_without_an_attachment_id
+    error = assert_raises(RecordingStudioApi::InvalidActionInputError) do
+      revise.call(context_for(caption: "Front"))
+    end
+    assert_includes error.message, "attachment_recording_id"
+  end
+
+  def test_replace_attachment_swaps_the_signed_blob_when_authorized
+    attachment = attachment_recording
+    captured = nil
+    success = Struct.new(:success?, :value, :error, :errors).new(true, attachment, nil, [])
+    RecordingStudioAttachable::Services::ReplaceAttachmentFile.stub(:call, lambda { |**kwargs|
+      captured = kwargs
+      success
+    }) do
+      RecordingStudioAttachable::Api::AttachmentActions::Payload.stub(:one, { id: "att-1" }) do
+        result = replace.call(parent_context(attachment, { signed_blob_id: "signed-2" }))
+        assert_equal "att-1", result[:id]
+      end
+    end
+
+    assert_equal "signed-2", captured[:signed_blob_id]
+    assert_equal :actor, captured[:actor]
+  end
+
+  def test_replace_attachment_rejects_a_forged_signed_blob_from_the_service
+    attachment = attachment_recording
+    failure = Struct.new(:success?, :value, :error, :errors).new(false, nil, "mismatched digest", [])
+    RecordingStudioAttachable::Services::ReplaceAttachmentFile.stub(:call, failure) do
+      error = assert_raises(RecordingStudioApi::InvalidActionInputError) do
+        replace.call(parent_context(attachment, { signed_blob_id: "forged" }))
+      end
+      assert_includes error.message, "mismatched digest"
+    end
+  end
+
+  def test_remove_attachment_removes_when_authorized
+    attachment = attachment_recording
+    captured = nil
+    success = Struct.new(:success?, :value, :error, :errors).new(true, attachment, nil, [])
+    RecordingStudioAttachable::Services::RemoveAttachment.stub(:call, lambda { |**kwargs|
+      captured = kwargs
+      success
+    }) do
+      RecordingStudioAttachable::Api::AttachmentActions::Payload.stub(:one, { id: "att-1" }) do
+        result = remove.call(parent_context(attachment, {}))
+        assert_equal "att-1", result[:id]
+      end
+    end
+
+    assert_equal attachment, captured[:attachment_recording]
+    assert_equal :actor, captured[:actor]
+  end
+
+  def test_remove_attachment_rejects_a_workspace_recording
+    error = assert_raises(RecordingStudioApi::InvalidActionInputError) do
+      remove.call(context_for({}))
+    end
+    assert_includes error.message, "attachment_recording_id"
+  end
+
   private
 
   def create_upload
@@ -235,6 +327,43 @@ class AttachmentActionsTest < Minitest::Test
 
   def import
     RecordingStudioAttachable::Api::AttachmentActions::ImportAttachment
+  end
+
+  def revise
+    RecordingStudioAttachable::Api::AttachmentActions::ReviseAttachment
+  end
+
+  def replace
+    RecordingStudioAttachable::Api::AttachmentActions::ReplaceAttachment
+  end
+
+  def remove
+    RecordingStudioAttachable::Api::AttachmentActions::RemoveAttachment
+  end
+
+  def attachment_recording
+    parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace")
+    FakeRecording.new(
+      id: "att-1",
+      recordable_type: "RecordingStudioAttachable::Attachment",
+      parent_recording: parent
+    )
+  end
+
+  def parent_context(attachment, params)
+    children = Object.new
+    children.define_singleton_method(:find_by) do |**kwargs|
+      kwargs[:id].to_s == attachment.id.to_s ? attachment : nil
+    end
+    root = FakeRecording.new(id: "root-1", recordable_type: "Workspace")
+    recording = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: root)
+    recording.define_singleton_method(:child_recordings) { children }
+    FakeContext.new(
+      recording: recording,
+      actor: :actor,
+      params: params.merge(attachment_recording_id: attachment.id),
+      access_grant: AllowGrant.new(actor: :actor)
+    )
   end
 
   def context(content_type:, byte_size:)
@@ -250,7 +379,7 @@ class AttachmentActionsTest < Minitest::Test
   def context_for(params)
     root = FakeRecording.new(id: "root-1", recordable_type: "Workspace")
     recording = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: root)
-    FakeContext.new(recording: recording, actor: :actor, params: params)
+    FakeContext.new(recording: recording, actor: :actor, params: params, access_grant: AllowGrant.new(actor: :actor))
   end
 
   def ensure_blob!

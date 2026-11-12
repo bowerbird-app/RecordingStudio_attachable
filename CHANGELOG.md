@@ -7,11 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Dummy `AttachmentsMetricsTest` restores admin resolvers and `Current.actor` after each example, so later tests are not left unauthorized.
+
 ## [0.23.0] - 2026-11-12
 
 ### Added
 
-- Recording Studio API actions `revise_attachment`, `replace_attachment`, and `remove_attachment` on the `:attachable` capability. They wrap `Services::ReviseAttachmentMetadata`, `Services::ReplaceAttachmentFile`, and `Services::RemoveAttachment`. Recording Studio API authorizes the parent recording with each action's `required_role` through Accessible. Revise and replace use `config.auth_roles[:revise]` (`:edit` by default). Remove uses `config.auth_roles[:remove]` (`:admin` by default). Call them on the parent type. Pass `attachment_recording_id` for the child returned by `attach`. `replace_attachment` takes the same `signed_blob_id` as `attach`. Remove does not require Trashable.
+- Recording Studio API actions `revise_attachment`, `replace_attachment`, and `remove_attachment` on the `:attachable` capability. They wrap `Services::ReviseAttachmentMetadata`, `Services::ReplaceAttachmentFile`, and `Services::RemoveAttachment`. Recording Studio API authorizes the parent recording with each action's `required_role` through Accessible. Revise and replace use `config.auth_roles[:revise]` (`:editor` by default). Remove uses `config.auth_roles[:remove]` (`:admin` by default). Call them on the parent type. Pass `attachment_recording_id` for the child returned by `attach`. `replace_attachment` takes the same `signed_blob_id` as `attach`. Remove does not require Trashable.
 
 ### Upgrade Notes
 

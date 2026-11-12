@@ -162,6 +162,7 @@ en:
         finalization_failed: "Finalization failed"
         remote_file: "Remote file"
         file_exceeds_max_size: "File exceeds the maximum allowed size"
+        file_exceeds_plan_size: "This file is too large for your plan."
         type_not_allowed: "%{type} is not allowed. Allowed types: %{types}"
         unknown_type: "Unknown type"
         could_not_prepare_file: "Could not prepare file for upload"

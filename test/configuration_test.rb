@@ -34,6 +34,7 @@ class ConfigurationTest < Minitest::Test
     assert_equal false, @configuration.purge_unattached_blobs
     assert_equal [], @configuration.import_allowed_hosts
     assert_nil @configuration.storage_limit
+    assert_nil @configuration.file_size_limit
     assert_not @configuration.image_processing_enabled
     assert_equal 2560, @configuration.image_processing_max_width
     assert_equal 2560, @configuration.image_processing_max_height
@@ -291,6 +292,21 @@ class ConfigurationTest < Minitest::Test
     assert_equal({ view: :view, upload: :edit }, roles)
   end
 
+  def test_file_size_limit_blank_values_are_stored_as_nil
+    @configuration.file_size_limit = :max_file_bytes
+    assert_equal :max_file_bytes, @configuration.file_size_limit
+
+    @configuration.file_size_limit = "  "
+    assert_nil @configuration.file_size_limit
+
+    @configuration.merge!(file_size_limit: "")
+    assert_nil @configuration.file_size_limit
+
+    @configuration.merge!(file_size_limit: "max_file_bytes")
+    assert_equal "max_file_bytes", @configuration[:file_size_limit]
+    assert_equal "max_file_bytes", @configuration.to_h[:file_size_limit]
+  end
+
   def test_storage_limit_blank_values_are_stored_as_nil
     @configuration.storage_limit = :storage_bytes
     assert_equal :storage_bytes, @configuration.storage_limit
@@ -321,6 +337,7 @@ class ConfigurationTest < Minitest::Test
         purge_unattached_blobs: false,
         import_allowed_hosts: [],
         storage_limit: nil,
+        file_size_limit: nil,
         image_processing_enabled: false,
         image_processing_max_width: 2560,
         image_processing_max_height: 2560,

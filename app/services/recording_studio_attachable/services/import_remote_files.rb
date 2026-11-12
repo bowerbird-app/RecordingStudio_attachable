@@ -82,10 +82,19 @@ module RecordingStudioAttachable
       end
 
       def reject_oversized!(byte_size)
-        max_bytes = RecordingStudioAttachable.configuration.max_file_size
-        return if max_bytes.blank? || byte_size.blank?
+        return if byte_size.blank?
 
-        raise ArgumentError, "Remote file exceeds maximum file size" if byte_size.to_i > max_bytes
+        code_max = import_code_max
+        FileSizeLimit.enforce!(parent_recording, byte_size.to_i, code_max: code_max)
+        return if code_max.blank?
+
+        raise ArgumentError, "Remote file exceeds maximum file size" if byte_size.to_i > code_max
+      end
+
+      def import_code_max
+        return RecordingStudioAttachable.configuration.max_file_size unless parent_recording.respond_to?(:recordable_type)
+
+        configured_capability_option(capability_options_for(parent_recording), :max_file_size)
       end
 
       def io_size(io)

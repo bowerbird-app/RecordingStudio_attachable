@@ -62,7 +62,7 @@ module RecordingStudioAttachable
       end
 
       def storage_limit_exception?(error)
-        error.is_a?(StorageLimitUnknown) || error.is_a?(StorageLimitError)
+        error.is_a?(StorageLimitUnknown) || error.is_a?(StorageLimitError) || error.is_a?(FileSizeLimitUnknown)
       end
 
       def success(value = nil)

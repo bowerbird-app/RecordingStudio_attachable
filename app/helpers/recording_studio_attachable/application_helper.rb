@@ -65,6 +65,7 @@ module RecordingStudioAttachable
         "js.finalization_failed" => "Finalization failed",
         "js.remote_file" => "Remote file",
         "js.file_exceeds_max_size" => "File exceeds the maximum allowed size",
+        "js.file_exceeds_plan_size" => "This file is too large for your plan.",
         "js.type_not_allowed" => "%{type} is not allowed. Allowed types: %{types}",
         "js.unknown_type" => "Unknown type",
         "js.could_not_prepare_file" => "Could not prepare file for upload",

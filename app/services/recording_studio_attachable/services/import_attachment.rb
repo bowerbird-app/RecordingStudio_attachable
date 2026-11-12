@@ -28,7 +28,7 @@ module RecordingStudioAttachable
         authorize!(action: :upload, actor: resolve_actor(actor), recording: parent_recording, capability_options: capability_options)
 
         blob = create_blob!
-        validate_blob!(blob, capability_options: capability_options)
+        validate_blob!(blob, capability_options: capability_options, recording: parent_recording)
         result = RecordAttachmentUpload.call(
           parent_recording: parent_recording,
           signed_blob_id: DirectUpload.sign(blob),
@@ -48,6 +48,11 @@ module RecordingStudioAttachable
       rescue ArgumentError => e
         purge_blob(blob)
         failure(e.message)
+      rescue StandardError => e
+        raise unless FileSizeLimit.plan_limit?(e)
+
+        purge_blob(blob)
+        raise
       end
 
       def create_blob!

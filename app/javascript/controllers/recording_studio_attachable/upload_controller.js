@@ -27,6 +27,7 @@ export default class extends Controller {
     directUploadUrl: String,
     finalizeUrl: String,
     maxFileSize: Number,
+    planLimited: Boolean,
     maxFilesCount: Number,
     imageProcessingEnabled: Boolean,
     imageProcessingMaxWidth: Number,
@@ -415,7 +416,10 @@ export default class extends Controller {
   }
 
   validationError(file) {
-    if (this.maxFileSizeValue && file.size > this.maxFileSizeValue) return this.i18nText("js.file_exceeds_max_size", "File exceeds the maximum allowed size")
+    if (this.maxFileSizeValue && file.size > this.maxFileSizeValue) {
+      if (this.planLimitedValue) return this.i18nText("js.file_exceeds_plan_size", "This file is too large for your plan.")
+      return this.i18nText("js.file_exceeds_max_size", "File exceeds the maximum allowed size")
+    }
     if (!this.contentTypeAllowed(file)) {
       return this.i18nFormat("js.type_not_allowed", "%{type} is not allowed. Allowed types: %{types}", { type: file.type || this.i18nText("js.unknown_type", "Unknown type"), types: this.allowedContentTypePatterns().join(", ") })
     }

@@ -198,6 +198,29 @@ end
 
 The product stores the cap in Stripe metadata as `limit_<name>`. For the example above that key is `limit_storage_bytes`. Attachable registers the usage provider. The provider calls `RecordingStudioAttachable.storage_bytes_for(root)` and returns that integer. The total does not reset each billing period.
 
+`file_size_limit` is optional. It names a per-item Stripe limit for one new file. Leave it unset, or leave `recording_studio_stripe` unloaded, and uploads keep today's `max_file_size` checks. This gem does not depend on `recording_studio_stripe`.
+
+```ruby
+config.file_size_limit = :max_file_bytes
+```
+
+Declare that limit in the host Stripe initializer. `aggregation` must be `"per_item"`. Put the plan number in Product metadata `limit_max_file_bytes`. `recording_studio_stripe` 0.21.0 or newer provides `ceiling`, `allows?`, and `enforce_item!`.
+
+```ruby
+RecordingStudioStripe.configure do |config|
+  config.limits = {
+    max_file_bytes: {
+      aggregation: "per_item",
+      label: "Max file size",
+      unit: "bytes",
+      no_plan_ceiling: 10.megabytes
+    }
+  }
+end
+```
+
+The max for a parent type is the smaller of that type's `max_file_size` and `root.billing.limit(name).ceiling`. A nil ceiling leaves the code max in place. The plan cannot raise the code max. A file over the plan ceiling raises `RecordingStudioStripe::PlanLimitReached`. The uploader and the image picker show that smaller max. Existing attachments stay. A downgrade applies to the next upload. An unknown name, or a limit that is not per-item, raises `RecordingStudioAttachable::FileSizeLimitUnknown`.
+
 `storage_bytes_for` sums distinct original file blobs on attachment rows stamped with that root. The same blob counts once under one root. It counts again, in full, under every other root that still has it. Variant files are not included. Rows whose recording and events were already gone before the backfill stay uncounted. The total is an ActiveRecord query on the host connection.
 
 ### Operations API metrics

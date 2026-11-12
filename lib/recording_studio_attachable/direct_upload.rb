@@ -132,6 +132,9 @@ module RecordingStudioAttachable
 
       def reject_size!(recording, size)
         raise ArgumentError, "byte_size must be zero or more" if size.negative?
+
+        code_max = recording_option(recording, :max_file_size)
+        FileSizeLimit.enforce!(recording, size, code_max: code_max)
         return if size_allowed?(recording, size)
 
         raise ArgumentError, "File exceeds maximum file size"

@@ -5,6 +5,9 @@ RecordingStudioAttachable.configure do |config|
   config.max_file_size = 25.megabytes
   # Optional. Requires RecordingStudio_stripe in the host app.
   # config.storage_limit = :storage_bytes
+  # Optional per-item cap. Requires recording_studio_stripe 0.21.0 or newer.
+  # The plan can lower max_file_size. It cannot raise it. Leave unset to skip.
+  # config.file_size_limit = :max_file_bytes
   # Maximum number of files accepted in a single upload or import request.
   config.max_file_count = 20
   # Cap on unattached direct uploads waiting for this actor on one root.

@@ -43,7 +43,8 @@ module RecordingStudioAttachable
                   :direct_url_host,
                   :attachment_place_labels
 
-    attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode, :upload_presentation, :import_allowed_hosts, :layout
+    attr_reader :image_variants, :upload_providers, :storage_limit, :file_size_limit, :url_mode, :upload_presentation,
+                :import_allowed_hosts, :layout
 
     def layout=(value)
       @layout = RecordingStudio::Layout.accept(value)
@@ -213,6 +214,11 @@ module RecordingStudioAttachable
       @storage_limit = normalized.presence
     end
 
+    def file_size_limit=(value)
+      normalized = value.is_a?(String) ? value.strip : value
+      @file_size_limit = normalized.presence
+    end
+
     def to_h
       {
         allowed_content_types: allowed_content_types,
@@ -224,6 +230,7 @@ module RecordingStudioAttachable
         purge_unattached_blobs: purge_unattached_blobs,
         import_allowed_hosts: import_allowed_hosts,
         storage_limit: storage_limit,
+        file_size_limit: file_size_limit,
         image_processing_enabled: image_processing_enabled,
         image_processing_max_width: image_processing_max_width,
         image_processing_max_height: image_processing_max_height,
@@ -267,6 +274,7 @@ module RecordingStudioAttachable
       @purge_unattached_blobs = false
       @import_allowed_hosts = []
       @storage_limit = nil
+      @file_size_limit = nil
       @image_processing_enabled = false
       @image_processing_max_width = 2560
       @image_processing_max_height = 2560

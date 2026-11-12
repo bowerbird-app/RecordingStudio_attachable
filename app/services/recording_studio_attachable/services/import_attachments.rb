@@ -80,7 +80,7 @@ module RecordingStudioAttachable
           service_name: attachment[:service_name],
           metadata: DirectUpload.metadata_for(recording: parent_recording, actor: resolve_actor(actor))
         )
-        validate_blob!(blob, capability_options: capability_options)
+        validate_blob!(blob, capability_options: capability_options, recording: parent_recording)
         {
           blob: blob, payload: attachment, name: resolved_import_name(attachment),
           description: attachment[:description],
@@ -90,6 +90,12 @@ module RecordingStudioAttachable
         @staged_blobs = staged.map { |entry| entry[:blob] } + [blob]
         details = [attachment.except(:io).merge(error: e.message)]
         raise BatchFailure.new(batch_failure_message(attachment, e.message), details: details)
+      rescue StandardError => e
+        raise unless FileSizeLimit.plan_limit?(e)
+
+        @staged_blobs = staged.map { |entry| entry[:blob] } + [blob]
+        RecordingStudioAttachable::StorageLimit.discard_unattached!(@staged_blobs)
+        raise
       end
 
       def resolved_import_name(attachment)

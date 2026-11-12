@@ -130,7 +130,21 @@ module RecordingStudioAttachable
         attr_reader :context, :params, :fetched
 
         def fetch
-          SafeRemoteFetch.call(remote_file, max_bytes: Limits.max_file_size(context.recording))
+          code_max = Limits.max_file_size(context.recording)
+          SafeRemoteFetch.call(remote_file, max_bytes: FileSizeLimit.effective_max(context.recording, code_max))
+        rescue SafeRemoteFetch::Error => e
+          raise_plan_size!(e, code_max)
+        end
+
+        def raise_plan_size!(error, code_max)
+          raise error unless plan_size_error?(error, code_max)
+
+          over = FileSizeLimit.effective_max(context.recording, code_max).to_i + 1
+          FileSizeLimit.enforce!(context.recording, over, code_max: code_max)
+        end
+
+        def plan_size_error?(error, code_max)
+          error.message == "Remote file exceeds maximum file size" && FileSizeLimit.lowers?(context.recording, code_max)
         end
 
         def record
@@ -177,6 +191,7 @@ module RecordingStudioAttachable
           ArgumentError,
           RecordingStudioAttachable::StorageLimitError,
           RecordingStudioAttachable::StorageLimitUnknown,
+          RecordingStudioAttachable::FileSizeLimitUnknown,
           RecordingStudioAttachable::SafeRemoteFetch::Error,
           ActiveRecord::RecordInvalid,
           URI::InvalidURIError

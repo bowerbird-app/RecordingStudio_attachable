@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Dummy `AttachmentsMetricsTest` restores admin resolvers and `Current.actor` after each example, so later tests are not left unauthorized.
+
 ## [0.22.1] - 2026-11-05
 
 ### Changed

@@ -4,10 +4,6 @@ require "test_helper"
 
 class AttachmentsMetricsTest < ActiveSupport::TestCase
   setup do
-    @previous_actor = Current.actor
-    configuration = RecordingStudioAdmin.configuration
-    @previous_site_resolver = configuration.site_admin_recording_resolver
-    @previous_access_resolver = configuration.access_recording_resolver
     @actor = create_user("metrics-staff-#{SecureRandom.hex(4)}@example.com")
     @denied = create_user("metrics-denied-#{SecureRandom.hex(4)}@example.com")
     workspace = Workspace.create!(name: "Metrics #{SecureRandom.hex(4)}")
@@ -21,9 +17,8 @@ class AttachmentsMetricsTest < ActiveSupport::TestCase
 
   teardown do
     configuration = RecordingStudioAdmin.configuration
-    configuration.site_admin_recording_resolver = @previous_site_resolver
-    configuration.access_recording_resolver = @previous_access_resolver
-    Current.actor = @previous_actor
+    configuration.site_admin_recording_resolver = nil
+    configuration.access_recording_resolver = nil
   end
 
   test "registers the attachments metrics on the operations API" do

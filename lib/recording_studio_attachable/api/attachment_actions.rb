@@ -5,10 +5,34 @@ module RecordingStudioAttachable
     module AttachmentActions
       module_function
 
+      CREATE_UPLOAD_OPENAPI = {
+        title: "Upload",
+        summary: "Prepare a direct upload",
+        description:
+          "Prepares a direct upload and returns an upload URL plus a signed_blob_id. " \
+          "PUT the file to that URL. It adds nothing to this record yet. " \
+          "The parent record must already exist."
+      }.freeze
+      ATTACH_OPENAPI = {
+        title: "Attach",
+        summary: "Attach already-uploaded files",
+        description:
+          "Links already-uploaded blobs to this record. Send one signed_blob_id, or a batch in attachments. " \
+          "Call create_upload and PUT the file first. The parent record must already exist. " \
+          "This action comes from RecordingStudio Attachable."
+      }.freeze
+      IMPORT_ATTACHMENT_OPENAPI = {
+        title: "Import",
+        summary: "Fetch a file from a URL and attach it",
+        description:
+          "Fetches a file from a URL and attaches it to this record. The parent record must already exist. " \
+          "This path does not return an upload URL or signed_blob_id."
+      }.freeze
+
       def register!(api)
-        register(api, :create_upload, CreateUpload, create_upload_contract, "Create a direct upload")
-        register(api, :attach, Attach, attach_contract, "Attach uploaded files")
-        register(api, :import_attachment, ImportAttachment, import_contract, "Import a file from a URL")
+        register(api, :create_upload, CreateUpload, create_upload_contract, CREATE_UPLOAD_OPENAPI)
+        register(api, :attach, Attach, attach_contract, ATTACH_OPENAPI)
+        register(api, :import_attachment, ImportAttachment, import_contract, IMPORT_ATTACHMENT_OPENAPI)
       end
 
       class CreateUpload
@@ -266,14 +290,14 @@ module RecordingStudioAttachable
       class << self
         private
 
-        def register(api, name, handler, contract, summary)
+        def register(api, name, handler, contract, openapi)
           return if ::RecordingStudioApi.capability_action(name, api: api)
 
           ::RecordingStudioApi.register_capability_action(
             name,
             capability: :attachable, scope: :member, http_verb: :post, version: "1.0.0",
             required_role: Api.role_for(name), handler: handler, serializer: method(:serialize),
-            input_contract: contract, openapi: { summary: summary }, api: api
+            input_contract: contract, openapi: openapi, api: api
           )
         end
 

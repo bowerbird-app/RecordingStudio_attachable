@@ -256,6 +256,8 @@ RecordingStudioApi.register_recordable_type_api(
 
 A type that leaves those names off `capability_actions` does not show the actions in OpenAPI. Calling one returns the Recording Studio API's unsupported-action response.
 
+The three actions are different steps. `create_upload` prepares a direct upload and returns an upload URL plus a `signed_blob_id`; it adds nothing to the record yet. `attach` links already-uploaded blobs to the record and comes from RecordingStudio Attachable. `import_attachment` fetches a file from a URL and attaches it. The parent record must already exist. OpenAPI titles are type-neutral (`Upload`, `Attach`, `Import`). Summaries and descriptions are the same on every parent type.
+
 `create_upload` takes `filename`, `byte_size`, `checksum`, and `content_type`. The checksum is the base64 MD5 of the bytes. The response is `signed_blob_id`, `upload` (`url` and `headers`), and `expires_at`. PUT the bytes to `upload.url` with `upload.headers`. The signed id uses the `:attachable_upload` purpose and expires after `config.direct_upload_expires_in` (default 5 minutes). It is bound to the parent recording and the actor that asked for it. `attach` accepts it once, and only while the blob is still unattached. The file bytes are sniffed and must match the declared content type.
 
 Browser and API `create_upload` both call `RecordingStudioAttachable::DirectUpload.prepare!(recording:, actor:, filename:, byte_size:, checksum:, content_type:)`. That method creates the Active Storage blob before the client PUT. It requires an actor. It refuses a content type the parent does not allow, a negative size, a file over `max_file_size`, and a pending queue at `config.pending_upload_limit`. A storage-limit refusal drops the blob.

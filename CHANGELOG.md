@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Dummy `AttachmentsMetricsTest` restores admin resolvers and `Current.actor` after each example, so later tests are not left unauthorized.
 
+## [0.22.2] - 2026-11-12
+
+### Changed
+
+- OpenAPI copy for `create_upload`, `attach`, and `import_attachment` now uses a type-neutral title (`Upload`, `Attach`, `Import`), a distinct summary, and a description for each step. Upload prepares a direct-upload ticket and adds nothing yet. Attach links already-uploaded blobs and names RecordingStudio Attachable. Import fetches a file from a URL.
+
+### Upgrade Notes
+
+- Bump to `0.22.2`. Docs-only. No behavior change.
+
 ## [0.22.1] - 2026-11-05
 
 ### Changed

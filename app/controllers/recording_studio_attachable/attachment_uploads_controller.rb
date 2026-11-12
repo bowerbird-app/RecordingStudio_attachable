@@ -9,7 +9,9 @@ module RecordingStudioAttachable
 
       authorize_attachment_action!(:upload, @recording, capability_options: capability_options)
       @allowed_content_types = configured_attachable_option(@recording, :allowed_content_types)
-      @max_file_size = configured_attachable_option(@recording, :max_file_size)
+      file_cap = file_size_cap(@recording)
+      @max_file_size = file_cap.max_bytes
+      @file_size_plan_limited = file_cap.plan_lowered
       @max_file_count = configured_attachable_option(@recording, :max_file_count)
       @image_processing_enabled = configured_attachable_option(@recording, :image_processing_enabled)
       @image_processing_max_width = configured_attachable_option(@recording, :image_processing_max_width)
@@ -61,6 +63,11 @@ module RecordingStudioAttachable
     end
 
     private
+
+    def file_size_cap(recording)
+      code_max = configured_attachable_option(recording, :max_file_size)
+      RecordingStudioAttachable::FileSizeLimit.cap_for(recording, code_max)
+    end
 
     # The upload modal loads this action into a lazy turbo frame. That request
     # only needs the uploader, wrapped in the frame that asked for it.

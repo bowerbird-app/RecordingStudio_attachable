@@ -6,6 +6,7 @@ module RecordingStudioAttachable
   class DependencyUnavailableError < Error; end
   class StorageLimitUnknown < Error; end
   class StorageLimitError < Error; end
+  class FileSizeLimitUnknown < Error; end
   class ReconnectRequired < Error; end
 
   class << self
@@ -52,6 +53,7 @@ require "recording_studio_attachable/direct_upload"
 require "recording_studio_attachable/api"
 require "recording_studio_attachable/storage_release"
 require "recording_studio_attachable/storage_limit"
+require "recording_studio_attachable/file_size_limit"
 require "recording_studio_attachable/services/base_service"
 require "recording_studio_attachable/engine"
 require "recording_studio/capabilities/attachable"

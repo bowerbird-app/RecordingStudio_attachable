@@ -58,7 +58,7 @@ module RecordingStudioAttachable
     def configuration_locals(recording)
       {
         allowed_content_types: configured_option(recording, :allowed_content_types),
-        max_file_size: configured_option(recording, :max_file_size),
+        max_file_size: FileSizeLimit.effective_max(recording, configured_option(recording, :max_file_size)),
         image_processing_enabled: configured_option(recording, :image_processing_enabled),
         image_processing_max_width: configured_option(recording, :image_processing_max_width),
         image_processing_max_height: configured_option(recording, :image_processing_max_height),

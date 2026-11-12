@@ -10,7 +10,8 @@ module RecordingStudioAttachable
 
       @attachment = @attachment_recording.recordable
       @replace_allowed_content_types = configured_attachable_option(@attachment_recording, :allowed_content_types)
-      @replace_max_file_size = configured_attachable_option(@attachment_recording, :max_file_size)
+      code_max = configured_attachable_option(@attachment_recording, :max_file_size)
+      @replace_max_file_size = RecordingStudioAttachable::FileSizeLimit.effective_max(@attachment_recording, code_max)
       @image_processing_enabled = configured_attachable_option(@attachment_recording, :image_processing_enabled)
       @image_processing_max_width = configured_attachable_option(@attachment_recording, :image_processing_max_width)
       @image_processing_max_height = configured_attachable_option(@attachment_recording, :image_processing_max_height)

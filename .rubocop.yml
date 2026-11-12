@@ -27,6 +27,7 @@ Metrics/ClassLength:
     - 'lib/recording_studio_attachable/direct_upload.rb'
     - 'lib/recording_studio_attachable/storage_limit.rb'
     - 'lib/recording_studio_attachable/upload_provider.rb'
+    - 'app/services/recording_studio_attachable/services/application_service.rb'
 
 Metrics/ModuleLength:
   Exclude:

@@ -7,9 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-11-12
+
+### Added
+
+- Optional `config.file_size_limit`. It names a `recording_studio_stripe` per-item limit. Leave it unset and uploads stay on the code `max_file_size`. This gem still does not depend on `recording_studio_stripe`.
+- The max for a parent type is the smaller of that type's `max_file_size` and the plan ceiling. A nil ceiling leaves the code max. The plan cannot raise the code max.
+- Direct upload tickets, attach, provider import, file replace, and the API `create_upload`, `attach`, and `import_attachment` actions enforce it. A file over the plan ceiling raises `RecordingStudioStripe::PlanLimitReached`.
+- The uploader and the image picker show that smaller max. When the plan lowered the cap, the uploader says the file is too large for the plan.
+- `RecordingStudioAttachable::FileSizeLimitUnknown` when the configured name is missing or is not a per-item limit.
+
 ### Fixed
 
 - Dummy `AttachmentsMetricsTest` restores admin resolvers and `Current.actor` after each example, so later tests are not left unauthorized.
+
+### Upgrade Notes
+
+- Bump to `0.23.0`. No migration. Leave `config.file_size_limit` unset to keep the current upload checks.
+- To turn the cap on, install `recording_studio_stripe` 0.21.0 or newer. Set `config.file_size_limit` to a per-item limit name, for example `:max_file_bytes`. Declare it with `aggregation: "per_item"`. Put the plan number in Product metadata `limit_max_file_bytes`.
+- A downgrade changes the next upload. Files already attached stay.
 
 ## [0.22.1] - 2026-11-05
 
@@ -601,7 +617,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.23.0...HEAD
+[0.23.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.1...v0.23.0
 [0.22.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.21.1...v0.22.0
 [0.16.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.15.0...v0.16.0

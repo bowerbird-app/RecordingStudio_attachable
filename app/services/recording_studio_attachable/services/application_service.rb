@@ -77,9 +77,14 @@ module RecordingStudioAttachable
 
       def signed_blob!(signed_blob_id, capability_options:, recording:, actor:)
         blob = DirectUpload.accept!(signed_blob_id, recording: recording, actor: actor)
-        validate_blob!(blob, capability_options: capability_options)
+        validate_blob!(blob, capability_options: capability_options, recording: recording)
         DirectUpload.sniff!(blob, capability_options)
         blob
+      rescue StandardError => e
+        raise unless FileSizeLimit.plan_limit?(e)
+
+        RecordingStudioAttachable::StorageLimit.discard_unattached!([blob])
+        raise
       end
 
       def create_imported_blob!(io:, filename:, content_type:, service_name: nil, metadata: nil)
@@ -97,7 +102,7 @@ module RecordingStudioAttachable
         )
       end
 
-      def validate_blob!(blob, capability_options: {})
+      def validate_blob!(blob, capability_options: {}, recording: nil)
         config = RecordingStudioAttachable.configuration
         validation_options = capability_validation_options(capability_options)
         allowed_content_types = validation_options[:allowed_content_types] || config.allowed_content_types
@@ -108,6 +113,7 @@ module RecordingStudioAttachable
         end
 
         max_file_size = configured_capability_option(capability_options, :max_file_size)
+        FileSizeLimit.enforce!(recording, blob.byte_size, code_max: max_file_size) if recording
         raise ArgumentError, "Blob exceeds maximum file size" if max_file_size.present? && blob.byte_size > max_file_size
       end
 

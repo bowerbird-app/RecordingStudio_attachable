@@ -188,11 +188,26 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
 
     get "/APIdocs/v1/openapi.json"
     assert_response :success
-    paths = JSON.parse(response.body).fetch("paths").keys
+    document = JSON.parse(response.body)
+    paths = document.fetch("paths").keys
     assert paths.any? { |path| path.include?("/workspaces/") && path.include?("create_upload") }
     assert paths.any? { |path| path.include?("/workspaces/") && path.include?("import_attachment") }
     refute paths.any? { |path| path.include?("/pages/") && path.include?("create_upload") }
     refute paths.any? { |path| path.include?("/pages/") && path.include?("attach") }
+
+    create_upload = workspace_action(document, "create_upload")
+    attach = workspace_action(document, "attach")
+    import_attachment = workspace_action(document, "import_attachment")
+    assert_equal "Prepare a direct upload", create_upload.fetch("summary")
+    assert_includes create_upload.fetch("description"), "upload URL plus a signed_blob_id"
+    assert_includes create_upload.fetch("description"), "adds nothing to this record yet"
+    assert_equal "Attach already-uploaded files", attach.fetch("summary")
+    assert_includes attach.fetch("description"), "RecordingStudio Attachable"
+    assert_includes attach.fetch("description"), "create_upload"
+    assert_equal "Fetch a file from a URL and attach it", import_attachment.fetch("summary")
+    assert_includes import_attachment.fetch("description"), "Fetches a file from a URL"
+    refute_equal create_upload.fetch("summary"), attach.fetch("summary")
+    refute_equal attach.fetch("summary"), import_attachment.fetch("summary")
   end
 
   test "the actions are registered on the public and operations APIs" do
@@ -201,12 +216,30 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
       assert_equal :attachable, action.capability
       assert_equal :member, action.scope
       assert_equal :edit, action.required_role
-      assert RecordingStudioApi.capability_action(:attach, api: api)
-      assert RecordingStudioApi.capability_action(:import_attachment, api: api)
+      assert_equal "Upload", action.openapi.fetch(:title)
+      assert_equal "Prepare a direct upload", action.openapi.fetch(:summary)
+      assert_includes action.openapi.fetch(:description), "adds nothing to this record yet"
+      attach = RecordingStudioApi.capability_action(:attach, api: api)
+      assert attach
+      assert_equal "Attach", attach.openapi.fetch(:title)
+      assert_equal "Attach already-uploaded files", attach.openapi.fetch(:summary)
+      assert_includes attach.openapi.fetch(:description), "RecordingStudio Attachable"
+      import_attachment = RecordingStudioApi.capability_action(:import_attachment, api: api)
+      assert import_attachment
+      assert_equal "Import", import_attachment.openapi.fetch(:title)
+      assert_equal "Fetch a file from a URL and attach it", import_attachment.openapi.fetch(:summary)
+      assert_includes import_attachment.openapi.fetch(:description), "Fetches a file from a URL"
     end
   end
 
   private
+
+  def workspace_action(document, action_name)
+    path = document.fetch("paths").keys.find do |key|
+      key.include?("/workspaces/") && key.include?("/#{action_name}")
+    end
+    document.fetch("paths").fetch(path).fetch("post")
+  end
 
   def user(name)
     User.create!(

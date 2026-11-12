@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - OpenAPI summary and description for Upload, Attach, and Import now tell an AI agent which step each action is, when to use it, and that the parent record must already exist. MCP describe shows the summary. Titles stay Upload, Attach, and Import.
+- Upload names step 2 as Attach, or Add File or Add Image for a press kit Files or Images section. Attach names step 1 as Upload, then PUT, then send the signed_blob_id. Import copy is unchanged.
 
 ### Upgrade Notes
 

@@ -27,7 +27,7 @@ RecordingStudioApi.register_recordable_type_api(
   operations: %i[index show],
   serializer: ->(workspace, **) { { name: workspace.name } },
   output_keys: %i[name],
-  capability_actions: %i[create_upload attach import_attachment]
+  capability_actions: %i[create_upload attach import_attachment revise_attachment replace_attachment remove_attachment]
 )
 
 RecordingStudioApi.register_recordable_type_api(
@@ -35,6 +35,14 @@ RecordingStudioApi.register_recordable_type_api(
   operations: %i[index show],
   serializer: ->(page, **) { { title: page.title } },
   output_keys: %i[title]
+)
+
+RecordingStudioApi.register_recordable_type_api(
+  "RecordingStudioAttachable::Attachment",
+  operations: %i[show],
+  serializer: ->(attachment, **) { { name: attachment.name, caption: attachment.caption, alt_text: attachment.alt_text } },
+  output_keys: %i[name caption alt_text],
+  capability_actions: %i[revise_attachment replace_attachment remove_attachment]
 )
 
 RecordingStudioAttachable::Api.register!(apis: [:public, :operations])

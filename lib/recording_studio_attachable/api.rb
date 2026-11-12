@@ -13,9 +13,16 @@ module RecordingStudioAttachable
     end
 
     def role_for(action)
+      RecordingStudioAttachable.configuration.auth_role_for(role_key(action.to_sym))
+    end
+
+    def role_key(action)
       roles = RecordingStudioAttachable.configuration.auth_roles
-      key = action.to_sym == :import_attachment && roles.key?(:import) ? :import : :upload
-      RecordingStudioAttachable.configuration.auth_role_for(key)
+      return :import if action == :import_attachment && roles.key?(:import)
+      return :revise if %i[revise_attachment replace_attachment].include?(action) && roles.key?(:revise)
+      return :remove if action == :remove_attachment && roles.key?(:remove)
+
+      :upload
     end
   end
 end

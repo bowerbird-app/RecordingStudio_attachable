@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "attachment_edits"
+
 module RecordingStudioAttachable
   module Api
     module AttachmentActions
@@ -9,6 +11,9 @@ module RecordingStudioAttachable
         register(api, :create_upload, CreateUpload, create_upload_contract, "Create a direct upload")
         register(api, :attach, Attach, attach_contract, "Attach uploaded files")
         register(api, :import_attachment, ImportAttachment, import_contract, "Import a file from a URL")
+        register(api, :revise_attachment, ReviseAttachment, EditDocs.revise_contract, EditDocs.revise_openapi)
+        register(api, :replace_attachment, ReplaceAttachment, EditDocs.replace_contract, EditDocs.replace_openapi)
+        register(api, :remove_attachment, RemoveAttachment, EditDocs.remove_contract, EditDocs.remove_openapi)
       end
 
       class CreateUpload
@@ -273,8 +278,14 @@ module RecordingStudioAttachable
             name,
             capability: :attachable, scope: :member, http_verb: :post, version: "1.0.0",
             required_role: Api.role_for(name), handler: handler, serializer: method(:serialize),
-            input_contract: contract, openapi: { summary: summary }, api: api
+            input_contract: contract, openapi: openapi_metadata(summary), api: api
           )
+        end
+
+        def openapi_metadata(summary)
+          return summary if summary.is_a?(Hash)
+
+          { summary: summary }
         end
 
         def serialize(result)

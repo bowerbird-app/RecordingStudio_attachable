@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-11-12
+
+### Added
+
+- Recording Studio API actions `revise_attachment`, `replace_attachment`, and `remove_attachment` on the `:attachable` capability. They wrap `Recording#revise_attachment_metadata`, `#replace_attachment_file`, and `#remove_attachment`. Each handler authorizes with Accessible through `access_grant.authorize!`. Revise and replace use `config.auth_roles[:revise]` (`:edit` by default). Remove uses `config.auth_roles[:remove]` (`:admin` by default). Call them on the parent type. Pass `attachment_recording_id` for the child returned by `attach`. `replace_attachment` takes the same `signed_blob_id` as `attach`. Remove does not require Trashable.
+
+### Upgrade Notes
+
+- Bump to `0.23.0`. No migration.
+- Add `revise_attachment`, `replace_attachment`, and `remove_attachment` to `capability_actions` on each parent type that already lists `attach`. MCP picks the actions up from that API registration. This gem does not add MCP tools.
+
 ## [0.22.1] - 2026-11-05
 
 ### Changed
@@ -597,7 +608,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.23.0...HEAD
+[0.23.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.1...v0.23.0
 [0.22.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.21.1...v0.22.0
 [0.16.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.15.0...v0.16.0

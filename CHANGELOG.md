@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Dummy `AttachmentsMetricsTest` restores admin resolvers and `Current.actor` after each example, so later tests are not left unauthorized.
 
+### Changed
+
+- Tests only: more coverage for attachment helpers, lifecycle requests, the client picker, and the security checks around auth, signed blobs, MIME, size, and remote import.
+
 ## [0.22.1] - 2026-11-05
 
 ### Changed

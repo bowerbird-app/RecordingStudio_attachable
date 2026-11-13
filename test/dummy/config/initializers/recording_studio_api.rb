@@ -34,7 +34,8 @@ RecordingStudioApi.register_recordable_type_api(
   "Page",
   operations: %i[index show],
   serializer: ->(page, **) { { title: page.title } },
-  output_keys: %i[title]
+  output_keys: %i[title],
+  auto_capability_actions: false
 )
 
 RecordingStudioAttachable::Api.register!(apis: [:public, :operations])

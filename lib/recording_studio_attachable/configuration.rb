@@ -43,7 +43,8 @@ module RecordingStudioAttachable
                   :direct_url_host,
                   :attachment_place_labels
 
-    attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode, :upload_presentation, :import_allowed_hosts, :layout
+    attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode,
+                :upload_presentation, :import_allowed_hosts, :layout, :before_save
 
     def layout=(value)
       @layout = RecordingStudio::Layout.accept(value)
@@ -213,6 +214,16 @@ module RecordingStudioAttachable
       @storage_limit = normalized.presence
     end
 
+    def before_save=(value)
+      if value.nil?
+        @before_save = nil
+        return
+      end
+      raise ArgumentError, "before_save must respond to #call" unless value.respond_to?(:call)
+
+      @before_save = value
+    end
+
     def to_h
       {
         allowed_content_types: allowed_content_types,
@@ -285,6 +296,7 @@ module RecordingStudioAttachable
       @classify_attachment_kind = default_attachment_kind_classifier
       @authorize_with = nil
       @attachment_place_labels = nil
+      @before_save = nil
     end
 
     def default_auth_roles

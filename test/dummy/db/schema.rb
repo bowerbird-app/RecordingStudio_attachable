@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_27_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -398,8 +398,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_150000) do
     t.text "session_token_secret_ciphertext"
     t.boolean "self_registered", default: false, null: false
     t.string "token_endpoint_auth_method", null: false
+    t.string "plugin_key"
     t.index ["api_key"], name: "index_recording_studio_oauth_clients_on_api_key"
     t.index ["client_id"], name: "index_recording_studio_oauth_clients_on_client_id", unique: true
+    t.index ["plugin_key"], name: "index_recording_studio_oauth_clients_on_plugin_key"
   end
 
   create_table "recording_studio_oauth_external_installs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -433,13 +435,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_150000) do
     t.string "status", default: "active", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["provider_key", "owner_actor_type", "owner_actor_id"], name: "idx_rs_oauth_outbound_live_user", unique: true, where: "((owner_actor_id IS NOT NULL) AND ((status)::text = ANY ((ARRAY['active'::character varying, 'needs_reconnect'::character varying])::text[])))"
-    t.index ["provider_key", "root_recording_id"], name: "idx_rs_oauth_outbound_live_root", unique: true, where: "((root_recording_id IS NOT NULL) AND ((status)::text = ANY ((ARRAY['active'::character varying, 'needs_reconnect'::character varying])::text[])))"
+    t.index ["provider_key", "owner_actor_type", "owner_actor_id", "root_recording_id"], name: "idx_rs_oauth_outbound_live_user", unique: true, where: "((owner_actor_id IS NOT NULL) AND (root_recording_id IS NOT NULL) AND ((status)::text = ANY ((ARRAY['active'::character varying, 'needs_reconnect'::character varying])::text[])))"
+    t.index ["provider_key", "root_recording_id"], name: "idx_rs_oauth_outbound_live_root", unique: true, where: "((root_recording_id IS NOT NULL) AND (owner_actor_id IS NULL) AND ((status)::text = ANY ((ARRAY['active'::character varying, 'needs_reconnect'::character varying])::text[])))"
     t.index ["provider_key"], name: "idx_on_provider_key_ad5bab8401"
     t.index ["root_recording_id"], name: "idx_on_root_recording_id_85327fae16"
     t.index ["status"], name: "index_recording_studio_oauth_outbound_connections_on_status"
-    t.check_constraint "root_recording_id IS NOT NULL AND owner_actor_id IS NULL AND owner_actor_type IS NULL OR root_recording_id IS NULL AND owner_actor_id IS NOT NULL AND owner_actor_type IS NOT NULL", name: "chk_rs_oauth_outbound_owner"
-    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'needs_reconnect'::character varying, 'revoked'::character varying]::text[])", name: "chk_rs_oauth_outbound_status"
+    t.check_constraint "root_recording_id IS NOT NULL AND owner_actor_id IS NULL AND owner_actor_type IS NULL OR root_recording_id IS NOT NULL AND owner_actor_id IS NOT NULL AND owner_actor_type IS NOT NULL OR root_recording_id IS NULL AND owner_actor_id IS NOT NULL AND owner_actor_type IS NOT NULL AND (status::text = ANY (ARRAY['needs_reconnect'::character varying, 'revoked'::character varying]::text[]))", name: "chk_rs_oauth_outbound_owner"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'needs_reconnect'::character varying::text, 'revoked'::character varying::text])", name: "chk_rs_oauth_outbound_status"
   end
 
   create_table "recording_studio_oauth_outbound_handshakes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

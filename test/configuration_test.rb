@@ -60,6 +60,7 @@ class ConfigurationTest < Minitest::Test
     assert_empty @configuration.upload_providers
     assert_equal :view, @configuration.auth_role_for(:view)
     assert_equal :edit, @configuration.auth_role_for(:upload)
+    assert_nil @configuration.before_save
     assert_nil @configuration.attachment_place_labels
     assert_equal [], @configuration.attachment_place_labels_for(Object.new)
   end
@@ -304,6 +305,20 @@ class ConfigurationTest < Minitest::Test
     @configuration.merge!(storage_limit: "archive_bytes")
     assert_equal "archive_bytes", @configuration[:storage_limit]
     assert_equal "archive_bytes", @configuration.to_h[:storage_limit]
+  end
+
+  def test_before_save_accepts_a_callable_and_rejects_other_values
+    assert_nil @configuration.before_save
+
+    hook = ->(**) {}
+    @configuration.before_save = hook
+    assert_same hook, @configuration.before_save
+
+    @configuration.before_save = nil
+    assert_nil @configuration.before_save
+
+    error = assert_raises(ArgumentError) { @configuration.before_save = Object.new }
+    assert_includes error.message, "before_save"
   end
 
   def test_to_h_reflects_current_values

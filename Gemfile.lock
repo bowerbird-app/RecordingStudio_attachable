@@ -8,6 +8,51 @@ GIT
       rails (>= 8.1.0)
 
 GIT
+  remote: https://github.com/bowerbird-app/RecordingStudio_accessible.git
+  revision: 737ad6fcd93788520259d590f829769d479227ed
+  tag: v0.18.1
+  specs:
+    recording_studio_accessible (0.18.1)
+      rails (~> 8.1.0)
+      recording_studio (>= 6.1.0)
+      recording_studio_trashable (~> 0.10)
+
+GIT
+  remote: https://github.com/bowerbird-app/RecordingStudio_api.git
+  revision: a5a862c2a857fe9ed1b98acb06fc21d95db7a18d
+  tag: v0.23.0
+  specs:
+    recording_studio_api (0.23.0)
+      flat_pack (>= 0.1.341)
+      rails (~> 8.1.0)
+      recording_studio (>= 6.1.0)
+      recording_studio_accessible (~> 0.11)
+      recording_studio_logs (>= 0.4.1, < 1.0)
+      recording_studio_metrics (>= 0.3.0, < 1.0)
+      recording_studio_moveable (~> 4.0)
+      recording_studio_trashable (~> 0.10)
+      redis (~> 5.3)
+      view_component (>= 4.14, < 5)
+
+GIT
+  remote: https://github.com/bowerbird-app/RecordingStudio_icons.git
+  revision: 329fbbb1d75bba3b1cc59f0b00650442f2433288
+  tag: v0.2.0
+  specs:
+    recording_studio_icons (0.2.0)
+      rails (>= 8.1.0)
+      recording_studio (>= 6.3.0)
+
+GIT
+  remote: https://github.com/bowerbird-app/RecordingStudio_logs.git
+  revision: 6f612ceba651b285f4452583617d5d5b866f3e56
+  tag: v0.4.1
+  specs:
+    recording_studio_logs (0.4.1)
+      rails (~> 8.1.0)
+      recording_studio (>= 6.1.0)
+
+GIT
   remote: https://github.com/bowerbird-app/RecordingStudio_metrics.git
   revision: cb87f3b47ec6825458e3f467f7b16a5cb407e96c
   tag: v0.7.2
@@ -15,6 +60,30 @@ GIT
     recording_studio_metrics (0.7.2)
       rails (~> 8.1.0)
       recording_studio (>= 6.1.0)
+
+GIT
+  remote: https://github.com/bowerbird-app/RecordingStudio_moveable.git
+  revision: 0e1cec42605b05098d63a53a0b1afa5e35a00d64
+  tag: v4.1.0
+  specs:
+    recording_studio_moveable (4.1.0)
+      flat_pack (>= 0.1.331)
+      rails (>= 8.1.0, < 9.0)
+      recording_studio (>= 6.1.0)
+      recording_studio_accessible (~> 0.6)
+      recording_studio_icons (>= 0.1.0)
+      view_component (>= 4.14, < 5)
+
+GIT
+  remote: https://github.com/bowerbird-app/RecordingStudio_trashable.git
+  revision: 07d715d32bb44225b9482f6318a071f7c1876141
+  tag: v0.12.2
+  specs:
+    recording_studio_trashable (0.12.2)
+      flat_pack (>= 0.1.315)
+      rails (~> 8.1.0)
+      recording_studio (>= 6.1.0)
+      recording_studio_metrics (>= 0.3.0, < 1.0)
 
 GIT
   remote: https://github.com/bowerbird-app/flatpack.git
@@ -30,10 +99,11 @@ GIT
 PATH
   remote: .
   specs:
-    recording_studio_attachable (0.22.4)
+    recording_studio_attachable (0.23.0)
       flat_pack (>= 0.1.315)
       rails (~> 8.1.0)
       recording_studio (>= 6.1.0)
+      recording_studio_api (~> 0.23)
       recording_studio_metrics (>= 0.3.0, < 1.0)
 
 GEM
@@ -251,6 +321,10 @@ GEM
       prism (>= 1.6.0)
       rbs (>= 4.0.0)
       tsort
+    redis (5.4.1)
+      redis-client (>= 0.22.0)
+    redis-client (0.31.0)
+      connection_pool
     regexp_parser (2.11.3)
     reline (0.7.0)
       io-console (~> 0.5)
@@ -329,8 +403,14 @@ DEPENDENCIES
   pg (~> 1.1)
   puma (~> 7.2.1)
   recording_studio!
+  recording_studio_accessible!
+  recording_studio_api!
   recording_studio_attachable!
+  recording_studio_icons!
+  recording_studio_logs!
   recording_studio_metrics!
+  recording_studio_moveable!
+  recording_studio_trashable!
   rubocop
   rubocop-rails
   simplecov
@@ -419,8 +499,16 @@ CHECKSUMS
   rbs (4.2.0) sha256=51f7b886dcc05bc09e10b901daa6a81829f6adc03101d6ca9ea4aac6103e0674
   rdoc (8.1.0) sha256=befc37880a5cfd36dcb176c748b5fd5ee39dd3536a75e81824e4972ce230f60a
   recording_studio (6.3.0)
-  recording_studio_attachable (0.22.4)
+  recording_studio_accessible (0.18.1)
+  recording_studio_api (0.23.0)
+  recording_studio_attachable (0.23.0)
+  recording_studio_icons (0.2.0)
+  recording_studio_logs (0.4.1)
   recording_studio_metrics (0.7.2)
+  recording_studio_moveable (4.1.0)
+  recording_studio_trashable (0.12.2)
+  redis (5.4.1) sha256=b5e675b57ad22b15c9bcc765d5ac26f60b675408af916d31527af9bd5a81faae
+  redis-client (0.31.0) sha256=6820cb2a21e6795a823141f50fd25e655de2b8dc8ff833b43509a27b0263fd75
   regexp_parser (2.11.3) sha256=ca13f381a173b7a93450e53459075c9b76a10433caadcb2f1180f2c741fc55a4
   reline (0.7.0) sha256=5b012d8e55dbf9d450f12bde2cf7d15ff546ae80b3f8f3b30e570d431815583d
   rubocop (1.81.7) sha256=6fb5cc298c731691e2a414fe0041a13eb1beed7bab23aec131da1bcc527af094

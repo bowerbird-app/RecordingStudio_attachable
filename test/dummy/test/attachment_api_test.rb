@@ -209,6 +209,24 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     assert_equal import_copy, import_attachment.fetch("description")
     refute_equal create_upload.fetch("summary"), attach.fetch("summary")
     refute_equal attach.fetch("summary"), import_attachment.fetch("summary")
+
+    import_schema = import_attachment.dig("responses", "200", "content", "application/json", "schema", "properties")
+    assert import_schema.key?("id")
+    assert import_schema.key?("kind")
+    assert import_schema.key?("name")
+    assert import_schema.dig("urls", "properties").key?("file")
+
+    upload_schema = create_upload.dig("responses", "200", "content", "application/json", "schema", "properties")
+    assert upload_schema.key?("signed_blob_id")
+    assert upload_schema.dig("upload", "properties").key?("url")
+    assert upload_schema.dig("upload", "properties").key?("headers")
+    assert upload_schema.key?("expires_at")
+
+    upload_fields = create_upload.dig("requestBody", "content", "application/json", "schema", "properties")
+    assert_equal "The file's name, like cover.jpg. Required.", upload_fields.dig("filename", "description")
+    assert_equal "The file's size in bytes. Required. Must be zero or more, and at most 10 MB on a press kit.", upload_fields.dig("byte_size", "description")
+    assert_equal "The file's MD5 checksum, Base64-encoded, as Active Storage expects. Required.", upload_fields.dig("checksum", "description")
+    assert_equal "The file's type, like image/png. Required. On a press kit only image types (image/*) and SVG (image/svg+xml) are accepted.", upload_fields.dig("content_type", "description")
   end
 
   test "the actions are registered on the public and operations APIs" do
@@ -231,6 +249,50 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
       assert_equal "An attachment is an uploaded file linked to a record, like a PDF, an image or a document. One step, no upload needed. Use this when the file is already online at a URL. It downloads the file and attaches it to this record as a plain attachment in a single call, so there's no Upload, PUT or signed_blob_id. For a press kit Files or Images section, use Add File or Add Image instead, so the file shows up as an item in that section. The parent record must already exist.", import_attachment.openapi.fetch(:summary)
       assert_equal "An attachment is an uploaded file linked to a record, like a PDF, an image or a document. One step, no upload needed. Use this when the file is already online at a URL. It downloads the file and attaches it to this record as a plain attachment in a single call, so there's no Upload, PUT or signed_blob_id. For a press kit Files or Images section, use Add File or Add Image instead, so the file shows up as an item in that section. The parent record must already exist.", import_attachment.openapi.fetch(:description)
     end
+  end
+
+  test "an openapi override changes one type and leaves generic Attachable copy" do
+    RecordingStudioAttachable::Api.override_openapi(
+      type: "Workspace",
+      action: :import_attachment,
+      title: "Workspace - Import Attachment",
+      summary: "Import a file onto this workspace from a web link.",
+      description: "Workspace import description."
+    )
+    RecordingStudioAttachable::Api.override_openapi(
+      type: "Page",
+      action: :attach,
+      title: "Page - Attach",
+      description: "Page attach description."
+    )
+
+    import = RecordingStudioApi.capability_action(:import_attachment)
+    attach = RecordingStudioApi.capability_action(:attach)
+    workspace_import = import.openapi_for(type: "Workspace", action: :import_attachment)
+    page_import = import.openapi_for(type: "Page", action: :import_attachment)
+    workspace_attach = attach.openapi_for(type: "Workspace", action: :attach)
+    page_attach = attach.openapi_for(type: "Page", action: :attach)
+
+    assert_equal "Workspace - Import Attachment", workspace_import[:title]
+    assert_equal "Import a file onto this workspace from a web link.", workspace_import[:summary]
+    assert_equal "Workspace import description.", workspace_import[:description]
+    assert_equal "Import", page_import[:title]
+    assert_equal RecordingStudioAttachable::Api::AttachmentActions::IMPORT_ATTACHMENT_COPY, page_import[:summary]
+    assert_equal "Page - Attach", page_attach[:title]
+    assert_equal "Page attach description.", page_attach[:description]
+    assert_equal "Attach", workspace_attach[:title]
+    assert_equal RecordingStudioAttachable::Api::AttachmentActions::ATTACH_COPY, workspace_attach[:summary]
+    assert_equal RecordingStudioAttachable::Api::AttachmentActions::CREATE_UPLOAD_COPY,
+                 RecordingStudioAttachable::Api::AttachmentActions::CREATE_UPLOAD_OPENAPI.fetch(:summary)
+
+    get "/APIdocs/v1/openapi.json"
+    assert_response :success
+    document = JSON.parse(response.body)
+    workspace_path = workspace_action(document, "import_attachment")
+    assert_equal "Import a file onto this workspace from a web link.", workspace_path.fetch("summary")
+    assert_equal "Workspace import description.", workspace_path.fetch("description")
+  ensure
+    RecordingStudioAttachable::Api::OpenapiOverrides.clear!
   end
 
   private

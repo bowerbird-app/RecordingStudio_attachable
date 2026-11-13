@@ -47,6 +47,7 @@ class AttachmentActionsTest < Minitest::Test
   def teardown
     @configuration.import_allowed_hosts = @original_hosts
     @configuration.auth_roles = @original_roles
+    RecordingStudioAttachable::Api::OpenapiOverrides.clear!
     remove_api_errors!
     restore_capability_options!
   end
@@ -205,6 +206,89 @@ class AttachmentActionsTest < Minitest::Test
         attach.call(context_for(signed_blob_id: "signed-1"))
       end
     end
+  end
+
+  def test_override_openapi_changes_one_type_and_leaves_generic_copy
+    RecordingStudioAttachable::Api.override_openapi(
+      type: "RecordingStudioPresskits::PressKit",
+      action: :import_attachment,
+      title: "Press Kit - Import Attachment",
+      summary: "Import an image onto this press kit from a web link.",
+      description: "Press kit import description."
+    )
+    RecordingStudioAttachable::Api.override_openapi(
+      type: "RecordingStudioPresskits::PressKit",
+      action: :attach,
+      title: "Press Kit - Attach",
+      description: "Press kit attach description."
+    )
+    RecordingStudioAttachable::Api.override_openapi(
+      type: "RecordingStudioPresskits::PressKit",
+      action: :create_upload,
+      title: "Press Kit - Create Upload",
+      summary: "Upload a cover image.",
+      description: "Press kit create upload description."
+    )
+
+    kit_import = RecordingStudioAttachable::Api.openapi_for(type: "RecordingStudioPresskits::PressKit", action: :import_attachment)
+    kit_attach = RecordingStudioAttachable::Api.openapi_for(type: "RecordingStudioPresskits::PressKit", action: :attach)
+    kit_upload = RecordingStudioAttachable::Api.openapi_for(type: "RecordingStudioPresskits::PressKit", action: :create_upload)
+    workspace_import = RecordingStudioAttachable::Api.openapi_for(type: "Workspace", action: :import_attachment)
+    workspace_attach = RecordingStudioAttachable::Api.openapi_for(type: "Workspace", action: :attach)
+    workspace_upload = RecordingStudioAttachable::Api.openapi_for(type: "Workspace", action: :create_upload)
+
+    assert_equal "Press Kit - Import Attachment", kit_import[:title]
+    assert_equal "Import an image onto this press kit from a web link.", kit_import[:summary]
+    assert_equal "Press kit import description.", kit_import[:description]
+    assert_equal "Press Kit - Attach", kit_attach[:title]
+    assert_equal RecordingStudioAttachable::Api::AttachmentActions::ATTACH_COPY, kit_attach[:summary]
+    assert_equal "Press kit attach description.", kit_attach[:description]
+    assert_equal "Press Kit - Create Upload", kit_upload[:title]
+    assert_equal "Upload a cover image.", kit_upload[:summary]
+    assert_equal "Press kit create upload description.", kit_upload[:description]
+
+    assert_equal "Import", workspace_import[:title]
+    assert_equal RecordingStudioAttachable::Api::AttachmentActions::IMPORT_ATTACHMENT_COPY, workspace_import[:summary]
+    assert_equal RecordingStudioAttachable::Api::AttachmentActions::IMPORT_ATTACHMENT_COPY, workspace_import[:description]
+    assert_equal "Attach", workspace_attach[:title]
+    assert_equal RecordingStudioAttachable::Api::AttachmentActions::ATTACH_COPY, workspace_attach[:summary]
+    assert_equal RecordingStudioAttachable::Api::AttachmentActions::ATTACH_COPY, workspace_attach[:description]
+    assert_equal "Upload", workspace_upload[:title]
+    assert_equal RecordingStudioAttachable::Api::AttachmentActions::CREATE_UPLOAD_COPY, workspace_upload[:summary]
+    assert_equal RecordingStudioAttachable::Api::AttachmentActions::CREATE_UPLOAD_COPY, workspace_upload[:description]
+
+    unknown = assert_raises(ArgumentError) do
+      RecordingStudioAttachable::Api.override_openapi(type: "Workspace", action: :grant_access, title: "Nope")
+    end
+    assert_includes unknown.message, "Unknown Attachable action"
+  end
+
+  def test_import_attachment_200_schema_documents_payload_one
+    schema = RecordingStudioAttachable::Api::AttachmentActions::IMPORT_ATTACHMENT_OPENAPI.dig(:responses, "200", :content, "application/json", :schema)
+    properties = schema.fetch(:properties)
+
+    assert_equal %i[id kind name urls], properties.keys
+    assert properties.dig(:urls, :properties).key?(:file)
+  end
+
+  def test_create_upload_200_schema_documents_the_ticket
+    schema = RecordingStudioAttachable::Api::AttachmentActions::CREATE_UPLOAD_OPENAPI.dig(:responses, "200", :content, "application/json", :schema)
+    properties = schema.fetch(:properties)
+
+    assert properties.key?(:signed_blob_id)
+    assert properties.dig(:upload, :properties).key?(:url)
+    assert properties.dig(:upload, :properties).key?(:headers)
+    assert properties.key?(:expires_at)
+  end
+
+  def test_create_upload_contract_has_approved_field_wording
+    contract = RecordingStudioAttachable::Api::AttachmentContracts.create_upload
+    fields = contract.fetch(:fields)
+
+    assert_equal "The file's name, like cover.jpg. Required.", fields.dig(:filename, :description)
+    assert_equal "The file's size in bytes. Required. Must be zero or more, and at most 10 MB on a press kit.", fields.dig(:byte_size, :description)
+    assert_equal "The file's MD5 checksum, Base64-encoded, as Active Storage expects. Required.", fields.dig(:checksum, :description)
+    assert_equal "The file's type, like image/png. Required. On a press kit only image types (image/*) and SVG (image/svg+xml) are accepted.", fields.dig(:content_type, :description)
   end
 
   def test_import_rejects_a_private_address_and_a_host_outside_the_allowlist

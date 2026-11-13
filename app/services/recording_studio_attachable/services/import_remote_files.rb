@@ -57,19 +57,39 @@ module RecordingStudioAttachable
       end
 
       def normalize_download(result, payload)
-        if result.respond_to?(:to_h) && result.to_h.key?(:io)
-          hash = result.to_h.symbolize_keys
-          {
-            io: hash.fetch(:io),
-            filename: hash[:filename].presence || payload[:filename],
-            content_type: hash[:content_type].presence || payload[:content_type],
-            byte_size: hash[:byte_size]
-          }
-        elsif result.respond_to?(:read) || result.respond_to?(:binmode)
-          { io: result, filename: payload[:filename], content_type: payload[:content_type] }
-        else
-          raise ArgumentError, "download must return io: or an IO"
-        end
+        return io_download(result, payload) if io_download?(result)
+
+        hash = download_hash(result)
+        return hash_download(hash, payload) if hash&.key?(:io)
+
+        raise ArgumentError, "download must return io: or an IO"
+      end
+
+      def io_download?(result)
+        result.respond_to?(:read) || result.respond_to?(:binmode)
+      end
+
+      def io_download(result, payload)
+        { io: result, filename: payload[:filename], content_type: payload[:content_type] }
+      end
+
+      def hash_download(hash, payload)
+        normalized = hash.symbolize_keys
+        {
+          io: normalized.fetch(:io),
+          filename: normalized[:filename].presence || payload[:filename],
+          content_type: normalized[:content_type].presence || payload[:content_type],
+          byte_size: normalized[:byte_size]
+        }
+      end
+
+      def download_hash(result)
+        return unless result.respond_to?(:to_h)
+
+        hash = result.to_h
+        hash if hash.respond_to?(:key?)
+      rescue TypeError
+        nil
       end
 
       def stamped_metadata(payload)

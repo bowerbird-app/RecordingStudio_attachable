@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Dummy `AttachmentsMetricsTest` restores admin resolvers and `Current.actor` after each example, so later tests are not left unauthorized.
 
+## [0.22.5] - 2026-11-13
+
+### Fixed
+
+- `ImportRemoteFiles` accepts a provider download that returns an IO, including `StringIO`. MIME sniffing, file size, the recordable file-size cap, storage limit, and the batch count still run. Any other download returns `download must return io: or an IO`.
+
+### Upgrade Notes
+
+- Bump to 0.22.5. No migration.
+
 ## [0.22.4] - 2026-11-13
 
 ### Changed
@@ -632,7 +642,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.4...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.5...HEAD
+[0.22.5]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.4...v0.22.5
 [0.22.4]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.3...v0.22.4
 [0.22.3]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.2...v0.22.3
 [0.22.2]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.1...v0.22.2

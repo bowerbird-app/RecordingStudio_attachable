@@ -36,6 +36,14 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes dummy_lock, "flat_pack (0.1.341)"
   end
 
+  def test_api_dependency_is_0_23
+    gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
+    dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
+
+    assert_includes gemspec, 'spec.add_dependency "recording_studio_api", "~> 0.23"'
+    assert_includes dummy_gemfile, 'tag: "v0.23.0"'
+  end
+
   def test_metrics_dependency_is_0_3_through_pre_1
     spec = Gem.loaded_specs.fetch("recording_studio_metrics")
     gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
@@ -60,10 +68,10 @@ class RecordingStudioAttachableTest < Minitest::Test
     refute_includes gemspec, "recording_studio_google_drive"
     refute_includes gemspec, "recording_studio_dropbox"
     assert_includes dummy_gemfile, 'gem "recording_studio_google_drive"'
-    assert_includes dummy_gemfile, 'tag: "v0.4.0"'
+    assert_includes dummy_gemfile, 'tag: "v0.6.0"'
     assert_includes dummy_gemfile, 'gem "recording_studio_dropbox"'
-    assert_includes dummy_gemfile, 'tag: "v0.3.0"'
-    assert_includes dummy_gemfile, 'gem "recording_studio_oauth", github: "bowerbird-app/RecordingStudio_Oauth", tag: "v0.15.1"'
+    assert_includes dummy_gemfile, 'tag: "v0.5.0"'
+    assert_includes dummy_gemfile, 'gem "recording_studio_oauth", github: "bowerbird-app/RecordingStudio_Oauth", tag: "v0.21.7"'
     assert_includes dummy_gemfile, 'gem "recording_studio_site_settings", github: "bowerbird-app/RecordingStudio_site_settings", tag: "v0.5.4"'
     assert_includes dummy_gemfile, 'gem "recording_studio_accessible", github: "bowerbird-app/RecordingStudio_accessible", tag: "v0.18.1"'
   end

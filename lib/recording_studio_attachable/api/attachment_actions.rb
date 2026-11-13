@@ -329,7 +329,8 @@ module RecordingStudioAttachable
             name,
             capability: :attachable, scope: :member, http_verb: :post, version: "1.0.0",
             required_role: Api.role_for(name), handler: handler, serializer: method(:serialize),
-            input_contract: contract, openapi: openapi, api: api
+            input_contract: contract, openapi: openapi, api: api,
+            openapi_for: ->(type:, action:) { Api.openapi_for(type: type, action: action) }
           )
         end
 

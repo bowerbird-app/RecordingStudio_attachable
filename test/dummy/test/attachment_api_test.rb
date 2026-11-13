@@ -266,10 +266,12 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
       description: "Page attach description."
     )
 
-    workspace_import = RecordingStudioAttachable::Api.openapi_for(type: "Workspace", action: :import_attachment)
-    page_import = RecordingStudioAttachable::Api.openapi_for(type: "Page", action: :import_attachment)
-    workspace_attach = RecordingStudioAttachable::Api.openapi_for(type: "Workspace", action: :attach)
-    page_attach = RecordingStudioAttachable::Api.openapi_for(type: "Page", action: :attach)
+    import = RecordingStudioApi.capability_action(:import_attachment)
+    attach = RecordingStudioApi.capability_action(:attach)
+    workspace_import = import.openapi_for(type: "Workspace", action: :import_attachment)
+    page_import = import.openapi_for(type: "Page", action: :import_attachment)
+    workspace_attach = attach.openapi_for(type: "Workspace", action: :attach)
+    page_attach = attach.openapi_for(type: "Page", action: :attach)
 
     assert_equal "Workspace - Import Attachment", workspace_import[:title]
     assert_equal "Import a file onto this workspace from a web link.", workspace_import[:summary]
@@ -282,6 +284,13 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     assert_equal RecordingStudioAttachable::Api::AttachmentActions::ATTACH_COPY, workspace_attach[:summary]
     assert_equal RecordingStudioAttachable::Api::AttachmentActions::CREATE_UPLOAD_COPY,
                  RecordingStudioAttachable::Api::AttachmentActions::CREATE_UPLOAD_OPENAPI.fetch(:summary)
+
+    get "/APIdocs/v1/openapi.json"
+    assert_response :success
+    document = JSON.parse(response.body)
+    workspace_path = workspace_action(document, "import_attachment")
+    assert_equal "Import a file onto this workspace from a web link.", workspace_path.fetch("summary")
+    assert_equal "Workspace import description.", workspace_path.fetch("description")
   ensure
     RecordingStudioAttachable::Api::OpenapiOverrides.clear!
   end

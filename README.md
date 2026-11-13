@@ -273,7 +273,7 @@ RecordingStudioAttachable::Api.override_openapi(
 )
 ```
 
-`RecordingStudioAttachable::Api.openapi_for(type:, action:)` returns the merged hash for that type. Leave the hook unset to keep the generic copy.
+`RecordingStudioAttachable::Api.openapi_for(type:, action:)` returns the merged hash for that type. Attachable registers that method as `openapi_for:` on each capability action, so Recording Studio API OpenAPI and the MCP catalog use the per-type copy. Leave the hook unset to keep the generic copy. Requires `recording_studio_api ~> 0.23`.
 
 `import_attachment` 200 is the `Payload.one` shape: `id`, `kind`, `name`, `urls.file`. `create_upload` 200 is the DirectUpload ticket: `signed_blob_id`, `upload.url`, `upload.headers`, `expires_at`.
 
@@ -839,7 +839,7 @@ Dummy credentials (`test/dummy/config/credentials.yml.enc`) are encrypted with t
 
 - the dummy app is a validation shell, not a production template
 - CI installs the dummy app bundle and runs dummy-app migrations before the root checks
-- the dummy app pins RecordingStudio `v6.3.0`, Recording Studio Accessible `v0.18.1`, Recording Studio Orderable `v0.3.0`, Recording Studio API `v0.11.4`, and Site Settings `v0.5.4`
+- the dummy app pins RecordingStudio `v6.3.0`, Recording Studio Accessible `v0.18.1`, Recording Studio Orderable `v0.3.0`, Recording Studio API `v0.23.0`, Oauth `v0.21.7`, Google Drive `v0.6.0`, Dropbox `v0.5.0`, and Site Settings `v0.5.4`
 - make sure engine, Active Storage, and Recording Studio tables are migrated in the dummy app before validating upload flows locally
 - `bin/rails db:seed` attaches a twenty-shot Kiln canister press kit to the workspace. The shots mix portrait, square, and landscape frames. Edit images uses those files. Seeds also remove the colour-block stand-ins `window.jpg`, `dock.jpg`, and `pier.jpg` when they are still on the workspace.
 - set `DUMMY_ACTIVE_STORAGE_SERVICE=amazon` plus `DUMMY_AWS_ACCESS_KEY_ID`, `DUMMY_AWS_SECRET_ACCESS_KEY`, `DUMMY_AWS_REGION`, and `DUMMY_AWS_BUCKET` to exercise S3-backed uploads in the dummy app; `DUMMY_AWS_BUCKET` may be either the plain bucket name or a bucket ARN

@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `RecordingStudioAttachable::Api.override_openapi(type:, action:, title:, summary:, description:)` overrides OpenAPI title, summary, and description for one recordable type on `create_upload`, `attach`, and `import_attachment`. Other types keep the generic Attachable copy. `CREATE_UPLOAD_COPY` and the shared Upload, Attach, and Import strings are unchanged.
+- `RecordingStudioAttachable::Api.override_openapi(type:, action:, title:, summary:, description:)` overrides OpenAPI title, summary, and description for one recordable type on `create_upload`, `attach`, and `import_attachment`. Other types keep the generic Attachable copy. `CREATE_UPLOAD_COPY` and the shared Upload, Attach, and Import strings are unchanged. Each Attachable capability action passes `openapi_for:` so Recording Studio API OpenAPI paths and the MCP catalog use that merged copy.
 - `import_attachment` OpenAPI 200 documents `Payload.one`: `id`, `kind`, `name`, `urls.file`.
 - `create_upload` OpenAPI 200 documents the DirectUpload ticket: `signed_blob_id`, `upload.url`, `upload.headers`, `expires_at`. The create_upload input contract now has field descriptions.
 - `config.before_save` runs after the blob is accepted in `RecordAttachmentUpload`, so import and batch attach go through the same check. Raise `ArgumentError` to refuse. Unset, nothing changes.
@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Upgrade Notes
 
 - Bump to `0.23.0`. No migration.
-- Call `RecordingStudioAttachable::Api.override_openapi` when a type needs its own title, summary, or description. Leave it unset to keep the generic copy.
+- Call `RecordingStudioAttachable::Api.override_openapi` when a type needs its own title, summary, or description. Leave it unset to keep the generic copy. Requires `recording_studio_api ~> 0.23` (`>= 0.23.0`). The dummy app pins API `v0.23.0`, Oauth `v0.21.7`, Google Drive `v0.6.0`, and Dropbox `v0.5.0`.
 - Set `config.before_save` only when a type must refuse a write that Attachable would otherwise accept. The callable receives `parent_recording:`, `actor:`, and `blob:`.
 
 ## [0.22.4] - 2026-11-13

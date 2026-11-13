@@ -5,46 +5,40 @@ module RecordingStudioAttachable
     module AttachmentActions
       module_function
 
+      CREATE_UPLOAD_COPY =
+        "An attachment is an uploaded file linked to a record, like a PDF, an image or a document. " \
+        "Step 1 of 2. Step 2 is Attach, or Add File or Add Image for a press kit Files or Images " \
+        "section. Use this when you have the file yourself. Send filename, byte_size, checksum and " \
+        "content_type, and you get back an upload URL and a signed_blob_id. PUT the file to that " \
+        "URL, then send the signed_blob_id to step 2. This step adds nothing to the record yet. " \
+        "The parent record must already exist."
       CREATE_UPLOAD_OPENAPI = {
         title: "Upload",
-        summary:
-          "Step 1 of 2. Step 2 is Attach, or Add File or Add Image for a press kit Files or Images " \
-          "section. Use this when you have the file yourself. Send filename, byte_size, checksum and " \
-          "content_type, and you get back an upload URL and a signed_blob_id. PUT the file to that " \
-          "URL, then send the signed_blob_id to step 2. For a press kit Files or Images section, " \
-          "step 2 is Add File or Add Image. For any other record, it's Attach. This step adds " \
-          "nothing to the record yet. The parent record must already exist.",
-        description:
-          "Step 1 of 2. Step 2 is Attach, or Add File or Add Image for a press kit Files or Images " \
-          "section. Use this when you have the file yourself. Send filename, byte_size, checksum and " \
-          "content_type, and you get back an upload URL and a signed_blob_id. PUT the file to that " \
-          "URL, then send the signed_blob_id to step 2. For a press kit Files or Images section, " \
-          "step 2 is Add File or Add Image. For any other record, it's Attach. This step adds " \
-          "nothing to the record yet. The parent record must already exist."
+        summary: CREATE_UPLOAD_COPY,
+        description: CREATE_UPLOAD_COPY
       }.freeze
+      ATTACH_COPY =
+        "An attachment is an uploaded file linked to a record, like a PDF, an image or a document. " \
+        "Step 2 of 2. Step 1 is Upload: call Upload, PUT the file to its URL, then send the " \
+        "signed_blob_id here. Links one signed_blob_id, or several in attachments, to this record " \
+        "as plain attachments. For a press kit Files or Images section, use Add File or Add Image " \
+        "instead, so the file shows up as an item in that section. The parent record must already exist."
       ATTACH_OPENAPI = {
         title: "Attach",
-        summary:
-          "Step 2 of 2. Step 1 is Upload: call Upload, PUT the file to its URL, then send the " \
-          "signed_blob_id here. Links one signed_blob_id, or several in attachments, to this record " \
-          "as plain attachments. For a press kit Files or Images section, use Add File or Add Image " \
-          "instead, so the file shows up as an item in that section. The parent record must already exist.",
-        description:
-          "Step 2 of 2. Step 1 is Upload: call Upload, PUT the file to its URL, then send the " \
-          "signed_blob_id here. Links one signed_blob_id, or several in attachments, to this record " \
-          "as plain attachments. For a press kit Files or Images section, use Add File or Add Image " \
-          "instead, so the file shows up as an item in that section. The parent record must already exist."
+        summary: ATTACH_COPY,
+        description: ATTACH_COPY
       }.freeze
+      IMPORT_ATTACHMENT_COPY =
+        "An attachment is an uploaded file linked to a record, like a PDF, an image or a document. " \
+        "One step, no upload needed. Use this when the file is already online at a URL. " \
+        "It downloads the file and attaches it to this record as a plain attachment in a single call, " \
+        "so there's no Upload, PUT or signed_blob_id. For a press kit Files or Images section, use " \
+        "Add File or Add Image instead, so the file shows up as an item in that section. " \
+        "The parent record must already exist."
       IMPORT_ATTACHMENT_OPENAPI = {
         title: "Import",
-        summary:
-          "One step, no upload needed. Use this when the file is already online at a URL. " \
-          "It downloads the file and attaches it to this record as a plain attachment in a single call, " \
-          "so there's no Upload, PUT or signed_blob_id. The parent record must already exist.",
-        description:
-          "One step, no upload needed. Use this when the file is already online at a URL. " \
-          "It downloads the file and attaches it to this record as a plain attachment in a single call, " \
-          "so there's no Upload, PUT or signed_blob_id. The parent record must already exist."
+        summary: IMPORT_ATTACHMENT_COPY,
+        description: IMPORT_ATTACHMENT_COPY
       }.freeze
 
       def register!(api)

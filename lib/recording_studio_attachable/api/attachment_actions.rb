@@ -1,10 +1,14 @@
 # frozen_string_literal: true
 
+require_relative "attachment_contracts"
+
 module RecordingStudioAttachable
   module Api
     module AttachmentActions
       module_function
 
+      ATTACHMENT_ONE_SCHEMA = AttachmentContracts::ATTACHMENT_ONE_SCHEMA
+      CREATE_UPLOAD_TICKET_SCHEMA = AttachmentContracts::CREATE_UPLOAD_TICKET_SCHEMA
       CREATE_UPLOAD_COPY =
         "An attachment is an uploaded file linked to a record, like a PDF, an image or a document. " \
         "Step 1 of 2. Step 2 is Attach, or Add File or Add Image for a press kit Files or Images " \
@@ -15,7 +19,15 @@ module RecordingStudioAttachable
       CREATE_UPLOAD_OPENAPI = {
         title: "Upload",
         summary: CREATE_UPLOAD_COPY,
-        description: CREATE_UPLOAD_COPY
+        description: CREATE_UPLOAD_COPY,
+        responses: {
+          "200" => {
+            description: "A direct-upload ticket. This step does not attach the file.",
+            content: {
+              "application/json" => { schema: CREATE_UPLOAD_TICKET_SCHEMA }
+            }
+          }
+        }
       }.freeze
       ATTACH_COPY =
         "An attachment is an uploaded file linked to a record, like a PDF, an image or a document. " \
@@ -38,13 +50,21 @@ module RecordingStudioAttachable
       IMPORT_ATTACHMENT_OPENAPI = {
         title: "Import",
         summary: IMPORT_ATTACHMENT_COPY,
-        description: IMPORT_ATTACHMENT_COPY
+        description: IMPORT_ATTACHMENT_COPY,
+        responses: {
+          "200" => {
+            description: "The new attachment.",
+            content: {
+              "application/json" => { schema: ATTACHMENT_ONE_SCHEMA }
+            }
+          }
+        }
       }.freeze
 
       def register!(api)
-        register(api, :create_upload, CreateUpload, create_upload_contract, CREATE_UPLOAD_OPENAPI)
-        register(api, :attach, Attach, attach_contract, ATTACH_OPENAPI)
-        register(api, :import_attachment, ImportAttachment, import_contract, IMPORT_ATTACHMENT_OPENAPI)
+        register(api, :create_upload, CreateUpload, AttachmentContracts.create_upload, CREATE_UPLOAD_OPENAPI)
+        register(api, :attach, Attach, AttachmentContracts.attach, ATTACH_OPENAPI)
+        register(api, :import_attachment, ImportAttachment, AttachmentContracts.import_attachment, IMPORT_ATTACHMENT_OPENAPI)
       end
 
       class CreateUpload
@@ -315,42 +335,6 @@ module RecordingStudioAttachable
 
         def serialize(result)
           result
-        end
-
-        def create_upload_contract
-          fields = {
-            filename: { type: :string, required: true, allow_blank: false },
-            byte_size: { type: :integer, required: true },
-            checksum: { type: :string, required: true, allow_blank: false },
-            content_type: { type: :string, required: true, allow_blank: false }
-          }
-          { reject_unknown: false, fields: fields }
-        end
-
-        def attach_contract
-          fields = {
-            signed_blob_id: { type: :string, required: false, allow_blank: true },
-            name: optional_string,
-            description: optional_string,
-            caption: optional_string,
-            credit: optional_string,
-            alt_text: optional_string,
-            attachments: { type: :array, required: false }
-          }
-          { reject_unknown: false, fields: fields }
-        end
-
-        def import_contract
-          fields = {
-            url: { type: :string, required: true, allow_blank: false },
-            name: optional_string,
-            description: optional_string
-          }
-          { reject_unknown: false, fields: fields }
-        end
-
-        def optional_string
-          { type: :string, required: false, allow_blank: true }
         end
       end
     end

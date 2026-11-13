@@ -152,6 +152,34 @@ class RecordAttachmentUploadTest < Minitest::Test
     assert_equal "Front door", captured[:alt_text]
   end
 
+  def test_before_save_can_refuse_a_write
+    blob = FakeBlob.new("image/png", 1024, FakeFilename.new("photo.png"))
+    parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: FakeRecording.new(id: "root-1"))
+    seen = nil
+    RecordingStudioAttachable.configuration.before_save = lambda { |parent_recording:, actor:, blob:|
+      seen = { parent_recording: parent_recording, actor: actor, blob: blob }
+      raise ArgumentError, "This press kit already has a cover image. Use Press Kit - Set Cover Image to replace it."
+    }
+
+    bind_blob(blob, parent)
+    ActiveStorage::Blob.stub(:find_signed!, blob) do
+      result = RecordingStudioAttachable::Services::RecordAttachmentUpload.call(
+        parent_recording: parent,
+        signed_blob_id: "signed-id",
+        actor: upload_actor
+      )
+
+      assert result.failure?
+      assert_includes result.error, "already has a cover image"
+    end
+
+    assert_same parent, seen[:parent_recording]
+    assert_equal upload_actor, seen[:actor]
+    assert_same blob, seen[:blob]
+  ensure
+    RecordingStudioAttachable.configuration.before_save = nil
+  end
+
   def test_rejects_pdf_and_text_uploads_for_page_recordings
     parent = FakeRecording.new(id: "parent-1", recordable_type: "Page", root_recording: FakeRecording.new(id: "root-1"))
     capability_options = { allowed_content_types: ["image/*"], enabled_attachment_kinds: %i[image], max_file_size: 2.megabytes }

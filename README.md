@@ -125,6 +125,9 @@ RecordingStudioAttachable.configure do |config|
   config.max_file_size = 25.megabytes
   # Maximum number of files accepted in a single upload or import request.
   config.max_file_count = 20
+  # Optional. Runs after a blob is accepted in RecordAttachmentUpload, so import
+  # and batch attach use the same check. Raise ArgumentError to refuse.
+  # config.before_save = ->(parent_recording:, actor:, blob:) { }
   config.enabled_attachment_kinds = %i[image file]
   config.default_listing_scope = :direct
   config.default_kind_filter = :all
@@ -256,7 +259,23 @@ RecordingStudioApi.register_recordable_type_api(
 
 A type that leaves those names off `capability_actions` does not show the actions in OpenAPI. Calling one returns the Recording Studio API's unsupported-action response.
 
-The three actions are different steps. `create_upload` prepares a direct upload and returns an upload URL plus a `signed_blob_id`; it adds nothing to the record yet. `attach` links already-uploaded blobs to the record and comes from RecordingStudio Attachable. `import_attachment` fetches a file from a URL and attaches it. The parent record must already exist. OpenAPI titles are type-neutral (`Upload`, `Attach`, `Import`). Summaries and descriptions start with what an attachment is, then the step, and they are the same on every parent type.
+The three actions are different steps. `create_upload` prepares a direct upload and returns an upload URL plus a `signed_blob_id`; it adds nothing to the record yet. `attach` links already-uploaded blobs to the record and comes from RecordingStudio Attachable. `import_attachment` fetches a file from a URL and attaches it. The parent record must already exist. OpenAPI titles are type-neutral (`Upload`, `Attach`, `Import`). Summaries and descriptions start with what an attachment is, then the step, and they are the same on every parent type unless a host overrides them.
+
+A host gem can set title, summary, and description for one recordable type without changing other types or the generic `CREATE_UPLOAD_COPY` / `ATTACH_COPY` / `IMPORT_ATTACHMENT_COPY` strings:
+
+```ruby
+RecordingStudioAttachable::Api.override_openapi(
+  type: "RecordingStudioPresskits::PressKit",
+  action: :import_attachment,
+  title: "Press Kit - Import Attachment",
+  summary: "Import an image onto this press kit from a web link.",
+  description: "..."
+)
+```
+
+`RecordingStudioAttachable::Api.openapi_for(type:, action:)` returns the merged hash for that type. Leave the hook unset to keep the generic copy.
+
+`import_attachment` 200 is the `Payload.one` shape: `id`, `kind`, `name`, `urls.file`. `create_upload` 200 is the DirectUpload ticket: `signed_blob_id`, `upload.url`, `upload.headers`, `expires_at`.
 
 `create_upload` takes `filename`, `byte_size`, `checksum`, and `content_type`. The checksum is the base64 MD5 of the bytes. The response is `signed_blob_id`, `upload` (`url` and `headers`), and `expires_at`. PUT the bytes to `upload.url` with `upload.headers`. The signed id uses the `:attachable_upload` purpose and expires after `config.direct_upload_expires_in` (default 5 minutes). It is bound to the parent recording and the actor that asked for it. `attach` accepts it once, and only while the blob is still unattached. The file bytes are sniffed and must match the declared content type.
 

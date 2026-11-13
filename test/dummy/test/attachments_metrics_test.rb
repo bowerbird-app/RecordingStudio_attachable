@@ -301,12 +301,20 @@ class AttachmentsMetricsTest < ActiveSupport::TestCase
   def grant_view!(actor, recording, role: :view)
     original = RecordingStudioAccessible.configuration.access_management_authorizer
     RecordingStudioAccessible.configuration.access_management_authorizer = ->(**) { true }
-    result = RecordingStudioAccessible.grant_access(
-      recording: recording,
-      actor: actor,
-      role: role,
-      manager_actor: actor
-    )
+    result = if role.to_sym == :admin
+      RecordingStudioAccessible.bootstrap_owner_access!(recording: recording, actor: actor)
+    else
+      owner = create_user("metrics-owner-#{SecureRandom.hex(4)}@example.com")
+      boot = RecordingStudioAccessible.bootstrap_owner_access!(recording: recording, actor: owner)
+      raise boot.error if boot.failure?
+
+      RecordingStudioAccessible.grant_access(
+        recording: recording,
+        actor: actor,
+        role: role,
+        manager_actor: owner
+      )
+    end
     raise result.error if result.failure?
   ensure
     RecordingStudioAccessible.configuration.access_management_authorizer = original

@@ -141,9 +141,7 @@ class UploadModalTest < ActionDispatch::IntegrationTest
   def grant_workspace_access!(root)
     original = RecordingStudioAccessible.configuration.access_management_authorizer
     RecordingStudioAccessible.configuration.access_management_authorizer = ->(**) { true }
-    result = RecordingStudioAccessible.grant_access(
-      recording: root, actor: @user, role: :admin, manager_actor: @user
-    )
+    result = RecordingStudioAccessible.bootstrap_owner_access!(recording: root, actor: @user)
     raise result.error if result.failure?
   ensure
     RecordingStudioAccessible.configuration.access_management_authorizer = original

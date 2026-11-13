@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Development and dummy pins use the current Recording Studio release tags: Recording Studio `v6.7.0`, Flatpack `v0.1.356`, Metrics `v0.8.0`, Cache `v0.6.3`, Logs `v0.7.4`, Trashable `v0.14.0`, Accessible `v0.31.0`, Orderable `v0.6.0`, Admin `v2.13.0`, API `v0.23.0`, Site Settings `v0.5.6`, Oauth `v0.21.7`, Dropbox `v0.5.0`, Google Drive `v0.6.0`, Moveable `v4.1.1`, and Icons `v0.2.1`.
+- Remove `test/support/widen_recording_studio_requirement.rb`. These release tags resolve without widening `recording_studio`.
+- The dummy app sets `config.authorize_write` so Recording Studio 6.5 writes are allowed when an actor is present. Dummy migrations add Trashable `purge_at`, API request-log arrival columns, and Logs `period_start`. The first admin on a new root uses `bootstrap_owner_access!`.
+
 ## [0.23.0] - 2026-11-13
 
 ### Added

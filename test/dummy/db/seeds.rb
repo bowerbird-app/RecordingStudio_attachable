@@ -72,11 +72,9 @@ end
 original_access_authorizer = RecordingStudioAccessible.configuration.access_management_authorizer
 RecordingStudioAccessible.configuration.access_management_authorizer = ->(**) { true }
 begin
-  grant_result = RecordingStudioAccessible.grant_access(
+  grant_result = RecordingStudioAccessible.bootstrap_owner_access!(
     recording: root_recording,
-    actor: user,
-    role: :admin,
-    manager_actor: user
+    actor: user
   )
   raise grant_result.error if grant_result.failure?
 ensure

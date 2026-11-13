@@ -16,4 +16,5 @@ RecordingStudio.configure do |config|
   config.recordable_dup_strategy = :dup
   config.require_actor = true if config.respond_to?(:require_actor=)
   config.max_metadata_bytes = 16_384 if config.respond_to?(:max_metadata_bytes=)
+  config.authorize_write = ->(actor:, **) { actor.present? } if config.respond_to?(:authorize_write=)
 end

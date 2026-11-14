@@ -694,6 +694,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes schema, 'create_table "active_storage_variant_records"'
     assert_includes schema, "idx_rs_attachable_parent_active"
     assert_includes schema, "idx_rs_attachable_root_active"
+    assert_includes schema, 't.uuid "root_recording_id", null: false'
+    assert_includes schema, "index_rs_events_on_root_and_timeline"
   end
 
   def test_dummy_active_storage_can_be_switched_to_amazon_via_environment

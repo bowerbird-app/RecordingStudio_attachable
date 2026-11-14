@@ -2,8 +2,8 @@
 
 Current development pins:
 
-- `recording_studio` git tag `v6.7.1` (`>= 6.7.1`)
-- `flat_pack` tag `v0.1.356` (`FlatPack::VERSION` `0.1.356`, gemspec `>= 0.1.315`)
+- `recording_studio` git tag `v6.10.0` (`>= 6.7.1`)
+- `flat_pack` tag `v0.1.366` (`FlatPack::VERSION` `0.1.366`, gemspec `>= 0.1.315`)
 - `view_component` `4.19.0`
 - `recording_studio_metrics` `>= 0.3.0, < 1.0` (Gemfile tag `v0.8.0`)
 
@@ -11,7 +11,7 @@ Current development pins:
 
 Accepted layout values are `nil`, `false`, a layout name, or a callable invoked as `call(controller:)`.
 
-Bundler resolves the dummy app against the pinned GitHub release tags. Trashable `v0.14.0` allows Recording Studio `v6.7.1`. The dummy initializer sets `config.authorize_write` because Recording Studio 6.5 writes fail closed without it. The dummy schema includes Trashable `purge_at`.
+Bundler resolves the dummy app against the pinned GitHub release tags. Trashable `v0.15.0` allows Recording Studio `v6.10.0`. The dummy initializer sets `config.authorize_write` because Recording Studio 6.5 writes fail closed without it. The dummy schema includes Trashable `purge_at` and `recording_studio_events.root_recording_id`.
 
 Gem pages set `content_for :title` and `:subtitle`, `flat_pack_page_nav` for back and close, and `register_page_nav` for page actions. The layout draws the shell. Modal and Turbo-frame responses still pass `layout: false`.
 

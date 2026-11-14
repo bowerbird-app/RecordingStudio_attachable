@@ -421,10 +421,10 @@ class DocsController < ApplicationController
     ]
 
     @picker_summary = [
-      "The picker is an image-only library surface backed by recording_attachment_picker_path(recording). The endpoint filters to kind: :images and returns JSON cards plus pagination.",
-      "The bundled Stimulus controller loads that JSON into a FlatPack modal, supports search, infinite scroll, direct uploads, and single or multiple selection.",
+      "The picker is an image-only library. recording_attachment_picker_path(recording) returns Flatpack Picker JSON: items, plus pagination.current_page, total_pages, and next_page.",
+      "next_page is the next page number, or null. A new search replaces the list. The next page is appended. The modal renders FlatPack::Picker with remote search. Upload and provider buttons sit in the toolbar. The empty slot is the empty state.",
       "Every selection dispatches a recording-studio-attachable--attachment-image-picker:selected event with event.detail.attachment so host-app code can persist or render the chosen attachment.",
-      "The same payload shape is returned after new uploads, so browsing existing images and uploading new images share one client contract."
+      "event.detail.attachment is the item payload. New uploads dispatch that same attachment object."
     ]
 
     @picker_payload_fields = [
@@ -462,9 +462,14 @@ class DocsController < ApplicationController
           <div
             data-controller="chat-demo recording-studio-attachable--attachment-image-picker"
             data-action="recording-studio-attachable--attachment-image-picker:selected->chat-demo#attachmentSelected"
-            data-recording-studio-attachable--attachment-image-picker-picker-url-value="<%= @chat_attachment_picker_path %>"
             data-recording-studio-attachable--attachment-image-picker-upload-url-value="<%= @chat_attachment_create_path %>"
             data-recording-studio-attachable--attachment-image-picker-direct-upload-url-value="<%= recording_studio_attachable.recording_direct_uploads_path(@recording) %>">
+            <%= render "recording_studio_attachable/attachment_image_pickers/modal",
+              picker_url: @chat_attachment_picker_path,
+              modal_id: "chat-images",
+              modal_title: "Add images",
+              recording: @recording,
+              empty_state_text: "No images yet." %>
           </div>
         ERB
       },
@@ -496,9 +501,14 @@ class DocsController < ApplicationController
           <div
             data-controller="recording-studio-attachable--attachment-image-picker"
             data-action="recording-studio-inline-picker->recording-studio-attachable--attachment-image-picker#openPickerFromToolbar"
-            data-recording-studio-attachable--attachment-image-picker-picker-url-value="<%= @page_attachment_picker_path %>"
             data-recording-studio-attachable--attachment-image-picker-upload-url-value="<%= @page_attachment_create_path %>"
             data-recording-studio-attachable--attachment-image-picker-modal-id-value="page-image-picker-modal">
+            <%= render "recording_studio_attachable/attachment_image_pickers/modal",
+              picker_url: @page_attachment_picker_path,
+              modal_id: "page-image-picker-modal",
+              modal_title: "Insert image",
+              recording: @page_recording,
+              empty_state_text: "No images yet." %>
           </div>
         ERB
       }

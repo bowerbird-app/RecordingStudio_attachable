@@ -32,7 +32,7 @@ gem "turbo-rails"
 gem "stimulus-rails"
 gem "jbuilder"
 gem "tailwindcss-rails"
-gem "flat_pack", github: "bowerbird-app/flatpack", tag: "v0.1.356"
+gem "flat_pack", github: "bowerbird-app/flatpack", tag: "v0.1.371"
 gem "view_component", "4.19.0"
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 gem "solid_cache"

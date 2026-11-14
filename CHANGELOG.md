@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-11-14
+
+### Changed
+
+- The attachment image picker renders `FlatPack::Picker` inside the existing modal (`modal: false`, `variant: :flush`). Search, the image grid, empty state, selection, and page append come from Flatpack. Upload, progress, preprocessing, storage errors, and provider buttons stay in Attachable. Provider buttons stay generic: they come from registered upload providers and render in the picker toolbar.
+- `GET` `recordings/:id/attachments/picker` returns Flatpack's remote shape: `{ items, pagination: { current_page, total_pages, next_page } }`. `next_page` is the next page number, or `null` when there is no next page. Each item is an image. `payload` is the attachment object hosts already receive on `recording-studio-attachable--attachment-image-picker:selected`.
+- Requires `flat_pack >= 0.1.371`. Development and dummy pins use tag `v0.1.371`.
+
+### Upgrade Notes
+
+- Bump to `0.26.0`. No migration.
+- Host apps need Flatpack `>= 0.1.371`. Reload JavaScript and kit CSS. Do not rebuild Tailwind.
+- Pass `picker_url:` when rendering `recording_studio_attachable/attachment_image_pickers/modal`. That URL is the picker's remote search endpoint.
+- The selected event is unchanged: `event.detail.attachment` is the item `payload` (`id`, `name`, `description`, `content_type`, `byte_size`, `attachment_kind`, `thumbnail_url`, `insert_url`, `variant_urls`, `alt`, `show_path`). `recording-studio-inline-picker` still opens the modal.
+
 ## [0.25.0] - 2026-11-14
 
 ### Added
@@ -677,7 +692,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.25.0...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.26.0...HEAD
+[0.26.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.24.0...v0.25.0
 [0.24.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.4...v0.23.0

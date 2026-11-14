@@ -3,7 +3,7 @@
 Current development pins:
 
 - `recording_studio` git tag `v6.7.1` (`>= 6.7.1`)
-- `flat_pack` tag `v0.1.356` (`FlatPack::VERSION` `0.1.356`, gemspec `>= 0.1.315`)
+- `flat_pack` tag `v0.1.371` (`FlatPack::VERSION` `0.1.371`, gemspec `>= 0.1.371`)
 - `view_component` `4.19.0`
 - `recording_studio_metrics` `>= 0.3.0, < 1.0` (Gemfile tag `v0.8.0`)
 

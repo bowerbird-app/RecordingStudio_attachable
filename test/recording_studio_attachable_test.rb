@@ -4,7 +4,7 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.25.0", RecordingStudioAttachable::VERSION
+    assert_equal "0.26.0", RecordingStudioAttachable::VERSION
   end
 
   def test_recording_studio_dependency_is_6_7_1_or_newer
@@ -21,24 +21,24 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes dummy_gemfile, pin
   end
 
-  def test_flat_pack_dependency_is_0_1_315_or_newer
+  def test_flat_pack_dependency_is_0_1_371_or_newer
     spec = Gem.loaded_specs.fetch("flat_pack")
     gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
     root_gemfile = File.read(File.expand_path("../Gemfile", __dir__))
     dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
     root_lock = File.read(File.expand_path("../Gemfile.lock", __dir__))
     dummy_lock = File.read(File.expand_path("dummy/Gemfile.lock", __dir__))
-    pin = 'gem "flat_pack", github: "bowerbird-app/flatpack", tag: "v0.1.356"'
+    pin = 'gem "flat_pack", github: "bowerbird-app/flatpack", tag: "v0.1.371"'
 
-    assert spec.version >= Gem::Version.new("0.1.315"),
-           "expected flat_pack >= 0.1.315, got #{spec.version}"
-    assert_includes gemspec, 'spec.add_dependency "flat_pack", ">= 0.1.315"'
+    assert spec.version >= Gem::Version.new("0.1.371"),
+           "expected flat_pack >= 0.1.371, got #{spec.version}"
+    assert_includes gemspec, 'spec.add_dependency "flat_pack", ">= 0.1.371"'
     assert_includes root_gemfile, pin
     assert_includes dummy_gemfile, pin
-    assert_includes root_lock, "tag: v0.1.356"
-    assert_includes dummy_lock, "tag: v0.1.356"
-    assert_includes root_lock, "flat_pack (0.1.356)"
-    assert_includes dummy_lock, "flat_pack (0.1.356)"
+    assert_includes root_lock, "tag: v0.1.371"
+    assert_includes dummy_lock, "tag: v0.1.371"
+    assert_includes root_lock, "flat_pack (0.1.371)"
+    assert_includes dummy_lock, "flat_pack (0.1.371)"
   end
 
   def test_api_dependency_is_0_23

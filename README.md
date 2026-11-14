@@ -17,7 +17,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - Rails 8.1+
 - Active Storage installed in the host app
 - Recording Studio 6.7.1 or newer installed in the host app (CI tested with GitHub tag `v6.7.1`)
-- Flatpack 0.1.315 or newer (`FlatPack::VERSION` 0.1.356 at tag `v0.1.356`)
+- Flatpack 0.1.371 or newer (`FlatPack::VERSION` 0.1.371 at tag `v0.1.371`)
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
 - RecordingStudio Metrics `>= 0.3.0, < 1.0` (CI tested with GitHub tag `v0.8.0`) for operations-API storage and upload metrics
@@ -350,17 +350,30 @@ attachment.url_for_variant(:med, mode: :direct, rails_url: preview_path)
 
 ### Attachment image picker
 
-The gem ships with a reusable image picker for browser-driven surfaces such as inline editors, chat composers, and custom attachment chips. The picker endpoint is `recording_attachment_picker_path(recording)` and always returns image attachments plus pagination metadata for the chosen parent recording.
+The gem ships with a reusable image picker for browser-driven surfaces such as inline editors, chat composers, and custom attachment chips. Render `FlatPack::Modal` and, inside it, `FlatPack::Picker` (`modal: false`, `variant: :flush`) from `recording_studio_attachable/attachment_image_pickers/modal`. Pass `picker_url:` as `recording_attachment_picker_path(recording)`.
 
-In the browser, the bundled `recording-studio-attachable--attachment-image-picker` Stimulus controller loads that JSON into a FlatPack modal, supports search and direct uploads, and dispatches a `selected` event each time the user chooses an attachment. Consumers receive the selected attachment in `event.detail.attachment`.
+That endpoint always returns images for the parent recording, in Flatpack's remote shape:
+
+```json
+{ "items": [], "pagination": { "current_page": 1, "total_pages": 1, "next_page": null } }
+```
+
+`next_page` is the next page number, or `null`. A new search replaces the list. The next page is appended. Each item is an image card. `payload` is the attachment object.
+
+The bundled `recording-studio-attachable--attachment-image-picker` Stimulus controller keeps direct upload, progress, preprocessing, storage errors, and registered provider buttons. Provider buttons render in the picker toolbar. Choosing images still dispatches `recording-studio-attachable--attachment-image-picker:selected`. `event.detail.attachment` is that item's `payload`. `recording-studio-inline-picker` still opens the modal and inserts the image into the editor.
 
 ```erb
 <div
   data-controller="chat-demo recording-studio-attachable--attachment-image-picker"
   data-action="recording-studio-attachable--attachment-image-picker:selected->chat-demo#attachmentSelected"
-  data-recording-studio-attachable--attachment-image-picker-picker-url-value="<%= recording_studio_attachable.recording_attachment_picker_path(@recording) %>"
   data-recording-studio-attachable--attachment-image-picker-upload-url-value="<%= recording_studio_attachable.recording_attachments_path(@recording) %>"
   data-recording-studio-attachable--attachment-image-picker-direct-upload-url-value="<%= recording_studio_attachable.recording_direct_uploads_path(@recording) %>">
+  <%= render "recording_studio_attachable/attachment_image_pickers/modal",
+    modal_id: "chat-images",
+    modal_title: "Add images",
+    recording: @recording,
+    picker_url: recording_studio_attachable.recording_attachment_picker_path(@recording),
+    empty_state_text: "No images yet." %>
 </div>
 ```
 
@@ -839,7 +852,7 @@ Save starts as the default button and is only as wide as its label. Change a cap
 
 `preview:` chooses the picture in the list and on Slides. The default `:square` uses the `square_med` crop. `preview: :natural` uses the `med` variant and keeps the file's proportions. On the list the picture stays about 208px wide beside the fields. On Slides the picture bleeds to the card edges. It stays tall enough for the previous and next controls, and it is capped in height. The fields span the width under it. Clicking those previews still opens the original file. Grid ignores `preview:` and always uses the natural `med` preview. `preview:` is not in the signed save token. An unknown value raises.
 
-FlatPack is the default UI system for the engine and the dummy app (Gemfile tag `v0.1.356`, `FlatPack::VERSION` 0.1.356; gem requires `>= 0.1.315`).
+FlatPack is the default UI system for the engine and the dummy app (Gemfile tag `v0.1.371`, `FlatPack::VERSION` 0.1.371; gem requires `>= 0.1.371`).
 
 ## Development
 

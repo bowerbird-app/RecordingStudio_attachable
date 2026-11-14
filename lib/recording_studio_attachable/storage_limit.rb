@@ -344,7 +344,9 @@ module RecordingStudioAttachable
         ids = []
         ids << recording.recordable_id if recording.respond_to?(:recordable_id) && recording.recordable_id.present?
         ids.concat(event_attachment_ids(recording))
-        ids.map(&:to_s).uniq
+        ids.map(&:to_s).uniq.reject do |recordable_id|
+          DestroyAttachmentChildren.referenced_elsewhere?(recordable_id, except_recording: recording)
+        end
       end
 
       def event_attachment_ids(recording)

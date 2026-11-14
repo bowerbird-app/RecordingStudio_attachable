@@ -132,6 +132,10 @@ module RecordingStudioAttachable
     end
   end
 
+  Engine.initializer "recording_studio_attachable.destroy_attachment_children" do
+    DestroyAttachmentChildren.register!
+  end
+
   Engine.initializer "recording_studio_attachable.metrics" do
     Engine.config.to_prepare do
       require "recording_studio_attachable/metrics"

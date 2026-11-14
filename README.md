@@ -16,7 +16,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - Ruby 3.3+
 - Rails 8.1+
 - Active Storage installed in the host app
-- Recording Studio 6.1.0 or newer installed in the host app (CI tested with GitHub tag `v6.7.0`)
+- Recording Studio 6.7.1 or newer installed in the host app (CI tested with GitHub tag `v6.7.1`)
 - Flatpack 0.1.315 or newer (`FlatPack::VERSION` 0.1.356 at tag `v0.1.356`)
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
@@ -311,6 +311,8 @@ RecordingStudioAttachable::PurgeUnattachedBlobsJob.perform_later
 ```
 
 Trash and restore leave the file attached, so the total stays the same. Permanent deletion is `Recording#destroy!`. `RemoveAttachment` uses that when the recording has no Trashable hook. Trashable purge uses that after the recording is already trashed. Destroy detaches the file rows for the current attachment and earlier snapshots on that recording, then purges a blob that no other attachment still references. The total drops when those file rows are gone.
+
+Destroying any recording also hard-destroys its attachment child recordings, including trashed ones, before Recording Studio's `child_recordings` restrict check. `Recording#destroy!` does not destroy the recordable (`delegated_type` is a `belongs_to` with no `dependent` option). Attachment snapshots are immutable, so `destroy!` on the snapshot raises. After the child recordings are gone, each snapshot that no remaining recording references has its file released and the row deleted. The blob is purged when no remaining file points at it. A snapshot another recording still uses is kept, file included. One notification, `destroy_children.recording_studio_attachable`, reports the parent recording id and how many attachment children were destroyed. No attachment event is written.
 
 When browser-side image preprocessing is enabled, the gem's built-in direct-upload surfaces resize oversized JPEG, PNG, and WebP files before `DirectUpload` sends them to Active Storage. That includes the main upload page, the bundled attachment-image picker, and attachment file replacements on the revision screen. This is a best-effort optimization layer, not a security boundary: server-side content-type and byte-size validation still runs on the final uploaded blob. GIF, SVG, HEIC/HEIF, and other unsupported image types are uploaded unchanged.
 
@@ -839,7 +841,7 @@ Dummy credentials (`test/dummy/config/credentials.yml.enc`) are encrypted with t
 
 - the dummy app is a validation shell, not a production template
 - CI installs the dummy app bundle and runs dummy-app migrations before the root checks
-- the dummy app pins RecordingStudio `v6.7.0`, Recording Studio Accessible `v0.31.0`, Recording Studio Orderable `v0.6.0`, Recording Studio API `v0.23.0`, Oauth `v0.21.7`, Google Drive `v0.6.0`, Dropbox `v0.5.0`, Site Settings `v0.5.6`, Trashable `v0.14.0`, and Metrics `v0.8.0`
+- the dummy app pins RecordingStudio `v6.7.1`, Recording Studio Accessible `v0.31.0`, Recording Studio Orderable `v0.6.0`, Recording Studio API `v0.23.0`, Oauth `v0.21.7`, Google Drive `v0.6.0`, Dropbox `v0.5.0`, Site Settings `v0.5.6`, Trashable `v0.14.0`, and Metrics `v0.8.0`
 - make sure engine, Active Storage, and Recording Studio tables are migrated in the dummy app before validating upload flows locally
 - `bin/rails db:seed` attaches a twenty-shot Kiln canister press kit to the workspace. The shots mix portrait, square, and landscape frames. Edit images uses those files. Seeds also remove the colour-block stand-ins `window.jpg`, `dock.jpg`, and `pier.jpg` when they are still on the workspace.
 - set `DUMMY_ACTIVE_STORAGE_SERVICE=amazon` plus `DUMMY_AWS_ACCESS_KEY_ID`, `DUMMY_AWS_SECRET_ACCESS_KEY`, `DUMMY_AWS_REGION`, and `DUMMY_AWS_BUCKET` to exercise S3-backed uploads in the dummy app; `DUMMY_AWS_BUCKET` may be either the plain bucket name or a bucket ARN

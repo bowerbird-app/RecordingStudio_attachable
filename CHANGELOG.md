@@ -9,9 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Development and dummy pins use the current Recording Studio release tags: Recording Studio `v6.7.0`, Flatpack `v0.1.356`, Metrics `v0.8.0`, Cache `v0.6.3`, Logs `v0.7.4`, Trashable `v0.14.0`, Accessible `v0.31.0`, Orderable `v0.6.0`, Admin `v2.13.0`, API `v0.23.0`, Site Settings `v0.5.6`, Oauth `v0.21.7`, Dropbox `v0.5.0`, Google Drive `v0.6.0`, Moveable `v4.1.1`, and Icons `v0.2.1`.
+- Development and dummy pins use the current Recording Studio release tags: Recording Studio `v6.7.1`, Flatpack `v0.1.356`, Metrics `v0.8.0`, Cache `v0.6.3`, Logs `v0.7.4`, Trashable `v0.14.0`, Accessible `v0.31.0`, Orderable `v0.6.0`, Admin `v2.13.0`, API `v0.23.0`, Site Settings `v0.5.6`, Oauth `v0.21.7`, Dropbox `v0.5.0`, Google Drive `v0.6.0`, Moveable `v4.1.1`, and Icons `v0.2.1`.
 - Remove `test/support/widen_recording_studio_requirement.rb`. These release tags resolve without widening `recording_studio`.
 - The dummy app sets `config.authorize_write` so Recording Studio 6.5 writes are allowed when an actor is present. Dummy migrations add Trashable `purge_at`, API request-log arrival columns, and Logs `period_start`. The first admin on a new root uses `bootstrap_owner_access!`.
+
+## [0.24.0] - 2026-11-14
+
+### Fixed
+
+- Destroying a `RecordingStudio::Recording` that has `RecordingStudioAttachable::Attachment` children now succeeds, including trashed children and `RecordingStudioApi` `destroy_resource!`. A `before_destroy` callback registered once through `extend_model(:recording)` hard-destroys those children before core's `dependent: :restrict_with_error` check.
+
+### Changed
+
+- Requires `recording_studio >= 6.7.1` (reload-safe `extend_model`). Development and dummy pins use tag `v6.7.1`.
+- `Recording#destroy!` does not destroy the recordable, and Attachment snapshots raise on `destroy!` because they are immutable. After the attachment children are gone, each snapshot that no remaining recording references has its file released and its row deleted. The blob is purged when nothing else still points at it. A snapshot another recording still uses is kept, file included. The destroy emits `destroy_children.recording_studio_attachable` and does not write an attachment event.
+
+### Upgrade Notes
+
+- Bump to `0.24.0`. No migration.
+- Host apps need Recording Studio `>= 6.7.1`.
+- Destroying a parent recording now removes its attachment children and unreferenced attachment files.
 
 ## [0.23.0] - 2026-11-13
 
@@ -649,7 +666,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.23.0...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.24.0...HEAD
+[0.24.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.4...v0.23.0
 [0.22.4]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.3...v0.22.4
 [0.22.3]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.2...v0.22.3

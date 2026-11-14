@@ -4,16 +4,21 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.23.0", RecordingStudioAttachable::VERSION
+    assert_equal "0.24.0", RecordingStudioAttachable::VERSION
   end
 
-  def test_recording_studio_dependency_is_6_1_or_newer
+  def test_recording_studio_dependency_is_6_7_1_or_newer
     spec = Gem.loaded_specs.fetch("recording_studio")
     gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
+    root_gemfile = File.read(File.expand_path("../Gemfile", __dir__))
+    dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
+    pin = 'gem "recording_studio", github: "bowerbird-app/RecordingStudio", tag: "v6.7.1"'
 
-    assert spec.version >= Gem::Version.new("6.1.0"),
-           "expected recording_studio >= 6.1.0, got #{spec.version}"
-    assert_includes gemspec, 'spec.add_dependency "recording_studio", ">= 6.1.0"'
+    assert spec.version >= Gem::Version.new("6.7.1"),
+           "expected recording_studio >= 6.7.1, got #{spec.version}"
+    assert_includes gemspec, 'spec.add_dependency "recording_studio", ">= 6.7.1"'
+    assert_includes root_gemfile, pin
+    assert_includes dummy_gemfile, pin
   end
 
   def test_flat_pack_dependency_is_0_1_315_or_newer

@@ -629,7 +629,8 @@ class DummyHomeDemoTest < Minitest::Test
     )
 
     assert_includes upload_view, "upload_providers.any?"
-    assert_includes upload_view, "max-w-sm flex-col items-stretch gap-3"
+    assert_includes upload_view, "file_input.actions do"
+    assert_includes upload_view, "flex flex-col gap-3"
     assert_includes upload_view, "full_width: true"
     assert_includes upload_view, "reverse_merge(full_width: true)"
     assert_includes upload_view, "provider.button_options(view_context: self, recording: @recording, query_params: @upload_redirect_params)"

@@ -61,6 +61,7 @@ class ConfigurationTest < Minitest::Test
     assert_equal :view, @configuration.auth_role_for(:view)
     assert_equal :edit, @configuration.auth_role_for(:upload)
     assert_nil @configuration.before_save
+    assert_nil @configuration.around_attach
     assert_nil @configuration.attachment_place_labels
     assert_equal [], @configuration.attachment_place_labels_for(Object.new)
   end
@@ -319,6 +320,20 @@ class ConfigurationTest < Minitest::Test
 
     error = assert_raises(ArgumentError) { @configuration.before_save = Object.new }
     assert_includes error.message, "before_save"
+  end
+
+  def test_around_attach_accepts_a_callable_and_rejects_other_values
+    assert_nil @configuration.around_attach
+
+    hook = ->(**) {}
+    @configuration.around_attach = hook
+    assert_same hook, @configuration.around_attach
+
+    @configuration.around_attach = nil
+    assert_nil @configuration.around_attach
+
+    error = assert_raises(ArgumentError) { @configuration.around_attach = Object.new }
+    assert_includes error.message, "around_attach"
   end
 
   def test_to_h_reflects_current_values

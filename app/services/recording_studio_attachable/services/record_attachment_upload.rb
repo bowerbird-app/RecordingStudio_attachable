@@ -37,29 +37,31 @@ module RecordingStudioAttachable
         )
         root_recording = root_recording_for(parent_recording)
         incoming = RecordingStudioAttachable::StorageLimit::IncomingBytes.for(root_recording, [blob])
-        event = RecordingStudioAttachable::StorageLimit.with_storage_capacity!(root_recording, incoming) do
-          attachment = build_attachment!(
-            blob: blob,
-            name: name,
-            description: description,
-            caption: caption,
-            credit: credit,
-            alt_text: alt_text,
-            capability_options: capability_options,
-            root_recording: root_recording
-          )
-          RecordingStudio.record!(
-            action: "attachment_uploaded",
-            recordable: attachment,
-            root_recording: root_recording,
-            parent_recording: parent_recording,
-            actor: resolved_actor,
-            impersonator: impersonator,
-            metadata: metadata_for(
-              attachment: attachment,
-              extra: metadata.merge(parent_recording_id: parent_recording.id, root_recording_id: root_recording.id, batch_id: batch_id)
+        event = with_around_attach(parent_recording: parent_recording, actor: resolved_actor, blobs: [blob]) do
+          RecordingStudioAttachable::StorageLimit.with_storage_capacity!(root_recording, incoming) do
+            attachment = build_attachment!(
+              blob: blob,
+              name: name,
+              description: description,
+              caption: caption,
+              credit: credit,
+              alt_text: alt_text,
+              capability_options: capability_options,
+              root_recording: root_recording
             )
-          )
+            RecordingStudio.record!(
+              action: "attachment_uploaded",
+              recordable: attachment,
+              root_recording: root_recording,
+              parent_recording: parent_recording,
+              actor: resolved_actor,
+              impersonator: impersonator,
+              metadata: metadata_for(
+                attachment: attachment,
+                extra: metadata.merge(parent_recording_id: parent_recording.id, root_recording_id: root_recording.id, batch_id: batch_id)
+              )
+            )
+          end
         end
 
         success(event.recording)

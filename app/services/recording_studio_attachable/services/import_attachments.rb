@@ -46,8 +46,10 @@ module RecordingStudioAttachable
         batch_id = SecureRandom.uuid
         root_recording = root_recording_for(parent_recording)
         incoming = RecordingStudioAttachable::StorageLimit::IncomingBytes.for(root_recording, @staged_blobs)
-        RecordingStudioAttachable::StorageLimit.with_storage_capacity!(root_recording, incoming) do
-          transaction_wrapper { record_entries(staged, batch_id) }
+        with_around_attach(parent_recording: parent_recording, actor: resolve_actor(actor), blobs: @staged_blobs) do
+          RecordingStudioAttachable::StorageLimit.with_storage_capacity!(root_recording, incoming) do
+            transaction_wrapper { record_entries(staged, batch_id) }
+          end
         end
         @created
       end

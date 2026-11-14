@@ -128,6 +128,16 @@ RecordingStudioAttachable.configure do |config|
   # Optional. Runs after a blob is accepted in RecordAttachmentUpload, so import
   # and batch attach use the same check. Raise ArgumentError to refuse.
   # config.before_save = ->(parent_recording:, actor:, blob:) { }
+  # Optional. Wraps only the attachment write, after the bytes are already stored.
+  # Assign an object whose call(parent_recording:, actor:, blobs:) yields to attach.
+  # Raise to reject: nothing is attached, and those blobs are purged.
+  # A batch calls this once with every blob in the batch.
+  # module AttachmentQuota
+  #   def self.call(parent_recording:, actor:, blobs:)
+  #     yield
+  #   end
+  # end
+  # config.around_attach = AttachmentQuota
   config.enabled_attachment_kinds = %i[image file]
   config.default_listing_scope = :direct
   config.default_kind_filter = :all

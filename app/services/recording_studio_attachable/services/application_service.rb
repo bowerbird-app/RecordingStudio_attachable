@@ -2,7 +2,48 @@
 
 module RecordingStudioAttachable
   module Services
+    module AroundAttachHook
+      private
+
+      # Runs config.around_attach around the attachment write, or just yields.
+      # A batch keeps one outer call; nested calls yield. A raise purges the
+      # blobs (a second purge of a missing blob is safe) and is re-raised.
+      def with_around_attach(parent_recording:, actor:, blobs:, &attachment_write)
+        blobs = Array(blobs)
+        return attachment_write.call if around_attach_depth.positive?
+
+        self.around_attach_depth = 1
+        begin
+          hook = RecordingStudioAttachable.configuration.around_attach
+          if hook
+            hook.call(parent_recording: parent_recording, actor: actor, blobs: blobs, &attachment_write)
+          else
+            attachment_write.call
+          end
+        rescue StandardError
+          RecordingStudioAttachable::StorageLimit.discard_unattached!(blobs)
+          raise
+        ensure
+          self.around_attach_depth = 0
+        end
+      end
+
+      def around_attach_depth
+        around_attach_state[:recording_studio_attachable_around_attach_depth].to_i
+      end
+
+      def around_attach_depth=(depth)
+        around_attach_state[:recording_studio_attachable_around_attach_depth] = depth
+      end
+
+      def around_attach_state
+        defined?(ActiveSupport::IsolatedExecutionState) ? ActiveSupport::IsolatedExecutionState : Thread.current
+      end
+    end
+
     class ApplicationService < BaseService
+      include AroundAttachHook
+
       private
 
       def require_recording_studio!

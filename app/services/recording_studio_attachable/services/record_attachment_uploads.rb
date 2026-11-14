@@ -22,38 +22,42 @@ module RecordingStudioAttachable
       def perform
         capability_options = capability_options_for(parent_recording)
         validate_attachment_count!(capability_options)
+        resolved_actor = resolve_actor(actor)
         resolved = resolve_uploads(capability_options)
+        blobs = resolved.map(&:last)
         root_recording = root_recording_for(parent_recording)
-        incoming = RecordingStudioAttachable::StorageLimit::IncomingBytes.for(root_recording, resolved.map(&:last))
+        incoming = RecordingStudioAttachable::StorageLimit::IncomingBytes.for(root_recording, blobs)
 
         batch_id = SecureRandom.uuid
         created = []
         failures = nil
 
         begin
-          RecordingStudioAttachable::StorageLimit.with_storage_capacity!(root_recording, incoming) do
-            transaction_wrapper do
-              resolved.each do |payload,|
-                result = RecordAttachmentUpload.call(
-                  parent_recording: parent_recording,
-                  signed_blob_id: payload.fetch(:signed_blob_id),
-                  name: payload[:name],
-                  description: payload[:description],
-                  caption: payload[:caption],
-                  credit: payload[:credit],
-                  alt_text: payload[:alt_text],
-                  actor: actor,
-                  impersonator: impersonator,
-                  batch_id: batch_id,
-                  metadata: payload_metadata(payload)
-                )
+          with_around_attach(parent_recording: parent_recording, actor: resolved_actor, blobs: blobs) do
+            RecordingStudioAttachable::StorageLimit.with_storage_capacity!(root_recording, incoming) do
+              transaction_wrapper do
+                resolved.each do |payload,|
+                  result = RecordAttachmentUpload.call(
+                    parent_recording: parent_recording,
+                    signed_blob_id: payload.fetch(:signed_blob_id),
+                    name: payload[:name],
+                    description: payload[:description],
+                    caption: payload[:caption],
+                    credit: payload[:credit],
+                    alt_text: payload[:alt_text],
+                    actor: actor,
+                    impersonator: impersonator,
+                    batch_id: batch_id,
+                    metadata: payload_metadata(payload)
+                  )
 
-                if result.failure?
-                  failures = [payload.merge(error: result.error)]
-                  raise BatchFailure, result.error
+                  if result.failure?
+                    failures = [payload.merge(error: result.error)]
+                    raise BatchFailure, result.error
+                  end
+
+                  created << result.value
                 end
-
-                created << result.value
               end
             end
           end

@@ -143,6 +143,52 @@ class ImportAttachmentTest < Minitest::Test
     end
   end
 
+  def test_around_attach_runs_after_the_bytes_are_stored
+    parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: FakeRecording.new(id: "root-1"))
+    blob = FakeBlob.new(signed_id: "signed-blob", content_type: "image/png", byte_size: 64)
+    order = []
+    seen = {}
+    RecordingStudioAttachable.configuration.around_attach = Class.new do
+      def initialize(order, seen)
+        @order = order
+        @seen = seen
+      end
+
+      def call(parent_recording:, actor:, blobs:)
+        @order << :hook
+        @seen.replace(parent_recording: parent_recording, actor: actor, blobs: blobs)
+        raise ArgumentError, "over the file quota"
+      end
+    end.new(order, seen)
+
+    ActiveStorage::Blob.stub(:create_and_upload!, lambda { |**|
+      order << :store
+      blob
+    }) do
+      RecordingStudioAttachable::Services::RecordAttachmentUpload.stub(:call, lambda { |**|
+        order << :attach
+        raise "attachment write should not run"
+      }) do
+        result = RecordingStudioAttachable::Services::ImportAttachment.call(
+          parent_recording: parent,
+          io: StringIO.new(UploadBlobBytes::PNG),
+          filename: "demo.png",
+          content_type: "image/png",
+          actor: :actor
+        )
+
+        assert result.failure?
+        assert_includes result.error, "over the file quota"
+      end
+    end
+
+    assert_equal %i[store hook], order
+    assert_same parent, seen[:parent_recording]
+    assert_equal :actor, seen[:actor]
+    assert_equal [blob], seen[:blobs]
+    assert blob.purged
+  end
+
   private
 
   def stub_recording_studio!

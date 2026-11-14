@@ -159,6 +159,23 @@ module RecordingStudioAttachable
         RecordingStudio.const_set(:Recording, original_recording) if defined?(original_recording) && original_recording
       end
 
+      def test_purging_an_already_gone_blob_is_safe
+        calls = 0
+        blob = Object.new
+        blob.define_singleton_method(:purge) do
+          calls += 1
+          raise ActiveRecord::RecordNotFound if calls > 1
+        end
+        gone = Object.new
+        gone.define_singleton_method(:persisted?) { false }
+        gone.define_singleton_method(:purge) { raise "missing blob should not be purged again" }
+
+        RecordingStudioAttachable::StorageLimit.discard_unattached!([blob])
+        RecordingStudioAttachable::StorageLimit.discard_unattached!([blob, nil, gone])
+
+        assert_equal 2, calls
+      end
+
       private
 
       def ensure_current_class

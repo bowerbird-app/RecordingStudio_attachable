@@ -267,9 +267,12 @@ module RecordingStudioAttachable
 
       def discard_one_unattached(blob)
         return if blob.blank? || !blob.respond_to?(:purge)
+        return if blob.respond_to?(:persisted?) && !blob.persisted?
         return if blob_attached?(blob)
 
         blob.purge
+      rescue ActiveRecord::RecordNotFound
+        nil
       end
 
       def blob_attached?(blob)

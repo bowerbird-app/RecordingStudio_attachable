@@ -44,7 +44,8 @@ module RecordingStudioAttachable
                   :attachment_place_labels
 
     attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode,
-                :upload_presentation, :import_allowed_hosts, :layout, :before_save
+                :upload_presentation, :import_allowed_hosts, :layout, :before_save,
+                :around_attach
 
     def layout=(value)
       @layout = RecordingStudio::Layout.accept(value)
@@ -224,6 +225,19 @@ module RecordingStudioAttachable
       @before_save = value
     end
 
+    # Wraps the attachment write after the bytes are stored. Nil means yield.
+    # The callable is call(parent_recording:, actor:, blobs:) and must yield to
+    # attach. Raise to reject; Attachable purges those blobs.
+    def around_attach=(value)
+      if value.nil?
+        @around_attach = nil
+        return
+      end
+      raise ArgumentError, "around_attach must respond to #call" unless value.respond_to?(:call)
+
+      @around_attach = value
+    end
+
     def to_h
       {
         allowed_content_types: allowed_content_types,
@@ -297,6 +311,7 @@ module RecordingStudioAttachable
       @authorize_with = nil
       @attachment_place_labels = nil
       @before_save = nil
+      @around_attach = nil
     end
 
     def default_auth_roles

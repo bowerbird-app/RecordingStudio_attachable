@@ -7,11 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-11-14
+
+### Added
+
+- `config.around_attach` wraps the attachment write after the bytes are stored. Call it as `call(parent_recording:, actor:, blobs:)` and yield to attach. Raise to reject. Unset, the write runs as before. A batch calls the hook once with every blob. On a raise, Attachable purges those blobs. Purging a blob that is already gone is safe.
+
 ### Changed
 
 - Development and dummy pins use the current Recording Studio release tags: Recording Studio `v6.7.1`, Flatpack `v0.1.356`, Metrics `v0.8.0`, Cache `v0.6.3`, Logs `v0.7.4`, Trashable `v0.14.0`, Accessible `v0.31.0`, Orderable `v0.6.0`, Admin `v2.13.0`, API `v0.23.0`, Site Settings `v0.5.6`, Oauth `v0.21.7`, Dropbox `v0.5.0`, Google Drive `v0.6.0`, Moveable `v4.1.1`, and Icons `v0.2.1`.
 - Remove `test/support/widen_recording_studio_requirement.rb`. These release tags resolve without widening `recording_studio`.
 - The dummy app sets `config.authorize_write` so Recording Studio 6.5 writes are allowed when an actor is present. Dummy migrations add Trashable `purge_at`, API request-log arrival columns, and Logs `period_start`. The first admin on a new root uses `bootstrap_owner_access!`.
+
+### Upgrade Notes
+
+- Bump to `0.25.0`. No migration.
+- Set `config.around_attach` when a host must lock or check a quota around the attachment write only. Yield to attach. Raise to reject and purge the blobs. Leave it unset to keep the current write.
 
 ## [0.24.0] - 2026-11-14
 
@@ -666,7 +677,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.24.0...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.25.0...HEAD
+[0.25.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.24.0...v0.25.0
 [0.24.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.4...v0.23.0
 [0.22.4]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.3...v0.22.4

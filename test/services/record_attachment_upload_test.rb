@@ -3,6 +3,7 @@
 require "test_helper"
 require_relative "../../app/services/recording_studio_attachable/services/application_service"
 require_relative "../../app/services/recording_studio_attachable/services/record_attachment_upload"
+require_relative "../../app/services/recording_studio_attachable/services/record_attachment_uploads"
 
 class RecordAttachmentUploadTest < Minitest::Test
   FakeRecording = Struct.new(:id, :recordable_type, :root_recording, keyword_init: true)
@@ -57,6 +58,7 @@ class RecordAttachmentUploadTest < Minitest::Test
     captured_recording_kwargs = nil
 
     bind_blob(blob, parent)
+    assert_nil RecordingStudioAttachable.configuration.around_attach
     ActiveStorage::Blob.stub(:find_signed!, blob) do
       RecordingStudioAttachable::Attachment.stub(:build_from_blob, built_attachment) do
         RecordingStudio.stub(:record!, lambda { |**kwargs|
@@ -180,6 +182,137 @@ class RecordAttachmentUploadTest < Minitest::Test
     RecordingStudioAttachable.configuration.before_save = nil
   end
 
+  def test_around_attach_receives_the_parent_actor_and_blobs_and_attaches
+    blob = FakeBlob.new("image/png", 1024, FakeFilename.new("photo.png"))
+    parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: FakeRecording.new(id: "root-1"))
+    built_attachment = Struct.new(:id, :name, :content_type, :byte_size, :attachment_kind, :original_filename).new(
+      "attachment-hook", "photo", "image/png", 1024, "image", "photo.png"
+    )
+    created = Struct.new(:id, :recordable).new("child-hook", built_attachment)
+    hook = AroundAttachProbe.new
+    RecordingStudioAttachable.configuration.around_attach = hook
+
+    bind_blob(blob, parent)
+    ActiveStorage::Blob.stub(:find_signed!, blob) do
+      RecordingStudioAttachable::Attachment.stub(:build_from_blob, built_attachment) do
+        RecordingStudio.stub(:record!, FakeEvent.new(created)) do
+          result = RecordingStudioAttachable::Services::RecordAttachmentUpload.call(
+            parent_recording: parent,
+            signed_blob_id: "signed-id",
+            actor: upload_actor
+          )
+
+          assert result.success?
+          assert_equal created, result.value
+        end
+      end
+    end
+
+    seen = hook.calls.first
+    assert_same parent, seen[:parent_recording]
+    assert_equal upload_actor, seen[:actor]
+    assert_equal [blob], seen[:blobs]
+  end
+
+  def test_around_attach_raise_attaches_nothing_and_purges_the_blob
+    blob = FakeBlob.new("image/png", 1024, FakeFilename.new("photo.png"))
+    parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: FakeRecording.new(id: "root-1"))
+    purged = false
+    blob.define_singleton_method(:purge) { purged = true }
+    recorded = false
+    RecordingStudioAttachable.configuration.around_attach = AroundAttachProbe.new(
+      error: ArgumentError.new("over the file quota")
+    )
+
+    bind_blob(blob, parent)
+    ActiveStorage::Blob.stub(:find_signed!, blob) do
+      RecordingStudio.stub(:record!, lambda { |**|
+        recorded = true
+        raise "attachment write should not run"
+      }) do
+        result = RecordingStudioAttachable::Services::RecordAttachmentUpload.call(
+          parent_recording: parent,
+          signed_blob_id: "signed-id",
+          actor: upload_actor
+        )
+
+        assert result.failure?
+        assert_includes result.error, "over the file quota"
+      end
+    end
+
+    assert_not recorded
+    assert purged
+  end
+
+  def test_a_failed_attachment_write_purges_the_blob
+    blob = FakeBlob.new("image/png", 1024, FakeFilename.new("photo.png"))
+    parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: FakeRecording.new(id: "root-1"))
+    purged = false
+    blob.define_singleton_method(:purge) { purged = true }
+    built_attachment = Struct.new(:id, :name, :content_type, :byte_size, :attachment_kind, :original_filename).new(
+      "attachment-fail", "photo", "image/png", 1024, "image", "photo.png"
+    )
+
+    bind_blob(blob, parent)
+    ActiveStorage::Blob.stub(:find_signed!, blob) do
+      RecordingStudioAttachable::Attachment.stub(:build_from_blob, built_attachment) do
+        RecordingStudio.stub(:record!, ->(**) { raise ArgumentError, "could not record" }) do
+          result = RecordingStudioAttachable::Services::RecordAttachmentUpload.call(
+            parent_recording: parent,
+            signed_blob_id: "signed-id",
+            actor: upload_actor
+          )
+
+          assert result.failure?
+          assert_includes result.error, "could not record"
+        end
+      end
+    end
+
+    assert purged
+  end
+
+  def test_batch_around_attach_runs_once_with_every_blob
+    parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: FakeRecording.new(id: "root-1"))
+    blobs = {
+      "signed-1" => FakeBlob.new("image/png", 10, FakeFilename.new("one.png")),
+      "signed-2" => FakeBlob.new("image/png", 12, FakeFilename.new("two.png"))
+    }
+    blobs.each_value { |blob| bind_blob(blob, parent) }
+    hook = AroundAttachProbe.new
+    RecordingStudioAttachable.configuration.around_attach = hook
+
+    ActiveStorage::Blob.stub(:find_signed!, ->(signed_id, **) { blobs.fetch(signed_id) }) do
+      RecordingStudioAttachable::Attachment.stub(:build_from_blob, lambda { |**kwargs|
+        Struct.new(:id, :name, :content_type, :byte_size, :attachment_kind, :original_filename).new(
+          kwargs[:blob].object_id.to_s, kwargs[:name], "image/png", kwargs[:blob].byte_size, "image", "file.png"
+        )
+      }) do
+        RecordingStudio.stub(:record!, lambda { |**kwargs|
+          FakeEvent.new(Struct.new(:id, :recordable).new(kwargs[:recordable].id, kwargs[:recordable]))
+        }) do
+          result = RecordingStudioAttachable::Services::RecordAttachmentUploads.call(
+            parent_recording: parent,
+            actor: upload_actor,
+            attachments: [
+              { signed_blob_id: "signed-1", name: "one" },
+              { signed_blob_id: "signed-2", name: "two" }
+            ]
+          )
+
+          assert result.success?
+          assert_equal 2, result.value.size
+        end
+      end
+    end
+
+    assert_equal 1, hook.calls.size
+    assert_same parent, hook.calls[0][:parent_recording]
+    assert_equal upload_actor, hook.calls[0][:actor]
+    assert_equal [blobs.fetch("signed-1"), blobs.fetch("signed-2")], hook.calls[0][:blobs]
+  end
+
   def test_rejects_pdf_and_text_uploads_for_page_recordings
     parent = FakeRecording.new(id: "parent-1", recordable_type: "Page", root_recording: FakeRecording.new(id: "root-1"))
     capability_options = { allowed_content_types: ["image/*"], enabled_attachment_kinds: %i[image], max_file_size: 2.megabytes }
@@ -254,6 +387,22 @@ class RecordAttachmentUploadTest < Minitest::Test
 
   def bind_blob(blob, recording)
     blob.metadata = RecordingStudioAttachable::DirectUpload.metadata_for(recording: recording, actor: upload_actor)
+  end
+
+  class AroundAttachProbe
+    attr_reader :calls
+
+    def initialize(error: nil)
+      @calls = []
+      @error = error
+    end
+
+    def call(parent_recording:, actor:, blobs:)
+      @calls << { parent_recording: parent_recording, actor: actor, blobs: blobs }
+      raise @error if @error
+
+      yield
+    end
   end
 
   def stub_attachment_class!

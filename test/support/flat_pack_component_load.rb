@@ -17,7 +17,12 @@ module FlatPackComponentLoad
     app/components/flat_pack/card/title/component.rb
   ].freeze
 
+  BUTTON_EXTRAS = %w[
+    app/components/flat_pack/button/form_submit.rb
+  ].freeze
+
   def self.require_component(root, path)
+    require_all(root, BUTTON_EXTRAS) if path.end_with?("button/component.rb")
     require_all(root, SHARED_EXTRAS) if path.end_with?("grid/component.rb") || path.end_with?("card/component.rb")
 
     if path.end_with?("card/component.rb")

@@ -280,7 +280,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes view, 'render "recording_studio_attachable/attachment_image_pickers/modal"'
     assert_includes view, 'modal_title: "Insert image"'
     assert_includes view, "recording: @page_recording"
-    assert_includes view, 'search_aria_label: "Search images"'
+    assert_includes view, "picker_url: @page_attachment_picker_path"
     assert_includes view, 'empty_state_text: "No images found for this page yet."'
     assert_includes view, "data-recording-studio-attachable--attachment-image-picker-max-file-size-value="
     assert_not_includes view, "data-recording-studio-attachable--attachment-image-picker-multiple-selection-value=\"true\""
@@ -289,35 +289,32 @@ class DummyHomeDemoTest < Minitest::Test
     assert_not_includes view, 'text: "Close"'
     assert_includes view, 'text: "Save page"'
     assert_includes picker_modal_partial, "FlatPack::Modal::Component.new("
+    assert_includes picker_modal_partial, "FlatPack::Picker::Component.new("
+    assert_includes picker_modal_partial, "modal: false"
+    assert_includes picker_modal_partial, "variant: :flush"
+    assert_includes picker_modal_partial, "search_mode: :remote"
+    assert_includes picker_modal_partial, "search_endpoint: picker_url"
+    assert_includes picker_modal_partial, "picker.with_toolbar"
+    assert_includes picker_modal_partial, "picker.with_empty"
     assert_includes picker_modal_partial, 't("recording_studio.attachable.picker.upload")'
     assert_includes picker_modal_partial, 't("recording_studio.attachable.picker.upload_from_device")'
     assert_includes picker_modal_partial, "dropdown.menu_divider"
-    assert_includes picker_modal_partial, 'class="flex h-full min-h-0 flex-col gap-4"'
-    assert_includes picker_modal_partial, 'class="w-full lg:w-auto"'
-    assert_includes picker_modal_partial, "FlatPack::Search::Component.new("
     assert_includes picker_modal_partial, 'placeholder: t("recording_studio.attachable.picker.search_placeholder")'
-    assert_includes picker_modal_partial, 'class="min-h-0 flex-1 overflow-y-auto p-1"'
-    assert_includes picker_modal_partial, 'data-recording-studio-attachable--attachment-image-picker-target="gallery"'
     assert_includes picker_modal_partial, 'data-recording-studio-attachable--attachment-image-picker-target="fileInput"'
-    assert_includes picker_modal_partial, 'data-recording-studio-attachable--attachment-image-picker-target="selectionActions"'
-    assert_includes picker_modal_partial, 'data-recording-studio-attachable--attachment-image-picker-target="selectionCount"'
     assert_includes picker_modal_partial, "provider.client_picker?"
     assert_includes picker_modal_partial, "recording-studio-attachable--attachment-image-picker#launchProvider"
-    assert_includes picker_modal_partial, "recording-studio-attachable--attachment-image-picker#confirmSelection"
-    assert_includes picker_modal_partial, "recording-studio-attachable--attachment-image-picker#clearSelection"
     assert_includes picker_controller, 'import { getUploadProviderLauncher, onUploadProviderLaunchersChanged, relaunchUploadProvider } from "controllers/recording_studio_attachable/provider_launchers"'
     assert_includes picker_controller, "application.getControllerForElementAndIdentifier"
     assert_includes picker_controller, "openPickerFromToolbar(event)"
-    assert_includes picker_controller, "async loadAttachments({ append = false, reset = false } = {}) {"
+    assert_includes picker_controller, "pickerConfirmed(event) {"
+    assert_includes picker_controller, 'this.element.addEventListener("flat-pack:picker:confirm", this.boundPickerConfirmed)'
     assert_includes picker_controller, "openSinglePicker(event) {"
     assert_includes picker_controller, "openMultiplePicker(event) {"
     assert_includes picker_controller, "async launchProvider(event) {"
     assert_includes picker_controller, "async addProviderSelections(providerKey, selections) {"
     assert_includes picker_controller, "multipleSelection: Boolean"
-    assert_includes picker_controller, "this.selectedAttachments = new Map()"
     assert_includes picker_controller, "this.syncFileInputMode()"
-    assert_includes picker_controller, "confirmSelection() {"
-    assert_includes picker_controller, "clearSelection() {"
+    assert_includes picker_controller, "this.syncPickerSelectionMode()"
     assert_includes picker_controller, "this.setMultipleSelectionMode(false)"
     assert_includes picker_controller, "async directUploadFiles(files) {"
     assert_includes picker_controller, "directUploadBlob(file, entry = null) {"
@@ -330,8 +327,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes picker_controller, "maxBytes: this.maxFileSizeValue"
     assert_includes picker_controller, "const selectedFiles = this.multipleSelectionEnabled() ? files : [files[0]]"
     assert_includes picker_controller, "const upload = new DirectUpload(file, this.directUploadUrlValue, entry"
-    assert_includes picker_controller, 'button.setAttribute("aria-label", attachment.name || this.i18nText("picker.untitled_image", "Untitled image"))'
-    assert_includes picker_controller, 'button.setAttribute("aria-pressed", this.attachmentSelectedForMultiMode(attachment.id) ? "true" : "false")'
+    assert_includes picker_controller, "attachmentFromPickerItem(item)"
+    assert_includes picker_controller, "return payload"
     assert_includes picker_controller, "attachmentId: attachment.id"
     assert_includes picker_controller, "showPath: attachment.show_path"
     assert_includes picker_controller, 'display: "small"'
@@ -441,20 +438,14 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes panel_partial, 'render "recording_studio_attachable/attachment_image_pickers/modal"'
     assert_includes panel_partial, 'modal_title: "Add images"'
     assert_includes panel_partial, "recording: @root_recording"
-    assert_includes panel_partial, 'search_aria_label: "Search chat images"'
+    assert_includes panel_partial, "picker_url: @chat_attachment_picker_path"
     assert_includes panel_partial, 'empty_state_text: "No images are available in the workspace library yet."'
-    assert_includes panel_partial, "show_mode_summary: true"
-    assert_includes panel_partial, 'mode_summary_text: "Choose one image to attach it immediately."'
     assert_includes panel_partial, 'data-chat-demo-target="attachmentTemplate"'
     assert_includes attachment_preview_partial, "FlatPack::Chat::Attachment::Component.new("
     assert_includes attachment_preview_partial, "FlatPack::Button::Component.new("
-    # rubocop:disable Style/FormatStringToken -- asserts JS I18n %{count} token byte-identical to main
-    assert_includes picker_controller, 'this.i18nFormat(count === 1 ? "picker.selected.one" : "picker.selected.other", "%{count} selected", { count })'
-    # rubocop:enable Style/FormatStringToken
-    assert_includes picker_controller, 'this.i18nText("picker.select_one_or_more", "Select one or more")'
-    assert_includes picker_modal_partial, 'data-recording-studio-attachable--attachment-image-picker-target="modeSummary"'
     assert_includes picker_modal_partial, 't("recording_studio.attachable.picker.add_selected")'
     assert_includes picker_modal_partial, 't("recording_studio.attachable.picker.clear")'
+    assert_includes picker_modal_partial, "picker.with_empty"
     assert_not_includes panel_partial, "flex min-h-full flex-col justify-end gap-4"
     assert_not_includes panel_partial, 'class: "min-h-0"'
     assert_not_includes panel_partial, 'class: "shrink-0 border-t border-(--surface-border-color) p-4"'
@@ -469,8 +460,9 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes controller, "def chat_threads"
     assert_includes picker_controller, "openPicker(event) {"
     assert_includes picker_controller, 'this.dispatch("selected", { detail: { attachment } })'
-    assert_includes picker_controller, "if (this.multipleSelectionEnabled()) {"
-    assert_includes picker_controller, "this.selectedAttachments.forEach((attachment) => this.dispatchSelection(attachment))"
+    assert_includes picker_controller, "const selectedFiles = this.multipleSelectionEnabled() ? files : [files[0]]"
+    assert_includes picker_controller, "selection.forEach((item) => {"
+    assert_includes picker_controller, "if (attachment) this.dispatchSelection(attachment)"
     assert_includes picker_controller, 'event.currentTarget.closest("details")?.removeAttribute("open")'
     assert_includes picker_controller, "this.openModalAndLoad()"
     assert_includes chat_controller, 'static targets = ["attachments", "emptyState", "attachmentTemplate"]'

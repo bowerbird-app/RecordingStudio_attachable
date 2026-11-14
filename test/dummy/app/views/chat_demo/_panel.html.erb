@@ -26,7 +26,6 @@
         data-action="recording-studio-attachable--attachment-image-picker:selected->chat-demo#attachmentSelected"
         data-chat-demo-attach-url-value="<%= chat_demo_message_attachments_path(@draft_message) %>"
         data-chat-demo-detach-url-template-value="<%= chat_demo_message_attachment_path(@draft_message, "__ATTACHMENT_ID__") %>"
-        data-recording-studio-attachable--attachment-image-picker-picker-url-value="<%= @chat_attachment_picker_path %>"
         data-recording-studio-attachable--attachment-image-picker-upload-url-value="<%= @chat_attachment_create_path %>"
         data-recording-studio-attachable--attachment-image-picker-direct-upload-url-value="<%= @chat_direct_upload_path %>"
         data-recording-studio-attachable--attachment-image-picker-max-file-size-value="<%= RecordingStudioAttachable.configuration.max_file_size %>"
@@ -117,10 +116,8 @@
           modal_id: chat_modal_id,
           modal_title: "Add images",
           recording: @root_recording,
-          search_aria_label: "Search chat images",
-          empty_state_text: "No images are available in the workspace library yet.",
-          show_mode_summary: true,
-          mode_summary_text: "Choose one image to attach it immediately." %>
+          picker_url: @chat_attachment_picker_path,
+          empty_state_text: "No images are available in the workspace library yet." %>
       </div>
     <% end %>
   <% end %>

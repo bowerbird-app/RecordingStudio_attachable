@@ -24,23 +24,14 @@ function providerBootstrapError(payload, response, fallback) {
 export default class extends Controller {
   static targets = [
     "editorHost",
-    "searchInput",
     "fileInput",
     "status",
     "uploadQueue",
-    "progressTemplate",
-    "modeSummary",
-    "scrollContainer",
-    "gallery",
-    "emptyState",
-    "selectionActions",
-    "selectionCount",
-    "confirmButton",
+    "progressTemplate"
   ]
 
   static values = {
     i18n: Object,
-    pickerUrl: String,
     uploadUrl: String,
     directUploadUrl: String,
     modalId: String,
@@ -49,10 +40,8 @@ export default class extends Controller {
     imageProcessingEnabled: Boolean,
     imageProcessingMaxWidth: Number,
     imageProcessingMaxHeight: Number,
-    imageProcessingQuality: Number,
-    searchDelay: { type: Number, default: 250 }
+    imageProcessingQuality: Number
   }
-
 
   i18nText(key, fallback) {
     const bag = this.hasI18nValue ? this.i18nValue : null
@@ -69,23 +58,18 @@ export default class extends Controller {
   }
 
   connect() {
-    this.currentPage = 1
-    this.totalPages = 1
-    this.hasNextPage = false
-    this.isLoading = false
-    this.searchTimeoutId = null
     this.activeEditor = null
-    this.selectedAttachments = new Map()
     this.uploadEntries = []
     this.providerUploadTimers = new Map()
     this.providerButtonsByKey = new Map()
-    this.boundHandleScroll = this.handleScroll.bind(this)
     this.handleProviderMessage = this.handleProviderMessage.bind(this)
     this.handleProviderStorage = this.handleProviderStorage.bind(this)
     this.handleProviderChannelMessage = this.handleProviderChannelMessage.bind(this)
+    this.boundPickerConfirmed = (event) => this.pickerConfirmed(event)
 
     this.syncFileInputMode()
-    this.updateSelectionUi()
+    this.syncPickerSelectionMode()
+    this.element.addEventListener("flat-pack:picker:confirm", this.boundPickerConfirmed)
     window.addEventListener("message", this.handleProviderMessage)
     window.addEventListener("storage", this.handleProviderStorage)
 
@@ -94,21 +78,12 @@ export default class extends Controller {
       this.providerEventChannel.addEventListener("message", this.handleProviderChannelMessage)
     }
 
-    if (this.hasScrollContainerTarget) {
-      this.scrollContainerTarget.addEventListener("scroll", this.boundHandleScroll)
-    }
-
     this.pickerPrefetchAbort = new AbortController()
     this.stopLauncherWatch = onUploadProviderLaunchersChanged(() => this.prefetchClientPickers())
     this.prefetchClientPickers()
   }
 
   disconnect() {
-    if (this.searchTimeoutId) {
-      window.clearTimeout(this.searchTimeoutId)
-      this.searchTimeoutId = null
-    }
-
     this.clearProviderUploadTimers()
     this.clientPickerButtons().forEach((button) => {
       delete button.dataset.providerPrefetchBound
@@ -116,6 +91,7 @@ export default class extends Controller {
     this.pickerPrefetchAbort?.abort()
     this.stopLauncherWatch?.()
 
+    this.element.removeEventListener("flat-pack:picker:confirm", this.boundPickerConfirmed)
     window.removeEventListener("message", this.handleProviderMessage)
     window.removeEventListener("storage", this.handleProviderStorage)
 
@@ -123,10 +99,6 @@ export default class extends Controller {
       this.providerEventChannel.removeEventListener("message", this.handleProviderChannelMessage)
       this.providerEventChannel.close()
       this.providerEventChannel = null
-    }
-
-    if (this.hasScrollContainerTarget) {
-      this.scrollContainerTarget.removeEventListener("scroll", this.boundHandleScroll)
     }
   }
 
@@ -242,17 +214,6 @@ export default class extends Controller {
     this.fileInputTarget.click()
   }
 
-  searchChanged() {
-    if (this.searchTimeoutId) {
-      window.clearTimeout(this.searchTimeoutId)
-    }
-
-    this.searchTimeoutId = window.setTimeout(() => {
-      this.currentPage = 1
-      this.loadAttachments({ reset: true })
-    }, this.searchDelayValue)
-  }
-
   uploadSelected() {
     const files = Array.from(this.fileInputTarget.files || [])
     if (files.length === 0) return
@@ -261,82 +222,22 @@ export default class extends Controller {
     this.directUploadFiles(selectedFiles)
   }
 
-  handleScroll() {
-    if (!this.hasScrollContainerTarget || this.isLoading || !this.hasNextPage) return
+  pickerConfirmed(event) {
+    const selection = event.detail?.selection
+    if (!Array.isArray(selection) || selection.length === 0) return
 
-    const { scrollTop, clientHeight, scrollHeight } = this.scrollContainerTarget
-    if (scrollTop + clientHeight < scrollHeight - 120) return
-
-    this.currentPage += 1
-    this.loadAttachments({ append: true })
-  }
-
-  async loadAttachments({ append = false, reset = false } = {}) {
-    if (!this.hasPickerUrlValue || this.isLoading) return
-
-    if (reset) {
-      this.currentPage = 1
-      this.totalPages = 1
-      this.hasNextPage = false
-
-      if (this.hasScrollContainerTarget) {
-        this.scrollContainerTarget.scrollTop = 0
-      }
-    }
-
-    this.showStatus("")
-    this.isLoading = true
-
-    try {
-      const response = await fetch(this.pickerRequestUrl(), {
-        headers: { Accept: "application/json" },
-        credentials: "same-origin"
-      })
-
-      if (!response.ok) {
-        throw new Error(this.i18nText("picker.unable_to_load_library", "Unable to load images"))
-      }
-
-      const payload = await response.json()
-      this.renderGallery(payload.attachments || [], { append })
-      this.updatePagination(payload.pagination || {})
-      this.showStatus("")
-      this.isLoading = false
-      this.fillScrollContainer()
-    } catch (error) {
-      this.renderGallery([], { append: false })
-      this.updatePagination({ current_page: 1, total_pages: 1, previous_page: false, next_page: false })
-      this.showStatus(error.message || this.i18nText("picker.unable_to_load_library", "Unable to load images"))
-      this.isLoading = false
-    } finally {
-      this.searchTimeoutId = null
-    }
-  }
-
-  selectAttachment(attachment) {
-    if (this.multipleSelectionEnabled()) {
-      this.toggleAttachmentSelection(attachment)
-      return
-    }
-
-    this.dispatchSelection(attachment)
+    selection.forEach((item) => {
+      const attachment = this.attachmentFromPickerItem(item)
+      if (attachment) this.dispatchSelection(attachment)
+    })
     this.modalController()?.close?.()
   }
 
-  confirmSelection() {
-    if (!this.multipleSelectionEnabled() || this.selectedAttachments.size === 0) return
+  attachmentFromPickerItem(item) {
+    const payload = item?.payload
+    if (!payload || typeof payload !== "object") return null
 
-    this.selectedAttachments.forEach((attachment) => this.dispatchSelection(attachment))
-    this.clearSelection()
-    this.modalController()?.close?.()
-  }
-
-  clearSelection() {
-    if (this.selectedAttachments.size === 0) return
-
-    this.selectedAttachments.clear()
-    this.updateSelectionUi()
-    this.refreshGallerySelection()
+    return payload
   }
 
   dispatchSelection(attachment) {
@@ -369,14 +270,6 @@ export default class extends Controller {
     }
   }
 
-  openModalAndLoad() {
-    this.modalController()?.open?.()
-    this.currentPage = 1
-    this.clearSelection()
-    this.clearUploadQueue()
-    this.loadAttachments({ reset: true })
-  }
-
   modalController() {
     if (!this.hasModalIdValue) return null
 
@@ -394,7 +287,6 @@ export default class extends Controller {
 
     return application.getControllerForElementAndIdentifier(fieldWrapper, "flat-pack--text-area")
   }
-
   async directUploadFiles(files) {
     const attachments = []
     this.uploadEntries = files.map((file) => this.buildUploadEntry(file))
@@ -441,10 +333,8 @@ export default class extends Controller {
 
       const noun = createdAttachments.length === 1 ? "image" : "images"
       this.showStatus(`Added ${createdAttachments.length} ${noun}`)
-      this.currentPage = 1
-      this.clearSelection()
       this.clearUploadQueue()
-      this.loadAttachments({ reset: true })
+      this.refreshPickerResults()
       this.modalController()?.close?.()
     } catch (uploadError) {
       const failedEntry = this.uploadEntries.find((entry) => ["processing", "uploading"].includes(entry.status))
@@ -485,10 +375,8 @@ export default class extends Controller {
 
       const noun = createdAttachments.length === 1 ? "image" : "images"
       this.showStatus(`Added ${createdAttachments.length} ${noun}`)
-      this.currentPage = 1
-      this.clearSelection()
       this.clearUploadQueue()
-      this.loadAttachments({ reset: true })
+      this.refreshPickerResults()
       this.modalController()?.close?.()
     } catch (uploadError) {
       this.clearProviderUploadTimers()
@@ -664,72 +552,6 @@ export default class extends Controller {
       id: selection.id,
       resource_key: selection.resource_key || selection.resourceKey
     }
-  }
-
-  pickerRequestUrl() {
-    const url = new URL(this.pickerUrlValue, window.location.origin)
-    const query = this.searchQuery()
-
-    url.searchParams.set("page", this.currentPage)
-    if (query) {
-      url.searchParams.set("q", query)
-    } else {
-      url.searchParams.delete("q")
-    }
-
-    return url.toString()
-  }
-
-  renderGallery(attachments, { append = false } = {}) {
-    if (!this.hasGalleryTarget) return
-
-    if (!append) {
-      this.galleryTarget.innerHTML = ""
-    }
-
-    attachments.forEach((attachment) => {
-      const button = document.createElement("button")
-      button.type = "button"
-      button.className = this.galleryButtonClass(this.attachmentSelectedForMultiMode(attachment.id))
-      button.setAttribute("aria-label", attachment.name || this.i18nText("picker.untitled_image", "Untitled image"))
-      button.setAttribute("aria-pressed", this.attachmentSelectedForMultiMode(attachment.id) ? "true" : "false")
-      button.dataset.attachmentId = attachment.id
-      button.addEventListener("click", () => this.selectAttachment(attachment))
-
-      const media = document.createElement("div")
-      media.className = "relative aspect-[4/3] overflow-hidden bg-(--surface-muted-background-color)"
-
-      if (attachment.thumbnail_url) {
-        const image = document.createElement("img")
-        image.src = attachment.thumbnail_url
-        image.alt = attachment.alt || attachment.name || "Attachment image"
-        image.className = "h-full w-full object-cover transition group-hover:scale-[1.02]"
-        media.appendChild(image)
-      }
-
-      button.appendChild(media)
-      this.galleryTarget.appendChild(button)
-    })
-
-    if (this.hasEmptyStateTarget) {
-      this.emptyStateTarget.classList.toggle("hidden", attachments.length > 0)
-    }
-  }
-
-  updatePagination(pagination) {
-    this.currentPage = Number(pagination.current_page || 1)
-    this.totalPages = Number(pagination.total_pages || 1)
-    this.hasNextPage = Boolean(pagination.next_page)
-  }
-
-  fillScrollContainer() {
-    if (!this.hasScrollContainerTarget || this.isLoading || !this.hasNextPage) return
-
-    const { clientHeight, scrollHeight } = this.scrollContainerTarget
-    if (scrollHeight > clientHeight + 8) return
-
-    this.currentPage += 1
-    this.loadAttachments({ append: true })
   }
 
   showStatus(message) {
@@ -923,16 +745,6 @@ export default class extends Controller {
       .replaceAll("'", "&#39;")
   }
 
-  searchQuery() {
-    if (!this.hasSearchInputTarget) return ""
-
-    const field = this.searchInputTarget instanceof HTMLInputElement
-      ? this.searchInputTarget
-      : this.searchInputTarget.querySelector("input")
-
-    return field?.value?.trim() || ""
-  }
-
   csrfToken() {
     return document.querySelector('meta[name="csrf-token"]')?.content || ""
   }
@@ -953,9 +765,24 @@ export default class extends Controller {
 
   setMultipleSelectionMode(enabled) {
     this.multipleSelectionValue = enabled
-    this.clearSelection()
     this.syncFileInputMode()
-    this.updateSelectionUi()
+    this.syncPickerSelectionMode()
+    this.pickerController()?.clearSelection()
+  }
+
+  syncPickerSelectionMode() {
+    const multiple = this.multipleSelectionEnabled()
+    const element = this.pickerElement()
+    if (element) {
+      element.setAttribute("data-flat-pack--picker-selection-mode-value", multiple ? "multiple" : "single")
+      element.setAttribute("data-flat-pack--picker-auto-confirm-value", multiple ? "false" : "true")
+    }
+
+    const picker = this.pickerController()
+    if (!picker) return
+
+    picker.selectionModeValue = multiple ? "multiple" : "single"
+    picker.autoConfirmValue = !multiple
   }
 
   syncFileInputMode() {
@@ -964,71 +791,37 @@ export default class extends Controller {
     this.fileInputTarget.multiple = this.multipleSelectionEnabled()
   }
 
-  toggleAttachmentSelection(attachment) {
-    if (this.selectedAttachments.has(attachment.id)) {
-      this.selectedAttachments.delete(attachment.id)
-    } else {
-      this.selectedAttachments.set(attachment.id, attachment)
-    }
+  pickerElement() {
+    if (!this.hasModalIdValue) return null
 
-    this.updateSelectionUi()
-    this.refreshGallerySelection()
+    const modalElement = document.getElementById(this.modalIdValue)
+    if (!modalElement) return null
+
+    return modalElement.querySelector("[data-controller~='flat-pack--picker']")
   }
 
-  updateSelectionUi() {
-    this.updateModeSummary()
+  pickerController() {
+    const element = this.pickerElement()
+    if (!element) return null
 
-    if (!this.multipleSelectionEnabled()) {
-      if (this.hasSelectionActionsTarget) {
-        this.selectionActionsTarget.classList.add("hidden")
-      }
-
-      return
-    }
-
-    if (this.hasSelectionActionsTarget) {
-      this.selectionActionsTarget.classList.remove("hidden")
-    }
-
-    if (this.hasSelectionCountTarget) {
-      const count = this.selectedAttachments.size
-      this.selectionCountTarget.textContent = count > 0 ? this.i18nFormat(count === 1 ? "picker.selected.one" : "picker.selected.other", "%{count} selected", { count }) : this.i18nText("picker.select_one_or_more", "Select one or more")
-    }
-
-    if (this.hasConfirmButtonTarget) {
-      this.confirmButtonTarget.disabled = this.selectedAttachments.size === 0
-    }
+    return application.getControllerForElementAndIdentifier(element, "flat-pack--picker")
   }
 
-  refreshGallerySelection() {
-    if (!this.hasGalleryTarget || !this.multipleSelectionEnabled()) return
+  refreshPickerResults() {
+    const picker = this.pickerController()
+    if (!picker) return
 
-    this.galleryTarget.querySelectorAll("button[data-attachment-id]").forEach((button) => {
-      const selected = this.attachmentSelectedForMultiMode(button.dataset.attachmentId)
-      button.className = this.galleryButtonClass(selected)
-      button.setAttribute("aria-pressed", selected ? "true" : "false")
-    })
+    const input = picker.hasSearchInputTarget ? picker.searchInputTarget : null
+    const field = input instanceof HTMLInputElement ? input : input?.querySelector?.("input")
+    picker.search({ target: { value: field?.value || "" } })
   }
 
-  attachmentSelectedForMultiMode(id) {
-    return this.selectedAttachments.has(String(id)) || this.selectedAttachments.has(id)
-  }
-
-  galleryButtonClass(selected) {
-    const baseClass = "group flex h-full flex-col overflow-hidden rounded-xl border bg-(--surface-background-color) text-left shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-
-    if (selected) {
-      return `${baseClass} border-(--surface-content-color) ring-2 ring-inset ring-ring shadow-md`
-    }
-
-    return `${baseClass} border-(--surface-border-color) hover:shadow-md`
-  }
-
-  updateModeSummary() {
-    if (!this.hasModeSummaryTarget) return
-
-    this.modeSummaryTarget.textContent = ""
-    this.modeSummaryTarget.classList.add("hidden")
+  openModalAndLoad() {
+    this.syncPickerSelectionMode()
+    this.pickerController()?.clearSelection()
+    this.clearUploadQueue()
+    this.showStatus("")
+    this.modalController()?.open?.()
   }
 
   closeModeMenu(event) {

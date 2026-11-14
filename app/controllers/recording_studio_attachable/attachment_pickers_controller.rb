@@ -21,18 +21,33 @@ module RecordingStudioAttachable
       attachments = attachment_query.call
 
       render json: {
-        attachments: attachments.map { |recording| attachment_json(recording) },
+        items: attachments.map { |recording| picker_item(recording) },
         pagination: {
           current_page: attachment_query.current_page,
           total_pages: attachment_query.total_pages,
-          total_count: attachment_query.total_count,
-          next_page: attachment_query.next_page?,
-          previous_page: attachment_query.previous_page?
+          next_page: (attachment_query.next_page? ? attachment_query.current_page + 1 : nil)
         }
       }
     end
 
     private
+
+    def picker_item(recording)
+      attachment = attachment_json(recording)
+
+      {
+        id: attachment[:id],
+        kind: "image",
+        name: attachment[:name],
+        label: attachment[:name],
+        title: attachment[:name],
+        content_type: attachment[:content_type],
+        byte_size: attachment[:byte_size],
+        thumbnail_url: attachment[:thumbnail_url],
+        description: attachment[:description],
+        payload: attachment
+      }
+    end
 
     def attachment_json(recording)
       attachment = recording.recordable

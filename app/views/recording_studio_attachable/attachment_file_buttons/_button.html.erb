@@ -10,7 +10,7 @@
 <% form_method = attachment_recording.present? ? :patch : :post %>
 <% accept_attribute = attachment_file_button_accept_attribute(allowed_content_types) %>
 <% form_controller_values = {
-  direct_upload_url: recording_direct_uploads_path(recording),
+  direct_upload_url: attachable_routes.recording_direct_uploads_path(recording),
   max_file_size: max_file_size,
   image_processing_enabled: image_processing_enabled,
   image_processing_max_width: image_processing_max_width,
@@ -20,7 +20,7 @@
 } %>
 <% revision_upload_data = {
   controller: "recording-studio-attachable--attachment-revision-upload",
-  action: "submit->recording-studio-attachable--attachment-revision-upload#handleSubmit",
+  action: "submit->recording-studio-attachable--attachment-revision-upload#handleSubmit flat-pack:file-input:change->recording-studio-attachable--attachment-revision-upload#fileSelected",
   recording_studio_attachable__attachment_revision_upload_direct_upload_url_value: form_controller_values[:direct_upload_url],
   recording_studio_attachable__attachment_revision_upload_max_file_size_value: form_controller_values[:max_file_size],
   recording_studio_attachable__attachment_revision_upload_image_processing_enabled_value: form_controller_values[:image_processing_enabled],
@@ -45,17 +45,14 @@
   <% else %>
     <%= hidden_field_tag "attachment_import[attachments][][signed_blob_id]", "", data: { recording_studio_attachable__attachment_revision_upload_target: "signedBlobInput" } %>
   <% end %>
-  <input type="file"
-         class="hidden"
-         accept="<%= accept_attribute %>"
-         data-recording-studio-attachable--attachment-revision-upload-target="fileInput"
-         data-action="change->recording-studio-attachable--attachment-revision-upload#fileSelected">
-  <%= render FlatPack::Button::Component.new(
+  <%= render FlatPack::FileInput::Component.new(
+    name: "attachment_source_file",
+    variant: :button,
     text: pick_button_text,
     style: :secondary,
     size: :md,
-    type: "button",
-    data: { action: "recording-studio-attachable--attachment-revision-upload#browse" }
+    accept: accept_attribute.presence,
+    max_files: 1
   ) %>
   <p class="hidden text-sm text-(--surface-muted-content-color)" data-recording-studio-attachable--attachment-revision-upload-target="status"></p>
 <% end %>

@@ -33,11 +33,16 @@ class UploadModalTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, "<html"
     assert_includes response.body, 'data-recording-studio-attachable--upload-success-behavior-value="redirect"'
-    assert_includes response.body, "Choose files"
+    assert_includes response.body, "Upload a file"
+    assert_includes response.body, "or drag and drop"
     assert_includes response.body, "Google Drive"
     assert_includes response.body, "Dropbox"
-    assert_includes response.body, 'type="file" multiple'
-    assert_includes response.body, 'data-recording-studio-attachable--upload-target="dropzone"'
+    assert_match(/data-flat-pack-file-input-actions.*?Google Drive/m, response.body)
+    assert_includes response.body, 'type="file"'
+    assert_includes response.body, "multiple"
+    assert_includes response.body, 'data-flat-pack--file-input-max-files-value="20"'
+    assert_includes response.body, "flat-pack:file-input:change->recording-studio-attachable--upload#filesSelected"
+    assert_not_includes response.body, 'data-recording-studio-attachable--upload-target="dropzone"'
     assert_includes response.body, 'data-recording-studio-attachable--upload-target="progressTemplate"'
     assert_not_includes response.body, "<turbo-frame"
   end
@@ -56,11 +61,14 @@ class UploadModalTest < ActionDispatch::IntegrationTest
     assert_match(/\A\s*<turbo-frame id="my-upload-frame">/, response.body)
     assert_includes response.body, 'data-recording-studio-attachable--upload-success-behavior-value="event"'
     assert_match(/data-recording-studio-attachable--upload-csrf-token-value="[^"]+"/, response.body)
-    assert_includes response.body, "Choose files"
-    assert_includes response.body, 'type="file" multiple'
-    assert_includes response.body, 'data-recording-studio-attachable--upload-target="dropzone"'
+    assert_includes response.body, "Upload a file"
+    assert_includes response.body, "or drag and drop"
+    assert_includes response.body, 'type="file"'
+    assert_includes response.body, "multiple"
+    assert_includes response.body, 'data-flat-pack--file-input-max-files-value="20"'
+    assert_includes response.body, "flat-pack:file-input:change->recording-studio-attachable--upload#filesSelected"
+    assert_not_includes response.body, 'data-recording-studio-attachable--upload-target="dropzone"'
     assert_includes response.body, 'data-recording-studio-attachable--upload-target="progressTemplate"'
-    assert_includes response.body, "Drag and drop, or choose"
     assert_includes response.body, "Demo cloud import"
     assert_includes response.body, 'data-turbo-frame="_top"'
     assert_includes response.body, "return_to=%2Fattachment_editor"
@@ -109,7 +117,13 @@ class UploadModalTest < ActionDispatch::IntegrationTest
   end
 
   test "file buttons follow the global upload presentation unless they override it" do
-    assert_includes render_add_button, "recording-studio-attachable--attachment-revision-upload"
+    page_button = render_add_button
+    assert_includes page_button, "recording-studio-attachable--attachment-revision-upload"
+    assert_includes page_button, "flat-pack:file-input:change-&gt;recording-studio-attachable--attachment-revision-upload#fileSelected"
+    assert_includes page_button, 'data-flat-pack--file-input-max-files-value="1"'
+    assert_includes page_button, "sr-only"
+    assert_includes page_button, ">Add<"
+    assert_not_includes page_button, "or drag and drop"
 
     RecordingStudioAttachable.configuration.upload_presentation = :modal
     modal_html = render_add_button

@@ -4,7 +4,7 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.26.0", RecordingStudioAttachable::VERSION
+    assert_equal "0.27.0", RecordingStudioAttachable::VERSION
   end
 
   def test_recording_studio_dependency_is_6_7_1_or_newer
@@ -21,24 +21,24 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes dummy_gemfile, pin
   end
 
-  def test_flat_pack_dependency_is_0_1_371_or_newer
+  def test_flat_pack_dependency_is_0_1_372_or_newer
     spec = Gem.loaded_specs.fetch("flat_pack")
     gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
     root_gemfile = File.read(File.expand_path("../Gemfile", __dir__))
     dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
     root_lock = File.read(File.expand_path("../Gemfile.lock", __dir__))
     dummy_lock = File.read(File.expand_path("dummy/Gemfile.lock", __dir__))
-    pin = 'gem "flat_pack", github: "bowerbird-app/flatpack", tag: "v0.1.371"'
+    pin = 'gem "flat_pack", github: "bowerbird-app/flatpack", tag: "v0.1.372"'
 
-    assert spec.version >= Gem::Version.new("0.1.371"),
-           "expected flat_pack >= 0.1.371, got #{spec.version}"
-    assert_includes gemspec, 'spec.add_dependency "flat_pack", ">= 0.1.371"'
+    assert spec.version >= Gem::Version.new("0.1.372"),
+           "expected flat_pack >= 0.1.372, got #{spec.version}"
+    assert_includes gemspec, 'spec.add_dependency "flat_pack", ">= 0.1.372"'
     assert_includes root_gemfile, pin
     assert_includes dummy_gemfile, pin
-    assert_includes root_lock, "tag: v0.1.371"
-    assert_includes dummy_lock, "tag: v0.1.371"
-    assert_includes root_lock, "flat_pack (0.1.371)"
-    assert_includes dummy_lock, "flat_pack (0.1.371)"
+    assert_includes root_lock, "tag: v0.1.372"
+    assert_includes dummy_lock, "tag: v0.1.372"
+    assert_includes root_lock, "flat_pack (0.1.372)"
+    assert_includes dummy_lock, "flat_pack (0.1.372)"
   end
 
   def test_api_dependency_is_0_23
@@ -146,9 +146,15 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes view_source, "size: :md"
     assert_includes view_source, 'content_for :title, t("recording_studio.attachable.upload.title")'
     assert_includes view_source, 't("recording_studio.attachable.upload.subtitle"'
-    assert_includes view_source, 't("recording_studio.attachable.upload.drag_and_drop")'
-    assert_includes view_source, 'icon: "upload"'
-    assert_includes view_source, 'data: { action: "recording-studio-attachable--upload#browse" }'
+    assert_includes view_source, "FlatPack::FileInput::Component.new("
+    assert_includes view_source, "max_files:"
+    assert_includes view_source, "file_input.actions do"
+    assert_includes view_source, "flat-pack:file-input:change->recording-studio-attachable--upload#filesSelected"
+    assert_includes upload_controller_source, "event.detail?.files"
+    assert_not_includes upload_controller_source, "bindDropzoneEvents"
+    assert_not_includes view_source, "upload#browse"
+    assert_not_includes view_source, 'data-recording-studio-attachable--upload-target="dropzone"'
+    assert_not_includes view_source, 'data-recording-studio-attachable--upload-target="input"'
     assert_includes view_source, "FlatPack::Modal::Component.new("
     assert_includes view_source, "data-provider-modal-frame"
     assert_includes upload_controller_source, "addProviderSelections(providerKey, selections)"
@@ -631,25 +637,28 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes helper_source, "def render_attachment_file_button(recording, return_to:, target: nil, presentation: nil)"
     assert_includes helper_source, "def attachment_preview_url(recording, variant: :square_med)"
     assert_includes button_source, "recording-studio-attachable--attachment-revision-upload"
-    assert_includes button_source, "recording-studio-attachable--attachment-revision-upload#browse"
-    assert_includes button_source, 'type: "button"'
-    assert_includes button_source, "FlatPack::Button::Component.new("
+    assert_includes button_source, "flat-pack:file-input:change->recording-studio-attachable--attachment-revision-upload#fileSelected"
+    assert_includes button_source, "FlatPack::FileInput::Component.new("
+    assert_includes button_source, "variant: :button"
     assert_includes button_source, "text: pick_button_text"
+    assert_includes button_source, "style: :secondary"
+    assert_includes button_source, "max_files: 1"
     assert_not_includes button_source, 'icon: "camera"'
     assert_not_includes button_source, "icon_only: true"
-    assert_includes button_source, 'class="hidden"'
+    assert_not_includes button_source, "attachment-revision-upload#browse"
+    assert_not_includes button_source, "FlatPack::Button::Component.new("
+    assert_includes button_source, "attachable_routes.recording_direct_uploads_path(recording)"
     assert_includes button_source, "attachable_attachment_path(attachment_recording"
     assert_includes button_source, "form_method = attachment_recording.present? ? :patch : :post"
     assert_includes button_source, "attachable_attachment_imports_path"
     assert_no_match(/turbo_frame_tag/, button_source)
     assert_not_includes button_source, "FlatPack::EmptyState::Component.new("
-    assert_not_includes button_source, "FlatPack::FileInput::Component"
     assert_not_includes button_source, "href: attachment_path("
     assert_not_includes button_source, "FlatPack::TextInput::Component"
     assert_not_includes button_source, 'text: "Save"'
   end
 
-  def test_attachment_revision_upload_controller_supports_browse_and_auto_submit
+  def test_attachment_revision_upload_controller_uploads_the_selected_file_and_auto_submits
     controller_path = File.expand_path(
       "../app/javascript/controllers/recording_studio_attachable/attachment_revision_upload_controller.js", __dir__
     )
@@ -657,8 +666,11 @@ class RecordingStudioAttachableTest < Minitest::Test
 
     assert_includes controller_source, "autoSubmit: { type: Boolean, default: false }"
     assert_includes controller_source, "signedBlobFieldName"
-    assert_includes controller_source, "browse() {"
-    assert_includes controller_source, "this.fileInputTarget.click()"
+    assert_includes controller_source, "const [file] = event.detail?.files || []"
+    assert_includes controller_source, "this.releaseSourceFile(event)"
+    assert_includes controller_source, 'input.value = ""'
+    assert_not_includes controller_source, "browse()"
+    assert_not_includes controller_source, "fileInputTarget"
     assert_includes controller_source, "if (this.autoSubmitValue) {"
     assert_includes controller_source, "this.element.requestSubmit()"
   end

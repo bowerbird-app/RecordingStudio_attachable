@@ -16,7 +16,8 @@ module RecordingStudioAttachable
       assert_includes helper_source, "def attachment_preview_url(recording, variant: :square_med)"
       assert_not_includes helper_source, "render_attachment_image_slot"
       assert_not_includes helper_source, "render_parent_attachment"
-      assert_includes button_source, "FlatPack::Button::Component.new("
+      assert_includes button_source, "FlatPack::FileInput::Component.new("
+      assert_includes button_source, "variant: :button"
       assert_includes button_source, "text: pick_button_text"
       assert_includes button_source, "turbo_frame: turbo_frame_target"
       assert_no_match(/turbo_frame_tag/, button_source)

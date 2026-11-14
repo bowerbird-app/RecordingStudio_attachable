@@ -17,7 +17,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - Rails 8.1+
 - Active Storage installed in the host app
 - Recording Studio 6.7.1 or newer installed in the host app (CI tested with GitHub tag `v6.7.1`)
-- Flatpack 0.1.371 or newer (`FlatPack::VERSION` 0.1.371 at tag `v0.1.371`)
+- Flatpack 0.1.372 or newer (`FlatPack::VERSION` 0.1.372 at tag `v0.1.372`)
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
 - RecordingStudio Metrics `>= 0.3.0, < 1.0` (CI tested with GitHub tag `v0.8.0`) for operations-API storage and upload metrics
@@ -740,7 +740,7 @@ The engine ships with:
 
 - an attachment listing page with scope and kind filters plus grid/list view toggles
 - name search, pagination, and bulk remove from the attachment listing page
-- an upload page with direct uploads, previews, progress, and server-side batch validation
+- an upload page with a Flatpack file dropzone, direct uploads, previews, progress, and server-side batch validation
 - an attachment detail page for gallery/library metadata editing and download/trash actions
 - an attachment file button for single-file parents (`max_file_count: 1`) that stays on the parent page via `return_to`
 
@@ -769,7 +769,9 @@ Replace never navigates to the attachment details screen. Keep `attachments#show
 
 ### Upload in a modal
 
-The standard upload page (multi-file queue, drag and drop, per-file progress, upload providers) can open in a FlatPack modal instead of navigating away. The full page stays the default.
+The upload page renders `FlatPack::FileInput` as the dropzone. `max_files` caps one selection. Registered provider buttons render in the `actions` slot. `flat-pack:file-input:change` hands `{ files }` to Attachable, which direct-uploads them and keeps progress, retry, and image preprocessing. The single-file button is the same component with `variant: :button`.
+
+The standard upload page can open in a FlatPack modal instead of navigating away. The full page stays the default.
 
 ```ruby
 # config/initializers/recording_studio_attachable.rb
@@ -852,7 +854,7 @@ Save starts as the default button and is only as wide as its label. Change a cap
 
 `preview:` chooses the picture in the list and on Slides. The default `:square` uses the `square_med` crop. `preview: :natural` uses the `med` variant and keeps the file's proportions. On the list the picture stays about 208px wide beside the fields. On Slides the picture bleeds to the card edges. It stays tall enough for the previous and next controls, and it is capped in height. The fields span the width under it. Clicking those previews still opens the original file. Grid ignores `preview:` and always uses the natural `med` preview. `preview:` is not in the signed save token. An unknown value raises.
 
-FlatPack is the default UI system for the engine and the dummy app (Gemfile tag `v0.1.371`, `FlatPack::VERSION` 0.1.371; gem requires `>= 0.1.371`).
+FlatPack is the default UI system for the engine and the dummy app (Gemfile tag `v0.1.372`, `FlatPack::VERSION` 0.1.372; gem requires `>= 0.1.372`).
 
 ## Development
 

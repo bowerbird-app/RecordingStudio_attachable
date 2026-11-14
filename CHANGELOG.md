@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-11-14
+
+### Changed
+
+- The upload dropzone is `FlatPack::FileInput`. `max_files` is the per-selection cap. Provider buttons render in the `actions` slot and stay generic. Choosing or dropping files emits `flat-pack:file-input:change`. Attachable still direct-uploads those files and still shows progress, retry, and image preprocessing.
+- The attachment file button is `FlatPack::FileInput` with `variant: :button` and `max_files: 1`. The same locals, form, Turbo frame target, and auto-submit remain.
+- Requires `flat_pack >= 0.1.372`. Development and dummy pins use tag `v0.1.372`.
+
+### Upgrade Notes
+
+- Bump to `0.27.0`. No migration.
+- Host apps need Flatpack `>= 0.1.372`. Reload JavaScript. Do not rebuild Tailwind.
+- `attachable:uploaded` is unchanged (`event.detail.attachments`, `event.detail.redirectPath`). `render_attachment_file_button` and the `attachment_file_buttons/button` partial take the same locals. The direct upload URL comes from `attachable_routes`, so a host does not define `recording_direct_uploads_path`.
+- The dropzone still shows Flatpack's own file list. There is no public option to hide that list. The queue under it is the upload progress. Flatpack does not upload and does not rewrite `input.files`. Size checks stay in Attachable so image preprocessing can shrink a file before the size limit applies.
+
 ## [0.26.0] - 2026-11-14
 
 ### Changed
@@ -692,7 +707,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.26.0...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.27.0...HEAD
+[0.27.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.26.0...v0.27.0
 [0.26.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.24.0...v0.25.0
 [0.24.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.23.0...v0.24.0

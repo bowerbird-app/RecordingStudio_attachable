@@ -22,6 +22,7 @@
 
 <div class="flex w-full flex-col gap-6"
      data-controller="recording-studio-attachable--upload"
+     data-action="flat-pack:file-input:change->recording-studio-attachable--upload#filesSelected"
      data-recording-studio-attachable--upload-direct-upload-url-value="<%= recording_direct_uploads_path(@recording) %>"
      data-recording-studio-attachable--upload-finalize-url-value="<%= @create_path %>"
      data-recording-studio-attachable--upload-max-file-size-value="<%= @max_file_size %>"
@@ -46,34 +47,29 @@
     <%= render FlatPack::Progress::Component.new(value: 0, max: 100, label: t("recording_studio.attachable.upload.progress")) %>
   </template>
 
-  <div class="flex min-h-80 flex-col gap-6">
-    <div class="flex h-full min-h-[220px] flex-col gap-6">
-      <div class="flex min-h-[220px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-(--surface-border-color) p-10 text-center" data-recording-studio-attachable--upload-target="dropzone">
-      <p class="text-sm text-(--surface-muted-content-color)"><%= t("recording_studio.attachable.upload.drag_and_drop") %></p>
-      <input type="file" multiple class="hidden" data-recording-studio-attachable--upload-target="input" data-action="change->recording-studio-attachable--upload#filesSelected">
-      <div class="flex w-full max-w-sm flex-col items-stretch gap-3">
-        <%= render FlatPack::Button::Component.new(
-          text: t("recording_studio.attachable.upload.choose_files"),
-          style: :primary,
-          size: :md,
-          type: "button",
-          icon: "upload",
-          full_width: true,
-          data: { action: "recording-studio-attachable--upload#browse" }
-        ) %>
-
-        <% if upload_providers.any? %>
+  <div class="flex flex-col gap-6">
+    <% max_files = @max_file_count.to_i %>
+    <% file_input = FlatPack::FileInput::Component.new(
+         name: "attachment_files",
+         multiple: true,
+         accept: @allowed_content_types.join(",").presence,
+         preview: false,
+         **(max_files.positive? ? { max_files: max_files } : {})
+       ) %>
+    <% if upload_providers.any? %>
+      <% file_input.actions do %>
+        <div class="flex flex-col gap-3">
           <% upload_providers.each do |provider| %>
             <% button_options = provider.button_options(view_context: self, recording: @recording, query_params: @upload_redirect_params).reverse_merge(full_width: true) %>
             <% button_options[:data] = button_options.fetch(:data, {}).merge(turbo_frame: "_top") if embedded %>
             <%= render FlatPack::Button::Component.new(**button_options) %>
           <% end %>
-        <% end %>
-      </div>
-      </div>
+        </div>
+      <% end %>
+    <% end %>
+    <%= render file_input %>
 
-      <div class="hidden space-y-4" data-recording-studio-attachable--upload-target="queue"></div>
-    </div>
+    <div class="hidden space-y-4" data-recording-studio-attachable--upload-target="queue"></div>
   </div>
 
   <% upload_providers.select(&:modal?).each do |provider| %>

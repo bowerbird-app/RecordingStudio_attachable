@@ -44,8 +44,6 @@ class LocalesTest < Minitest::Test
     "upload.type_images" => "images",
     "upload.type_pdfs" => "PDFs",
     "upload.type_text_files" => "text files",
-    "upload.drag_and_drop" => "Drag and drop, or choose",
-    "upload.choose_files" => "Choose files",
     "upload.progress" => "Progress",
     "upload.close" => "Close",
     "upload.remove" => "X",

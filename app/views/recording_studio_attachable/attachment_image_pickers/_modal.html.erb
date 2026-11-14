@@ -77,6 +77,10 @@
       <% picker.with_empty do %>
         <%= empty_state_text %>
       <% end %>
+
+      <% picker.with_error do %>
+        <%= t("recording_studio.attachable.picker.unable_to_load_library") %>
+      <% end %>
     <% end %>
   <% end %>
 <% end %>

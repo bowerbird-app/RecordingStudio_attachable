@@ -296,6 +296,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes picker_modal_partial, "search_endpoint: picker_url"
     assert_includes picker_modal_partial, "picker.with_toolbar"
     assert_includes picker_modal_partial, "picker.with_empty"
+    assert_includes picker_modal_partial, "picker.with_error"
+    assert_includes picker_modal_partial, 't("recording_studio.attachable.picker.unable_to_load_library")'
     assert_includes picker_modal_partial, 't("recording_studio.attachable.picker.upload")'
     assert_includes picker_modal_partial, 't("recording_studio.attachable.picker.upload_from_device")'
     assert_includes picker_modal_partial, "dropdown.menu_divider"

@@ -422,7 +422,7 @@ class DocsController < ApplicationController
 
     @picker_summary = [
       "The picker is an image-only library. recording_attachment_picker_path(recording) returns Flatpack Picker JSON: items, plus pagination.current_page, total_pages, and next_page.",
-      "next_page is the next page number, or null. A new search replaces the list. The next page is appended. The modal renders FlatPack::Picker with remote search. Upload and provider buttons sit in the toolbar. The empty slot is the empty state.",
+      "next_page is the next page number, or null. A new search replaces the list. The next page is appended. The modal renders FlatPack::Picker with remote search. Upload and provider buttons sit in the toolbar. The empty slot is the empty state. A failed load shows the error slot, and the next search or scroll tries again.",
       "Every selection dispatches a recording-studio-attachable--attachment-image-picker:selected event with event.detail.attachment so host-app code can persist or render the chosen attachment.",
       "event.detail.attachment is the item payload. New uploads dispatch that same attachment object."
     ]

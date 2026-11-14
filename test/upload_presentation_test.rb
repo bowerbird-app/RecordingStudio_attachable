@@ -98,6 +98,7 @@ module RecordingStudioAttachable
       assert_includes page, 'render "recording_studio_attachable/attachment_uploads/uploader", modal: true'
       assert_includes page, 'render "recording_studio_attachable/attachment_uploads/uploader", modal: false'
       assert_includes uploader, "FlatPack::FileInput::Component.new("
+      assert_includes uploader, "show_file_list: false"
       assert_includes uploader, "max_files:"
       assert_includes uploader, "flat-pack:file-input:change->recording-studio-attachable--upload#filesSelected"
       assert_not_includes uploader, 'data-recording-studio-attachable--upload-target="dropzone"'

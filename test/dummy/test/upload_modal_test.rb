@@ -41,6 +41,8 @@ class UploadModalTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'type="file"'
     assert_includes response.body, "multiple"
     assert_includes response.body, 'data-flat-pack--file-input-max-files-value="20"'
+    assert_includes response.body, 'data-flat-pack--file-input-show-list-value="false"'
+    assert_not_includes response.body, 'data-flat-pack--file-input-target="fileList"'
     assert_includes response.body, "flat-pack:file-input:change->recording-studio-attachable--upload#filesSelected"
     assert_not_includes response.body, 'data-recording-studio-attachable--upload-target="dropzone"'
     assert_includes response.body, 'data-recording-studio-attachable--upload-target="progressTemplate"'
@@ -66,6 +68,8 @@ class UploadModalTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'type="file"'
     assert_includes response.body, "multiple"
     assert_includes response.body, 'data-flat-pack--file-input-max-files-value="20"'
+    assert_includes response.body, 'data-flat-pack--file-input-show-list-value="false"'
+    assert_not_includes response.body, 'data-flat-pack--file-input-target="fileList"'
     assert_includes response.body, "flat-pack:file-input:change->recording-studio-attachable--upload#filesSelected"
     assert_not_includes response.body, 'data-recording-studio-attachable--upload-target="dropzone"'
     assert_includes response.body, 'data-recording-studio-attachable--upload-target="progressTemplate"'

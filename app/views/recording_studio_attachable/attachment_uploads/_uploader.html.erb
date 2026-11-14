@@ -53,7 +53,7 @@
          name: "attachment_files",
          multiple: true,
          accept: @allowed_content_types.join(",").presence,
-         preview: false,
+         show_file_list: false,
          **(max_files.positive? ? { max_files: max_files } : {})
        ) %>
     <% if upload_providers.any? %>

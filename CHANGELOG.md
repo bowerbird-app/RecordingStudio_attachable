@@ -13,14 +13,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The upload dropzone is `FlatPack::FileInput`. `max_files` is the per-selection cap. Provider buttons render in the `actions` slot and stay generic. Choosing or dropping files emits `flat-pack:file-input:change`. Attachable still direct-uploads those files and still shows progress, retry, and image preprocessing.
 - The attachment file button is `FlatPack::FileInput` with `variant: :button` and `max_files: 1`. The same locals, form, Turbo frame target, and auto-submit remain.
-- Requires `flat_pack >= 0.1.372`. Development and dummy pins use tag `v0.1.372`.
+- The dropzone passes `show_file_list: false`. Only Attachable's queue lists files. `flat-pack:file-input:change` still carries `{ files }`.
+- A failed picker load shows the `error` slot (`Unable to load images`). The next search or scroll tries again.
+- Requires `flat_pack >= 0.1.376`. Development and dummy pins use tag `v0.1.376`.
 
 ### Upgrade Notes
 
 - Bump to `0.27.0`. No migration.
-- Host apps need Flatpack `>= 0.1.372`. Reload JavaScript. Do not rebuild Tailwind.
+- Host apps need Flatpack `>= 0.1.376`. Reload JavaScript. Do not rebuild Tailwind.
 - `attachable:uploaded` is unchanged (`event.detail.attachments`, `event.detail.redirectPath`). `render_attachment_file_button` and the `attachment_file_buttons/button` partial take the same locals. The direct upload URL comes from `attachable_routes`, so a host does not define `recording_direct_uploads_path`.
-- The dropzone still shows Flatpack's own file list. There is no public option to hide that list. The queue under it is the upload progress. Flatpack does not upload and does not rewrite `input.files`. Size checks stay in Attachable so image preprocessing can shrink a file before the size limit applies.
+- Size checks stay in Attachable so image preprocessing can shrink a file before the size limit applies. Flatpack does not upload and does not rewrite `input.files`.
 
 ## [0.26.0] - 2026-11-14
 

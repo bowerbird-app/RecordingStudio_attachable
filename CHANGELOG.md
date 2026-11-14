@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remove `test/support/widen_recording_studio_requirement.rb`. These release tags resolve without widening `recording_studio`.
 - The dummy app sets `config.authorize_write` so Recording Studio 6.5 writes are allowed when an actor is present. Dummy migrations add Trashable `purge_at`, API request-log arrival columns, and Logs `period_start`. The first admin on a new root uses `bootstrap_owner_access!`.
 
-## [0.23.1] - 2026-11-14
+## [0.24.0] - 2026-11-14
 
 ### Fixed
 
@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrade Notes
 
-- Bump to `0.23.1`. No migration.
+- Bump to `0.24.0`. No migration.
 - Host apps need Recording Studio `>= 6.7.1`.
 - Destroying a parent recording now removes its attachment children and unreferenced attachment files.
 
@@ -666,8 +666,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.23.1...HEAD
-[0.23.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.23.0...v0.23.1
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.24.0...HEAD
+[0.24.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.4...v0.23.0
 [0.22.4]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.3...v0.22.4
 [0.22.3]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.22.2...v0.22.3

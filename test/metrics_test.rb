@@ -73,22 +73,32 @@ class MetricsTest < Minitest::Test
   private
 
   def with_admin_root(resolver)
+    created = false
+    added_method = false
     original = nil
-    if defined?(::RecordingStudioAccessible)
-      original = ::RecordingStudioAccessible.method(:admin_root)
-      ::RecordingStudioAccessible.define_singleton_method(:admin_root) { |**| resolver.call }
-    else
-      accessible = Module.new
-      accessible.define_singleton_method(:admin_root) { |**| resolver.call }
-      Object.const_set(:RecordingStudioAccessible, accessible)
+
+    unless defined?(::RecordingStudioAccessible)
+      Object.const_set(:RecordingStudioAccessible, Module.new)
+      created = true
     end
+
+    if ::RecordingStudioAccessible.respond_to?(:admin_root)
+      original = ::RecordingStudioAccessible.method(:admin_root)
+    else
+      added_method = true
+    end
+
+    ::RecordingStudioAccessible.define_singleton_method(:admin_root) { |**| resolver.call }
 
     yield
   ensure
-    if original
-      ::RecordingStudioAccessible.define_singleton_method(:admin_root, original)
-    elsif defined?(::RecordingStudioAccessible)
+    if created && defined?(::RecordingStudioAccessible)
       Object.send(:remove_const, :RecordingStudioAccessible)
+    elsif original
+      ::RecordingStudioAccessible.define_singleton_method(:admin_root, original)
+    elsif added_method && defined?(::RecordingStudioAccessible)
+      singleton = ::RecordingStudioAccessible.singleton_class
+      singleton.send(:remove_method, :admin_root) if singleton.method_defined?(:admin_root)
     end
   end
 

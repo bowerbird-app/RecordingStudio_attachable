@@ -46,7 +46,7 @@ end
 
 # Create the root recording
 Current.actor = user
-root_recording = RecordingStudio.root_recording_for(workspace)
+root_recording = RecordingStudio.create_root_recording!(workspace, actor: user)
 
 RecordingStudio::Recording.unscoped.find_or_create_by!(
   root_recording_id: root_recording.id,

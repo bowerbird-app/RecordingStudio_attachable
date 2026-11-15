@@ -15,7 +15,7 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     @viewer = user("viewer")
     Current.actor = @owner
     @workspace = Workspace.create!(name: "API #{SecureRandom.hex(4)}")
-    @root = RecordingStudio.root_recording_for(@workspace)
+    @root = RecordingStudio.create_root_recording!(@workspace, actor: @owner)
     @owner_access = bootstrap!(@root, @owner)
     @editor_access = grant!(@editor, :edit)
     @viewer_access = grant!(@viewer, :view)

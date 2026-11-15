@@ -163,7 +163,7 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes seeds, "ChatMessage.find_or_create_by!(chat_thread: chat_thread, position: attributes[:position])"
     assert_includes seeds, 'message.status = "sent"'
     assert_includes seeds, "message.seeded = true"
-    assert_includes seeds, "RecordingStudio.root_recording_for(workspace)"
+    assert_includes seeds, "RecordingStudio.create_root_recording!(workspace, actor: user)"
     assert_includes seeds, "recordable: page"
     assert_includes seeds, "recordable: chat_thread"
     assert_includes seeds, "recordable: chat_message"

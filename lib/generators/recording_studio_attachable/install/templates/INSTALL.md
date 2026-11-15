@@ -1,6 +1,6 @@
 1. Mount the engine and review `config/initializers/recording_studio_attachable.rb`.
 2. Ensure Active Storage is installed and direct uploads are wired in your host app.
-3. Ensure Recording Studio 6.1.0+ and RecordingStudio Accessible are installed before using the default authorization flow.
+3. Ensure Recording Studio 7 (`>= 7.0, < 8.0`) and RecordingStudio Accessible are installed before using the default authorization flow.
 4. Run `rails generate recording_studio_attachable:migrations` and then `rails db:migrate`.
 5. Declare each host-app domain recordable with `recording_studio_recordable(...)`, including `root:` and `allowed_parent_types:` for non-root domain recordables.
 6. Opt each parent recordable into `RecordingStudio::Capabilities::Attachable.to(...)` and set any per-recordable overrides there.
@@ -18,7 +18,7 @@
    - confirm server-side file type, file size, and file count rules
    - revise metadata and replace a file from the detail page
 11. For operations-API storage and upload metrics, add RecordingStudio Metrics
-    (`>= 0.3.0, < 1.0`, GitHub tag `v0.8.0`). This gem registers `:attachments`
+    (`>= 0.9.0, < 1.0`, GitHub tag `v0.9.0`). This gem registers `:attachments`
     metrics only. The host calls `RecordingStudioMetrics::Api.register!(api: :operations)`.
     RecordingStudio MCP `0.17.0` then advertises `attachments-storage_used`,
     `attachments-uploads_over_time`, `attachments-by_kind`, and

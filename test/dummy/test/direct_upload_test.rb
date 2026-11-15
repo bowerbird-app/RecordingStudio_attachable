@@ -15,7 +15,7 @@ class DirectUploadTest < ActionDispatch::IntegrationTest
     sign_in @user
     Current.actor = @user
     workspace = Workspace.create!(name: "Uploads #{SecureRandom.hex(4)}")
-    @root = RecordingStudio.root_recording_for(workspace)
+    @root = RecordingStudio.create_root_recording!(workspace, actor: @user)
     grant_workspace_access!(@root)
   end
 

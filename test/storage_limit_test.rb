@@ -963,10 +963,15 @@ class StorageLimitTest < Minitest::Test
   end
 
   def insert_event(recording_id:, recordable_id:, previous_recordable_id:)
+    root_recording_id = connection.select_value(<<~SQL)
+      SELECT COALESCE(root_recording_id, id)
+      FROM recording_studio_recordings
+      WHERE id = #{connection.quote(recording_id)}
+    SQL
     id = connection.select_value(<<~SQL)
       INSERT INTO recording_studio_events
         (id, action, created_at, occurred_at, recordable_id, recordable_type, recording_id,
-         previous_recordable_id, previous_recordable_type, metadata)
+         root_recording_id, previous_recordable_id, previous_recordable_type, metadata)
       VALUES (
         gen_random_uuid(),
         'attachment_metadata_revised',
@@ -975,6 +980,7 @@ class StorageLimitTest < Minitest::Test
         #{connection.quote(recordable_id)},
         'RecordingStudioAttachable::Attachment',
         #{connection.quote(recording_id)},
+        #{connection.quote(root_recording_id)},
         #{connection.quote(previous_recordable_id)},
         'RecordingStudioAttachable::Attachment',
         '{}'::jsonb

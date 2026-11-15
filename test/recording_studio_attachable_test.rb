@@ -4,21 +4,27 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.27.0", RecordingStudioAttachable::VERSION
+    assert_equal "0.28.0", RecordingStudioAttachable::VERSION
   end
 
-  def test_recording_studio_dependency_is_6_7_1_or_newer
+  def test_recording_studio_dependency_is_7
     spec = Gem.loaded_specs.fetch("recording_studio")
     gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
     root_gemfile = File.read(File.expand_path("../Gemfile", __dir__))
     dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
-    pin = 'gem "recording_studio", github: "bowerbird-app/RecordingStudio", tag: "v6.7.1"'
+    root_lock = File.read(File.expand_path("../Gemfile.lock", __dir__))
+    dummy_lock = File.read(File.expand_path("dummy/Gemfile.lock", __dir__))
+    pin = 'gem "recording_studio", github: "bowerbird-app/RecordingStudio", tag: "v7.0.0"'
 
-    assert spec.version >= Gem::Version.new("6.7.1"),
-           "expected recording_studio >= 6.7.1, got #{spec.version}"
-    assert_includes gemspec, 'spec.add_dependency "recording_studio", ">= 6.7.1"'
+    assert spec.version >= Gem::Version.new("7.0"),
+           "expected recording_studio >= 7.0, got #{spec.version}"
+    assert spec.version < Gem::Version.new("8.0"),
+           "expected recording_studio < 8.0, got #{spec.version}"
+    assert_includes gemspec, 'spec.add_dependency "recording_studio", ">= 7.0", "< 8.0"'
     assert_includes root_gemfile, pin
     assert_includes dummy_gemfile, pin
+    assert_includes root_lock, "recording_studio (7.0.0)"
+    assert_includes dummy_lock, "recording_studio (7.0.0)"
   end
 
   def test_flat_pack_dependency_is_0_1_376_or_newer
@@ -41,27 +47,34 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes dummy_lock, "flat_pack (0.1.376)"
   end
 
-  def test_api_dependency_is_0_23
+  def test_api_dependency_is_0_24
+    spec = Gem.loaded_specs.fetch("recording_studio_api")
     gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
+    root_gemfile = File.read(File.expand_path("../Gemfile", __dir__))
     dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
 
-    assert_includes gemspec, 'spec.add_dependency "recording_studio_api", "~> 0.23"'
-    assert_includes dummy_gemfile, 'tag: "v0.23.0"'
+    assert spec.version >= Gem::Version.new("0.24.0"),
+           "expected recording_studio_api >= 0.24.0, got #{spec.version}"
+    assert spec.version < Gem::Version.new("1.0.0"),
+           "expected recording_studio_api < 1.0, got #{spec.version}"
+    assert_includes gemspec, 'spec.add_dependency "recording_studio_api", ">= 0.24.0", "< 1.0"'
+    assert_includes root_gemfile, 'tag: "v0.24.0"'
+    assert_includes dummy_gemfile, 'tag: "v0.24.0"'
   end
 
-  def test_metrics_dependency_is_0_3_through_pre_1
+  def test_metrics_dependency_is_0_9_through_pre_1
     spec = Gem.loaded_specs.fetch("recording_studio_metrics")
     gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
     root_gemfile = File.read(File.expand_path("../Gemfile", __dir__))
     dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
 
-    assert spec.version >= Gem::Version.new("0.3.0"),
-           "expected recording_studio_metrics >= 0.3.0, got #{spec.version}"
+    assert spec.version >= Gem::Version.new("0.9.0"),
+           "expected recording_studio_metrics >= 0.9.0, got #{spec.version}"
     assert spec.version < Gem::Version.new("1.0.0"),
            "expected recording_studio_metrics < 1.0, got #{spec.version}"
-    assert_includes gemspec, 'spec.add_dependency "recording_studio_metrics", ">= 0.3.0", "< 1.0"'
-    assert_includes root_gemfile, 'tag: "v0.8.0"'
-    assert_includes dummy_gemfile, 'tag: "v0.8.0"'
+    assert_includes gemspec, 'spec.add_dependency "recording_studio_metrics", ">= 0.9.0", "< 1.0"'
+    assert_includes root_gemfile, 'tag: "v0.9.0"'
+    assert_includes dummy_gemfile, 'tag: "v0.9.0"'
   end
 
   def test_provider_gems_are_not_runtime_dependencies
@@ -74,12 +87,24 @@ class RecordingStudioAttachableTest < Minitest::Test
     refute_includes gemspec, "recording_studio_google_drive"
     refute_includes gemspec, "recording_studio_dropbox"
     assert_includes dummy_gemfile, 'gem "recording_studio_google_drive"'
-    assert_includes dummy_gemfile, 'tag: "v0.6.0"'
+    assert_includes dummy_gemfile, 'tag: "v0.6.1"'
     assert_includes dummy_gemfile, 'gem "recording_studio_dropbox"'
-    assert_includes dummy_gemfile, 'tag: "v0.5.0"'
-    assert_includes dummy_gemfile, 'gem "recording_studio_oauth", github: "bowerbird-app/RecordingStudio_Oauth", tag: "v0.21.7"'
+    assert_includes dummy_gemfile, 'tag: "v0.5.1"'
+    assert_includes dummy_gemfile, 'gem "recording_studio_oauth", github: "bowerbird-app/RecordingStudio_Oauth", tag: "v0.21.9"'
     assert_includes dummy_gemfile, 'gem "recording_studio_site_settings", github: "bowerbird-app/RecordingStudio_site_settings", tag: "v0.5.6"'
-    assert_includes dummy_gemfile, 'gem "recording_studio_accessible", github: "bowerbird-app/RecordingStudio_accessible", tag: "v0.31.0"'
+    assert_includes dummy_gemfile, 'gem "recording_studio_accessible", github: "bowerbird-app/RecordingStudio_accessible", tag: "v0.44.0"'
+    assert_includes dummy_gemfile, 'gem "recording_studio_trashable", github: "bowerbird-app/RecordingStudio_trashable", tag: "v0.17.0"'
+    assert_includes dummy_gemfile, 'gem "recording_studio_admin", github: "bowerbird-app/RecordingStudio_admin", tag: "v2.16.0"'
+    assert_includes dummy_gemfile, 'gem "recording_studio_moveable", github: "bowerbird-app/RecordingStudio_moveable", tag: "v5.0.0"'
+    assert_includes dummy_gemfile, 'gem "recording_studio_logs", github: "bowerbird-app/RecordingStudio_logs", tag: "v0.8.0"'
+    initializer = File.read(File.expand_path("dummy/config/initializers/recording_studio.rb", __dir__))
+    assert_includes initializer, "config.authorize_write = ->(actor:, **) { actor.present? }"
+    refute_includes initializer, "allow_unauthorized_writes"
+    admin_initializer = File.read(File.expand_path("dummy/config/initializers/recording_studio_admin.rb", __dir__))
+    assert_includes admin_initializer, "config.admin_root_resolver = workspace_root"
+    refute_includes admin_initializer, "site_admin_recording_resolver"
+    migration = File.read(File.expand_path("dummy/db/migrate/20261114090000_add_root_recording_id_to_recording_studio_events.rb", __dir__))
+    assert_includes migration, "add_column :recording_studio_events, :root_recording_id, :uuid"
     refute_includes root_gemfile, "widen_recording_studio_requirement"
     refute_includes dummy_gemfile, "widen_recording_studio_requirement"
     refute File.exist?(File.expand_path("support/widen_recording_studio_requirement.rb", __dir__))

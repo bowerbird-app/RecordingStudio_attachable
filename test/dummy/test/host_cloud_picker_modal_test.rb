@@ -18,7 +18,7 @@ class HostCloudPickerModalTest < ActionDispatch::IntegrationTest
 
     @workspace = Workspace.first || Workspace.find_or_create_by!(name: "Studio Workspace")
     Current.actor = @user
-    @root = RecordingStudio.root_recording_for(@workspace)
+    @root = RecordingStudio.create_root_recording!(@workspace, actor: @user)
     grant_workspace_access!(@root)
     MyCloud.reset!
   end

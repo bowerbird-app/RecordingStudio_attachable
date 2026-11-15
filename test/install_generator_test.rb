@@ -91,7 +91,7 @@ class InstallGeneratorTest < Minitest::Test
       )
     )
 
-    assert_includes install_docs, "Recording Studio 6.1.0+"
+    assert_includes install_docs, "Recording Studio 7 (`>= 7.0, < 8.0`)"
     assert_includes install_docs, "recording_studio_recordable"
     assert_includes install_docs, "allowed_parent_types"
     assert_includes install_docs, "RecordingStudioAttachable::Attachment"

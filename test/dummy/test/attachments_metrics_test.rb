@@ -6,13 +6,13 @@ class AttachmentsMetricsTest < ActiveSupport::TestCase
   setup do
     @previous_actor = Current.actor
     configuration = RecordingStudioAdmin.configuration
-    @previous_site_resolver = configuration.site_admin_recording_resolver
+    @previous_admin_root_resolver = RecordingStudioAccessible.configuration.admin_root_resolver
     @previous_access_resolver = configuration.access_recording_resolver
     @actor = create_user("metrics-staff-#{SecureRandom.hex(4)}@example.com")
     @denied = create_user("metrics-denied-#{SecureRandom.hex(4)}@example.com")
     workspace = Workspace.create!(name: "Metrics #{SecureRandom.hex(4)}")
     Current.actor = @actor
-    @root = RecordingStudio.root_recording_for(workspace)
+    @root = RecordingStudio.create_root_recording!(workspace, actor: @actor)
     grant_view!(@actor, @root, role: :admin)
     install_admin_resolver!(@root)
     RecordingStudioMetrics.registry.reset!
@@ -22,7 +22,7 @@ class AttachmentsMetricsTest < ActiveSupport::TestCase
   teardown do
     Current.actor = @previous_actor
     configuration = RecordingStudioAdmin.configuration
-    configuration.site_admin_recording_resolver = @previous_site_resolver
+    RecordingStudioAccessible.configuration.admin_root_resolver = @previous_admin_root_resolver
     configuration.access_recording_resolver = @previous_access_resolver
   end
 
@@ -172,43 +172,39 @@ class AttachmentsMetricsTest < ActiveSupport::TestCase
     refute RecordingStudioAttachable::Api::Access.can_view?(build_api_context(@denied))
   end
 
-  test "site resolver is preferred when set" do
+  test "admin root resolver is the metrics root" do
     other = other_root
-    with_admin_resolvers(site: ->(_context) { other }, access: ->(_context) { @root }) do
+    with_admin_root(-> { other }) do
       refute RecordingStudioAttachable::Api::Access.can_view?(build_api_context(@actor))
     end
 
     grant_view!(@actor, other, role: :view)
-    with_admin_resolvers(site: ->(_context) { other }, access: ->(_context) { @root }) do
+    with_admin_root(-> { other }) do
       assert RecordingStudioAttachable::Api::Access.can_view?(build_api_context(@actor))
     end
   end
 
-  test "access resolver is used when the site resolver is unset" do
-    with_admin_resolvers(site: nil, access: ->(_context) { @root }) do
-      assert RecordingStudioAttachable::Api::Access.can_view?(build_api_context(@actor))
-      refute RecordingStudioAttachable::Api::Access.can_view?(build_api_context(@denied))
+  test "access recording resolver is not the metrics admin root" do
+    original_access = RecordingStudioAdmin.configuration.access_recording_resolver
+    RecordingStudioAdmin.configuration.access_recording_resolver = ->(_context) { @root }
+    with_admin_root(nil) do
+      refute RecordingStudioAttachable::Api::Access.can_view?(build_api_context(@actor))
     end
+  ensure
+    RecordingStudioAdmin.configuration.access_recording_resolver = original_access
   end
 
-  test "resolver raising denies without an exception" do
-    result = nil
-
-    with_admin_resolvers(
-      site: ->(_context) { raise NoMethodError, "undefined method `controller'" },
-      access: ->(_context) { @root }
-    ) do
-      result = RecordingStudioAttachable::Api::Access.can_view?(build_api_context(@actor))
+  test "admin root resolver raising denies without an exception" do
+    result = with_admin_root(-> { raise NoMethodError, "undefined method `controller'" }) do
+      RecordingStudioAttachable::Api::Access.can_view?(build_api_context(@actor))
     end
 
     assert_equal false, result
   end
 
-  test "resolver returning nil denies" do
-    result = nil
-
-    with_admin_resolvers(site: ->(_context) {}, access: ->(_context) { @root }) do
-      result = RecordingStudioAttachable::Api::Access.can_view?(build_api_context(@actor))
+  test "admin root resolver returning nil denies" do
+    result = with_admin_root(-> { nil }) do
+      RecordingStudioAttachable::Api::Access.can_view?(build_api_context(@actor))
     end
 
     assert_equal false, result
@@ -270,32 +266,21 @@ class AttachmentsMetricsTest < ActiveSupport::TestCase
   end
 
   def install_admin_resolver!(recording)
-    unless defined?(RecordingStudioAdmin)
-      admin = Module.new
-      configuration = Struct.new(:site_admin_recording_resolver, :access_recording_resolver).new
-      admin.define_singleton_method(:configuration) { configuration }
-      Object.const_set(:RecordingStudioAdmin, admin)
-    end
-
-    RecordingStudioAdmin.configuration.site_admin_recording_resolver = nil
-    RecordingStudioAdmin.configuration.access_recording_resolver = ->(_context) { recording }
+    RecordingStudioAccessible.configuration.admin_root_resolver = -> { recording }
   end
 
-  def with_admin_resolvers(site:, access:)
-    configuration = RecordingStudioAdmin.configuration
-    original_site = configuration.site_admin_recording_resolver
-    original_access = configuration.access_recording_resolver
-    configuration.site_admin_recording_resolver = site
-    configuration.access_recording_resolver = access
+  def with_admin_root(resolver)
+    configuration = RecordingStudioAccessible.configuration
+    original = configuration.admin_root_resolver
+    configuration.admin_root_resolver = resolver
     yield
   ensure
-    configuration.site_admin_recording_resolver = original_site
-    configuration.access_recording_resolver = original_access
+    configuration.admin_root_resolver = original
   end
 
   def other_root
     workspace = Workspace.create!(name: "Metrics other #{SecureRandom.hex(4)}")
-    RecordingStudio.root_recording_for(workspace)
+    RecordingStudio.create_root_recording!(workspace, actor: Current.actor)
   end
 
   def grant_view!(actor, recording, role: :view)

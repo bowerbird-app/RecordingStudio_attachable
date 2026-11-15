@@ -15,7 +15,7 @@ class DestroyAttachmentChildrenTest < ActionDispatch::IntegrationTest
     @editor = user("editor")
     Current.actor = @owner
     @workspace = Workspace.create!(name: "Destroy #{SecureRandom.hex(4)}")
-    @root = RecordingStudio.root_recording_for(@workspace)
+    @root = RecordingStudio.create_root_recording!(@workspace, actor: @owner)
     @owner_access = bootstrap!(@root, @owner)
     @editor_access = grant!(@editor, :edit)
     @page = @root.record(Page, actor: @owner) { |page| page.title = "Notes" }

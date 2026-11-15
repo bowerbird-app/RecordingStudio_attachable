@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-11-15
+
+### Changed
+
+- Requires Recording Studio `>= 7.0, < 8.0`. Development and dummy pins use tag `v7.0.0`.
+- Requires `recording_studio_api >= 0.24.0, < 1.0` and `recording_studio_metrics >= 0.9.0, < 1.0`.
+- Dummy pins that cannot resolve on core 7 move to Accessible `v0.44.0`, Trashable `v0.17.0`, Moveable `v5.0.0`, Logs `v0.8.0`, Admin `v2.16.0`, API `v0.24.0`, Metrics `v0.9.0`, Oauth `v0.21.9`, Google Drive `v0.6.1`, and Dropbox `v0.5.1`. Flatpack stays `v0.1.376`.
+- The dummy app creates roots with `RecordingStudio.create_root_recording!(recordable, actor:)`. Lookups stay on `root_recording_for`. Writes stay behind `config.authorize_write`.
+- The dummy app adds `recording_studio_events.root_recording_id`.
+- Site-wide attachment metrics use `RecordingStudioAccessible.admin_root`. Set `RecordingStudioAccessible.configuration.admin_root_resolver`. `RecordingStudioAdmin.configuration.site_admin_recording_resolver` is not read.
+
+### Upgrade Notes
+
+- Bump to `0.28.0`.
+- Host apps need Recording Studio 7 (`>= 7.0, < 8.0`), API `>= 0.24.0, < 1.0`, and Metrics `>= 0.9.0, < 1.0`.
+- Run the Recording Studio 7 migration that adds `recording_studio_events.root_recording_id`.
+- Create a root with `RecordingStudio.create_root_recording!(recordable, actor:)`. `root_recording_for` only finds an existing root.
+- Keep `config.authorize_write`. Do not set `allow_unauthorized_writes`.
+- Point `RecordingStudioAccessible.configuration.admin_root_resolver` at the kept admin root. Attachment metrics no longer read `site_admin_recording_resolver`.
+
 ## [0.27.0] - 2026-11-14
 
 ### Changed
@@ -709,7 +729,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.27.0...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.28.0...HEAD
+[0.28.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.27.0...v0.28.0
 [0.27.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.26.0...v0.27.0
 [0.26.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.24.0...v0.25.0

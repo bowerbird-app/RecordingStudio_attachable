@@ -5,26 +5,13 @@ module RecordingStudioAttachable
     module Access
       module_function
 
-      ResolverContext = Struct.new(:controller)
-
       def admin_root_recording
-        config = admin_configuration
-        return unless config
+        return unless defined?(RecordingStudioAccessible)
+        return unless RecordingStudioAccessible.respond_to?(:admin_root)
 
-        resolver = config.site_admin_recording_resolver || config.access_recording_resolver
-        return unless resolver
-
-        begin
-          resolver.call(ResolverContext.new(nil))
-        rescue StandardError
-          nil
-        end
-      end
-
-      def admin_configuration
-        return unless defined?(RecordingStudioAdmin)
-
-        RecordingStudioAdmin.configuration
+        RecordingStudioAccessible.admin_root
+      rescue StandardError
+        nil
       end
 
       def actor_for(context)

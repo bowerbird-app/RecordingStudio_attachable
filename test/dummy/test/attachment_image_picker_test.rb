@@ -32,6 +32,8 @@ class AttachmentImagePickerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes response.body, 'data-flat-pack-picker-empty-slot="true"'
+    assert_includes response.body, 'data-flat-pack-picker-error-slot="true"'
+    assert_includes response.body, "Unable to load images"
     assert_includes response.body, "No images found for this page yet."
     assert_includes response.body, 'data-flat-pack--picker-search-mode-value="remote"'
     assert_includes response.body, 'data-flat-pack--picker-modal-value="false"'

@@ -296,6 +296,8 @@ class DummyHomeDemoTest < Minitest::Test
     assert_includes picker_modal_partial, "search_endpoint: picker_url"
     assert_includes picker_modal_partial, "picker.with_toolbar"
     assert_includes picker_modal_partial, "picker.with_empty"
+    assert_includes picker_modal_partial, "picker.with_error"
+    assert_includes picker_modal_partial, 't("recording_studio.attachable.picker.unable_to_load_library")'
     assert_includes picker_modal_partial, 't("recording_studio.attachable.picker.upload")'
     assert_includes picker_modal_partial, 't("recording_studio.attachable.picker.upload_from_device")'
     assert_includes picker_modal_partial, "dropdown.menu_divider"
@@ -629,7 +631,8 @@ class DummyHomeDemoTest < Minitest::Test
     )
 
     assert_includes upload_view, "upload_providers.any?"
-    assert_includes upload_view, "max-w-sm flex-col items-stretch gap-3"
+    assert_includes upload_view, "file_input.actions do"
+    assert_includes upload_view, "flex flex-col gap-3"
     assert_includes upload_view, "full_width: true"
     assert_includes upload_view, "reverse_merge(full_width: true)"
     assert_includes upload_view, "provider.button_options(view_context: self, recording: @recording, query_params: @upload_redirect_params)"

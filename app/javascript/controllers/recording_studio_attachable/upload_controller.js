@@ -21,7 +21,7 @@ function providerBootstrapError(payload, response, fallback) {
 }
 
 export default class extends Controller {
-  static targets = ["dropzone", "input", "queue", "progressTemplate"]
+  static targets = ["queue", "progressTemplate"]
   static values = {
     i18n: Object,
     directUploadUrl: String,
@@ -61,7 +61,6 @@ export default class extends Controller {
     this.handleProviderMessage = this.handleProviderMessage.bind(this)
     this.handleProviderStorage = this.handleProviderStorage.bind(this)
     this.handleProviderChannelMessage = this.handleProviderChannelMessage.bind(this)
-    this.bindDropzoneEvents()
     window.addEventListener("message", this.handleProviderMessage)
     window.addEventListener("storage", this.handleProviderStorage)
 
@@ -91,10 +90,6 @@ export default class extends Controller {
       this.providerEventChannel.close()
       this.providerEventChannel = null
     }
-  }
-
-  browse() {
-    this.inputTarget.click()
   }
 
   async launchProvider(event) {
@@ -186,8 +181,25 @@ export default class extends Controller {
   }
 
   filesSelected(event) {
-    this.addFiles(Array.from(event.target.files || []))
-    event.target.value = null
+    const incoming = Array.from(event.detail?.files || []).filter(Boolean)
+    const known = new Set(this.files.map((entry) => entry.file).filter(Boolean))
+    const fresh = incoming.filter((file) => !known.has(file))
+    if (fresh.length > 0) {
+      this.addFiles(fresh)
+      return
+    }
+
+    const stillSelected = new Set(incoming)
+    const removed = this.files.filter((entry) => entry.file && !stillSelected.has(entry.file))
+    if (removed.length === 0) return
+
+    removed.forEach((entry) => {
+      this.clearRemoteStageTimer(entry.id)
+      this.revokePreview(entry)
+    })
+    const removedIds = new Set(removed.map((entry) => entry.id))
+    this.files = this.files.filter((entry) => !removedIds.has(entry.id))
+    this.renderQueue()
   }
 
   finalize() {
@@ -276,27 +288,6 @@ export default class extends Controller {
     this.clearRemoteStageTimer(id)
     this.revokePreview(entry)
     this.renderQueue()
-  }
-
-  bindDropzoneEvents() {
-    ;["dragenter", "dragover"].forEach((eventName) => {
-      this.dropzoneTarget.addEventListener(eventName, (event) => {
-        event.preventDefault()
-        this.dropzoneTarget.classList.add("ring-2", "ring-[var(--brand-primary-color)]")
-      })
-    })
-
-    ;["dragleave", "drop"].forEach((eventName) => {
-      this.dropzoneTarget.addEventListener(eventName, (event) => {
-        event.preventDefault()
-        this.dropzoneTarget.classList.remove("ring-2", "ring-[var(--brand-primary-color)]")
-      })
-    })
-
-    this.dropzoneTarget.addEventListener("drop", (event) => {
-      const files = Array.from(event.dataTransfer?.files || [])
-      this.addFiles(files)
-    })
   }
 
   addFiles(files) {
@@ -689,7 +680,7 @@ export default class extends Controller {
       region = document.createElement("p")
       region.dataset.providerStatusRegion = "true"
       region.className = "text-sm"
-      const anchor = this.element.querySelector(".max-w-sm")
+      const anchor = this.element.querySelector(".flat-pack-input-wrapper")
       if (anchor) {
         anchor.insertAdjacentElement("afterend", region)
       } else {

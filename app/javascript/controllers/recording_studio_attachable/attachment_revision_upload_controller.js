@@ -3,7 +3,7 @@ import { DirectUpload } from "@rails/activestorage"
 import { preprocessImageFile } from "controllers/recording_studio_attachable/image_preprocessing"
 
 export default class extends Controller {
-  static targets = ["fileInput", "signedBlobInput", "submitButton", "status"]
+  static targets = ["signedBlobInput", "submitButton", "status"]
 
   static values = {
     directUploadUrl: String,
@@ -21,12 +21,9 @@ export default class extends Controller {
     this.pendingSubmit = false
   }
 
-  browse() {
-    this.fileInputTarget.click()
-  }
-
-  async fileSelected() {
-    const [file] = this.fileInputTarget.files || []
+  async fileSelected(event) {
+    const [file] = event.detail?.files || []
+    this.releaseSourceFile(event)
     this.signedBlobInputTarget.value = ""
     if (!file) {
       this.showStatus("")
@@ -69,6 +66,13 @@ export default class extends Controller {
     event.preventDefault()
     this.pendingSubmit = true
     this.showStatus("Waiting for the replacement upload to finish…")
+  }
+
+  releaseSourceFile(event) {
+    const input = event?.target?.querySelector?.("input[type='file']")
+    if (!input) return
+
+    input.value = ""
   }
 
   directUpload(file) {

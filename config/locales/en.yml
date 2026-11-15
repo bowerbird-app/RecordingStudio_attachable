@@ -43,8 +43,6 @@ en:
         type_images: "images"
         type_pdfs: "PDFs"
         type_text_files: "text files"
-        drag_and_drop: "Drag and drop, or choose"
-        choose_files: "Choose files"
         progress: "Progress"
         close: "Close"
         remove: "X"

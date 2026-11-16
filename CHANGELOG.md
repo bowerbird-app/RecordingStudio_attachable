@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-11-16
+
+### Changed
+
+- Requires `recording_studio_api >= 1.1.0, < 2.0`. Development and dummy pins use tag `v1.1.0`.
+- Development and dummy pins use Recording Studio `v7.1.0`. API 1.x requires `recording_studio >= 7.1.0`. This gem's floor stays `>= 7.0, < 8.0`.
+- Dummy pins that cannot resolve on API 1.1 move to Oauth `v0.24.0` and Site Settings `v0.6.0`. Google Drive stays `v0.6.1`. Dropbox stays `v0.5.1`.
+
+### Upgrade Notes
+
+- Bump to `0.31.0`. There is no migration.
+- Host apps need `recording_studio_api >= 1.1.0, < 2.0`. That release needs Recording Studio `>= 7.1.0, < 8.0`, Accessible `>= 0.44.0, < 1.0`, Logs `>= 0.8.0, < 1.0`, Moveable `>= 5.0, < 6.0`, and Trashable `>= 0.17.0, < 2.0`.
+- API 1.0 removed `RecordingStudioApi::Hooks` and `RecordingStudioApi::Services::BaseService`. This gem does not call them. A host that still does should move lifecycle hooks to `RecordingStudio.configuration.hooks` and services to `RecordingStudio::Services::BaseService`.
+
 ## [0.30.0] - 2026-11-16
 
 ### Added
@@ -761,7 +775,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.30.0...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.31.0...HEAD
+[0.31.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.30.0...v0.31.0
 [0.30.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.29.0...v0.30.0
 [0.29.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.28.0...v0.29.0
 [0.28.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.27.0...v0.28.0

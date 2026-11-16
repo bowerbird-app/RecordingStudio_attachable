@@ -98,4 +98,78 @@ class InstallGeneratorTest < Minitest::Test
     assert_includes install_docs, ":attachable"
     assert_not_includes install_docs, "Register `RecordingStudioAttachable::Attachment` in `RecordingStudio.configure`"
   end
+
+  def test_restrict_active_storage_routes_is_off_unless_the_flag_is_passed
+    with_host_config do |dir|
+      application = File.read(File.join(dir, "config/application.rb"))
+      routes = File.read(File.join(dir, "config/routes.rb"))
+
+      generator = build_generator(dir)
+      Rails.stub(:root, Pathname.new(dir)) { generator.apply_active_storage_route_restriction }
+
+      assert_equal application, File.read(File.join(dir, "config/application.rb"))
+      assert_equal routes, File.read(File.join(dir, "config/routes.rb"))
+    end
+  end
+
+  def test_restrict_active_storage_routes_writes_the_flag_once
+    with_host_config do |dir|
+      generator = build_generator(dir, restrict_active_storage_routes: true)
+      Rails.stub(:root, Pathname.new(dir)) do
+        generator.apply_active_storage_route_restriction
+        generator.apply_active_storage_route_restriction
+      end
+
+      application = File.read(File.join(dir, "config/application.rb"))
+      routes = File.read(File.join(dir, "config/routes.rb"))
+
+      assert_equal 1, application.scan("config.active_storage.draw_routes = false").size
+      assert_equal 1, application.scan("ActiveStorage.draw_routes = false").size
+      assert_equal 1, routes.scan("RecordingStudioAttachable::ActiveStorageRoutes.draw(self)").size
+      assert_not_includes routes, "direct_uploads#create"
+    end
+  end
+
+  def test_install_docs_cover_the_active_storage_route_restriction
+    install_docs = File.read(
+      File.expand_path(
+        "../lib/generators/recording_studio_attachable/install/templates/INSTALL.md",
+        __dir__
+      )
+    )
+    readme = File.read(File.expand_path("../README.md", __dir__))
+
+    [install_docs, readme].each do |docs|
+      assert_includes docs, "--restrict-active-storage-routes"
+      assert_includes docs, "config.active_storage.draw_routes = false"
+      assert_includes docs, "config.active_storage.urls_expire_in"
+      assert_includes docs, "warn_on_active_storage_routes"
+      assert_includes docs, "variation key"
+      assert_includes docs, "RecordingStudioAttachable::ActiveStorageRoutes.draw(self)"
+    end
+  end
+
+  def with_host_config
+    with_temp_app do |dir|
+      File.write(
+        File.join(dir, "config/application.rb"),
+        <<~RUBY
+          module Example
+            class Application < Rails::Application
+              config.load_defaults 8.1
+            end
+          end
+        RUBY
+      )
+      File.write(
+        File.join(dir, "config/routes.rb"),
+        <<~RUBY
+          Rails.application.routes.draw do
+            root "home#index"
+          end
+        RUBY
+      )
+      yield dir
+    end
+  end
 end

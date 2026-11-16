@@ -42,6 +42,16 @@ module Dummy
       g.orm :active_record, primary_key_type: :uuid
     end
 
+    # Leave POST /rails/active_storage/direct_uploads undrawn. Uploads use
+    # Attachable. The signed redirects are drawn in config/routes.rb.
+    config.active_storage.draw_routes = false
+    config.active_storage.urls_expire_in = 5.minutes
+
+    # Devise reloads routes from before_eager_load, before Active Storage
+    # copies this config in after_initialize. Set the module attribute here.
+    # An initializer before-edge reshuffles boot and skips recordable registration.
+    ActiveStorage.draw_routes = false
+
     # Don't generate system test files.
     config.generators.system_tests = nil
   end

@@ -116,6 +116,39 @@ If your app customizes those entrypoints, make sure all three of these remain tr
 - `ActiveStorage.start()` is called in `app/javascript/application.js`
 - `controllers/recording_studio_attachable` is eager-loaded from the Stimulus controller index
 
+### Restrict the Active Storage routes
+
+Rails draws `POST /rails/active_storage/direct_uploads` unless the host turns that route file off. The route has no login. The caller picks the content type, creates a blob, and receives a signed id. Attachable does not use that route. Browser and API uploads go to the recording direct-upload route, which checks the actor.
+
+The signed id does not expire until you set `config.active_storage.urls_expire_in`. The representation redirect accepts the id plus a variation key. The key is a digest of the transform. The same key works on every blob. It is not a secret. The redirect runs the transform in the web process, including an image Attachable would refuse on attach because of `max_image_pixels`.
+
+Pass `--restrict-active-storage-routes` to the install generator, or make the same three edits by hand.
+
+1. Set `config.active_storage.draw_routes = false`.
+2. Set `ActiveStorage.draw_routes = false` in the same class body. Devise reloads routes from `before_eager_load`. Active Storage copies the config later, in `after_initialize`. The module attribute is what that reload reads. Do not copy it from an initializer `before` edge. That edge reshuffles boot.
+3. Call `RecordingStudioAttachable::ActiveStorageRoutes.draw(self)` inside `routes.draw`. That draws the signed blob redirect, the representation redirect, and Disk show and update when `config/storage.yml` says the current service is Disk. It does not draw direct uploads or the proxy routes.
+
+Keep the Rails signature on the blob redirect and the disk token. You can also require a login. The signature still has to be there. An S3 host does not need the Disk routes. A Disk host does. Without Disk show and update, the browser PUT has nowhere to go.
+
+```ruby
+config.active_storage.draw_routes = false
+config.active_storage.urls_expire_in = 5.minutes
+
+ActiveStorage.draw_routes = false
+```
+
+```ruby
+Rails.application.routes.draw do
+  RecordingStudioAttachable::ActiveStorageRoutes.draw(self)
+end
+```
+
+`config.warn_on_active_storage_routes` defaults to true. Boot logs a warning when `direct_uploads` is still drawn. Set it to false to silence the log. The warning does not change the route set.
+
+`PurgeUnattachedBlobsJob` deletes unattached blobs this gem tagged. Blobs created on Rails' route are not tagged, so that job leaves them. Schedule a separate purge for old unattached blobs that lack the `recording_studio_attachable` tag. This gem does not delete those rows.
+
+Existing hosts keep Rails' routes. The generator flag is off unless you pass it. A host that already sets `draw_routes = false` should not call `ActiveStorageRoutes.draw` a second time.
+
 ## Configuration
 
 The generator creates `config/initializers/recording_studio_attachable.rb` with these defaults:
@@ -123,6 +156,8 @@ The generator creates `config/initializers/recording_studio_attachable.rb` with 
 ```ruby
 RecordingStudioAttachable.configure do |config|
   config.allowed_content_types = ["image/*", "application/pdf"]
+  # Boot warning when Rails draws the anonymous direct_uploads route.
+  # config.warn_on_active_storage_routes = false
   config.max_file_size = 25.megabytes
   # Maximum number of files accepted in a single upload or import request.
   config.max_file_count = 20

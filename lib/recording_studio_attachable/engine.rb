@@ -142,4 +142,10 @@ module RecordingStudioAttachable
       Metrics.register!
     end
   end
+
+  # A finisher before/after edge reshuffles boot. Subscribe to the route load
+  # instead, which runs after Active Storage has copied draw_routes.
+  ActiveSupport.on_load(:after_routes_loaded) do
+    ActiveStorageRoutes.warn_if_exposed
+  end
 end

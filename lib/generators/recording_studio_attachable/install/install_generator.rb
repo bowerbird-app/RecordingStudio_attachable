@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rails/generators"
+require_relative "active_storage_route_restriction"
 
 module RecordingStudioAttachable
   module Generators
@@ -13,6 +14,11 @@ module RecordingStudioAttachable
                    type: :string,
                    default: "/recording_studio_attachable",
                    desc: "Route prefix used when mounting the engine"
+
+      class_option :restrict_active_storage_routes,
+                   type: :boolean,
+                   default: false,
+                   desc: "Leave Rails' anonymous direct_uploads route undrawn and redraw the signed redirects"
 
       def mount_engine
         route %(mount RecordingStudioAttachable::Engine, at: "#{options[:mount_path]}")
@@ -63,6 +69,12 @@ module RecordingStudioAttachable
 
       def show_readme
         readme "INSTALL.md" if behavior == :invoke
+      end
+
+      def apply_active_storage_route_restriction
+        return unless options[:restrict_active_storage_routes]
+
+        ActiveStorageRouteRestriction.apply(self, destination_root)
       end
 
       private

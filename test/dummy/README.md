@@ -9,6 +9,7 @@ Use it to verify:
 - Recording Studio 4.3 root recording wiring
 - `include RecordingStudio::Capabilities::Attachable.to(...)` opt-in behavior
 - `/recording_studio_attachable` mounted engine routes
+- Active Storage leaves the anonymous `direct_uploads` route undrawn. The dummy redraws the signed blob redirect, the representation redirect, and Disk show and update
 - Recording Studio core default layout plus FlatPack sidebar, login, and Stimulus upload UI
 - a fake My Cloud provider that mounts through `register_adapter_routes`, inherits `ProviderController`, and imports through `ImportRemoteFiles`
 - Google Drive (`recording_studio_google_drive`) and Dropbox (`recording_studio_dropbox`) upload providers, Oauth at `/recording_studio_oauth`, and importmap pins for each picker launcher

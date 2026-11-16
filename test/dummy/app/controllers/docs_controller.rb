@@ -137,7 +137,7 @@ class DocsController < ApplicationController
       },
       {
         title: "Install Active Storage before uploads",
-        body: "The gem stores files with Active Storage and depends on the direct-upload pipeline being available before editors can attach files.",
+        body: "The gem stores files with Active Storage. Editors upload through this gem's recording route. Install the Active Storage tables before the first upload. Rails' anonymous direct-upload route is separate, and this dummy app leaves it undrawn.",
         code_title: "Set up Active Storage",
         code: <<~BASH
           bin/rails active_storage:install

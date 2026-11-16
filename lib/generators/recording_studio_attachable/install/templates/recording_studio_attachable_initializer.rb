@@ -2,6 +2,10 @@
 
 RecordingStudioAttachable.configure do |config|
   config.allowed_content_types = ["image/*", "application/pdf"]
+  # Boot warning when Rails draws the anonymous direct_uploads route.
+  # The flag does not change routes. Pass --restrict-active-storage-routes
+  # to the install generator to leave that route undrawn.
+  # config.warn_on_active_storage_routes = false
   config.max_file_size = 25.megabytes
   # Optional. Requires RecordingStudio_stripe in the host app.
   # config.storage_limit = :storage_bytes

@@ -82,6 +82,9 @@ jobs:
           bundler-cache: true
           cache-version: ${{ hashFiles('test/dummy/Gemfile.lock') }}
 
+      - name: Install libvips
+        run: sudo apt-get update && sudo apt-get install -y libvips-dev
+
       - name: Install dummy app dependencies
         run: bundle install
         working-directory: test/dummy

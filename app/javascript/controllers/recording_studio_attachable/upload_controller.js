@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import { DirectUpload } from "@rails/activestorage"
 import { getUploadProviderLauncher, onUploadProviderLaunchersChanged, relaunchUploadProvider } from "controllers/recording_studio_attachable/provider_launchers"
 import { preprocessImageFile, shouldPreprocessImageFile } from "controllers/recording_studio_attachable/image_preprocessing"
+import { dimensionErrorForFile } from "controllers/recording_studio_attachable/image_limits"
 
 const PROVIDER_EVENT_STORAGE_KEY = "recording-studio-attachable:provider-event"
 const PROVIDER_EVENT_CHANNEL_NAME = `${PROVIDER_EVENT_STORAGE_KEY}:channel`
@@ -32,6 +33,9 @@ export default class extends Controller {
     imageProcessingMaxWidth: Number,
     imageProcessingMaxHeight: Number,
     imageProcessingQuality: Number,
+    maxImagePixels: Number,
+    maxImageLongestSide: Number,
+    imageTooLargeMessage: String,
     removeButtonTemplate: String,
     allowedContentTypes: String,
     successBehavior: { type: String, default: "redirect" },
@@ -355,6 +359,14 @@ export default class extends Controller {
     try {
       entry.status = "processing"
       this.renderEntry(entry)
+
+      const dimensionError = await dimensionErrorForFile(entry.file, this.imageLimitOptions())
+      if (dimensionError) {
+        entry.status = "invalid"
+        entry.error = dimensionError
+        this.renderEntry(entry)
+        return
+      }
 
       await this.preprocessEntryFile(entry)
 
@@ -723,6 +735,14 @@ export default class extends Controller {
     this.revokePreview(entry)
     entry.file = result.file
     entry.previewUrl = entry.file.type.startsWith("image/") ? URL.createObjectURL(entry.file) : null
+  }
+
+  imageLimitOptions() {
+    return {
+      maxPixels: this.maxImagePixelsValue,
+      maxLongestSide: this.maxImageLongestSideValue,
+      message: this.imageTooLargeMessageValue
+    }
   }
 
   imageProcessingOptions() {

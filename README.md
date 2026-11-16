@@ -151,6 +151,13 @@ RecordingStudioAttachable.configure do |config|
   # config.image_processing_max_height = 2560
   # config.image_processing_quality = 0.82
 
+  # Pixel caps. An image over either one is refused before a variant is built.
+  # image_processing_max_width and image_processing_max_height resize in the
+  # browser. A normal 24 megapixel photo fits these caps. An image already
+  # stored stays stored and gets no new variants.
+  # config.max_image_pixels = 40_000_000
+  # config.max_image_longest_side = 12_000
+
   # Optional server-side image delivery variants. The gem keeps the original
   # upload and generates delivery variants on demand, storing them in the same
   # Active Storage service as the source blob.

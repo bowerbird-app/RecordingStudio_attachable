@@ -15,6 +15,9 @@ module RecordingStudioAttachable
       @image_processing_max_width = configured_attachable_option(@recording, :image_processing_max_width)
       @image_processing_max_height = configured_attachable_option(@recording, :image_processing_max_height)
       @image_processing_quality = configured_attachable_option(@recording, :image_processing_quality)
+      @max_image_pixels = configured_attachable_option(@recording, :max_image_pixels)
+      @max_image_longest_side = configured_attachable_option(@recording, :max_image_longest_side)
+      @image_too_large_message = image_too_large_message
       @upload_providers = configured_upload_providers(@recording)
       @create_path = recording_attachment_imports_path(@recording, @upload_redirect_params)
       @upload_modal = upload_modal_request?
@@ -98,7 +101,7 @@ module RecordingStudioAttachable
         content_type: attachment.content_type,
         byte_size: attachment.byte_size,
         attachment_kind: attachment.attachment_kind,
-        thumbnail_url: authorized_attachment_preview_path(recording, :square_small) || insert_url,
+        thumbnail_url: authorized_attachment_preview_or_file_path(recording, :square_small),
         insert_url: insert_url,
         variant_urls: authorized_attachment_inline_variant_urls(recording),
         alt: attachment.name,

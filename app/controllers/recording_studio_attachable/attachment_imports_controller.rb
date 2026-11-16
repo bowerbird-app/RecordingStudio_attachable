@@ -176,7 +176,7 @@ module RecordingStudioAttachable
         content_type: attachment.content_type,
         byte_size: attachment.byte_size,
         attachment_kind: attachment.attachment_kind,
-        thumbnail_url: authorized_attachment_preview_path(recording, :square_small) || insert_url,
+        thumbnail_url: authorized_attachment_preview_or_file_path(recording, :square_small),
         insert_url: insert_url,
         variant_urls: authorized_attachment_inline_variant_urls(recording),
         alt: attachment.name,

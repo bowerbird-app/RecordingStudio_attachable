@@ -16,6 +16,8 @@
   image_processing_max_width: image_processing_max_width,
   image_processing_max_height: image_processing_max_height,
   image_processing_quality: image_processing_quality,
+  max_image_pixels: max_image_pixels,
+  max_image_longest_side: max_image_longest_side,
   auto_submit: true
 } %>
 <% revision_upload_data = {
@@ -27,6 +29,12 @@
   recording_studio_attachable__attachment_revision_upload_image_processing_max_width_value: form_controller_values[:image_processing_max_width],
   recording_studio_attachable__attachment_revision_upload_image_processing_max_height_value: form_controller_values[:image_processing_max_height],
   recording_studio_attachable__attachment_revision_upload_image_processing_quality_value: form_controller_values[:image_processing_quality],
+  recording_studio_attachable__attachment_revision_upload_max_image_pixels_value: form_controller_values[:max_image_pixels],
+  recording_studio_attachable__attachment_revision_upload_max_image_longest_side_value: form_controller_values[:max_image_longest_side],
+  recording_studio_attachable__attachment_revision_upload_image_too_large_message_value: RecordingStudioAttachable::ImageLimits.refusal_message(
+    max_image_pixels: max_image_pixels,
+    max_image_longest_side: max_image_longest_side
+  ),
   recording_studio_attachable__attachment_revision_upload_auto_submit_value: form_controller_values[:auto_submit]
 } %>
 <% form_data = revision_upload_data.merge(

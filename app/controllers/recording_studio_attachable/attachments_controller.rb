@@ -15,6 +15,9 @@ module RecordingStudioAttachable
       @image_processing_max_width = configured_attachable_option(@attachment_recording, :image_processing_max_width)
       @image_processing_max_height = configured_attachable_option(@attachment_recording, :image_processing_max_height)
       @image_processing_quality = configured_attachable_option(@attachment_recording, :image_processing_quality)
+      @max_image_pixels = configured_attachable_option(@attachment_recording, :max_image_pixels)
+      @max_image_longest_side = configured_attachable_option(@attachment_recording, :max_image_longest_side)
+      @image_too_large_message = image_too_large_message
       @place_labels = RecordingStudioAttachable.configuration.attachment_place_labels_for(@attachment_recording)
     end
 
@@ -77,10 +80,15 @@ module RecordingStudioAttachable
       @attachment_recording = find_attachment_recording
       authorize_attachment_owner_action!(:view, @attachment_recording)
 
-      preview_target = @attachment_recording.recordable.preview_target_named(params[:variant_name])
-      raise ActiveRecord::RecordNotFound if preview_target.blank?
+      attachment = @attachment_recording.recordable
+      preview_target = attachment.preview_target_named(params[:variant_name])
+      blocked = attachment.respond_to?(:variants_allowed?) && !attachment.variants_allowed?
+      if preview_target.blank? || blocked
+        head :not_found
+        return
+      end
 
-      send_preview_data(@attachment_recording.recordable, preview_target)
+      send_preview_data(attachment, preview_target)
     end
 
     private

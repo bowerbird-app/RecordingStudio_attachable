@@ -3,6 +3,7 @@ import { Controller } from "@hotwired/stimulus"
 import { application } from "controllers/application"
 import { getUploadProviderLauncher, onUploadProviderLaunchersChanged, relaunchUploadProvider } from "controllers/recording_studio_attachable/provider_launchers"
 import { preprocessImageFile } from "controllers/recording_studio_attachable/image_preprocessing"
+import { dimensionErrorForFile } from "controllers/recording_studio_attachable/image_limits"
 
 const PROVIDER_EVENT_STORAGE_KEY = "recording-studio-attachable:provider-event"
 const PROVIDER_EVENT_CHANNEL_NAME = `${PROVIDER_EVENT_STORAGE_KEY}:channel`
@@ -40,7 +41,10 @@ export default class extends Controller {
     imageProcessingEnabled: Boolean,
     imageProcessingMaxWidth: Number,
     imageProcessingMaxHeight: Number,
-    imageProcessingQuality: Number
+    imageProcessingQuality: Number,
+    maxImagePixels: Number,
+    maxImageLongestSide: Number,
+    imageTooLargeMessage: String
   }
 
   i18nText(key, fallback) {
@@ -300,6 +304,16 @@ export default class extends Controller {
           this.renderUploadEntry(entry)
         }
 
+        const dimensionError = await dimensionErrorForFile(file, this.imageLimitOptions())
+        if (dimensionError) {
+          if (entry) {
+            entry.status = "invalid"
+            entry.error = dimensionError
+            this.renderUploadEntry(entry)
+          }
+          continue
+        }
+
         const processed = await preprocessImageFile(file, this.imageProcessingOptions())
         const uploadFile = processed.file
         if (entry) {
@@ -325,6 +339,12 @@ export default class extends Controller {
           signed_blob_id: blob.signed_id,
           name: this.defaultAttachmentName(uploadFile)
         })
+      }
+
+      if (attachments.length === 0) {
+        const refused = this.uploadEntries.find((entry) => entry.status === "invalid")
+        this.showStatus(refused?.error || this.imageTooLargeMessageValue)
+        return
       }
 
       const createdAttachments = await this.createAttachments(attachments)
@@ -747,6 +767,14 @@ export default class extends Controller {
 
   csrfToken() {
     return document.querySelector('meta[name="csrf-token"]')?.content || ""
+  }
+
+  imageLimitOptions() {
+    return {
+      maxPixels: this.maxImagePixelsValue,
+      maxLongestSide: this.maxImageLongestSideValue,
+      message: this.imageTooLargeMessageValue
+    }
   }
 
   imageProcessingOptions() {

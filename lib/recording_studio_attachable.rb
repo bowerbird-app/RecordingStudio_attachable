@@ -33,6 +33,8 @@ require "recording_studio"
 require "recording_studio_attachable/version"
 require "recording_studio_attachable/copy"
 require "recording_studio_attachable/configuration"
+require "recording_studio_attachable/image_limits"
+require "recording_studio_attachable/image_size"
 require "recording_studio_attachable/direct_url"
 require "recording_studio_attachable/attachment_urls"
 require "recording_studio_attachable/attachment_file_button"
@@ -56,5 +58,9 @@ require "recording_studio_attachable/storage_limit"
 require "recording_studio_attachable/services/base_service"
 require "recording_studio_attachable/engine"
 require "recording_studio/capabilities/attachable"
+
+ActiveSupport.on_load(:active_record) do
+  RecordingStudioAttachable::ImageLimits.block_untrusted_loaders!
+end
 
 ActiveSupport.run_load_hooks(:recording_studio_attachable, RecordingStudioAttachable)

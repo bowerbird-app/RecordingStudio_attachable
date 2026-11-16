@@ -16,12 +16,12 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - Ruby 3.3+
 - Rails 8.1+
 - Active Storage installed in the host app
-- Recording Studio 7 (`>= 7.0, < 8.0`) installed in the host app (CI tested with GitHub tag `v7.1.0`; Recording Studio API 1.1 needs `>= 7.1.0`)
-- Flatpack 0.1.376 or newer (`FlatPack::VERSION` 0.1.376 at tag `v0.1.376`)
+- Recording Studio 7 (`>= 7.0, < 8.0`) installed in the host app (CI tested with GitHub tag `v7.3.0`; Recording Studio API 1.2 needs `>= 7.1.0`)
+- Flatpack 0.1.376 or newer (`FlatPack::VERSION` 0.1.377 at tag `v0.1.377`)
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
 - RecordingStudio Metrics `>= 0.9.0, < 1.0` (CI tested with GitHub tag `v0.9.0`) for operations-API storage and upload metrics
-- RecordingStudio API `>= 1.1.0, < 2.0` (CI tested with GitHub tag `v1.1.0`)
+- RecordingStudio API `>= 1.1.0, < 2.0` (CI tested with GitHub tag `v1.2.1`)
 - Optional cloud import: a separate provider gem that registers with `register_upload_provider`. Attachable does not depend on provider gems at runtime.
 
 ## Quick start
@@ -897,7 +897,7 @@ Save starts as the default button and is only as wide as its label. Change a cap
 
 `preview:` chooses the picture in the list and on Slides. The default `:square` uses the `square_med` crop. `preview: :natural` uses the `med` variant and keeps the file's proportions. On the list the picture stays about 208px wide beside the fields. On Slides the picture bleeds to the card edges. It stays tall enough for the previous and next controls, and it is capped in height. The fields span the width under it. Clicking those previews still opens the original file. Grid ignores `preview:` and always uses the natural `med` preview. `preview:` is not in the signed save token. An unknown value raises.
 
-FlatPack is the default UI system for the engine and the dummy app (Gemfile tag `v0.1.376`, `FlatPack::VERSION` 0.1.376; gem requires `>= 0.1.376`).
+FlatPack is the default UI system for the engine and the dummy app (Gemfile tag `v0.1.377`, `FlatPack::VERSION` 0.1.377; gem requires `>= 0.1.376`).
 
 ## Development
 
@@ -909,7 +909,7 @@ Dummy credentials (`test/dummy/config/credentials.yml.enc`) are encrypted with t
 
 - the dummy app is a validation shell, not a production template
 - CI installs the dummy app bundle and runs dummy-app migrations before the root checks
-- the dummy app pins RecordingStudio `v7.1.0`, Recording Studio Accessible `v0.44.0`, Recording Studio Orderable `v0.6.0`, Recording Studio API `v1.1.0`, Oauth `v0.24.0`, Google Drive `v0.6.1`, Dropbox `v0.5.1`, Site Settings `v0.6.0`, Trashable `v0.17.0`, Moveable `v5.0.0`, Logs `v0.8.0`, Admin `v2.16.0`, and Metrics `v0.9.0`
+- the dummy app pins RecordingStudio `v7.3.0`, Recording Studio Accessible `v0.45.1`, Recording Studio Orderable `v0.10.0`, Recording Studio API `v1.2.1`, Oauth `v0.25.0`, Google Drive `v0.7.0`, Dropbox `v0.6.0`, Site Settings `v0.6.0`, Trashable `v1.0.1`, Moveable `v6.0.0`, Logs `v0.8.0`, Admin `v2.18.0`, Cache `v0.7.0`, Icons `v0.4.0`, and Metrics `v0.9.0`
 - make sure engine, Active Storage, and Recording Studio tables are migrated in the dummy app before validating upload flows locally
 - `bin/rails db:seed` attaches a twenty-shot Kiln canister press kit to the workspace. The shots mix portrait, square, and landscape frames. Edit images uses those files. Seeds also remove the colour-block stand-ins `window.jpg`, `dock.jpg`, and `pier.jpg` when they are still on the workspace.
 - set `DUMMY_ACTIVE_STORAGE_SERVICE=amazon` plus `DUMMY_AWS_ACCESS_KEY_ID`, `DUMMY_AWS_SECRET_ACCESS_KEY`, `DUMMY_AWS_REGION`, and `DUMMY_AWS_BUCKET` to exercise S3-backed uploads in the dummy app; `DUMMY_AWS_BUCKET` may be either the plain bucket name or a bucket ARN

@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import { DirectUpload } from "@rails/activestorage"
 import { preprocessImageFile } from "controllers/recording_studio_attachable/image_preprocessing"
+import { dimensionErrorForFile } from "controllers/recording_studio_attachable/image_limits"
 
 export default class extends Controller {
   static targets = ["signedBlobInput", "submitButton", "status"]
@@ -12,6 +13,9 @@ export default class extends Controller {
     imageProcessingMaxWidth: Number,
     imageProcessingMaxHeight: Number,
     imageProcessingQuality: Number,
+    maxImagePixels: Number,
+    maxImageLongestSide: Number,
+    imageTooLargeMessage: String,
     autoSubmit: { type: Boolean, default: false },
     signedBlobFieldName: { type: String, default: "attachment[signed_blob_id]" }
   }
@@ -35,6 +39,13 @@ export default class extends Controller {
     this.toggleSubmitButton(true)
 
     try {
+      const dimensionError = await dimensionErrorForFile(file, this.imageLimitOptions())
+      if (dimensionError) {
+        this.pendingSubmit = false
+        this.showStatus(dimensionError, "error")
+        return
+      }
+
       const processed = await preprocessImageFile(file, this.imageProcessingOptions())
       const uploadFile = processed.file
       this.showStatus(processed.transformed ? `Optimizing complete. Uploading ${uploadFile.name}…` : `Uploading ${uploadFile.name}…`)
@@ -89,6 +100,14 @@ export default class extends Controller {
     })
   }
 
+  imageLimitOptions() {
+    return {
+      maxPixels: this.maxImagePixelsValue,
+      maxLongestSide: this.maxImageLongestSideValue,
+      message: this.imageTooLargeMessageValue
+    }
+  }
+
   imageProcessingOptions() {
     return {
       enabled: this.imageProcessingEnabledValue,
@@ -105,10 +124,12 @@ export default class extends Controller {
     this.submitButtonTarget.disabled = disabled
   }
 
-  showStatus(message) {
+  showStatus(message, tone = "muted") {
     if (!this.hasStatusTarget) return
 
     this.statusTarget.textContent = message
     this.statusTarget.classList.toggle("hidden", !message)
+    this.statusTarget.classList.toggle("text-red-600", tone === "error")
+    this.statusTarget.classList.toggle("text-(--surface-muted-content-color)", tone !== "error")
   }
 }

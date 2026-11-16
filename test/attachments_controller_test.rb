@@ -40,7 +40,9 @@ module RecordingStudioAttachable
                 image_processing_enabled: true,
                 image_processing_max_width: 1600,
                 image_processing_max_height: 1200,
-                image_processing_quality: 0.72
+                image_processing_quality: 0.72,
+                max_image_pixels: 40_000_000,
+                max_image_longest_side: 12_000
               }.fetch(option_name)
             }
 

@@ -135,6 +135,7 @@ en:
       errors:
         content_type_not_allowed: "is not allowed"
         attachment_kind_not_enabled: "is not enabled"
+        image_too_large: "This image is too big. Keep it under %{pixels} pixels, and under %{side} pixels on the longest side."
       file_facts:
         types:
           "image/jpeg": "JPEG"

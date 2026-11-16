@@ -150,6 +150,8 @@ module RecordingStudioAttachable
 
         max_file_size = configured_capability_option(capability_options, :max_file_size)
         raise ArgumentError, "Blob exceeds maximum file size" if max_file_size.present? && blob.byte_size > max_file_size
+
+        RecordingStudioAttachable::ImageLimits.refuse!(blob, capability_options: capability_options)
       end
 
       def capability_validation_options(capability_options)

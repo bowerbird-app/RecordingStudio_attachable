@@ -62,7 +62,9 @@ module RecordingStudioAttachable
         image_processing_enabled: configured_option(recording, :image_processing_enabled),
         image_processing_max_width: configured_option(recording, :image_processing_max_width),
         image_processing_max_height: configured_option(recording, :image_processing_max_height),
-        image_processing_quality: configured_option(recording, :image_processing_quality)
+        image_processing_quality: configured_option(recording, :image_processing_quality),
+        max_image_pixels: configured_option(recording, :max_image_pixels),
+        max_image_longest_side: configured_option(recording, :max_image_longest_side)
       }
     end
 

@@ -177,6 +177,33 @@ class ApplicationControllerTest < Minitest::Test
     assert_equal "/attachments/att-1/preview/large", @controller.send(:authorized_attachment_preview_path, recording, :large)
   end
 
+  def test_inline_variant_urls_skip_the_original_when_variants_are_blocked
+    attachment = Object.new
+    attachment.define_singleton_method(:preview_target_named) { |_variant_name| nil }
+    attachment.define_singleton_method(:variants_allowed?) { false }
+    recording = FakeRecording.new(id: "att-1", recordable_type: "RecordingStudioAttachable::Attachment")
+    recording.define_singleton_method(:recordable) { attachment }
+    @controller.define_singleton_method(:attachment_file_path) { |value| "/attachments/#{value.id}/file" }
+
+    urls = @controller.send(:authorized_attachment_inline_variant_urls, recording)
+
+    assert_nil urls[:small]
+    assert_nil urls[:medium]
+    assert_nil urls[:large]
+    assert_nil @controller.send(:authorized_attachment_preview_or_file_path, recording, :square_small)
+  end
+
+  def test_inline_variant_urls_keep_the_original_when_a_preview_is_unavailable
+    attachment = Object.new
+    attachment.define_singleton_method(:preview_target_named) { |_variant_name| nil }
+    attachment.define_singleton_method(:variants_allowed?) { true }
+    recording = FakeRecording.new(id: "att-1", recordable_type: "RecordingStudioAttachable::Attachment")
+    recording.define_singleton_method(:recordable) { attachment }
+    @controller.define_singleton_method(:attachment_file_path) { |value| "/attachments/#{value.id}/file" }
+
+    assert_equal "/attachments/att-1/file", @controller.send(:authorized_attachment_inline_variant_urls, recording)[:large]
+  end
+
   def test_attachment_page_nav_anchor_url_ignores_referer_without_redirect_params
     @request.env["HTTP_REFERER"] = "http://test.host/recordings/rec-1/attachments/upload"
 

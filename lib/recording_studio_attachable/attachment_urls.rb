@@ -44,6 +44,12 @@ module RecordingStudioAttachable
       PreprocessVariantsJob.perform_later(id)
     end
 
+    def variants_allowed?
+      return true unless file.attached?
+
+      RecordingStudioAttachable::ImageLimits.allow_variants?(file)
+    end
+
     private
 
     def resolve_url_mode(mode)
@@ -59,6 +65,7 @@ module RecordingStudioAttachable
     def direct_variant_url(variant_name, rails_url:)
       DirectUrl.ensure_host_configured!
       return unprocessed_direct_variant_fallback(rails_url) unless file.attached?
+      return rails_delivery_url(rails_url) if image_variants_blocked?
       return non_variable_direct_variant_url(rails_url) unless file.variable?
 
       variant_key = processed_variant_blob_key(variant_name)
@@ -106,9 +113,14 @@ module RecordingStudioAttachable
     def should_preprocess_variants?
       return false unless file.attached?
       return false unless file.respond_to?(:variable?) && file.variable?
+      return false if image_variants_blocked?
       return false if RecordingStudioAttachable.configuration.preprocessed_variants.blank?
 
       true
+    end
+
+    def image_variants_blocked?
+      !variants_allowed?
     end
   end
 end

@@ -76,11 +76,13 @@ module RecordingStudioAttachable
     end
 
     def preview_target_named(name)
-      return unless previewable?
+      return unless previewable? && variants_allowed?
 
       return variant_named(name) if file.variable?
 
       file
+    rescue ArgumentError
+      nil
     end
 
     def variant_named(name)

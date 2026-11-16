@@ -11,9 +11,7 @@ module RecordingStudioAttachable
 
     def perform(attachment_id)
       attachment = Attachment.find_by(id: attachment_id)
-      return if attachment.blank?
-      return unless attachment.file.attached?
-      return unless attachment.file.variable?
+      return unless preprocessable?(attachment)
 
       RecordingStudioAttachable.configuration.preprocessed_variants.each do |variant_name|
         transformations = RecordingStudioAttachable.configuration.image_variant(variant_name)
@@ -21,6 +19,17 @@ module RecordingStudioAttachable
 
         attachment.file.variant(transformations).processed
       end
+    end
+
+    private
+
+    def preprocessable?(attachment)
+      return false if attachment.blank?
+      return false unless attachment.file.attached?
+      return false unless attachment.file.variable?
+      return false if attachment.respond_to?(:variants_allowed?) && !attachment.variants_allowed?
+
+      true
     end
   end
 end

@@ -44,6 +44,7 @@ module RecordingStudioAttachable
                   :attachment_place_labels
 
     attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode,
+                :max_image_pixels, :max_image_longest_side,
                 :upload_presentation, :import_allowed_hosts, :layout, :before_save,
                 :around_attach
 
@@ -141,6 +142,14 @@ module RecordingStudioAttachable
 
     def upload_provider(key)
       upload_providers.find { |provider| provider.key == key.to_sym }
+    end
+
+    def max_image_pixels=(value)
+      @max_image_pixels = positive_image_limit(value, "max_image_pixels")
+    end
+
+    def max_image_longest_side=(value)
+      @max_image_longest_side = positive_image_limit(value, "max_image_longest_side")
     end
 
     def image_variant(name)
@@ -253,6 +262,8 @@ module RecordingStudioAttachable
         image_processing_max_width: image_processing_max_width,
         image_processing_max_height: image_processing_max_height,
         image_processing_quality: image_processing_quality,
+        max_image_pixels: max_image_pixels,
+        max_image_longest_side: max_image_longest_side,
         image_variants: image_variants,
         url_mode: url_mode,
         direct_url_host: direct_url_host,
@@ -278,6 +289,15 @@ module RecordingStudioAttachable
 
     private
 
+    def positive_image_limit(value, name)
+      number = Integer(value)
+      raise ArgumentError, "#{name} must be greater than zero" unless number.positive?
+
+      number
+    rescue ArgumentError, TypeError
+      raise ArgumentError, "#{name} must be a positive integer"
+    end
+
     def explicit_svg?(allowed_content_types)
       Array(allowed_content_types).any? { |pattern| pattern.to_s.downcase.strip == "image/svg+xml" }
     end
@@ -296,6 +316,8 @@ module RecordingStudioAttachable
       @image_processing_max_width = 2560
       @image_processing_max_height = 2560
       @image_processing_quality = 0.82
+      @max_image_pixels = 40_000_000
+      @max_image_longest_side = 12_000
       @image_variants = default_image_variants
       @url_mode = :rails
       @upload_presentation = :page

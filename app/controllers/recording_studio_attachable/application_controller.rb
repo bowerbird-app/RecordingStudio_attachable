@@ -104,6 +104,13 @@ module RecordingStudioAttachable
       RecordingStudio.capability_options(:attachable, for_type: owner_type) || {}
     end
 
+    def image_too_large_message
+      RecordingStudioAttachable::ImageLimits.refusal_message(
+        max_image_pixels: @max_image_pixels,
+        max_image_longest_side: @max_image_longest_side
+      )
+    end
+
     def configured_attachable_option(recording, option_name)
       capability_options_for(recording).fetch(option_name) do
         RecordingStudioAttachable.configuration.public_send(option_name)
@@ -137,13 +144,24 @@ module RecordingStudioAttachable
     end
 
     def authorized_attachment_inline_variant_urls(recording)
-      original_url = authorized_attachment_file_path(recording)
-
       {
-        small: authorized_attachment_preview_path(recording, :small) || original_url,
-        medium: authorized_attachment_preview_path(recording, :med) || original_url,
-        large: authorized_attachment_preview_path(recording, :large) || original_url
+        small: authorized_attachment_preview_or_file_path(recording, :small),
+        medium: authorized_attachment_preview_or_file_path(recording, :med),
+        large: authorized_attachment_preview_or_file_path(recording, :large)
       }
+    end
+
+    def authorized_attachment_preview_or_file_path(recording, variant_name)
+      preview_path = authorized_attachment_preview_path(recording, variant_name)
+      return preview_path if preview_path.present?
+      return if image_variants_blocked?(recording)
+
+      authorized_attachment_file_path(recording)
+    end
+
+    def image_variants_blocked?(recording)
+      attachment = recording.respond_to?(:recordable) ? recording.recordable : nil
+      attachment.respond_to?(:variants_allowed?) && !attachment.variants_allowed?
     end
 
     def attachment_redirect_params(fallback_return_to: nil)

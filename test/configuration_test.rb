@@ -38,6 +38,8 @@ class ConfigurationTest < Minitest::Test
     assert_equal 2560, @configuration.image_processing_max_width
     assert_equal 2560, @configuration.image_processing_max_height
     assert_equal 0.82, @configuration.image_processing_quality
+    assert_equal 40_000_000, @configuration.max_image_pixels
+    assert_equal 12_000, @configuration.max_image_longest_side
     assert_equal(
       {
         square_small: { resize_to_fill: [128, 128] },
@@ -355,6 +357,8 @@ class ConfigurationTest < Minitest::Test
         image_processing_max_width: 2560,
         image_processing_max_height: 2560,
         image_processing_quality: 0.82,
+        max_image_pixels: 40_000_000,
+        max_image_longest_side: 12_000,
         image_variants: {
           square_small: { resize_to_fill: [128, 128] },
           square_med: { resize_to_fill: [400, 400] },

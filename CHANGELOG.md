@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-11-15
+
+### Added
+
+- `max_image_pixels` (default 40,000,000) and `max_image_longest_side` (default 12,000). An image over either cap is refused when it is attached or imported. Nothing is saved, and the unattached blob is discarded. The uploader, the file button, and the image picker read the image's own dimensions first and show the limit before a direct upload starts.
+- An image that is already stored and is over the cap stays stored. Variant work skips it. A preview returns 404 and does not send the original file. Direct delivery does not queue that work again.
+- An unknown preview name returns 404.
+- On libvips 8.13 or newer, untrusted image loaders are blocked.
+
+### Upgrade Notes
+
+- Bump to `0.29.0`. There is no migration.
+- Set `max_image_pixels` and `max_image_longest_side` in the initializer when the defaults are wrong. Leave `image_processing_max_width` and `image_processing_max_height` as the browser resize. They are a different setting.
+- Reload the JavaScript. The caps and the warning are rendered onto the upload page.
+- An image already stored that is over the new cap remains. It will not gain new variants, and its preview will not fall back to the original file. The original can still be downloaded.
+
 ## [0.28.0] - 2026-11-15
 
 ### Changed

@@ -4,6 +4,7 @@ require "test_helper"
 require "base64"
 require "digest"
 require "net/http"
+require Rails.root.join("../../test/support/oversized_png")
 
 class AttachmentApiTest < ActionDispatch::IntegrationTest
   BASE = "/recording_studio_api/api/v1"
@@ -85,6 +86,28 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     call(:post, "/workspaces/#{@root.id}/actions/import_attachment", @editor_token, url: "https://evil.example.test/secret.png")
     assert_response :unprocessable_entity
     assert_includes json.dig("error", "message"), "not allowed"
+  end
+
+  test "attach and import refuse an over cap image and leave no attachment" do
+    bomb = OversizedPng.bytes(13_000, 1, valid: true)
+    before = @root.child_recordings.where(recordable_type: "RecordingStudioAttachable::Attachment").count
+    ticket = upload_ticket("wide.png", "image/png", bomb)
+    assert_response :success
+    put_upload(ticket, bomb)
+    stored = ActiveStorage::Blob.find_signed!(ticket.fetch("signed_blob_id"), purpose: RecordingStudioAttachable::DirectUpload::PURPOSE)
+
+    call(:post, "/workspaces/#{@root.id}/actions/attach", @editor_token, signed_blob_id: ticket.fetch("signed_blob_id"), name: "Wide")
+    assert_response :unprocessable_entity
+    assert_includes json.dig("error", "message"), "too big"
+    assert_equal before, @root.child_recordings.where(recordable_type: "RecordingStudioAttachable::Attachment").count
+    assert_nil ActiveStorage::Blob.find_by(id: stored.id)
+
+    with_fetch(bomb, content_type: "image/png") do
+      call(:post, "/workspaces/#{@root.id}/actions/import_attachment", @editor_token, url: "https://files.example.test/wide.png", name: "Wide")
+      assert_response :unprocessable_entity
+      assert_includes json.dig("error", "message"), "too big"
+    end
+    assert_equal before, @root.child_recordings.where(recordable_type: "RecordingStudioAttachable::Attachment").count
   end
 
   test "create_upload rejects a bad content type, an oversized file, and a full storage limit" do

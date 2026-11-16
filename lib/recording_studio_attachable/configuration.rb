@@ -46,7 +46,7 @@ module RecordingStudioAttachable
     attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode,
                 :max_image_pixels, :max_image_longest_side,
                 :upload_presentation, :import_allowed_hosts, :layout, :before_save,
-                :around_attach
+                :around_attach, :warn_on_active_storage_routes
 
     def layout=(value)
       @layout = RecordingStudio::Layout.accept(value)
@@ -247,6 +247,14 @@ module RecordingStudioAttachable
       @around_attach = value
     end
 
+    # True logs a boot warning when Rails draws the anonymous direct_uploads
+    # route. The flag does not draw or remove routes.
+    def warn_on_active_storage_routes=(value)
+      cast = ActiveModel::Type::Boolean.new.cast(value)
+      # A blank value stays on. Only an explicit false silences the warning.
+      @warn_on_active_storage_routes = cast != false
+    end
+
     def to_h
       {
         allowed_content_types: allowed_content_types,
@@ -256,6 +264,7 @@ module RecordingStudioAttachable
         unattached_blob_ttl: unattached_blob_ttl,
         direct_upload_expires_in: direct_upload_expires_in,
         purge_unattached_blobs: purge_unattached_blobs,
+        warn_on_active_storage_routes: warn_on_active_storage_routes,
         import_allowed_hosts: import_allowed_hosts,
         storage_limit: storage_limit,
         image_processing_enabled: image_processing_enabled,
@@ -310,6 +319,7 @@ module RecordingStudioAttachable
       @unattached_blob_ttl = 24.hours
       @direct_upload_expires_in = 5.minutes
       @purge_unattached_blobs = false
+      @warn_on_active_storage_routes = true
       @import_allowed_hosts = []
       @storage_limit = nil
       @image_processing_enabled = false

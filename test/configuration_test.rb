@@ -32,6 +32,7 @@ class ConfigurationTest < Minitest::Test
     assert_equal 24.hours, @configuration.unattached_blob_ttl
     assert_equal 5.minutes, @configuration.direct_upload_expires_in
     assert_equal false, @configuration.purge_unattached_blobs
+    assert_equal true, @configuration.warn_on_active_storage_routes
     assert_equal [], @configuration.import_allowed_hosts
     assert_nil @configuration.storage_limit
     assert_not @configuration.image_processing_enabled
@@ -66,6 +67,20 @@ class ConfigurationTest < Minitest::Test
     assert_nil @configuration.around_attach
     assert_nil @configuration.attachment_place_labels
     assert_equal [], @configuration.attachment_place_labels_for(Object.new)
+  end
+
+  def test_warn_on_active_storage_routes_accepts_false_without_changing_other_defaults
+    assert_equal true, @configuration.warn_on_active_storage_routes
+
+    @configuration.warn_on_active_storage_routes = false
+    assert_equal false, @configuration.warn_on_active_storage_routes
+
+    @configuration.merge!(warn_on_active_storage_routes: "false")
+    assert_equal false, @configuration.warn_on_active_storage_routes
+
+    @configuration.warn_on_active_storage_routes = "true"
+    assert_equal true, @configuration.warn_on_active_storage_routes
+    assert_equal true, @configuration.to_h.fetch(:warn_on_active_storage_routes)
   end
 
   def test_attachment_place_labels_use_the_host_proc
@@ -351,6 +366,7 @@ class ConfigurationTest < Minitest::Test
         unattached_blob_ttl: 24.hours,
         direct_upload_expires_in: 5.minutes,
         purge_unattached_blobs: false,
+        warn_on_active_storage_routes: true,
         import_allowed_hosts: [],
         storage_limit: nil,
         image_processing_enabled: false,

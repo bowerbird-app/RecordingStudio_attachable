@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-11-16
+
+### Added
+
+- `config.warn_on_active_storage_routes` (default true). Boot logs a warning when Rails draws the anonymous `direct_uploads` route. Set the flag to false to silence the log. The flag does not change routes.
+- Install generator `--restrict-active-storage-routes`. It sets `config.active_storage.draw_routes = false` and `ActiveStorage.draw_routes = false` in the application class, and calls `RecordingStudioAttachable::ActiveStorageRoutes.draw`. That draws the signed blob redirect, the representation redirect, and Disk show and update when the current service is Disk. Direct uploads and the proxy routes stay undrawn. The flag is off unless you pass it.
+
+### Upgrade Notes
+
+- Bump to `0.30.0`. There is no migration. Existing hosts keep Rails' Active Storage routes. Existing blobs stay where they are.
+- The boot warning is new. Silence it with `config.warn_on_active_storage_routes = false`, or opt in with `--restrict-active-storage-routes` and the README section "Restrict the Active Storage routes".
+- A host that already sets `draw_routes = false` should not call `ActiveStorageRoutes.draw` again.
+- A Disk host that opts in needs Disk show and update. An S3 host does not.
+- Set `config.active_storage.urls_expire_in`. A variation key is reusable across blobs. Keep the signature on the redrawn routes.
+- `PurgeUnattachedBlobsJob` still deletes only blobs this gem tagged. Schedule a separate purge for old unattached blobs that lack that tag. This gem does not delete them.
+
 ## [0.29.0] - 2026-11-15
 
 ### Added
@@ -745,7 +761,9 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.28.0...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.30.0...HEAD
+[0.30.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.29.0...v0.30.0
+[0.29.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.28.0...v0.29.0
 [0.28.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.27.0...v0.28.0
 [0.27.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.26.0...v0.27.0
 [0.26.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.25.0...v0.26.0

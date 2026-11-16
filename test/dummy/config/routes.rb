@@ -1,4 +1,8 @@
 Rails.application.routes.draw do
+  # Signed blob redirect, representation redirect, and Disk show and update.
+  # The anonymous direct_uploads route stays undrawn.
+  RecordingStudioAttachable::ActiveStorageRoutes.draw(self)
+
   devise_for :users
 
   get "/recording_studio", to: redirect("/"), as: nil

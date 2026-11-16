@@ -24,7 +24,14 @@
     `attachments-uploads_over_time`, `attachments-by_kind`, and
     `attachments-by_content_type`. Only `attachments.uploads_over_time` takes
     `from`, `to`, and `interval`.
-12. For contributor validation, mirror CI:
+12. To leave Rails' anonymous `POST /rails/active_storage/direct_uploads` undrawn, rerun the generator with `--restrict-active-storage-routes`, or apply the same edits by hand. The flag is off by default. Existing apps keep Rails' routes.
+    - Set `config.active_storage.draw_routes = false`.
+    - Set `ActiveStorage.draw_routes = false` in that same class body. Devise reloads routes from `before_eager_load`, and Active Storage copies the config later. The module attribute is what that reload reads. Do not copy it from an initializer `before` edge. That edge reshuffles boot.
+    - Call `RecordingStudioAttachable::ActiveStorageRoutes.draw(self)` inside `routes.draw`. That draws the signed blob redirect, the representation redirect, and Disk show and update when the current service in `config/storage.yml` is Disk. Direct uploads and the proxy routes stay undrawn.
+    - Keep the Rails signature on the blob redirect and the disk token. You can also require a login. Set `config.active_storage.urls_expire_in` so the signed ids expire. A variation key is a digest of the transform and works on every blob. It is not a secret.
+    - `config.warn_on_active_storage_routes` (default true) logs a boot warning when `direct_uploads` is still drawn. Set it to false to silence the log.
+    - `PurgeUnattachedBlobsJob` only deletes blobs this gem tagged. Schedule your own purge for old unattached blobs that lack the `recording_studio_attachable` tag.
+13. For contributor validation, mirror CI:
    - run `bundle install` inside `test/dummy`
    - run `bundle exec rake db:migrate RAILS_ENV=test` inside `test/dummy`
    - return to the repo root and run `bundle exec rubocop` and `bundle exec rake test`

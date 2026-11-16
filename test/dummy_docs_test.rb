@@ -184,6 +184,8 @@ class DummyDocsTest < Minitest::Test
     assert_includes setup_source, "Verify Active Storage wiring"
     assert_includes setup_source, "FlatPack::CodeBlock::Component"
     assert_includes controller_source, "bin/rails active_storage:install"
+    assert_includes controller_source, "this dummy app leaves it undrawn"
+    assert_not_includes controller_source, "depends on the direct-upload pipeline being available"
     assert_includes controller_source, "generate recording_studio_attachable:install"
     assert_includes controller_source, "Recording Studio 4.2.0+"
     assert_includes controller_source, "recording_studio_recordable label: \"Workspace\", root: true"

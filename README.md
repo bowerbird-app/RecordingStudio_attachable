@@ -16,12 +16,12 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - Ruby 3.3+
 - Rails 8.1+
 - Active Storage installed in the host app
-- Recording Studio 7 (`>= 7.0, < 8.0`) installed in the host app (CI tested with GitHub tag `v7.0.0`)
+- Recording Studio 7 (`>= 7.0, < 8.0`) installed in the host app (CI tested with GitHub tag `v7.1.0`; Recording Studio API 1.1 needs `>= 7.1.0`)
 - Flatpack 0.1.376 or newer (`FlatPack::VERSION` 0.1.376 at tag `v0.1.376`)
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
 - RecordingStudio Metrics `>= 0.9.0, < 1.0` (CI tested with GitHub tag `v0.9.0`) for operations-API storage and upload metrics
-- RecordingStudio API `>= 0.24.0, < 1.0` (CI tested with GitHub tag `v0.24.0`)
+- RecordingStudio API `>= 1.1.0, < 2.0` (CI tested with GitHub tag `v1.1.0`)
 - Optional cloud import: a separate provider gem that registers with `register_upload_provider`. Attachable does not depend on provider gems at runtime.
 
 ## Quick start
@@ -326,7 +326,7 @@ RecordingStudioAttachable::Api.override_openapi(
 )
 ```
 
-`RecordingStudioAttachable::Api.openapi_for(type:, action:)` returns the merged hash for that type. Attachable registers that method as `openapi_for:` on each capability action, so Recording Studio API OpenAPI and the MCP catalog use the per-type copy. Leave the hook unset to keep the generic copy. Requires `recording_studio_api >= 0.24.0, < 1.0`.
+`RecordingStudioAttachable::Api.openapi_for(type:, action:)` returns the merged hash for that type. Attachable registers that method as `openapi_for:` on each capability action, so Recording Studio API OpenAPI and the MCP catalog use the per-type copy. Leave the hook unset to keep the generic copy. Requires `recording_studio_api >= 1.1.0, < 2.0`.
 
 `import_attachment` 200 is the `Payload.one` shape: `id`, `kind`, `name`, `urls.file`. `create_upload` 200 is the DirectUpload ticket: `signed_blob_id`, `upload.url`, `upload.headers`, `expires_at`.
 
@@ -909,7 +909,7 @@ Dummy credentials (`test/dummy/config/credentials.yml.enc`) are encrypted with t
 
 - the dummy app is a validation shell, not a production template
 - CI installs the dummy app bundle and runs dummy-app migrations before the root checks
-- the dummy app pins RecordingStudio `v7.0.0`, Recording Studio Accessible `v0.44.0`, Recording Studio Orderable `v0.6.0`, Recording Studio API `v0.24.0`, Oauth `v0.21.9`, Google Drive `v0.6.1`, Dropbox `v0.5.1`, Site Settings `v0.5.6`, Trashable `v0.17.0`, Moveable `v5.0.0`, Logs `v0.8.0`, Admin `v2.16.0`, and Metrics `v0.9.0`
+- the dummy app pins RecordingStudio `v7.1.0`, Recording Studio Accessible `v0.44.0`, Recording Studio Orderable `v0.6.0`, Recording Studio API `v1.1.0`, Oauth `v0.24.0`, Google Drive `v0.6.1`, Dropbox `v0.5.1`, Site Settings `v0.6.0`, Trashable `v0.17.0`, Moveable `v5.0.0`, Logs `v0.8.0`, Admin `v2.16.0`, and Metrics `v0.9.0`
 - make sure engine, Active Storage, and Recording Studio tables are migrated in the dummy app before validating upload flows locally
 - `bin/rails db:seed` attaches a twenty-shot Kiln canister press kit to the workspace. The shots mix portrait, square, and landscape frames. Edit images uses those files. Seeds also remove the colour-block stand-ins `window.jpg`, `dock.jpg`, and `pier.jpg` when they are still on the workspace.
 - set `DUMMY_ACTIVE_STORAGE_SERVICE=amazon` plus `DUMMY_AWS_ACCESS_KEY_ID`, `DUMMY_AWS_SECRET_ACCESS_KEY`, `DUMMY_AWS_REGION`, and `DUMMY_AWS_BUCKET` to exercise S3-backed uploads in the dummy app; `DUMMY_AWS_BUCKET` may be either the plain bucket name or a bucket ARN

@@ -5,6 +5,11 @@ require "uri"
 module RecordingStudioAttachable
   class ApplicationController < (defined?(::ApplicationController) ? ::ApplicationController : ActionController::Base)
     PROVIDER_EVENT_STORAGE_KEY = "recording-studio-attachable:provider-event"
+    OWNER_UNAVAILABLE_READS = {
+      "attachments" => %w[show file download preview],
+      "recording_attachments" => %w[index],
+      "attachment_pickers" => %w[index]
+    }.freeze
 
     include RecordingStudio::ControllerLayout
 
@@ -12,6 +17,7 @@ module RecordingStudioAttachable
     recording_studio_layout { RecordingStudioAttachable.configuration.layout }
 
     rescue_from RecordingStudioAttachable::Authorization::NotAuthorizedError, with: :handle_not_authorized
+    rescue_from RecordingStudioAttachable::Authorization::OwnerUnavailableError, with: :handle_owner_unavailable
     rescue_from ActiveRecord::RecordNotFound, with: :handle_record_not_found
 
     helper_method :current_attachable_actor
@@ -77,6 +83,19 @@ module RecordingStudioAttachable
         end
         format.json { render json: { error: exception.message }, status: :forbidden }
       end
+    end
+
+    def handle_owner_unavailable(exception)
+      return handle_not_authorized(exception) unless read_attachment_request?
+
+      respond_to do |format|
+        format.json { render json: { error: Copy.t("flashes.not_found", default: "Not found") }, status: :not_found }
+        format.any { head :not_found }
+      end
+    end
+
+    def read_attachment_request?
+      OWNER_UNAVAILABLE_READS.fetch(controller_name, []).include?(action_name)
     end
 
     def handle_record_not_found

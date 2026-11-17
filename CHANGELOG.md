@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-11-17
+
+### Added
+
+- An owner recordable can define `attachable_available_for?(actor:, action:, recording:)`. After the role check passes, Attachable calls that public method. The action is allowed only when the result is exactly `true`. Recordables that do not define it are unchanged.
+
+### Changed
+
+- When that method refuses a read (show, file, download, preview, the attachment listing, or the picker), the response is 404. Role refusals and write actions keep their current responses.
+
+### Upgrade Notes
+
+- Bump to `0.32.0`. There is no migration.
+- Define `attachable_available_for?` on an owner recordable when that owner's state should block its attachments. Return exactly `true` to allow the action.
+- `url_mode :direct` URLs are built from the blob key and served by storage, so this check does not run. Use `:rails` when the check has to gate the bytes.
+
 ## [0.31.0] - 2026-11-16
 
 ### Changed

@@ -221,15 +221,17 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     create_upload = workspace_action(document, "create_upload")
     attach = workspace_action(document, "attach")
     import_attachment = workspace_action(document, "import_attachment")
-    upload_copy = "An attachment is an uploaded file linked to a record, like a PDF, an image or a document. Step 1 of 2. Step 2 is Attach, or Add File or Add Image for a press kit Files or Images section. Use this when you have the file yourself. Send filename, byte_size, checksum and content_type, and you get back an upload URL and a signed_blob_id. PUT the file to that URL, then send the signed_blob_id to step 2. This step adds nothing to the record yet. The parent record must already exist."
-    attach_copy = "An attachment is an uploaded file linked to a record, like a PDF, an image or a document. Step 2 of 2. Step 1 is Upload: call Upload, PUT the file to its URL, then send the signed_blob_id here. Links one signed_blob_id, or several in attachments, to this record as plain attachments. For a press kit Files or Images section, use Add File or Add Image instead, so the file shows up as an item in that section. The parent record must already exist."
-    import_copy = "An attachment is an uploaded file linked to a record, like a PDF, an image or a document. One step, no upload needed. Use this when the file is already online at a URL. It downloads the file and attaches it to this record as a plain attachment in a single call, so there's no Upload, PUT or signed_blob_id. For a press kit Files or Images section, use Add File or Add Image instead, so the file shows up as an item in that section. The parent record must already exist."
-    assert_equal upload_copy, create_upload.fetch("summary")
-    assert_equal upload_copy, create_upload.fetch("description")
-    assert_equal attach_copy, attach.fetch("summary")
-    assert_equal attach_copy, attach.fetch("description")
-    assert_equal import_copy, import_attachment.fetch("summary")
-    assert_equal import_copy, import_attachment.fetch("description")
+    actions = RecordingStudioAttachable::Api::AttachmentActions
+    assert_equal actions::CREATE_UPLOAD_SUMMARY, create_upload.fetch("summary")
+    assert_equal actions::CREATE_UPLOAD_COPY, create_upload.fetch("description")
+    assert_equal actions::ATTACH_SUMMARY, attach.fetch("summary")
+    assert_equal actions::ATTACH_COPY, attach.fetch("description")
+    assert_equal actions::IMPORT_ATTACHMENT_SUMMARY, import_attachment.fetch("summary")
+    assert_equal actions::IMPORT_ATTACHMENT_COPY, import_attachment.fetch("description")
+    [create_upload, attach, import_attachment].each do |operation|
+      shown = [operation.fetch("summary"), operation.fetch("description")].join("\n\n")
+      assert_equal 1, shown.scan(operation.fetch("description")).size
+    end
     refute_equal create_upload.fetch("summary"), attach.fetch("summary")
     refute_equal attach.fetch("summary"), import_attachment.fetch("summary")
 
@@ -246,10 +248,19 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     assert upload_schema.key?("expires_at")
 
     upload_fields = create_upload.dig("requestBody", "content", "application/json", "schema", "properties")
-    assert_equal "The file's name, like cover.jpg. Required.", upload_fields.dig("filename", "description")
-    assert_equal "The file's size in bytes. Required. Must be zero or more, and at most 10 MB on a press kit.", upload_fields.dig("byte_size", "description")
-    assert_equal "The file's MD5 checksum, Base64-encoded, as Active Storage expects. Required.", upload_fields.dig("checksum", "description")
-    assert_equal "The file's type, like image/png. Required. On a press kit only image types (image/*) and SVG (image/svg+xml) are accepted.", upload_fields.dig("content_type", "description")
+    contract = RecordingStudioAttachable::Api::AttachmentContracts.create_upload.fetch(:fields)
+    assert_equal contract.dig(:filename, :description), upload_fields.dig("filename", "description")
+    assert_equal contract.dig(:byte_size, :description), upload_fields.dig("byte_size", "description")
+    assert_equal contract.dig(:checksum, :description), upload_fields.dig("checksum", "description")
+    assert_equal contract.dig(:content_type, :description), upload_fields.dig("content_type", "description")
+    attach_fields = attach.dig("requestBody", "content", "application/json", "schema", "properties")
+    import_fields = import_attachment.dig("requestBody", "content", "application/json", "schema", "properties")
+    %w[signed_blob_id name description caption credit alt_text attachments].each do |field|
+      assert attach_fields.dig(field, "description").present?, "#{field} has no description"
+    end
+    %w[url name description].each do |field|
+      assert import_fields.dig(field, "description").present?, "#{field} has no description"
+    end
   end
 
   test "the actions are registered on the public and operations APIs" do
@@ -258,19 +269,20 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
       assert_equal :attachable, action.capability
       assert_equal :member, action.scope
       assert_equal :edit, action.required_role
+      copy = RecordingStudioAttachable::Api::AttachmentActions
       assert_equal "Upload", action.openapi.fetch(:title)
-      assert_equal "An attachment is an uploaded file linked to a record, like a PDF, an image or a document. Step 1 of 2. Step 2 is Attach, or Add File or Add Image for a press kit Files or Images section. Use this when you have the file yourself. Send filename, byte_size, checksum and content_type, and you get back an upload URL and a signed_blob_id. PUT the file to that URL, then send the signed_blob_id to step 2. This step adds nothing to the record yet. The parent record must already exist.", action.openapi.fetch(:summary)
-      assert_equal "An attachment is an uploaded file linked to a record, like a PDF, an image or a document. Step 1 of 2. Step 2 is Attach, or Add File or Add Image for a press kit Files or Images section. Use this when you have the file yourself. Send filename, byte_size, checksum and content_type, and you get back an upload URL and a signed_blob_id. PUT the file to that URL, then send the signed_blob_id to step 2. This step adds nothing to the record yet. The parent record must already exist.", action.openapi.fetch(:description)
+      assert_equal copy::CREATE_UPLOAD_SUMMARY, action.openapi.fetch(:summary)
+      assert_equal copy::CREATE_UPLOAD_COPY, action.openapi.fetch(:description)
       attach = RecordingStudioApi.capability_action(:attach, api: api)
       assert attach
       assert_equal "Attach", attach.openapi.fetch(:title)
-      assert_equal "An attachment is an uploaded file linked to a record, like a PDF, an image or a document. Step 2 of 2. Step 1 is Upload: call Upload, PUT the file to its URL, then send the signed_blob_id here. Links one signed_blob_id, or several in attachments, to this record as plain attachments. For a press kit Files or Images section, use Add File or Add Image instead, so the file shows up as an item in that section. The parent record must already exist.", attach.openapi.fetch(:summary)
-      assert_equal "An attachment is an uploaded file linked to a record, like a PDF, an image or a document. Step 2 of 2. Step 1 is Upload: call Upload, PUT the file to its URL, then send the signed_blob_id here. Links one signed_blob_id, or several in attachments, to this record as plain attachments. For a press kit Files or Images section, use Add File or Add Image instead, so the file shows up as an item in that section. The parent record must already exist.", attach.openapi.fetch(:description)
+      assert_equal copy::ATTACH_SUMMARY, attach.openapi.fetch(:summary)
+      assert_equal copy::ATTACH_COPY, attach.openapi.fetch(:description)
       import_attachment = RecordingStudioApi.capability_action(:import_attachment, api: api)
       assert import_attachment
       assert_equal "Import", import_attachment.openapi.fetch(:title)
-      assert_equal "An attachment is an uploaded file linked to a record, like a PDF, an image or a document. One step, no upload needed. Use this when the file is already online at a URL. It downloads the file and attaches it to this record as a plain attachment in a single call, so there's no Upload, PUT or signed_blob_id. For a press kit Files or Images section, use Add File or Add Image instead, so the file shows up as an item in that section. The parent record must already exist.", import_attachment.openapi.fetch(:summary)
-      assert_equal "An attachment is an uploaded file linked to a record, like a PDF, an image or a document. One step, no upload needed. Use this when the file is already online at a URL. It downloads the file and attaches it to this record as a plain attachment in a single call, so there's no Upload, PUT or signed_blob_id. For a press kit Files or Images section, use Add File or Add Image instead, so the file shows up as an item in that section. The parent record must already exist.", import_attachment.openapi.fetch(:description)
+      assert_equal copy::IMPORT_ATTACHMENT_SUMMARY, import_attachment.openapi.fetch(:summary)
+      assert_equal copy::IMPORT_ATTACHMENT_COPY, import_attachment.openapi.fetch(:description)
     end
   end
 
@@ -300,12 +312,12 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     assert_equal "Import a file onto this workspace from a web link.", workspace_import[:summary]
     assert_equal "Workspace import description.", workspace_import[:description]
     assert_equal "Import", page_import[:title]
-    assert_equal RecordingStudioAttachable::Api::AttachmentActions::IMPORT_ATTACHMENT_COPY, page_import[:summary]
+    assert_equal RecordingStudioAttachable::Api::AttachmentActions::IMPORT_ATTACHMENT_SUMMARY, page_import[:summary]
     assert_equal "Page - Attach", page_attach[:title]
     assert_equal "Page attach description.", page_attach[:description]
     assert_equal "Attach", workspace_attach[:title]
-    assert_equal RecordingStudioAttachable::Api::AttachmentActions::ATTACH_COPY, workspace_attach[:summary]
-    assert_equal RecordingStudioAttachable::Api::AttachmentActions::CREATE_UPLOAD_COPY,
+    assert_equal RecordingStudioAttachable::Api::AttachmentActions::ATTACH_SUMMARY, workspace_attach[:summary]
+    assert_equal RecordingStudioAttachable::Api::AttachmentActions::CREATE_UPLOAD_SUMMARY,
                  RecordingStudioAttachable::Api::AttachmentActions::CREATE_UPLOAD_OPENAPI.fetch(:summary)
 
     get "/APIdocs/v1/openapi.json"

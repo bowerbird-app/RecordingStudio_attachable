@@ -8,52 +8,51 @@ module RecordingStudioAttachable
       module_function
 
       ATTACHMENT_ONE_SCHEMA = AttachmentContracts::ATTACHMENT_ONE_SCHEMA
+      ATTACHMENT_MANY_SCHEMA = AttachmentContracts::ATTACHMENT_MANY_SCHEMA
       CREATE_UPLOAD_TICKET_SCHEMA = AttachmentContracts::CREATE_UPLOAD_TICKET_SCHEMA
-      CREATE_UPLOAD_COPY =
-        "An attachment is an uploaded file linked to a record, like a PDF, an image or a document. " \
-        "Step 1 of 2. Step 2 is Attach, or Add File or Add Image for a press kit Files or Images " \
-        "section. Use this when you have the file yourself. Send filename, byte_size, checksum and " \
-        "content_type, and you get back an upload URL and a signed_blob_id. PUT the file to that " \
-        "URL, then send the signed_blob_id to step 2. This step adds nothing to the record yet. " \
-        "The parent record must already exist."
+      CREATE_UPLOAD_SUMMARY = AttachmentCopy::Text::CREATE_UPLOAD_SUMMARY
+      CREATE_UPLOAD_COPY = AttachmentCopy::Text::CREATE_UPLOAD
       CREATE_UPLOAD_OPENAPI = {
         title: "Upload",
-        summary: CREATE_UPLOAD_COPY,
+        summary: CREATE_UPLOAD_SUMMARY,
         description: CREATE_UPLOAD_COPY,
         responses: {
           "200" => {
-            description: "A direct-upload ticket. This step does not attach the file.",
+            description: "Direct-upload ticket. Returns signed_blob_id, upload.url, upload.headers, " \
+                         "and expires_at. This step does not attach the file.",
             content: {
               "application/json" => { schema: CREATE_UPLOAD_TICKET_SCHEMA }
             }
           }
         }
       }.freeze
-      ATTACH_COPY =
-        "An attachment is an uploaded file linked to a record, like a PDF, an image or a document. " \
-        "Step 2 of 2. Step 1 is Upload: call Upload, PUT the file to its URL, then send the " \
-        "signed_blob_id here. Links one signed_blob_id, or several in attachments, to this record " \
-        "as plain attachments. For a press kit Files or Images section, use Add File or Add Image " \
-        "instead, so the file shows up as an item in that section. The parent record must already exist."
+      ATTACH_SUMMARY = AttachmentCopy::Text::ATTACH_SUMMARY
+      ATTACH_COPY = AttachmentCopy::Text::ATTACH
       ATTACH_OPENAPI = {
         title: "Attach",
-        summary: ATTACH_COPY,
-        description: ATTACH_COPY
+        summary: ATTACH_SUMMARY,
+        description: ATTACH_COPY,
+        responses: {
+          "200" => {
+            description: "One file returns id, kind, name, and urls.file. A list returns attachments, " \
+                         "an array of those objects.",
+            content: {
+              "application/json" => {
+                schema: { oneOf: [ATTACHMENT_ONE_SCHEMA, ATTACHMENT_MANY_SCHEMA] }
+              }
+            }
+          }
+        }
       }.freeze
-      IMPORT_ATTACHMENT_COPY =
-        "An attachment is an uploaded file linked to a record, like a PDF, an image or a document. " \
-        "One step, no upload needed. Use this when the file is already online at a URL. " \
-        "It downloads the file and attaches it to this record as a plain attachment in a single call, " \
-        "so there's no Upload, PUT or signed_blob_id. For a press kit Files or Images section, use " \
-        "Add File or Add Image instead, so the file shows up as an item in that section. " \
-        "The parent record must already exist."
+      IMPORT_ATTACHMENT_SUMMARY = AttachmentCopy::Text::IMPORT_SUMMARY
+      IMPORT_ATTACHMENT_COPY = AttachmentCopy::Text::IMPORT
       IMPORT_ATTACHMENT_OPENAPI = {
         title: "Import",
-        summary: IMPORT_ATTACHMENT_COPY,
+        summary: IMPORT_ATTACHMENT_SUMMARY,
         description: IMPORT_ATTACHMENT_COPY,
         responses: {
           "200" => {
-            description: "The new attachment.",
+            description: "The new attachment. Returns id, kind, name, and urls.file.",
             content: {
               "application/json" => { schema: ATTACHMENT_ONE_SCHEMA }
             }

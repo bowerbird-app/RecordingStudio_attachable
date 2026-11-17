@@ -241,20 +241,20 @@ class AttachmentActionsTest < Minitest::Test
     assert_equal "Import an image onto this press kit from a web link.", kit_import[:summary]
     assert_equal "Press kit import description.", kit_import[:description]
     assert_equal "Press Kit - Attach", kit_attach[:title]
-    assert_equal RecordingStudioAttachable::Api::AttachmentActions::ATTACH_COPY, kit_attach[:summary]
+    assert_equal RecordingStudioAttachable::Api::AttachmentActions::ATTACH_SUMMARY, kit_attach[:summary]
     assert_equal "Press kit attach description.", kit_attach[:description]
     assert_equal "Press Kit - Create Upload", kit_upload[:title]
     assert_equal "Upload a cover image.", kit_upload[:summary]
     assert_equal "Press kit create upload description.", kit_upload[:description]
 
     assert_equal "Import", workspace_import[:title]
-    assert_equal RecordingStudioAttachable::Api::AttachmentActions::IMPORT_ATTACHMENT_COPY, workspace_import[:summary]
+    assert_equal RecordingStudioAttachable::Api::AttachmentActions::IMPORT_ATTACHMENT_SUMMARY, workspace_import[:summary]
     assert_equal RecordingStudioAttachable::Api::AttachmentActions::IMPORT_ATTACHMENT_COPY, workspace_import[:description]
     assert_equal "Attach", workspace_attach[:title]
-    assert_equal RecordingStudioAttachable::Api::AttachmentActions::ATTACH_COPY, workspace_attach[:summary]
+    assert_equal RecordingStudioAttachable::Api::AttachmentActions::ATTACH_SUMMARY, workspace_attach[:summary]
     assert_equal RecordingStudioAttachable::Api::AttachmentActions::ATTACH_COPY, workspace_attach[:description]
     assert_equal "Upload", workspace_upload[:title]
-    assert_equal RecordingStudioAttachable::Api::AttachmentActions::CREATE_UPLOAD_COPY, workspace_upload[:summary]
+    assert_equal RecordingStudioAttachable::Api::AttachmentActions::CREATE_UPLOAD_SUMMARY, workspace_upload[:summary]
     assert_equal RecordingStudioAttachable::Api::AttachmentActions::CREATE_UPLOAD_COPY, workspace_upload[:description]
 
     unknown = assert_raises(ArgumentError) do
@@ -285,10 +285,59 @@ class AttachmentActionsTest < Minitest::Test
     contract = RecordingStudioAttachable::Api::AttachmentContracts.create_upload
     fields = contract.fetch(:fields)
 
-    assert_equal "The file's name, like cover.jpg. Required.", fields.dig(:filename, :description)
-    assert_equal "The file's size in bytes. Required. Must be zero or more, and at most 10 MB on a press kit.", fields.dig(:byte_size, :description)
-    assert_equal "The file's MD5 checksum, Base64-encoded, as Active Storage expects. Required.", fields.dig(:checksum, :description)
-    assert_equal "The file's type, like image/png. Required. On a press kit only image types (image/*) and SVG (image/svg+xml) are accepted.", fields.dig(:content_type, :description)
+    assert_equal "The file name to store, such as cover.jpg. Required. Send the name you want on the blob.", fields.dig(:filename, :description)
+    assert_equal "The file size in bytes. Required. Use zero or more, and stay within the size cap. The default cap is 25 MB (config.max_file_size). A parent record can set a lower cap.", fields.dig(:byte_size, :description)
+    assert_equal "MD5 checksum of the file bytes, Base64-encoded, as Active Storage expects. Required. Compute it from the bytes before you call create_upload.", fields.dig(:checksum, :description)
+    assert_equal "The file type, such as image/png or application/pdf. Required. The default allow list is image/* and application/pdf. image/* does not include image/svg+xml unless that exact type is named in the allow list. A parent record can set its own list.", fields.dig(:content_type, :description)
+  end
+
+  def test_tool_description_is_printed_once_and_covers_inputs_and_returns
+    actions = {
+      create_upload: RecordingStudioAttachable::Api::AttachmentContracts.create_upload,
+      attach: RecordingStudioAttachable::Api::AttachmentContracts.attach,
+      import_attachment: RecordingStudioAttachable::Api::AttachmentContracts.import_attachment
+    }
+
+    actions.each do |name, contract|
+      openapi = RecordingStudioAttachable::Api.openapi_for(type: "Workspace", action: name)
+      summary = openapi.fetch(:summary)
+      description = openapi.fetch(:description)
+      shown = [summary, description].join("\n\n")
+
+      refute_equal summary, description, "#{name} summary repeats the description"
+      assert_equal 1, shown.scan(description).size, "#{name} description is printed more than once"
+      assert_match(/returns/i, description, "#{name} does not say what it returns")
+      refute_match(/add file|press kit/i, description, "#{name} names another product's tool")
+
+      contract.fetch(:fields).each do |field, rules|
+        text = rules.to_h[:description].to_s
+        assert text.present?, "#{name} #{field} has no description"
+        refute_match(/press kit/i, text, "#{name} #{field} names a press kit")
+      end
+    end
+
+    upload = actions.fetch(:create_upload).fetch(:fields)
+    attach = actions.fetch(:attach).fetch(:fields)
+    import = actions.fetch(:import_attachment).fetch(:fields)
+    upload_description = RecordingStudioAttachable::Api.openapi_for(type: "Workspace", action: :create_upload).fetch(:description)
+    attach_description = RecordingStudioAttachable::Api.openapi_for(type: "Workspace", action: :attach).fetch(:description)
+    import_description = RecordingStudioAttachable::Api.openapi_for(type: "Workspace", action: :import_attachment).fetch(:description)
+
+    assert_includes upload_description, "signed_blob_id"
+    assert_includes upload_description, "upload.url"
+    assert_includes upload_description, "upload.headers"
+    assert_includes upload_description, "expires_at"
+    assert_includes attach_description, "id"
+    assert_includes attach_description, "kind"
+    assert_includes attach_description, "urls.file"
+    assert_includes import_description, "urls.file"
+    assert_includes attach.fetch(:signed_blob_id).fetch(:description), "create_upload"
+    assert_includes attach.fetch(:attachments).fetch(:description), "signed_blob_id"
+    assert_includes import.fetch(:url).fetch(:description), "HTTPS"
+    assert_includes import.fetch(:url).fetch(:description), "import_allowed_hosts"
+    assert_match(%r{image/svg\+xml}, upload.fetch(:content_type).fetch(:description))
+    assert_match(/25 MB/, upload.fetch(:byte_size).fetch(:description))
+    assert_match(/20/, attach.fetch(:attachments).fetch(:description))
   end
 
   def test_import_rejects_a_private_address_and_a_host_outside_the_allowlist

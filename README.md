@@ -772,6 +772,28 @@ Default roles:
 - `restore`: `:admin`
 - `download`: `:view`
 
+### Owner availability
+
+The role check runs first. `authorize_with` still answers that question. Accessible answers it when no adapter is set.
+
+After the role check passes, Attachable looks at the owner recording from `Authorization.owner_recording_for`. The owner's recordable can define a public instance method:
+
+```ruby
+def attachable_available_for?(actor:, action:, recording:)
+  true
+end
+```
+
+`recording` is the owner recording. `action` is `:view`, `:download`, `:upload`, `:revise`, `:remove`, or `:restore`.
+
+The action is allowed only when the method returns exactly `true`. `false`, `nil`, and any other object refuse it. A private or protected method refuses the action and is not called. A raised `StandardError` refuses the action. The log line names the exception class.
+
+A recordable that does not define the method is unchanged.
+
+On show, file, download, preview, the attachment listing, and the picker, a refusal from this method is a 404. Role refusals keep their current responses. Write actions keep their current responses.
+
+`url_mode :direct` builds `https://<direct_url_host>/<blob key>`. Storage serves that URL and does not call this method. Use `:rails` when this check has to run before the bytes are sent.
+
 Removal is Trashable-aware:
 
 - if the child attachment recording responds to Trashable hooks, remove uses trash/restore operations

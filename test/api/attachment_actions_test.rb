@@ -291,6 +291,55 @@ class AttachmentActionsTest < Minitest::Test
     assert_equal "The file's type, like image/png. Required. On a press kit only image types (image/*) and SVG (image/svg+xml) are accepted.", fields.dig(:content_type, :description)
   end
 
+  def test_tool_description_is_printed_once_and_covers_inputs_and_returns
+    actions = {
+      create_upload: RecordingStudioAttachable::Api::AttachmentContracts.create_upload,
+      attach: RecordingStudioAttachable::Api::AttachmentContracts.attach,
+      import_attachment: RecordingStudioAttachable::Api::AttachmentContracts.import_attachment
+    }
+
+    actions.each do |name, contract|
+      openapi = RecordingStudioAttachable::Api.openapi_for(type: "Workspace", action: name)
+      summary = openapi.fetch(:summary)
+      description = openapi.fetch(:description)
+      shown = [summary, description].join("\n\n")
+
+      refute_equal summary, description, "#{name} summary repeats the description"
+      assert_equal 1, shown.scan(description).size, "#{name} description is printed more than once"
+      assert_match(/returns/i, description, "#{name} does not say what it returns")
+      refute_match(/add file|press kit/i, description, "#{name} names another product's tool")
+
+      contract.fetch(:fields).each do |field, rules|
+        text = rules.to_h[:description].to_s
+        assert text.present?, "#{name} #{field} has no description"
+        refute_match(/press kit/i, text, "#{name} #{field} names a press kit")
+      end
+    end
+
+    upload = actions.fetch(:create_upload).fetch(:fields)
+    attach = actions.fetch(:attach).fetch(:fields)
+    import = actions.fetch(:import_attachment).fetch(:fields)
+    upload_description = RecordingStudioAttachable::Api.openapi_for(type: "Workspace", action: :create_upload).fetch(:description)
+    attach_description = RecordingStudioAttachable::Api.openapi_for(type: "Workspace", action: :attach).fetch(:description)
+    import_description = RecordingStudioAttachable::Api.openapi_for(type: "Workspace", action: :import_attachment).fetch(:description)
+
+    assert_includes upload_description, "signed_blob_id"
+    assert_includes upload_description, "upload.url"
+    assert_includes upload_description, "upload.headers"
+    assert_includes upload_description, "expires_at"
+    assert_includes attach_description, "id"
+    assert_includes attach_description, "kind"
+    assert_includes attach_description, "urls.file"
+    assert_includes import_description, "urls.file"
+    assert_includes attach.fetch(:signed_blob_id).fetch(:description), "create_upload"
+    assert_includes attach.fetch(:attachments).fetch(:description), "signed_blob_id"
+    assert_includes import.fetch(:url).fetch(:description), "HTTPS"
+    assert_includes import.fetch(:url).fetch(:description), "import_allowed_hosts"
+    assert_match(/image\/svg\+xml/, upload.fetch(:content_type).fetch(:description))
+    assert_match(/25 MB/, upload.fetch(:byte_size).fetch(:description))
+    assert_match(/20/, attach.fetch(:attachments).fetch(:description))
+  end
+
   def test_import_rejects_a_private_address_and_a_host_outside_the_allowlist
     @configuration.import_allowed_hosts = ["files.example.test"]
 

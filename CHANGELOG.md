@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.32.1] - 2026-11-17
+
+### Fixed
+
+- Public MCP docs print an action's OpenAPI summary and then its description. `create_upload`, `attach`, and `import_attachment` used the same paragraph for both, so the note appeared twice. The summary is now one line. The description is the note, once.
+- `attach` and `import_attachment` describe every input, including where the value comes from. `signed_blob_id` comes from `create_upload`. `attachments` is a list of those objects. `url` is a public HTTPS URL on `config.import_allowed_hosts`.
+- Each action states the fields it returns. `create_upload` returns `signed_blob_id`, `upload.url`, `upload.headers`, and `expires_at`. `import_attachment` and a single `attach` return `id`, `kind`, `name`, and `urls.file`. A batch `attach` returns `attachments`, a list of those objects.
+- The generic note no longer names another product's tools. On a record that lists files or images, `attach` and `import_attachment` still only link an attachment. They do not add a listed item. A host that needs different wording for one recordable type uses `override_openapi`.
+
+### Upgrade Notes
+
+- none
+
 ## [0.32.0] - 2026-11-17
 
 ### Added

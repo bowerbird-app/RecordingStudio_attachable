@@ -312,9 +312,9 @@ RecordingStudioApi.register_recordable_type_api(
 
 A type that leaves those names off `capability_actions` does not show the actions in OpenAPI. Calling one returns the Recording Studio API's unsupported-action response.
 
-The three actions are different steps. `create_upload` prepares a direct upload and returns an upload URL plus a `signed_blob_id`; it adds nothing to the record yet. `attach` links already-uploaded blobs to the record and comes from RecordingStudio Attachable. `import_attachment` fetches a file from a URL and attaches it. The parent record must already exist. OpenAPI titles are type-neutral (`Upload`, `Attach`, `Import`). Summaries and descriptions start with what an attachment is, then the step, and they are the same on every parent type unless a host overrides them.
+The three actions are different steps. `create_upload` prepares a direct upload and returns an upload URL plus a `signed_blob_id`; it adds nothing to the record yet. `attach` links already-uploaded blobs to the record and comes from RecordingStudio Attachable. `import_attachment` fetches a file from a URL and attaches it. The parent record must already exist. OpenAPI titles are type-neutral (`Upload`, `Attach`, `Import`). Each action has a short summary and a longer description. Public MCP docs print the summary and then the description, so the description is not copied into the summary. The description says what the action does, when to call it, each input and where the value comes from, the fields it returns, and the limits. The same generic text is used on every parent type. It does not name another product's tools. `attach` and `import_attachment` link a file to the record as an attachment. They do not add that file as an item in a list on the record. When a record has its own action for a file or image list, that action is the one that adds a listed item.
 
-A host gem can set title, summary, and description for one recordable type without changing other types or the generic `CREATE_UPLOAD_COPY` / `ATTACH_COPY` / `IMPORT_ATTACHMENT_COPY` strings:
+A host gem can set title, summary, and description for one recordable type without changing other types or the generic summary and description strings (`CREATE_UPLOAD_SUMMARY`, `CREATE_UPLOAD_COPY`, `ATTACH_SUMMARY`, `ATTACH_COPY`, `IMPORT_ATTACHMENT_SUMMARY`, `IMPORT_ATTACHMENT_COPY`):
 
 ```ruby
 RecordingStudioAttachable::Api.override_openapi(
@@ -340,7 +340,7 @@ Request logs filter `signed_blob_id` and `checksum`. This gem does not write the
 
 The disk service builds that URL from the current request host. This gem includes `ActiveStorage::SetCurrent` on `RecordingStudioApi::ApiController` so the host is set. An S3 service returns a presigned URL and does not use the app host.
 
-`attach` takes one file (`signed_blob_id`, and optional `name`, `description`, `caption`, `credit`, `alt_text`) or `attachments` as a list of those objects. The response is the new child attachment (`id`, `kind`, `name`, `urls`) or `{ attachments: [...] }` for a list.
+`attach` takes one file (`signed_blob_id`, and optional `name`, `description`, `caption`, `credit`, `alt_text`) or `attachments` as a list of those objects. The response is the new child attachment (`id`, `kind`, `name`, `urls.file`) or `{ attachments: [...] }` for a list. `kind` is `image` when the content type starts with `image/`, and `file` otherwise. `urls.file` is the delivery URL for the original file. The default `rails` mode returns the engine file path. `direct` mode returns the blob direct URL. The default batch cap is `config.max_file_count` (20).
 
 `import_attachment` takes `url`, and optional `name` and `description`. Set `config.import_allowed_hosts` to the HTTPS hosts the host app trusts. Private addresses, non-HTTPS URLs, and any other host are rejected. The fetch uses `SafeRemoteFetch`.
 

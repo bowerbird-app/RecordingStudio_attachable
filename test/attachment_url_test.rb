@@ -71,6 +71,14 @@ module RecordingStudioAttachable
       )
     end
 
+    def test_direct_urls_available_follows_the_configured_host
+      assert_equal false, RecordingStudioAttachable.direct_urls_available?
+
+      @configuration.direct_url_host = "images.featuredin.press"
+
+      assert_equal true, RecordingStudioAttachable.direct_urls_available?
+    end
+
     def test_direct_mode_raises_when_host_is_missing
       @configuration.url_mode = :direct
       @configuration.direct_url_host = nil

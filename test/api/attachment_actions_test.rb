@@ -340,6 +340,82 @@ class AttachmentActionsTest < Minitest::Test
     assert_match(/20/, attach.fetch(:attachments).fetch(:description))
   end
 
+  def test_openapi_for_states_the_type_rules_and_keeps_the_global_default
+    kit = "KitCover"
+    with_type_rules(kit, kit_cover_rules) do
+      upload = RecordingStudioAttachable::Api.openapi_for(type: kit, action: :create_upload)
+      attach = RecordingStudioAttachable::Api.openapi_for(type: kit, action: :attach)
+      default_upload = RecordingStudioAttachable::Api.openapi_for(type: "Workspace", action: :create_upload)
+      content_type = field_description(upload, :content_type)
+      byte_size = field_description(upload, :byte_size)
+      limits = RecordingStudioAttachable::Api::UploadRules.limits_paragraph(kit)
+
+      assert_includes content_type, "image/svg+xml"
+      assert_includes content_type, "allowed because it is named"
+      assert_includes byte_size, "10 MB"
+      assert_includes limits, "10 MB"
+      assert_includes limits, "Allowed kinds are image."
+      assert_includes upload.fetch(:description), limits
+      assert_includes attach.fetch(:description), limits
+      [content_type, byte_size, limits, upload.fetch(:description)].each do |text|
+        refute_match(/pdf/i, text)
+      end
+
+      assert_equal RecordingStudioAttachable::Api::AttachmentActions::CREATE_UPLOAD_COPY, default_upload.fetch(:description)
+      assert_nil default_upload[:request_body]
+      default_type = RecordingStudioAttachable::Api::AttachmentContracts.create_upload.dig(:fields, :content_type, :description)
+      assert_includes default_type, "image/*"
+      assert_includes default_type, "application/pdf"
+      assert_includes default_type, "image/svg+xml"
+      assert_includes default_type, "does not include"
+    end
+  end
+
+  def test_kit_cover_refuses_pdf_and_allows_svg_only_when_it_is_named
+    kit = "KitCover"
+    images_only = "ImagesOnly"
+
+    with_type_rules(kit, kit_cover_rules) do
+      created = nil
+      blob = FakeBlob.new(id: "blob-svg", persisted: true, purged: false)
+      ActiveStorage::Blob.stub(:create_before_direct_upload!, lambda { |**attributes|
+        created = attributes
+        blob
+      }) do
+        RecordingStudioAttachable::StorageLimit.stub(:with_storage_capacity!, ->(_root, _incoming, &block) { block.call }) do
+          RecordingStudioAttachable::DirectUpload.stub(:pending_count, 0) do
+            pdf = assert_raises(RecordingStudioApi::InvalidActionInputError) do
+              create_upload.call(context_for_type(kit, content_type: "application/pdf", byte_size: 12))
+            end
+            assert_includes pdf.message, "application/pdf"
+            assert_includes pdf.message, "not allowed"
+
+            ticket = create_upload.call(context_for_type(kit, content_type: "image/svg+xml", byte_size: 12))
+            assert_equal "image/svg+xml", created[:content_type]
+            assert_match(/\Asigned-attachable_upload-/, ticket[:signed_blob_id])
+
+            oversized = assert_raises(RecordingStudioApi::InvalidActionInputError) do
+              create_upload.call(context_for_type(kit, content_type: "image/svg+xml", byte_size: 10.megabytes + 1))
+            end
+            assert_includes oversized.message, "maximum file size"
+          end
+        end
+      end
+    end
+
+    with_type_rules(images_only, kit_cover_rules.merge(allowed_content_types: ["image/*"])) do
+      called = false
+      ActiveStorage::Blob.stub(:create_before_direct_upload!, ->(**) { called = true }) do
+        svg = assert_raises(RecordingStudioApi::InvalidActionInputError) do
+          create_upload.call(context_for_type(images_only, content_type: "image/svg+xml", byte_size: 12))
+        end
+        assert_includes svg.message, "image/svg+xml"
+        assert_includes svg.message, "not allowed"
+        assert_equal false, called
+      end
+    end
+  end
+
   def test_import_rejects_a_private_address_and_a_host_outside_the_allowlist
     @configuration.import_allowed_hosts = ["files.example.test"]
 
@@ -377,6 +453,44 @@ class AttachmentActionsTest < Minitest::Test
       recording: recording,
       actor: :actor,
       params: { filename: "photo.png", byte_size: byte_size, checksum: "checksum", content_type: content_type }
+    )
+  end
+
+  def kit_cover_rules
+    {
+      allowed_content_types: ["image/*", "image/svg+xml"],
+      max_file_size: 10.megabytes,
+      enabled_attachment_kinds: [:image]
+    }
+  end
+
+  def with_type_rules(type, rules)
+    studio = RecordingStudio
+    singleton = studio.singleton_class
+    singleton.send(:remove_method, :capability_options) if singleton.method_defined?(:capability_options)
+    studio.define_singleton_method(:capability_options) do |name, for_type: nil, **|
+      next rules if name.to_sym == :attachable && for_type.to_s == type
+
+      {}
+    end
+    yield
+  ensure
+    singleton = RecordingStudio.singleton_class
+    singleton.send(:remove_method, :capability_options) if singleton.method_defined?(:capability_options)
+    RecordingStudio.define_singleton_method(:capability_options) { |_name, _for_type: nil, **| {} }
+  end
+
+  def field_description(openapi, name)
+    openapi.dig(:request_body, :content, "application/json", :schema, :properties, name, :description)
+  end
+
+  def context_for_type(type, content_type:, byte_size:)
+    root = FakeRecording.new(id: "root-1", recordable_type: type)
+    recording = FakeRecording.new(id: "parent-1", recordable_type: type, root_recording: root)
+    FakeContext.new(
+      recording: recording,
+      actor: :actor,
+      params: { filename: "cover.svg", byte_size: byte_size, checksum: "checksum", content_type: content_type }
     )
   end
 

@@ -1,0 +1,70 @@
+# frozen_string_literal: true
+
+require "test_helper"
+
+class AttachmentPayloadTest < Minitest::Test
+  FakeAttachment = Struct.new(:attachment_kind, :name, :url, keyword_init: true) do
+    def original_url(mode: nil, rails_url: nil)
+      raise RecordingStudioAttachable::ConfigurationError, RecordingStudioAttachable::DirectUrl.missing_host_message if url == :missing
+
+      return "https://images.example.test/blob-key" if mode == :direct || url == :direct
+
+      rails_url
+    end
+  end
+  FakeRecording = Struct.new(:id, :recordable, keyword_init: true)
+
+  def setup
+    @previous = RecordingStudioAttachable.configuration
+    RecordingStudioAttachable.instance_variable_set(:@configuration, RecordingStudioAttachable::Configuration.new)
+  end
+
+  def teardown
+    RecordingStudioAttachable.instance_variable_set(:@configuration, @previous)
+  end
+
+  def test_authorized_viewer_receives_the_rails_file_url
+    payload = payload_for(actor_allowed: true, rails_url: "/attachments/9/file")
+
+    assert_equal "rec-9", payload[:id]
+    assert_equal "image", payload[:kind]
+    assert_equal "Cover", payload[:name]
+    assert_equal "/attachments/9/file", payload.dig(:urls, :file)
+    assert_equal %i[id kind name urls], payload.keys
+  end
+
+  def test_unauthorized_viewer_receives_no_file_url
+    attachment = FakeAttachment.new(attachment_kind: "image", name: "Cover", url: :missing)
+    recording = FakeRecording.new(id: "rec-9", recordable: attachment)
+
+    payload = RecordingStudioAttachable::Authorization.stub(:allowed?, false) do
+      RecordingStudioAttachable.attachment_payload(recording, actor: :stranger, url_mode: :direct)
+    end
+
+    assert_nil payload.dig(:urls, :file)
+    assert_equal "Cover", payload[:name]
+  end
+
+  def test_direct_mode_returns_the_host_url_and_raises_without_a_host
+    RecordingStudioAttachable.configuration.direct_url_host = "images.example.test"
+    hosted = payload_for(actor_allowed: true, url: :direct, url_mode: :direct, rails_url: "/attachments/9/file")
+    assert_equal "https://images.example.test/blob-key", hosted.dig(:urls, :file)
+
+    RecordingStudioAttachable.configuration.direct_url_host = nil
+    error = assert_raises(RecordingStudioAttachable::ConfigurationError) do
+      payload_for(actor_allowed: true, url: :missing, url_mode: :direct, rails_url: "/attachments/9/file")
+    end
+    assert_match(/direct_url_host must be set/, error.message)
+    assert_equal false, RecordingStudioAttachable.direct_urls_available?
+  end
+
+  private
+
+  def payload_for(actor_allowed:, rails_url:, url: nil, url_mode: nil)
+    attachment = FakeAttachment.new(attachment_kind: "image", name: "Cover", url: url)
+    recording = FakeRecording.new(id: "rec-9", recordable: attachment)
+    RecordingStudioAttachable::Authorization.stub(:allowed?, actor_allowed) do
+      RecordingStudioAttachable.attachment_payload(recording, actor: :viewer, url_mode: url_mode, rails_url: rails_url)
+    end
+  end
+end

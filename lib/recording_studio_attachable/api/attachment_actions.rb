@@ -129,11 +129,11 @@ module RecordingStudioAttachable
         end
 
         def one
-          Payload.one(Errors.finish!(Services::RecordAttachmentUpload.call(**single_arguments)))
+          Payload.one(Errors.finish!(Services::RecordAttachmentUpload.call(**single_arguments)), actor: context.actor)
         end
 
         def many
-          Payload.many(Errors.finish!(Services::RecordAttachmentUploads.call(**batch_arguments)))
+          Payload.many(Errors.finish!(Services::RecordAttachmentUploads.call(**batch_arguments)), actor: context.actor)
         end
 
         def single_arguments
@@ -175,7 +175,7 @@ module RecordingStudioAttachable
 
         def call
           @fetched = fetch
-          Payload.one(Errors.finish!(record))
+          Payload.one(Errors.finish!(record), actor: context.actor)
         ensure
           SafeRemoteFetch.close_io(@fetched&.io)
         end
@@ -295,26 +295,12 @@ module RecordingStudioAttachable
       module Payload
         module_function
 
-        def one(recording)
-          attachment = recording.recordable
-          {
-            id: recording.id,
-            kind: attachment.attachment_kind,
-            name: attachment.name,
-            urls: { file: file_url(recording, attachment) }
-          }
+        def one(recording, actor:)
+          RecordingStudioAttachable.attachment_payload(recording, actor: actor)
         end
 
-        def many(recordings)
-          { attachments: Array(recordings).map { |recording| one(recording) } }
-        end
-
-        def file_url(recording, attachment)
-          attachment.original_url(rails_url: file_path(recording))
-        end
-
-        def file_path(recording)
-          RecordingStudioAttachable::Engine.routes.url_helpers.attachment_file_path(recording)
+        def many(recordings, actor:)
+          { attachments: Array(recordings).map { |recording| one(recording, actor: actor) } }
         end
       end
 

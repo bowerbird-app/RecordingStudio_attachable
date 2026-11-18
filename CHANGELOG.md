@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-11-18
+
+### Added
+
+- `RecordingStudioAttachable.attachment_payload(recording, actor:, url_mode: nil, rails_url: nil)` returns the `attach` and `import_attachment` hash (`id`, `kind`, `name`, `urls.file`). `urls.file` is nil when `actor` cannot view the attachment.
+- `RecordingStudioAttachable.direct_urls_available?` is true when `config.direct_url_host` is set.
+
+### Changed
+
+- OpenAPI `content_type`, `byte_size`, and the limits paragraph for `create_upload`, `attach`, and `import_attachment` use that recordable type's Attachable options. A type with none of those options keeps the global default text. Upload enforcement is unchanged.
+- `attach` and `import_attachment` build their JSON with `attachment_payload`.
+- When `url_mode` is `:direct` and `direct_url_host` is blank, those API actions return 422 `configuration_error`. `original_url` and `DirectUrl.build` still raise `RecordingStudioAttachable::ConfigurationError`.
+
+### Upgrade Notes
+
+- Bump to `0.33.0`. There is no migration.
+- Build client payloads with `RecordingStudioAttachable.attachment_payload(recording, actor: viewer)`. Pass the attachment recording and the viewer.
+- Before `original_url(mode: :direct)`, call `RecordingStudioAttachable.direct_urls_available?`. Rescue `RecordingStudioAttachable::Error` around a direct URL call. `ArgumentError` does not catch a missing `direct_url_host`.
+- OpenAPI for a type with its own allow list, size, batch cap, or kinds now states those rules. `override_openapi` still replaces title, summary, and description for one type.
+
 ## [0.32.1] - 2026-11-17
 
 ### Fixed

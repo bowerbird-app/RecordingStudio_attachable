@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "upload_rules"
+
 module RecordingStudioAttachable
   module Api
     module OpenapiOverrides
@@ -21,7 +23,7 @@ module RecordingStudioAttachable
         def for(type:, action:)
           name = action.to_sym
           generic = GENERIC.fetch(name) { raise ArgumentError, "Unknown Attachable action #{action.inspect}" }
-          generic.merge(table.dig(type.to_s, name) || {})
+          UploadRules.apply(type, name, generic).merge(table.dig(type.to_s, name) || {})
         end
 
         def clear!

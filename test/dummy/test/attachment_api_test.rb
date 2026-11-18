@@ -223,11 +223,15 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     import_attachment = workspace_action(document, "import_attachment")
     actions = RecordingStudioAttachable::Api::AttachmentActions
     assert_equal actions::CREATE_UPLOAD_SUMMARY, create_upload.fetch("summary")
-    assert_equal actions::CREATE_UPLOAD_COPY, create_upload.fetch("description")
+    assert_includes create_upload.fetch("description"), "text/plain"
+    assert_includes create_upload.fetch("description"), "image/*"
+    assert_includes create_upload.fetch("description"), "application/pdf"
+    assert_includes create_upload.fetch("description"), "25 MB"
+    refute_includes create_upload.fetch("description"), "A parent record can set"
     assert_equal actions::ATTACH_SUMMARY, attach.fetch("summary")
-    assert_equal actions::ATTACH_COPY, attach.fetch("description")
+    assert_includes attach.fetch("description"), "text/plain"
     assert_equal actions::IMPORT_ATTACHMENT_SUMMARY, import_attachment.fetch("summary")
-    assert_equal actions::IMPORT_ATTACHMENT_COPY, import_attachment.fetch("description")
+    assert_includes import_attachment.fetch("description"), "text/plain"
     [create_upload, attach, import_attachment].each do |operation|
       shown = [operation.fetch("summary"), operation.fetch("description")].join("\n\n")
       assert_equal 1, shown.scan(operation.fetch("description")).size
@@ -250,9 +254,11 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     upload_fields = create_upload.dig("requestBody", "content", "application/json", "schema", "properties")
     contract = RecordingStudioAttachable::Api::AttachmentContracts.create_upload.fetch(:fields)
     assert_equal contract.dig(:filename, :description), upload_fields.dig("filename", "description")
-    assert_equal contract.dig(:byte_size, :description), upload_fields.dig("byte_size", "description")
     assert_equal contract.dig(:checksum, :description), upload_fields.dig("checksum", "description")
-    assert_equal contract.dig(:content_type, :description), upload_fields.dig("content_type", "description")
+    assert_includes upload_fields.dig("byte_size", "description"), "25 MB"
+    assert_includes upload_fields.dig("content_type", "description"), "text/plain"
+    assert_includes upload_fields.dig("content_type", "description"), "image/* does not include image/svg+xml"
+    refute_includes upload_fields.dig("content_type", "description"), "A parent record can set its own list"
     attach_fields = attach.dig("requestBody", "content", "application/json", "schema", "properties")
     import_fields = import_attachment.dig("requestBody", "content", "application/json", "schema", "properties")
     %w[signed_blob_id name description caption credit alt_text attachments].each do |field|
@@ -330,7 +336,63 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     RecordingStudioAttachable::Api::OpenapiOverrides.clear!
   end
 
+  test "attachment_payload omits the file url when the viewer cannot see the recording" do
+    bytes = png_bytes
+    created = upload_ticket("photo.png", "image/png", bytes)
+    put_upload(created, bytes)
+    attached = call(:post, "/workspaces/#{@root.id}/actions/attach", @editor_token, signed_blob_id: created.fetch("signed_blob_id"), name: "Door")
+    assert_response :success
+    recording = RecordingStudio::Recording.find(attached.fetch("id"))
+    stranger = user("stranger")
+
+    hidden = RecordingStudioAttachable.attachment_payload(recording, actor: stranger)
+    visible = RecordingStudioAttachable.attachment_payload(recording, actor: @editor)
+
+    assert_nil hidden.dig(:urls, :file)
+    assert_equal "Door", hidden[:name]
+    assert visible.dig(:urls, :file).present?
+    assert_equal attached.dig("urls", "file"), visible.dig(:urls, :file)
+  end
+
+  test "direct mode returns the host url and a configuration error when the host is blank" do
+    configuration = RecordingStudioAttachable.configuration
+    previous_mode = configuration.url_mode
+    previous_host = configuration.direct_url_host
+    bytes = png_bytes
+    created = upload_ticket("photo.png", "image/png", bytes)
+    put_upload(created, bytes)
+    signed_id = created.fetch("signed_blob_id")
+
+    configuration.url_mode = :direct
+    configuration.direct_url_host = "images.example.test"
+    assert_equal true, RecordingStudioAttachable.direct_urls_available?
+    hosted = call(:post, "/workspaces/#{@root.id}/actions/attach", @editor_token, signed_blob_id: signed_id, name: "Door")
+    assert_response :success, response.body
+    assert_equal "https://images.example.test/#{stored_blob_key(signed_id)}", hosted.dig("urls", "file")
+
+    configuration.direct_url_host = nil
+    assert_equal false, RecordingStudioAttachable.direct_urls_available?
+    second = upload_ticket("other.png", "image/png", bytes)
+    put_upload(second, bytes)
+    call(:post, "/workspaces/#{@root.id}/actions/attach", @editor_token, signed_blob_id: second.fetch("signed_blob_id"), name: "Other")
+    assert_response :unprocessable_entity
+    assert_equal "configuration_error", json.dig("error", "code")
+    assert_includes json.dig("error", "message"), "direct_url_host must be set"
+
+    error = assert_raises(RecordingStudioAttachable::ConfigurationError) do
+      RecordingStudioAttachable::DirectUrl.build("blob-key")
+    end
+    assert_match(/direct_url_host must be set/, error.message)
+  ensure
+    configuration.url_mode = previous_mode
+    configuration.direct_url_host = previous_host
+  end
+
   private
+
+  def stored_blob_key(signed_id)
+    ActiveStorage::Blob.find_signed!(signed_id, purpose: RecordingStudioAttachable::DirectUpload::PURPOSE).key
+  end
 
   def workspace_action(document, action_name)
     path = document.fetch("paths").keys.find do |key|

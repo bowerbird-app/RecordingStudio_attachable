@@ -286,9 +286,9 @@ class AttachmentActionsTest < Minitest::Test
     fields = contract.fetch(:fields)
 
     assert_equal "The file name to store, such as cover.jpg. Required. Send the name you want on the blob.", fields.dig(:filename, :description)
-    assert_equal "The file size in bytes. Required. Use zero or more, and stay within the size cap. The default cap is 25 MB (config.max_file_size). A parent record can set a lower cap.", fields.dig(:byte_size, :description)
+    assert_equal "The file size in bytes. Required. Use zero or more. It must match this record type's allowed content types and size and count limits, as shown in the action description.", fields.dig(:byte_size, :description)
     assert_equal "MD5 checksum of the file bytes, Base64-encoded, as Active Storage expects. Required. Compute it from the bytes before you call create_upload.", fields.dig(:checksum, :description)
-    assert_equal "The file type, such as image/png or application/pdf. Required. The default allow list is image/* and application/pdf. image/* does not include image/svg+xml unless that exact type is named in the allow list. A parent record can set its own list.", fields.dig(:content_type, :description)
+    assert_equal "The file's content type. Required. It must match this record type's allowed content types and size and count limits, as shown in the action description. image/* does not include image/svg+xml unless that exact type is named in the allow list.", fields.dig(:content_type, :description)
   end
 
   def test_tool_description_is_printed_once_and_covers_inputs_and_returns
@@ -336,8 +336,8 @@ class AttachmentActionsTest < Minitest::Test
     assert_includes import.fetch(:url).fetch(:description), "HTTPS"
     assert_includes import.fetch(:url).fetch(:description), "import_allowed_hosts"
     assert_match(%r{image/svg\+xml}, upload.fetch(:content_type).fetch(:description))
-    assert_match(/25 MB/, upload.fetch(:byte_size).fetch(:description))
-    assert_match(/20/, attach.fetch(:attachments).fetch(:description))
+    refute_includes upload.fetch(:byte_size).fetch(:description), "25 MB"
+    refute_includes attach.fetch(:attachments).fetch(:description), "20 files"
   end
 
   def test_openapi_for_states_the_type_rules_and_keeps_the_global_default
@@ -364,10 +364,45 @@ class AttachmentActionsTest < Minitest::Test
       assert_equal RecordingStudioAttachable::Api::AttachmentActions::CREATE_UPLOAD_COPY, default_upload.fetch(:description)
       assert_nil default_upload[:request_body]
       default_type = RecordingStudioAttachable::Api::AttachmentContracts.create_upload.dig(:fields, :content_type, :description)
-      assert_includes default_type, "image/*"
-      assert_includes default_type, "application/pdf"
+      refute_includes default_type, "application/pdf"
       assert_includes default_type, "image/svg+xml"
       assert_includes default_type, "does not include"
+    end
+  end
+
+  def test_static_upload_fields_omit_default_mime_and_size
+    note = "this record type's allowed content types and size and count limits, as shown in the action description"
+    fields = {
+      content_type: RecordingStudioAttachable::Api::AttachmentContracts.create_upload.dig(:fields, :content_type, :description),
+      byte_size: RecordingStudioAttachable::Api::AttachmentContracts.create_upload.dig(:fields, :byte_size, :description),
+      attachments: RecordingStudioAttachable::Api::AttachmentContracts.attach.dig(:fields, :attachments, :description)
+    }
+
+    assert_equal "List of files to attach in one call. Each item has signed_blob_id from its own create_upload call, plus optional name, description, caption, credit, and alt_text. Send this or signed_blob_id, not both. It must match this record type's allowed content types and size and count limits, as shown in the action description.", fields.fetch(:attachments)
+
+    fields.each do |name, text|
+      refute_includes text, "application/pdf", "#{name} names application/pdf"
+      refute_includes text, "25 MB", "#{name} names the default size"
+      refute_includes text, "20 files", "#{name} names the default count"
+      refute_match(/default (allow|cap|size)/i, text, "#{name} states a default")
+      assert_includes text, note, "#{name} does not point at the action description"
+    end
+  end
+
+  def test_per_record_upload_text_follows_an_images_only_record
+    type = "PressKit"
+    with_type_rules(type, images_only_rules) do
+      upload = RecordingStudioAttachable::Api.openapi_for(type: type, action: :create_upload)
+      attach = RecordingStudioAttachable::Api.openapi_for(type: type, action: :attach)
+      content_type = field_description(upload, :content_type)
+      byte_size = field_description(upload, :byte_size)
+      attachments = field_description(attach, :attachments)
+      texts = [content_type, byte_size, attachments, upload.fetch(:description), attach.fetch(:description)]
+
+      assert_includes content_type, "This record allows image/*."
+      assert_includes byte_size, "The size cap is 8 MB."
+      assert_includes attachments, "A batch can include up to 3 files."
+      texts.each { |text| refute_includes text, "application/pdf" }
     end
   end
 
@@ -460,6 +495,15 @@ class AttachmentActionsTest < Minitest::Test
     {
       allowed_content_types: ["image/*", "image/svg+xml"],
       max_file_size: 10.megabytes,
+      enabled_attachment_kinds: [:image]
+    }
+  end
+
+  def images_only_rules
+    {
+      allowed_content_types: ["image/*"],
+      max_file_size: 8.megabytes,
+      max_file_count: 3,
       enabled_attachment_kinds: [:image]
     }
   end

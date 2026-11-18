@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.33.1] - 2026-11-18
+
+### Fixed
+
+- Static `content_type`, `byte_size`, and `attachments` field text no longer names `application/pdf`, 25 MB, or 20 files. Each field says the value must match this record type's allowed content types and size and count limits, as shown in the action description. Upload checks are unchanged. The per-record OpenAPI request body from 0.33.0 is unchanged.
+
+### Upgrade Notes
+
+- none
+
 ## [0.33.0] - 2026-11-18
 
 ### Added

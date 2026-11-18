@@ -4,7 +4,6 @@ module RecordingStudioAttachable
   module Api
     module UploadRuleText
       EXAMPLE = "such as a PDF, an image, or a document"
-      BATCH_CAP = "The default cap is 20 files (config.max_file_count). A parent record can set a lower cap."
       EXAMPLES = {
         "image/*" => "an image",
         "image/svg+xml" => "an SVG",
@@ -34,8 +33,7 @@ module RecordingStudioAttachable
       end
 
       def attachments(type)
-        cap = batch_sentence(UploadRules.value(type, :max_file_count))
-        AttachmentCopy::Fields::ATTACH.dig(:attachments, :description).sub(BATCH_CAP, cap)
+        "#{AttachmentCopy::Fields::ATTACHMENTS_LEAD}#{batch_sentence(UploadRules.value(type, :max_file_count))}"
       end
 
       def limits_paragraph(type)

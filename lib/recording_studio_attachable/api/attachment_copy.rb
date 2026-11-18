@@ -62,6 +62,13 @@ module RecordingStudioAttachable
       end
 
       module Fields
+        RECORD_LIMIT_NOTE =
+          "It must match this record type's allowed content types and size and count limits, " \
+          "as shown in the action description."
+        ATTACHMENTS_LEAD =
+          "List of files to attach in one call. Each item has signed_blob_id from its own " \
+          "create_upload call, plus optional name, description, caption, credit, and alt_text. " \
+          "Send this or signed_blob_id, not both. "
         CREATE_UPLOAD = {
           filename: {
             type: :string, required: true, allow_blank: false,
@@ -69,8 +76,7 @@ module RecordingStudioAttachable
           },
           byte_size: {
             type: :integer, required: true,
-            description: "The file size in bytes. Required. Use zero or more, and stay within the size cap. " \
-                         "The default cap is 25 MB (config.max_file_size). A parent record can set a lower cap."
+            description: "The file size in bytes. Required. Use zero or more. #{RECORD_LIMIT_NOTE}".freeze
           },
           checksum: {
             type: :string, required: true, allow_blank: false,
@@ -79,10 +85,8 @@ module RecordingStudioAttachable
           },
           content_type: {
             type: :string, required: true, allow_blank: false,
-            description: "The file type, such as image/png or application/pdf. Required. " \
-                         "The default allow list is image/* and application/pdf. " \
-                         "image/* does not include image/svg+xml unless that exact type is named in the allow list. " \
-                         "A parent record can set its own list."
+            description: "The file's content type. Required. #{RECORD_LIMIT_NOTE} " \
+                         "image/* does not include image/svg+xml unless that exact type is named in the allow list.".freeze
           }
         }.freeze
         ATTACH = {
@@ -114,10 +118,7 @@ module RecordingStudioAttachable
           },
           attachments: {
             type: :array, required: false,
-            description: "List of files to attach in one call. Each item has signed_blob_id from its own " \
-                         "create_upload call, plus optional name, description, caption, credit, and alt_text. " \
-                         "Send this or signed_blob_id, not both. The default cap is 20 files " \
-                         "(config.max_file_count). A parent record can set a lower cap."
+            description: "#{ATTACHMENTS_LEAD}#{RECORD_LIMIT_NOTE}".freeze
           }
         }.freeze
         IMPORT = {

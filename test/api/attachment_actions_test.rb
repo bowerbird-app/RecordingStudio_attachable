@@ -399,9 +399,9 @@ class AttachmentActionsTest < Minitest::Test
       attachments = field_description(attach, :attachments)
       texts = [content_type, byte_size, attachments, upload.fetch(:description), attach.fetch(:description)]
 
-      assert_includes content_type, "This record allows image/*."
-      assert_includes byte_size, "The size cap is 8 MB."
-      assert_includes attachments, "A batch can include up to 3 files."
+      assert_equal "The file type, such as image/png. Required. This record allows image/*. image/* does not include image/svg+xml.", content_type
+      assert_equal "The file size in bytes. Required. Use zero or more. The size cap is 8 MB.", byte_size
+      assert_equal "List of files to attach in one call. Each item has signed_blob_id from its own create_upload call, plus optional name, description, caption, credit, and alt_text. Send this or signed_blob_id, not both. A batch can include up to 3 files.", attachments
       texts.each { |text| refute_includes text, "application/pdf" }
     end
   end

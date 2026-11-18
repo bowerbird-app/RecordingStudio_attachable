@@ -24,6 +24,14 @@ module RecordingStudioAttachable
     def configure
       yield(configuration) if block_given?
     end
+
+    def attachment_payload(recording, actor:, url_mode: nil, rails_url: nil)
+      AttachmentPayload.build(recording, actor: actor, url_mode: url_mode, rails_url: rails_url)
+    end
+
+    def direct_urls_available?
+      configuration.direct_url_host.present?
+    end
   end
 end
 
@@ -37,6 +45,7 @@ require "recording_studio_attachable/image_limits"
 require "recording_studio_attachable/image_size"
 require "recording_studio_attachable/direct_url"
 require "recording_studio_attachable/attachment_urls"
+require "recording_studio_attachable/attachment_payload"
 require "recording_studio_attachable/attachment_file_button"
 require "recording_studio_attachable/attachment_file_facts"
 require "recording_studio_attachable/attachment_collection"

@@ -312,7 +312,7 @@ RecordingStudioApi.register_recordable_type_api(
 
 A type that leaves those names off `capability_actions` does not show the actions in OpenAPI. Calling one returns the Recording Studio API's unsupported-action response.
 
-The three actions are different steps. `create_upload` prepares a direct upload and returns an upload URL plus a `signed_blob_id`; it adds nothing to the record yet. `attach` links already-uploaded blobs to the record and comes from RecordingStudio Attachable. `import_attachment` fetches a file from a URL and attaches it. The parent record must already exist. OpenAPI titles are type-neutral (`Upload`, `Attach`, `Import`). Each action has a short summary and a longer description. Public MCP docs print the summary and then the description, so the description is not copied into the summary. The description says what the action does, when to call it, each input and where the value comes from, the fields it returns, and the limits. The same generic text is used on every parent type. It does not name another product's tools. `attach` and `import_attachment` link a file to the record as an attachment. They do not add that file as an item in a list on the record. When a record has its own action for a file or image list, that action is the one that adds a listed item.
+The three actions are different steps. `create_upload` prepares a direct upload and returns an upload URL plus a `signed_blob_id`; it adds nothing to the record yet. `attach` links already-uploaded blobs to the record and comes from RecordingStudio Attachable. `import_attachment` fetches a file from a URL and attaches it. The parent record must already exist. OpenAPI titles are type-neutral (`Upload`, `Attach`, `Import`). Each action has a short summary and a longer description. Public MCP docs print the summary and then the description, so the description is not copied into the summary. The description says what the action does, when to call it, each input and where the value comes from, the fields it returns, and the limits. `content_type`, `byte_size`, and the limits paragraph come from that recordable type's Attachable options (`allowed_content_types`, `max_file_size`, `max_file_count`, and `enabled_attachment_kinds`). A missing option uses the global config. A type with none of those options keeps the global default text (`image/*` and `application/pdf`, 25 MB, 20 files per batch). `image/*` does not include `image/svg+xml` unless that type is named. The text does not name another product's tools. `attach` and `import_attachment` link a file to the record as an attachment. They do not add that file as an item in a list on the record. When a record has its own action for a file or image list, that action is the one that adds a listed item.
 
 A host gem can set title, summary, and description for one recordable type without changing other types or the generic summary and description strings (`CREATE_UPLOAD_SUMMARY`, `CREATE_UPLOAD_COPY`, `ATTACH_SUMMARY`, `ATTACH_COPY`, `IMPORT_ATTACHMENT_SUMMARY`, `IMPORT_ATTACHMENT_COPY`):
 
@@ -328,7 +328,14 @@ RecordingStudioAttachable::Api.override_openapi(
 
 `RecordingStudioAttachable::Api.openapi_for(type:, action:)` returns the merged hash for that type. Attachable registers that method as `openapi_for:` on each capability action, so Recording Studio API OpenAPI and the MCP catalog use the per-type copy. Leave the hook unset to keep the generic copy. Requires `recording_studio_api >= 1.1.0, < 2.0`.
 
-`import_attachment` 200 is the `Payload.one` shape: `id`, `kind`, `name`, `urls.file`. `create_upload` 200 is the DirectUpload ticket: `signed_blob_id`, `upload.url`, `upload.headers`, `expires_at`.
+`import_attachment` 200 and a single `attach` 200 use `RecordingStudioAttachable.attachment_payload`. The hash is `id`, `kind`, `name`, and `urls.file`. `create_upload` 200 is the DirectUpload ticket: `signed_blob_id`, `upload.url`, `upload.headers`, `expires_at`.
+
+```ruby
+RecordingStudioAttachable.attachment_payload(attachment_recording, actor: viewer)
+RecordingStudioAttachable.attachment_payload(attachment_recording, actor: viewer, url_mode: :direct)
+```
+
+`recording` is the attachment recording. `actor` is the viewer. `urls.file` follows `config.url_mode`, or `url_mode:` when you pass it. The value is nil when that viewer cannot view the attachment. Omit `rails_url:` and the helper uses the engine file route. Pass `rails_url:` when you already have that path. `attach` and `import_attachment` call this method. Do not build the hash by hand.
 
 `create_upload` takes `filename`, `byte_size`, `checksum`, and `content_type`. The checksum is the base64 MD5 of the bytes. The response is `signed_blob_id`, `upload` (`url` and `headers`), and `expires_at`. PUT the bytes to `upload.url` with `upload.headers`. The signed id uses the `:attachable_upload` purpose and expires after `config.direct_upload_expires_in` (default 5 minutes). It is bound to the parent recording and the actor that asked for it. `attach` accepts it once, and only while the blob is still unattached. The file bytes are sniffed and must match the declared content type.
 
@@ -389,7 +396,9 @@ attachment.original_url(mode: :direct, rails_url: file_path)
 attachment.url_for_variant(:med, mode: :direct, rails_url: preview_path)
 ```
 
-`rails_url:` is required in `:rails` mode. In `:direct` mode it is the fallback when a named variant is not processed yet: the gem returns that authorized Rails preview path and enqueues preprocessing, rather than pointing at the original's direct URL (which would be the wrong size). For a processed resize, direct mode always uses the variant_record's image blob key, never the original blob key. Studio UI helpers keep Rails paths unless the host sets `config.url_mode = :direct`.
+`rails_url:` is required in `:rails` mode. In `:direct` mode it is the fallback when a named variant is not processed yet. The gem returns that authorized Rails preview path and enqueues preprocessing, rather than pointing at the original's direct URL (which would be the wrong size). For a processed resize, direct mode always uses the variant record's image blob key, never the original blob key. Studio UI helpers keep Rails paths unless the host sets `config.url_mode = :direct`.
+
+`RecordingStudioAttachable.direct_urls_available?` is true when `config.direct_url_host` is present. Call it before `original_url(mode: :direct)`, `url_for_variant(name, mode: :direct)`, or `attachment_payload(..., url_mode: :direct)`. A missing host raises `RecordingStudioAttachable::ConfigurationError`. That class inherits `RecordingStudioAttachable::Error`. Rescue `RecordingStudioAttachable::Error`, or use the predicate. `ArgumentError` does not cover a missing host. API `attach` and `import_attachment` turn that error into HTTP 422 with code `configuration_error` and the same message. A direct Ruby call still raises.
 
 ### Attachment image picker
 

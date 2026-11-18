@@ -15,9 +15,22 @@ module RecordingStudioAttachable
       OpenapiOverrides.for(type: type, action: action)
     end
 
+    def install_configuration_error!
+      return unless defined?(::RecordingStudioApi::ApiController)
+
+      controller = ::RecordingStudioApi::ApiController
+      name = "RecordingStudioAttachable::ConfigurationError"
+      return if controller.rescue_handlers.any? { |registered, _handler| registered == name }
+
+      controller.rescue_from(RecordingStudioAttachable::ConfigurationError) do |error|
+        render_error(code: "configuration_error", message: error.message, status: :unprocessable_entity)
+      end
+    end
+
     def register!(apis: [:public])
       return unless defined?(::RecordingStudioApi)
 
+      install_configuration_error!
       Array(apis).each { |api| AttachmentActions.register!(api) }
     end
 

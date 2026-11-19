@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-11-19
+
+### Changed
+
+- Development and dummy pins move to Recording Studio `v7.8.0`, Flatpack `v0.2.0`, Accessible `v0.58.0`, API `v1.21.2`, Icons `v0.5.0`, Logs `v0.9.0`, Moveable `v6.1.0`, Trashable `v1.3.0`, and Metrics `v0.10.0`.
+- Dummy pins move to Cache `v0.8.0`, Orderable `v0.12.0`, and Admin `v2.20.0`. Google Drive stays `v0.7.0`. Dropbox stays `v0.6.3`. Oauth stays `v0.25.1`. Site Settings stays `v0.6.0`.
+
+### Upgrade Notes
+
+- Bump to `0.34.0`. This gem adds no migration of its own.
+- Hosts MUST run the Recording Studio 7.4, 7.5 and 7.7 migrations if they have not.
+- flat_pack 0.2.0 is supported; hosts moving to 0.2 must remove the manual `flat_pack/heroicons` importmap pin and any `flat-pack--icon` controller registration.
+
 ## [0.33.2] - 2026-11-19
 
 ### Changed
@@ -848,7 +861,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.33.2...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.0...HEAD
+[0.34.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.33.2...v0.34.0
 [0.33.2]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.33.1...v0.33.2
 [0.33.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.33.0...v0.33.1
 [0.33.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.32.1...v0.33.0

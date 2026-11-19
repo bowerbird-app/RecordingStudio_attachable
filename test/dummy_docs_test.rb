@@ -207,10 +207,10 @@ class DummyDocsTest < Minitest::Test
     assert_includes controller_source, 'title: "Attachment picker modal"'
     assert_includes controller_source, 'title: "Attachment details"'
     assert_includes controller_source, 'title: "Default layout"'
-    assert_includes controller_source, "icon: :grid"
+    assert_includes controller_source, 'icon: :"squares-2x2"'
     assert_includes controller_source, "icon: :plus"
     assert_includes controller_source, "icon: :eye"
-    assert_includes controller_source, "icon: :layout"
+    assert_includes controller_source, 'icon: :"rectangle-group"'
     assert_includes controller_source, "Upload images and files"
     assert_includes controller_source, "Browse the attachment library and manage uploads with bulk remove actions."
     assert_includes controller_source,

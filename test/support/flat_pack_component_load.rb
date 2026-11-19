@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 # Unit tests load FlatPack components without booting Rails. Newer FlatPack
-# Grid and Card files expect these siblings first. A second require of Card
-# raises a superclass mismatch when another test already loaded it.
+# Grid, Card, and Clipboard files expect these siblings first. A second require
+# of Card raises a superclass mismatch when another test already loaded it.
 module FlatPackComponentLoad
   SHARED_EXTRAS = %w[
     app/components/flat_pack/shared/inline_svg.rb
@@ -21,7 +21,12 @@ module FlatPackComponentLoad
     app/components/flat_pack/button/form_submit.rb
   ].freeze
 
+  CLIPBOARD_EXTRAS = %w[
+    app/components/flat_pack/clipboard/state_icons.rb
+  ].freeze
+
   def self.require_component(root, path)
+    require_all(root, CLIPBOARD_EXTRAS) if path.end_with?("clipboard/quick_copy.rb")
     require_all(root, BUTTON_EXTRAS) if path.end_with?("button/component.rb")
     require_all(root, SHARED_EXTRAS) if path.end_with?("grid/component.rb") || path.end_with?("card/component.rb")
 

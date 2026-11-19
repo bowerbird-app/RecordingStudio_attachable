@@ -47,7 +47,8 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, ">Save<"
     assert_includes html, 'value="delete"'
     assert_includes html, ">Trash<"
-    assert_includes html, 'data-flat-pack--icon-name-value="trash"'
+    assert_includes html, "<svg"
+    assert_includes html, 'd="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21'
     assert_includes html, 'data-fp-style="danger"'
     assert_includes html, 'data-fp-style="default"'
     refute_includes html, 'data-fp-style="primary"'
@@ -82,7 +83,8 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, 'type="hidden"'
     assert_includes html, 'value="1"'
     assert_includes html, 'aria-label="Drag"'
-    assert_includes html, 'data-flat-pack--icon-name-value="bars-2"'
+    assert_includes html, "<svg"
+    assert_includes html, 'd="M3.75 9h16.5m-16.5 6.75h16.5"'
     refute_includes html, ">Order<"
     refute_includes html, ">Drag<"
   end
@@ -469,7 +471,8 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes html, 'action="/pointers/member-1'
     assert_includes html, 'name="attachment_collection[rows][][order]"'
     assert_includes html, 'aria-label="Drag"'
-    assert_includes html, 'data-flat-pack--icon-name-value="bars-2"'
+    assert_includes html, "<svg"
+    assert_includes html, 'd="M3.75 9h16.5m-16.5 6.75h16.5"'
     assert_includes html, 'aria-label="Edit Pier"'
     assert_includes html, 'data-modal-id="attachment-collection-parent-1-edit-member-1"'
     assert_includes html, "grid-cols-1"
@@ -549,7 +552,8 @@ class AttachmentCollectionsHelperTest < Minitest::Test
     assert_includes list_form, 'name="attachment_collection[rows][][order]"'
     assert_includes list_form, 'value="1"'
     assert_includes list_form, 'aria-label="Drag"'
-    assert_includes list_form, 'data-flat-pack--icon-name-value="bars-2"'
+    assert_includes list_form, "<svg"
+    assert_includes list_form, 'd="M3.75 9h16.5m-16.5 6.75h16.5"'
     refute_includes list_form, ">Order<"
     refute_includes list_form, ">Drag<"
     assert_match(/\bhidden(?:=|\s|>)/, list_form[/<form\b[^>]*>/])
@@ -634,6 +638,7 @@ class AttachmentCollectionsHelperTest < Minitest::Test
       app/components/flat_pack/button/pill/component.rb
       app/components/flat_pack/form_field/control_styles.rb
       app/components/flat_pack/form_field/component.rb
+      app/components/flat_pack/clipboard/state_icons.rb
       app/components/flat_pack/clipboard/quick_copy.rb
       app/components/flat_pack/text_input/component.rb
       app/components/flat_pack/tooltip/component.rb

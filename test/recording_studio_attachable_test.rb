@@ -4,7 +4,7 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.33.1", RecordingStudioAttachable::VERSION
+    assert_equal "0.33.2", RecordingStudioAttachable::VERSION
   end
 
   def test_recording_studio_dependency_is_7
@@ -14,7 +14,7 @@ class RecordingStudioAttachableTest < Minitest::Test
     dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
     root_lock = File.read(File.expand_path("../Gemfile.lock", __dir__))
     dummy_lock = File.read(File.expand_path("dummy/Gemfile.lock", __dir__))
-    pin = 'gem "recording_studio", github: "bowerbird-app/RecordingStudio", tag: "v7.3.0"'
+    pin = 'gem "recording_studio", github: "bowerbird-app/RecordingStudio", tag: "v7.7.2"'
 
     assert spec.version >= Gem::Version.new("7.0"),
            "expected recording_studio >= 7.0, got #{spec.version}"
@@ -23,8 +23,8 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes gemspec, 'spec.add_dependency "recording_studio", ">= 7.0", "< 8.0"'
     assert_includes root_gemfile, pin
     assert_includes dummy_gemfile, pin
-    assert_includes root_lock, "recording_studio (7.3.0)"
-    assert_includes dummy_lock, "recording_studio (7.3.0)"
+    assert_includes root_lock, "recording_studio (7.7.2)"
+    assert_includes dummy_lock, "recording_studio (7.7.2)"
   end
 
   def test_flat_pack_dependency_is_0_1_376_or_newer
@@ -34,17 +34,17 @@ class RecordingStudioAttachableTest < Minitest::Test
     dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
     root_lock = File.read(File.expand_path("../Gemfile.lock", __dir__))
     dummy_lock = File.read(File.expand_path("dummy/Gemfile.lock", __dir__))
-    pin = 'gem "flat_pack", github: "bowerbird-app/flatpack", tag: "v0.1.377"'
+    pin = 'gem "flat_pack", github: "bowerbird-app/flatpack", tag: "v0.1.380"'
 
     assert spec.version >= Gem::Version.new("0.1.376"),
            "expected flat_pack >= 0.1.376, got #{spec.version}"
     assert_includes gemspec, 'spec.add_dependency "flat_pack", ">= 0.1.376"'
     assert_includes root_gemfile, pin
     assert_includes dummy_gemfile, pin
-    assert_includes root_lock, "tag: v0.1.377"
-    assert_includes dummy_lock, "tag: v0.1.377"
-    assert_includes root_lock, "flat_pack (0.1.377)"
-    assert_includes dummy_lock, "flat_pack (0.1.377)"
+    assert_includes root_lock, "tag: v0.1.380"
+    assert_includes dummy_lock, "tag: v0.1.380"
+    assert_includes root_lock, "flat_pack (0.1.380)"
+    assert_includes dummy_lock, "flat_pack (0.1.380)"
   end
 
   def test_api_dependency_is_1_1
@@ -58,8 +58,8 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert spec.version < Gem::Version.new("2.0.0"),
            "expected recording_studio_api < 2.0, got #{spec.version}"
     assert_includes gemspec, 'spec.add_dependency "recording_studio_api", ">= 1.1.0", "< 2.0"'
-    assert_includes root_gemfile, 'tag: "v1.2.1"'
-    assert_includes dummy_gemfile, 'tag: "v1.2.1"'
+    assert_includes root_gemfile, 'tag: "v1.19.0"'
+    assert_includes dummy_gemfile, 'tag: "v1.19.0"'
   end
 
   def test_metrics_dependency_is_0_9_through_pre_1
@@ -73,8 +73,8 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert spec.version < Gem::Version.new("1.0.0"),
            "expected recording_studio_metrics < 1.0, got #{spec.version}"
     assert_includes gemspec, 'spec.add_dependency "recording_studio_metrics", ">= 0.9.0", "< 1.0"'
-    assert_includes root_gemfile, 'tag: "v0.9.0"'
-    assert_includes dummy_gemfile, 'tag: "v0.9.0"'
+    assert_includes root_gemfile, 'tag: "v0.9.2"'
+    assert_includes dummy_gemfile, 'tag: "v0.9.2"'
   end
 
   def test_provider_gems_are_not_runtime_dependencies
@@ -89,14 +89,18 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes dummy_gemfile, 'gem "recording_studio_google_drive"'
     assert_includes dummy_gemfile, "bowerbird-app/RecordingStudio_GoogleDrive\",\n    tag: \"v0.7.0\""
     assert_includes dummy_gemfile, 'gem "recording_studio_dropbox"'
-    assert_includes dummy_gemfile, "bowerbird-app/RecordingStudio_Dropbox\",\n    tag: \"v0.6.0\""
-    assert_includes dummy_gemfile, 'gem "recording_studio_oauth", github: "bowerbird-app/RecordingStudio_Oauth", tag: "v0.25.0"'
+    assert_includes dummy_gemfile, "bowerbird-app/RecordingStudio_Dropbox\",\n    tag: \"v0.6.3\""
+    assert_includes dummy_gemfile, 'gem "recording_studio_oauth", github: "bowerbird-app/RecordingStudio_Oauth", tag: "v0.25.1"'
     assert_includes dummy_gemfile, 'gem "recording_studio_site_settings", github: "bowerbird-app/RecordingStudio_site_settings", tag: "v0.6.0"'
-    assert_includes dummy_gemfile, 'gem "recording_studio_accessible", github: "bowerbird-app/RecordingStudio_accessible", tag: "v0.45.1"'
-    assert_includes dummy_gemfile, 'gem "recording_studio_trashable", github: "bowerbird-app/RecordingStudio_trashable", tag: "v1.0.1"'
-    assert_includes dummy_gemfile, 'gem "recording_studio_admin", github: "bowerbird-app/RecordingStudio_admin", tag: "v2.18.0"'
-    assert_includes dummy_gemfile, 'gem "recording_studio_moveable", github: "bowerbird-app/RecordingStudio_moveable", tag: "v6.0.0"'
-    assert_includes dummy_gemfile, 'gem "recording_studio_logs", github: "bowerbird-app/RecordingStudio_logs", tag: "v0.8.0"'
+    assert_includes dummy_gemfile, 'gem "recording_studio_accessible", github: "bowerbird-app/RecordingStudio_accessible", tag: "v0.55.0"'
+    assert_includes dummy_gemfile, 'gem "recording_studio_trashable", github: "bowerbird-app/RecordingStudio_trashable", tag: "v1.2.3"'
+    assert_includes dummy_gemfile, 'gem "recording_studio_admin", github: "bowerbird-app/RecordingStudio_admin", tag: "v2.19.1"'
+    assert_includes dummy_gemfile, 'gem "recording_studio_moveable", github: "bowerbird-app/RecordingStudio_moveable", tag: "v6.0.3"'
+    assert_includes dummy_gemfile, 'gem "recording_studio_logs", github: "bowerbird-app/RecordingStudio_logs", tag: "v0.8.2"'
+    assert_includes root_gemfile, 'gem "view_component", "~> 4.19"'
+    assert_includes dummy_gemfile, 'gem "view_component", "~> 4.19"'
+    assert_includes root_gemfile, 'gem "puma", "~> 8.1"'
+    assert_includes dummy_gemfile, 'gem "puma", "~> 8.1"'
     initializer = File.read(File.expand_path("dummy/config/initializers/recording_studio.rb", __dir__))
     assert_includes initializer, "config.authorize_write = ->(actor:, **) { actor.present? }"
     refute_includes initializer, "allow_unauthorized_writes"
@@ -108,6 +112,15 @@ class RecordingStudioAttachableTest < Minitest::Test
     refute_includes root_gemfile, "widen_recording_studio_requirement"
     refute_includes dummy_gemfile, "widen_recording_studio_requirement"
     refute File.exist?(File.expand_path("support/widen_recording_studio_requirement.rb", __dir__))
+    api_config = File.read(File.expand_path("dummy/config/recording_studio_api.yml", __dir__))
+    owner_migration = File.read(File.expand_path("dummy/db/migrate/20261119090000_add_owner_to_recording_studio_api_api_clients.rb", __dir__))
+    schema = File.read(File.expand_path("dummy/db/schema.rb", __dir__))
+    assert_includes api_config, "timeout: 5"
+    assert_includes owner_migration, "add_column :recording_studio_api_api_clients, :owner_type, :string"
+    assert_includes owner_migration, "add_column :recording_studio_api_api_clients, :owner_id, :uuid"
+    assert_includes schema, 't.string "owner_type"'
+    assert_includes schema, 't.uuid "owner_id"'
+    assert_includes schema, 'name: "index_rs_api_clients_on_owner"'
   end
 
   def test_root_suite_does_not_register_host_provider_gems

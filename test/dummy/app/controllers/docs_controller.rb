@@ -585,7 +585,7 @@ class DocsController < ApplicationController
         path: "recording_studio_attachable/recording_attachments/index.html.erb",
         description: "Browse the attachment library and manage uploads with bulk remove actions.",
         example: "Use it to review uploaded images, PDFs, and other attached files for a recording.",
-        icon: :grid
+        icon: :"squares-2x2"
       },
       {
         title: "Upload",
@@ -620,7 +620,7 @@ class DocsController < ApplicationController
         path: "recording_studio/default_layout",
         description: "Gem pages render in Recording Studio's default layout unless config.layout overrides it.",
         example: "Leave config.layout unset, or set a layout name, false, or a callable that takes controller:.",
-        icon: :layout
+        icon: :"rectangle-group"
       }
     ]
 

@@ -21,7 +21,8 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
 - RecordingStudio Metrics `>= 0.9.0, < 1.0` (CI tested with GitHub tag `v0.10.0`) for operations-API storage and upload metrics
-- RecordingStudio API `>= 1.1.0, < 2.0` (CI tested with GitHub tag `v1.21.2`)
+- RecordingStudio API `>= 1.1.0, < 2.0` (CI tested with GitHub tag `v1.21.3`)
+- RecordingStudio MCP `>= 0.43.4, < 0.45` (CI tested with GitHub tag `v0.44.0`) when the host mounts MCP. The engine registers named tools; hosts still list them on `include_tools`.
 - Optional cloud import: a separate provider gem that registers with `register_upload_provider`. Attachable does not depend on provider gems at runtime.
 
 ## Quick start
@@ -283,6 +284,16 @@ RecordingStudioAttachable::Api.register!(apis: [:public, :operations])
 ```
 
 Configure a named API before you pass it. `register!` reads `config.auth_role_for(:upload)` at that moment. `import_attachment` uses `config.auth_roles[:import]` when that key exists, and `:upload` otherwise.
+
+MCP 0.44 lists only named tools. The engine calls `RecordingStudioAttachable::McpCopy.register!`. Hosts splat the names onto the same APIs they passed to `Api.register!`:
+
+```ruby
+RecordingStudioMcp.register_server(:public, api: :public) do
+  include_tools(*RecordingStudioAttachable::McpCopy.tool_names)
+end
+```
+
+The three names are `create_upload`, `attach`, and `import_attachment`. They are typeless: send `type` and `id` of the parent record. Include generic `list` and `show` (or another typed tool) and `register_type` for each parent so those `type` values resolve. An operations server needs `allow_sensitive: true` when that named API marks the writes sensitive. Call `create_upload`, PUT the bytes, then `attach`. Use `import_attachment` when the file is already at an HTTPS URL. Do not include `capability_action` for these writes. Do not include the Metrics `attachments-*` tools from this gem; Metrics still owns those.
 
 3. Allow the actions on each parent type. Registration alone does not expose them.
 

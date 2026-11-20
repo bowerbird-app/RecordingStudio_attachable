@@ -4,20 +4,22 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.34.1", RecordingStudioAttachable::VERSION
+    assert_equal "0.34.2", RecordingStudioAttachable::VERSION
     changelog = File.read(File.expand_path("../CHANGELOG.md", __dir__))
     dummy_lock = File.read(File.expand_path("dummy/Gemfile.lock", __dir__))
     dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
     root_ruby = File.read(File.expand_path("../.ruby-version", __dir__))
     dummy_ruby = File.read(File.expand_path("dummy/.ruby-version", __dir__))
 
-    assert_includes changelog, "## [0.34.1]"
+    assert_includes changelog, "## [0.34.2]"
+    assert changelog.index("## [0.34.2]") < changelog.index("## [0.34.1]")
     assert changelog.index("## [0.34.1]") < changelog.index("## [0.34.0]")
     notes = changelog[changelog.index("## [0.34.1]")...changelog.index("## [0.34.0]")]
     assert_includes notes, "8.1.1"
     assert_includes notes, "3.3.14"
     assert_includes notes, "CVE-2026-132825"
     assert_includes notes, "Previous is `0.34.0`"
+    assert_includes changelog, "compare/v0.34.1...v0.34.2"
     assert_includes changelog, "compare/v0.34.0...v0.34.1"
     assert_includes dummy_gemfile, 'gem "brakeman", "8.1.1"'
     assert_includes dummy_lock, "brakeman (8.1.1)"
@@ -74,9 +76,27 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert spec.version < Gem::Version.new("2.0.0"),
            "expected recording_studio_api < 2.0, got #{spec.version}"
     assert_includes gemspec, 'spec.add_dependency "recording_studio_api", ">= 1.1.0", "< 2.0"'
-    pin = 'gem "recording_studio_api", "~> 1.21", github: "bowerbird-app/RecordingStudio_api", tag: "v1.21.2"'
+    pin = 'gem "recording_studio_api", "~> 1.21", github: "bowerbird-app/RecordingStudio_api", tag: "v1.21.3"'
     assert_includes root_gemfile, pin
     assert_includes dummy_gemfile, pin
+  end
+
+  def test_mcp_dependency_covers_0_44
+    gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
+    root_gemfile = File.read(File.expand_path("../Gemfile", __dir__))
+    dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
+    root_lock = File.read(File.expand_path("../Gemfile.lock", __dir__))
+    dummy_lock = File.read(File.expand_path("dummy/Gemfile.lock", __dir__))
+    pin = 'gem "recording_studio_mcp", ">= 0.43.4", "< 0.45", github: "bowerbird-app/RecordingStudio_MCP", tag: "v0.44.0"'
+
+    refute_includes gemspec, 'spec.add_dependency "recording_studio_mcp"'
+    assert_includes gemspec, "recording_studio_mcp cannot be a runtime dependency"
+    assert_includes root_gemfile, pin
+    assert_includes dummy_gemfile, pin
+    assert_includes root_lock, "recording_studio_mcp (0.44.0)"
+    assert_includes dummy_lock, "recording_studio_mcp (0.44.0)"
+    dummy_initializer = File.read(File.expand_path("dummy/config/initializers/recording_studio_mcp.rb", __dir__))
+    assert_includes dummy_initializer, "*RecordingStudioAttachable::McpCopy.tool_names"
   end
 
   def test_metrics_dependency_is_0_9_through_pre_1

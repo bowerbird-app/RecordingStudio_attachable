@@ -136,6 +136,17 @@ module RecordingStudioAttachable
     DestroyAttachmentChildren.register!
   end
 
+  Engine.initializer "recording_studio_attachable.mcp", after: "recording_studio_attachable.api" do
+    Engine.config.to_prepare do
+      if defined?(::RecordingStudioMcp::McpController) &&
+         !(::RecordingStudioMcp::McpController < ActiveStorage::SetCurrent)
+        ::RecordingStudioMcp::McpController.include ActiveStorage::SetCurrent
+      end
+
+      RecordingStudioAttachable::McpCopy.register!
+    end
+  end
+
   Engine.initializer "recording_studio_attachable.metrics" do
     Engine.config.to_prepare do
       require "recording_studio_attachable/metrics"

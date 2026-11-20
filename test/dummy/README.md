@@ -18,6 +18,7 @@ Use it to verify:
 - a host-added `:poster` image variant (and no explicit `preprocessed_variants`) so the default preprocess set (`small`/`med`/`large` plus host-added names) is what `/url_modes` demos; `:xlarge` stays unprocessed for the Rails-path fallback row
 - twenty press kit JPGs under `db/seed_images/`, portrait, square, and landscape, re-imported when Active Storage blobs are missing from the current Disk service
 - operations-API attachment metrics via RecordingStudio Metrics (`attachments.storage_used`, `uploads_over_time`, `by_kind`, `by_content_type`) authorized with AdminRoot `:view`. MCP `0.17.0` tool names replace the identifier's first dot with a hyphen. `from`, `to`, and `interval` apply only to `uploads_over_time`.
+- named MCP tools `create_upload`, `attach`, and `import_attachment` from `RecordingStudioAttachable::McpCopy.tool_names` on the dummy public and operations MCP servers
 
 Boot from `test/dummy`:
 

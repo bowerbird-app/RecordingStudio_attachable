@@ -23,7 +23,9 @@
     RecordingStudio MCP `0.17.0` then advertises `attachments-storage_used`,
     `attachments-uploads_over_time`, `attachments-by_kind`, and
     `attachments-by_content_type`. Only `attachments.uploads_over_time` takes
-    `from`, `to`, and `interval`.
+    `from`, `to`, and `interval`. For the upload, attach, and import writes,
+    MCP `0.44` needs `include_tools(*RecordingStudioAttachable::McpCopy.tool_names)`
+    on the same named APIs you passed to `Api.register!`.
 12. To leave Rails' anonymous `POST /rails/active_storage/direct_uploads` undrawn, rerun the generator with `--restrict-active-storage-routes`, or apply the same edits by hand. The flag is off by default. Existing apps keep Rails' routes.
     - Set `config.active_storage.draw_routes = false`.
     - Set `ActiveStorage.draw_routes = false` in that same class body. Devise reloads routes from `before_eager_load`, and Active Storage copies the config later. The module attribute is what that reload reads. Do not copy it from an initializer `before` edge. That edge reshuffles boot.

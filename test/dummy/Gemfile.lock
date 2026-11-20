@@ -28,6 +28,20 @@ GIT
       recording_studio_oauth (>= 0.22.0, < 1.0)
 
 GIT
+  remote: https://github.com/bowerbird-app/RecordingStudio_MCP.git
+  revision: f882b539d89531747648b473d301230539faa480
+  tag: v0.44.0
+  specs:
+    recording_studio_mcp (0.44.0)
+      rails (~> 8.1.0)
+      recording_studio (>= 7.0, < 8.0)
+      recording_studio_admin (>= 2.19.0, < 3.0)
+      recording_studio_api (>= 1.21.3, < 2.0)
+      recording_studio_logs (>= 0.8.0, < 1.0)
+      recording_studio_metrics (>= 0.9.0, < 1.0)
+      recording_studio_oauth (>= 0.22.0, < 1.0)
+
+GIT
   remote: https://github.com/bowerbird-app/RecordingStudio_Oauth.git
   revision: f419d92431db0ee65681855628bc195da236d3c3
   tag: v0.25.1
@@ -70,10 +84,10 @@ GIT
 
 GIT
   remote: https://github.com/bowerbird-app/RecordingStudio_api.git
-  revision: 758371de7752a7893d1614e6ea477b2f71c30063
-  tag: v1.21.2
+  revision: 02b8fd5062ed8a7cd451c67208017dd9f55f786d
+  tag: v1.21.3
   specs:
-    recording_studio_api (1.21.2)
+    recording_studio_api (1.21.3)
       flat_pack (>= 0.1.356, < 2.0)
       rails (~> 8.1.0)
       recording_studio (>= 7.7.0, < 8.0)
@@ -184,7 +198,7 @@ GIT
 PATH
   remote: ../..
   specs:
-    recording_studio_attachable (0.34.1)
+    recording_studio_attachable (0.34.2)
       flat_pack (>= 0.1.376)
       rails (~> 8.1.0)
       recording_studio (>= 7.0, < 8.0)
@@ -671,6 +685,7 @@ DEPENDENCIES
   recording_studio_google_drive!
   recording_studio_icons (~> 0.5)!
   recording_studio_logs (~> 0.9)!
+  recording_studio_mcp (>= 0.43.4, < 0.45)!
   recording_studio_metrics (~> 0.10)!
   recording_studio_moveable (~> 6.1)!
   recording_studio_oauth!
@@ -817,13 +832,14 @@ CHECKSUMS
   recording_studio (7.8.0)
   recording_studio_accessible (0.58.0)
   recording_studio_admin (2.20.0)
-  recording_studio_api (1.21.2)
-  recording_studio_attachable (0.34.1)
+  recording_studio_api (1.21.3)
+  recording_studio_attachable (0.34.2)
   recording_studio_cache (0.8.0)
   recording_studio_dropbox (0.6.3)
   recording_studio_google_drive (0.7.0)
   recording_studio_icons (0.5.0)
   recording_studio_logs (0.9.0)
+  recording_studio_mcp (0.44.0)
   recording_studio_metrics (0.10.0)
   recording_studio_moveable (6.1.0)
   recording_studio_oauth (0.25.1)

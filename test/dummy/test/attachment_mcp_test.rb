@@ -43,6 +43,11 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
     attach_props = properties(attach)
     import_props = properties(import)
 
+    [upload, attach, import].each do |tool|
+      schema = tool.fetch("inputSchema")
+      refute_empty schema
+      refute_empty schema.fetch("properties")
+    end
     %w[id type filename byte_size checksum content_type].each { |key| assert upload_props.key?(key), key }
     %w[id type signed_blob_id attachments name description caption credit alt_text].each do |key|
       assert attach_props.key?(key), key

@@ -19,6 +19,7 @@ class McpCopyTest < Minitest::Test
     assert_includes source, "name: action.to_s"
     assert_includes source, "action: action"
     refute_includes source, "type:"
+    refute_includes source, "type: \"\""
     refute_includes source, "RecordingStudioMcp.tool_name"
     refute_includes source, "capability_action"
   end

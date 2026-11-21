@@ -50,19 +50,14 @@ module RecordingStudioAttachable
     end
 
     def register_action_tool(action)
-      # MCP 0.44 treats a missing type as a generic tree tool and skips the API
-      # action lookup, so tools/list would only advertise id. A blank type keeps
-      # the action contract. The dispatcher still reads args["type"].
-      options = {
+      ::RecordingStudioMcp.register_tool(
         name: action.to_s,
         action: action,
         title: TITLES.fetch(action),
         description: DESCRIPTIONS.fetch(action),
-        input: input_for(action),
+        input: PROTOCOL_INPUT,
         output: OUTPUTS.fetch(action)
-      }
-      options[:type] = ""
-      ::RecordingStudioMcp.register_tool(**options)
+      )
     end
 
     def input_for(action)

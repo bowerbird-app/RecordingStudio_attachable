@@ -81,20 +81,20 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes dummy_gemfile, pin
   end
 
-  def test_mcp_dependency_covers_0_44
+  def test_mcp_dependency_covers_0_45_1
     gemspec = File.read(File.expand_path("../recording_studio_attachable.gemspec", __dir__))
     root_gemfile = File.read(File.expand_path("../Gemfile", __dir__))
     dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
     root_lock = File.read(File.expand_path("../Gemfile.lock", __dir__))
     dummy_lock = File.read(File.expand_path("dummy/Gemfile.lock", __dir__))
-    pin = 'gem "recording_studio_mcp", ">= 0.43.4", "< 0.45", github: "bowerbird-app/RecordingStudio_MCP", tag: "v0.44.0"'
+    pin = 'gem "recording_studio_mcp", ">= 0.45.1", "< 0.46", github: "bowerbird-app/RecordingStudio_MCP", tag: "v0.45.1"'
 
     refute_includes gemspec, 'spec.add_dependency "recording_studio_mcp"'
     assert_includes gemspec, "recording_studio_mcp cannot be a runtime dependency"
     assert_includes root_gemfile, pin
     assert_includes dummy_gemfile, pin
-    assert_includes root_lock, "recording_studio_mcp (0.44.0)"
-    assert_includes dummy_lock, "recording_studio_mcp (0.44.0)"
+    assert_includes root_lock, "recording_studio_mcp (0.45.1)"
+    assert_includes dummy_lock, "recording_studio_mcp (0.45.1)"
     dummy_initializer = File.read(File.expand_path("dummy/config/initializers/recording_studio_mcp.rb", __dir__))
     assert_includes dummy_initializer, "*RecordingStudioAttachable::McpCopy.tool_names"
   end

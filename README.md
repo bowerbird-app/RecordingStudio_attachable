@@ -22,7 +22,7 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - RecordingStudio Trashable installed if you want restore support for removed attachments
 - RecordingStudio Metrics `>= 0.9.0, < 1.0` (CI tested with GitHub tag `v0.10.0`) for operations-API storage and upload metrics
 - RecordingStudio API `>= 1.1.0, < 2.0` (CI tested with GitHub tag `v1.21.3`)
-- RecordingStudio MCP `>= 0.43.4, < 0.45` (CI tested with GitHub tag `v0.44.0`) when the host mounts MCP. The engine registers named tools; hosts still list them on `include_tools`.
+- RecordingStudio MCP `>= 0.45.1, < 0.46` (CI tested with GitHub tag `v0.45.1`) when the host mounts MCP. Typeless named tools need 0.45.1 so `tools/list` keeps the action `inputSchema`. The engine registers named tools; hosts still list them on `include_tools`.
 - Optional cloud import: a separate provider gem that registers with `register_upload_provider`. Attachable does not depend on provider gems at runtime.
 
 ## Quick start
@@ -285,7 +285,7 @@ RecordingStudioAttachable::Api.register!(apis: [:public, :operations])
 
 Configure a named API before you pass it. `register!` reads `config.auth_role_for(:upload)` at that moment. `import_attachment` uses `config.auth_roles[:import]` when that key exists, and `:upload` otherwise.
 
-MCP 0.44 lists only named tools. The engine calls `RecordingStudioAttachable::McpCopy.register!`. Hosts splat the names onto the same APIs they passed to `Api.register!`:
+MCP 0.45.1 lists only named tools and keeps the action `inputSchema` when `register_tool` omits `type`. The engine calls `RecordingStudioAttachable::McpCopy.register!` without `type`. Callers still send `type` and `id`. Hosts splat the names onto the same APIs they passed to `Api.register!`:
 
 ```ruby
 RecordingStudioMcp.register_server(:public, api: :public) do

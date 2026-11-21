@@ -14,7 +14,7 @@ gem "recording_studio_api", "~> 1.21", github: "bowerbird-app/RecordingStudio_ap
 gem "recording_studio_cache", "~> 0.8", github: "bowerbird-app/RecordingStudio_cache", tag: "v0.8.0"
 gem "recording_studio_icons", "~> 0.5", github: "bowerbird-app/RecordingStudio_icons", tag: "v0.5.0"
 gem "recording_studio_logs", "~> 0.9", github: "bowerbird-app/RecordingStudio_logs", tag: "v0.9.0"
-gem "recording_studio_mcp", ">= 0.43.4", "< 0.45", github: "bowerbird-app/RecordingStudio_MCP", tag: "v0.44.0"
+gem "recording_studio_mcp", ">= 0.45.1", "< 0.46", github: "bowerbird-app/RecordingStudio_MCP", tag: "v0.45.1"
 gem "recording_studio_metrics", "~> 0.10", github: "bowerbird-app/RecordingStudio_metrics", tag: "v0.10.0"
 gem "recording_studio_moveable", "~> 6.1", github: "bowerbird-app/RecordingStudio_moveable", tag: "v6.1.0"
 gem "recording_studio_oauth", github: "bowerbird-app/RecordingStudio_Oauth", tag: "v0.25.1"

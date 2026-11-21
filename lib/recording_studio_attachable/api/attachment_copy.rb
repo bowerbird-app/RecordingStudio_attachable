@@ -69,7 +69,12 @@ module RecordingStudioAttachable
           "List of files to attach in one call. Each item has signed_blob_id from its own " \
           "create_upload call, plus optional name, description, caption, credit, and alt_text. " \
           "Send this or signed_blob_id, not both. "
+        TYPE = {
+          type: :string, required: false, allow_blank: false,
+          description: "Public type of the parent record, such as Workspace. Call describe if you do not know it."
+        }.freeze
         CREATE_UPLOAD = {
+          type: TYPE,
           filename: {
             type: :string, required: true, allow_blank: false,
             description: "The file name to store, such as cover.jpg. Required. Send the name you want on the blob."
@@ -90,6 +95,7 @@ module RecordingStudioAttachable
           }
         }.freeze
         ATTACH = {
+          type: TYPE,
           signed_blob_id: {
             type: :string, required: false, allow_blank: true,
             description: "Signed id from create_upload, after you PUT the file bytes to upload.url. " \
@@ -122,6 +128,7 @@ module RecordingStudioAttachable
           }
         }.freeze
         IMPORT = {
+          type: TYPE,
           url: {
             type: :string, required: true, allow_blank: false,
             description: "Public HTTPS URL of the file to download. The host must be in " \

@@ -21,7 +21,8 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
 - RecordingStudio Metrics `>= 0.9.0, < 1.0` (CI tested with GitHub tag `v0.10.0`) for operations-API storage and upload metrics
-- RecordingStudio API `>= 1.1.0, < 2.0` (CI tested with GitHub tag `v1.21.2`)
+- RecordingStudio API `>= 1.1.0, < 2.0` (CI tested with GitHub tag `v1.21.3`)
+- RecordingStudio MCP `>= 0.45.1, < 0.46` (CI tested with GitHub tag `v0.45.1`) when the host mounts MCP. Typeless named tools need 0.45.1 so `tools/list` keeps the action `inputSchema`. The engine registers named tools; hosts still list them on `include_tools`.
 - Optional cloud import: a separate provider gem that registers with `register_upload_provider`. Attachable does not depend on provider gems at runtime.
 
 ## Quick start
@@ -284,6 +285,16 @@ RecordingStudioAttachable::Api.register!(apis: [:public, :operations])
 
 Configure a named API before you pass it. `register!` reads `config.auth_role_for(:upload)` at that moment. `import_attachment` uses `config.auth_roles[:import]` when that key exists, and `:upload` otherwise.
 
+MCP 0.45.1 lists only named tools and keeps the action `inputSchema` when `register_tool` omits `type`. The engine calls `RecordingStudioAttachable::McpCopy.register!` without `type`. Callers still send `type` and `id`. Hosts splat the names onto the same APIs they passed to `Api.register!`:
+
+```ruby
+RecordingStudioMcp.register_server(:public, api: :public) do
+  include_tools(*RecordingStudioAttachable::McpCopy.tool_names)
+end
+```
+
+The three names are `create_upload`, `attach`, and `import_attachment`. They are typeless: send `type` and `id` of the parent record. Include generic `list` and `show` (or another typed tool) and `register_type` for each parent so those `type` values resolve. An operations server needs `allow_sensitive: true` when that named API marks the writes sensitive. Call `create_upload`, PUT the bytes, then `attach`. Use `import_attachment` when the file is already at an HTTPS URL. Do not include `capability_action` for these writes. Do not include the Metrics `attachments-*` tools from this gem; Metrics still owns those.
+
 3. Allow the actions on each parent type. Registration alone does not expose them.
 
 ```ruby
@@ -345,7 +356,7 @@ Browser and API `create_upload` both call `RecordingStudioAttachable::DirectUplo
 
 Request logs filter `signed_blob_id` and `checksum`. This gem does not write the upload URL into a log line. The Recording Studio API request log stores allowlisted request params, not the response body.
 
-The disk service builds that URL from the current request host. This gem includes `ActiveStorage::SetCurrent` on `RecordingStudioApi::ApiController` so the host is set. An S3 service returns a presigned URL and does not use the app host.
+The disk service builds that URL from the current request host. This gem includes `ActiveStorage::SetCurrent` on `RecordingStudioApi::ApiController` and `RecordingStudioMcp::McpController` so the host is set. An S3 service returns a presigned URL and does not use the app host.
 
 `attach` takes one file (`signed_blob_id`, and optional `name`, `description`, `caption`, `credit`, `alt_text`) or `attachments` as a list of those objects. The response is the new child attachment (`id`, `kind`, `name`, `urls.file`) or `{ attachments: [...] }` for a list. `kind` is `image` when the content type starts with `image/`, and `file` otherwise. `urls.file` is the delivery URL for the original file. The default `rails` mode returns the engine file path. `direct` mode returns the blob direct URL. The default batch cap is `config.max_file_count` (20).
 

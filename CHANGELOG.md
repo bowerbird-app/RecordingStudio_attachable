@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.34.2] - 2026-11-21
+
+### Added
+
+- Named MCP tools `create_upload`, `attach`, and `import_attachment` via `RecordingStudioAttachable::McpCopy`. Recording Studio MCP 0.44 no longer lists capability actions as sidebar tools unless they are registered. The engine calls `McpCopy.register!` on `to_prepare` when MCP is loaded. Named tools omit `type` on `RecordingStudioMcp.register_tool`. Recording Studio MCP 0.45.1 looks up typeless registered actions and keeps `inputSchema`. Callers still send `type` and `id`. Auth is still Accessible `required_role`.
+
+### Upgrade Notes
+
+- Bump to `0.34.2`. This gem adds no migration of its own.
+- Hosts that mount MCP and use the named upload tools need `recording_studio_mcp` `>= 0.45.1, < 0.46` (CI tested with GitHub tag `v0.45.1`). MCP 0.45.1 needs `recording_studio_api` `>= 1.21.3`. This gem cannot list MCP in the gemspec: MCP depends on Oauth, Oauth depends on Site Settings, and Site Settings depends on Attachable.
+- Hosts that mount MCP splat `*RecordingStudioAttachable::McpCopy.tool_names` into `register_server` `include_tools` on the same named APIs they passed to `RecordingStudioAttachable::Api.register!` (default `:public`; `:operations` only when the host passed it). Do not call `McpCopy.register!` from the host; the engine already does. Do not include `capability_action` for these three writes. Metric tools stay on Metrics (`attachments-*`).
+
 ## [0.34.1] - 2026-11-21
 
 ### Changed
@@ -872,7 +884,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.1...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.2...HEAD
+[0.34.2]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.1...v0.34.2
 [0.34.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.0...v0.34.1
 [0.34.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.33.2...v0.34.0
 [0.33.2]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.33.1...v0.33.2

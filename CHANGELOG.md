@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.34.1] - 2026-11-21
+
+### Changed
+
+- Dummy Brakeman is `8.1.1`. `.ruby-version` at the gem root and in `test/dummy` is `3.3.14` so Brakeman 8.1.1 does not flag CVE-2026-132825 against Ruby 3.3.6. CI still uses ruby `'3.3'`.
+
+### Upgrade notes
+
+- Bump to `0.34.1`. Previous is `0.34.0`. This gem adds no migration of its own.
+- Run dummy `bin/brakeman` on Brakeman `8.1.1`. Point `.ruby-version` at `3.3.14`. Do not change the CI ruby line.
+
 ## [0.34.0] - 2026-11-19
 
 ### Changed
@@ -861,7 +872,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.0...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.1...HEAD
+[0.34.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.0...v0.34.1
 [0.34.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.33.2...v0.34.0
 [0.33.2]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.33.1...v0.33.2
 [0.33.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.33.0...v0.33.1

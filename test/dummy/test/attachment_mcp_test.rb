@@ -3,6 +3,7 @@
 require "test_helper"
 require "base64"
 require "digest"
+require "net/http"
 
 class AttachmentMcpTest < ActionDispatch::IntegrationTest
   setup do
@@ -18,10 +19,13 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
     @viewer_access = grant!(@viewer, :view)
     @editor_token = token_for(@editor_access)
     @viewer_token = token_for(@viewer_access)
+    @hosts = RecordingStudioAttachable.configuration.import_allowed_hosts.dup
+    RecordingStudioAttachable.configuration.import_allowed_hosts = ["files.example.test"]
   end
 
   teardown do
     Current.actor = @previous_actor
+    RecordingStudioAttachable.configuration.import_allowed_hosts = @hosts
   end
 
   test "named tools are listed with id type and action inputs" do
@@ -76,6 +80,77 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
       "tools/call",
       name: "create_upload",
       arguments: upload_arguments(bytes)
+    )
+    assert denied.dig("result", "isError"), denied.to_json
+  end
+
+  test "attach through the named tool records a child and Accessible denies a viewer" do
+    bytes = png_bytes
+    created = rpc(@editor_token, "tools/call", name: "create_upload", arguments: upload_arguments(bytes))
+    refute created.dig("result", "isError"), created.to_json
+    ticket = payload(created)
+    put_upload(ticket, bytes)
+
+    attached = rpc(
+      @editor_token,
+      "tools/call",
+      name: "attach",
+      arguments: {
+        type: "Workspace",
+        id: @root.id.to_s,
+        signed_blob_id: ticket.fetch("signed_blob_id"),
+        name: "Door"
+      }
+    )
+    refute attached.dig("result", "isError"), attached.to_json
+    row = payload(attached)
+    assert_equal "Door", row.fetch("name")
+    assert_equal "image", row.fetch("kind")
+    assert row.dig("urls", "file").present?
+
+    denied = rpc(
+      @viewer_token,
+      "tools/call",
+      name: "attach",
+      arguments: {
+        type: "Workspace",
+        id: @root.id.to_s,
+        signed_blob_id: ticket.fetch("signed_blob_id"),
+        name: "Nope"
+      }
+    )
+    assert denied.dig("result", "isError"), denied.to_json
+  end
+
+  test "import_attachment through the named tool fetches a url and Accessible denies a viewer" do
+    with_fetch(png_bytes, content_type: "image/png") do
+      imported = rpc(
+        @editor_token,
+        "tools/call",
+        name: "import_attachment",
+        arguments: {
+          type: "Workspace",
+          id: @root.id.to_s,
+          url: "https://files.example.test/door.png",
+          name: "Door"
+        }
+      )
+      refute imported.dig("result", "isError"), imported.to_json
+      row = payload(imported)
+      assert_equal "Door", row.fetch("name")
+      assert_equal "image", row.fetch("kind")
+    end
+
+    denied = rpc(
+      @viewer_token,
+      "tools/call",
+      name: "import_attachment",
+      arguments: {
+        type: "Workspace",
+        id: @root.id.to_s,
+        url: "https://files.example.test/secret.png",
+        name: "Secret"
+      }
     )
     assert denied.dig("result", "isError"), denied.to_json
   end
@@ -162,8 +237,56 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
 
   def payload(body)
     structured = body.dig("result", "structuredContent")
-    return structured if structured.is_a?(Hash) && structured["signed_blob_id"]
+    return structured if structured.is_a?(Hash) && (structured["signed_blob_id"] || structured["id"])
 
     JSON.parse(body.dig("result", "content", 0, "text").to_s)
+  end
+
+  def put_upload(ticket, bytes)
+    uri = URI(ticket.dig("upload", "url"))
+    put "#{uri.path}?#{uri.query}", params: bytes, headers: ticket.dig("upload", "headers")
+    assert_response :no_content, response.body
+  end
+
+  def with_fetch(body, content_type:, addresses: ["8.8.8.8"])
+    response = Struct.new(:body, :code, :headers, keyword_init: true) do
+      def is_a?(klass)
+        klass == Net::HTTPSuccess
+      end
+
+      def [](header)
+        headers[header]
+      end
+
+      def read_body
+        yield body.to_s if block_given?
+        body
+      end
+    end.new(body: body, code: "200", headers: { "content-type" => content_type })
+
+    with_stub(Resolv, :getaddresses, ->(_host) { addresses }) do
+      with_stub(Net::HTTP, :start, lambda { |_host, _port, **_options, &http_block|
+        http = Object.new
+        http.define_singleton_method(:request) do |_request, &request_block|
+          request_block ? request_block.call(response) : response
+        end
+        http_block.call(http)
+      }) do
+        yield
+      end
+    end
+  end
+
+  def with_stub(object, name, callable)
+    singleton = object.singleton_class
+    original = singleton.instance_method(name) if singleton.method_defined?(name) || singleton.private_method_defined?(name)
+    singleton.define_method(name, callable)
+    yield
+  ensure
+    if original
+      singleton.define_method(name, original)
+    elsif singleton.method_defined?(name) || singleton.private_method_defined?(name)
+      singleton.remove_method(name)
+    end
   end
 end

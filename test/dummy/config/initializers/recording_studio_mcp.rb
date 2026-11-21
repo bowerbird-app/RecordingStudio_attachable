@@ -16,8 +16,6 @@ end
 end
 
 include_attachable_mcp = lambda do |*|
-  next unless defined?(::RecordingStudioMcp)
-
   RecordingStudioMcp.register_server(:public, api: :public) do
     include_tools(:list, :show, *RecordingStudioAttachable::McpCopy.tool_names)
   end
@@ -27,4 +25,3 @@ include_attachable_mcp = lambda do |*|
 end
 
 Rails.application.config.to_prepare(&include_attachable_mcp)
-Rails.application.config.after_initialize(&include_attachable_mcp)

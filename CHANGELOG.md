@@ -11,11 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Named MCP tools `create_upload`, `attach`, and `import_attachment` via `RecordingStudioAttachable::McpCopy`. Recording Studio MCP 0.44 no longer lists capability actions as sidebar tools unless they are registered. The engine calls `McpCopy.register!` on `to_prepare` when MCP is loaded.
-
-### Changed
-
-- Named MCP tools omit `type` on `RecordingStudioMcp.register_tool`. Recording Studio MCP 0.45.1 looks up typeless registered actions and keeps `inputSchema`. Callers still send `type` and `id`. Auth is still Accessible `required_role`.
+- Named MCP tools `create_upload`, `attach`, and `import_attachment` via `RecordingStudioAttachable::McpCopy`. Recording Studio MCP 0.44 no longer lists capability actions as sidebar tools unless they are registered. The engine calls `McpCopy.register!` on `to_prepare` when MCP is loaded. Named tools omit `type` on `RecordingStudioMcp.register_tool`. Recording Studio MCP 0.45.1 looks up typeless registered actions and keeps `inputSchema`. Callers still send `type` and `id`. Auth is still Accessible `required_role`.
 
 ### Upgrade Notes
 

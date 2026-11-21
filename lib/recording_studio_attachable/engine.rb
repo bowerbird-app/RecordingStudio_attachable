@@ -138,6 +138,7 @@ module RecordingStudioAttachable
 
   Engine.initializer "recording_studio_attachable.mcp", after: "recording_studio_attachable.api" do
     Engine.config.to_prepare do
+      # Direct-upload tickets need the request host; MCP shares that path with the API.
       if defined?(::RecordingStudioMcp::McpController) &&
          !(::RecordingStudioMcp::McpController < ActiveStorage::SetCurrent)
         ::RecordingStudioMcp::McpController.include ActiveStorage::SetCurrent

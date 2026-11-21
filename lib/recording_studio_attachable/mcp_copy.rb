@@ -1,24 +1,14 @@
 # frozen_string_literal: true
 
-require_relative "api/attachment_copy"
+require_relative "api/attachment_actions"
 
 module RecordingStudioAttachable
   module McpCopy
     ACTIONS = %i[create_upload attach import_attachment].freeze
-    TITLES = {
-      create_upload: "Upload",
-      attach: "Attach",
-      import_attachment: "Import"
-    }.freeze
-    DESCRIPTIONS = {
-      create_upload: Api::AttachmentCopy::Text::CREATE_UPLOAD,
-      attach: Api::AttachmentCopy::Text::ATTACH,
-      import_attachment: Api::AttachmentCopy::Text::IMPORT
-    }.freeze
-    OUTPUTS = {
-      create_upload: "Direct-upload ticket with signed_blob_id, upload.url, upload.headers, and expires_at.",
-      attach: "One file returns id, kind, name, and urls.file. A list returns attachments, an array of those objects.",
-      import_attachment: "The new attachment with id, kind, name, and urls.file."
+    OPENAPI = {
+      create_upload: Api::AttachmentActions::CREATE_UPLOAD_OPENAPI,
+      attach: Api::AttachmentActions::ATTACH_OPENAPI,
+      import_attachment: Api::AttachmentActions::IMPORT_ATTACHMENT_OPENAPI
     }.freeze
     TYPE_INPUT = {
       description: Api::AttachmentCopy::Fields::TYPE.fetch(:description)
@@ -29,11 +19,6 @@ module RecordingStudioAttachable
     PROTOCOL_INPUT = {
       "type" => TYPE_INPUT,
       "id" => ID_INPUT
-    }.freeze
-    FIELD_SETS = {
-      create_upload: Api::AttachmentCopy::Fields::CREATE_UPLOAD,
-      attach: Api::AttachmentCopy::Fields::ATTACH,
-      import_attachment: Api::AttachmentCopy::Fields::IMPORT
     }.freeze
 
     module_function
@@ -50,25 +35,16 @@ module RecordingStudioAttachable
     end
 
     def register_action_tool(action)
+      spec = OPENAPI.fetch(action)
       ::RecordingStudioMcp.register_tool(
         name: action.to_s,
         action: action,
-        title: TITLES.fetch(action),
-        description: DESCRIPTIONS.fetch(action),
+        title: spec.fetch(:title),
+        description: spec.fetch(:description),
         input: PROTOCOL_INPUT,
-        output: OUTPUTS.fetch(action)
+        output: spec.dig(:responses, "200", :description)
       )
     end
-
-    def input_for(action)
-      PROTOCOL_INPUT.merge(field_input(FIELD_SETS.fetch(action)))
-    end
-
-    def field_input(fields)
-      fields.to_h do |name, meta|
-        [name.to_s, { description: meta.fetch(:description) }]
-      end
-    end
-    private_class_method :register_action_tool, :field_input
+    private_class_method :register_action_tool
   end
 end

@@ -356,7 +356,7 @@ Browser and API `create_upload` both call `RecordingStudioAttachable::DirectUplo
 
 Request logs filter `signed_blob_id` and `checksum`. This gem does not write the upload URL into a log line. The Recording Studio API request log stores allowlisted request params, not the response body.
 
-The disk service builds that URL from the current request host. This gem includes `ActiveStorage::SetCurrent` on `RecordingStudioApi::ApiController` so the host is set. An S3 service returns a presigned URL and does not use the app host.
+The disk service builds that URL from the current request host. This gem includes `ActiveStorage::SetCurrent` on `RecordingStudioApi::ApiController` and `RecordingStudioMcp::McpController` so the host is set. An S3 service returns a presigned URL and does not use the app host.
 
 `attach` takes one file (`signed_blob_id`, and optional `name`, `description`, `caption`, `credit`, `alt_text`) or `attachments` as a list of those objects. The response is the new child attachment (`id`, `kind`, `name`, `urls.file`) or `{ attachments: [...] }` for a list. `kind` is `image` when the content type starts with `image/`, and `file` otherwise. `urls.file` is the delivery URL for the original file. The default `rails` mode returns the engine file path. `direct` mode returns the blob direct URL. The default batch cap is `config.max_file_count` (20).
 

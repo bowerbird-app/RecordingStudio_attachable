@@ -24,6 +24,14 @@ class McpCopyTest < Minitest::Test
       assert spec.fetch(:title).present?
       assert spec.fetch(:description).present?
       assert spec.dig(:responses, "200", :description).present?
+      refute_match(/\bconfig\./, spec.fetch(:description))
+      refute_match(/\bAccess\b/, spec.fetch(:description))
     end
+  end
+
+  def test_protocol_input_marks_type_required
+    assert_equal true, RecordingStudioAttachable::McpCopy::TYPE_INPUT.fetch(:required)
+    assert_equal RecordingStudioAttachable::Api::AttachmentCopy::Fields::TYPE.fetch(:description),
+                 RecordingStudioAttachable::McpCopy::TYPE_INPUT.fetch(:description)
   end
 end

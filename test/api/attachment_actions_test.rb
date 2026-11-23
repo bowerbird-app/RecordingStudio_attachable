@@ -334,7 +334,12 @@ class AttachmentActionsTest < Minitest::Test
     assert_includes attach.fetch(:signed_blob_id).fetch(:description), "create_upload"
     assert_includes attach.fetch(:attachments).fetch(:description), "signed_blob_id"
     assert_includes import.fetch(:url).fetch(:description), "HTTPS"
-    assert_includes import.fetch(:url).fetch(:description), "import_allowed_hosts"
+    assert_includes import.fetch(:url).fetch(:description), "host app"
+    refute_includes import.fetch(:url).fetch(:description), "config."
+    refute_includes upload_description, "config."
+    refute_includes attach_description, "config."
+    refute_includes import_description, "config."
+    assert_includes import_description, "host app must allow"
     assert_match(%r{image/svg\+xml}, upload.fetch(:content_type).fetch(:description))
     refute_includes upload.fetch(:byte_size).fetch(:description), "25 MB"
     refute_includes attach.fetch(:attachments).fetch(:description), "20 files"

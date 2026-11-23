@@ -234,6 +234,8 @@ module RecordingStudioAttachable
           RecordingStudioAttachable::StorageLimitUnknown,
           RecordingStudioAttachable::SafeRemoteFetch::Error,
           ActiveRecord::RecordInvalid,
+          ActiveRecord::RecordNotFound,
+          ActiveSupport::MessageVerifier::InvalidSignature,
           URI::InvalidURIError
         ].freeze
 
@@ -242,11 +244,11 @@ module RecordingStudioAttachable
         def wrap
           yield
         rescue *INPUT_ERRORS => e
-          invalid!(e)
+          invalid!(signed_blob_message(e))
         rescue StandardError => e
-          raise unless plan_limit?(e)
+          raise unless plan_limit?(e) || integrity_error?(e)
 
-          invalid!(e)
+          invalid!(signed_blob_message(e))
         end
 
         def finish!(result)
@@ -267,6 +269,22 @@ module RecordingStudioAttachable
 
         def plan_limit?(error)
           defined?(::RecordingStudioStripe::PlanLimitReached) && error.is_a?(::RecordingStudioStripe::PlanLimitReached)
+        end
+
+        def integrity_error?(error)
+          defined?(ActiveStorage::IntegrityError) && error.is_a?(ActiveStorage::IntegrityError)
+        end
+
+        def signed_blob_message(error)
+          return DirectUpload::SIGNED_BLOB_INVALID if signed_blob_error?(error)
+
+          error
+        end
+
+        def signed_blob_error?(error)
+          error.is_a?(ActiveSupport::MessageVerifier::InvalidSignature) ||
+            error.is_a?(ActiveRecord::RecordNotFound) ||
+            integrity_error?(error)
         end
       end
 

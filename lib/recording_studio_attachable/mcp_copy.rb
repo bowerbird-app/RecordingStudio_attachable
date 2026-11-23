@@ -11,10 +11,12 @@ module RecordingStudioAttachable
       import_attachment: Api::AttachmentActions::IMPORT_ATTACHMENT_OPENAPI
     }.freeze
     TYPE_INPUT = {
-      description: Api::AttachmentCopy::Fields::TYPE.fetch(:description)
+      description: Api::AttachmentCopy::Fields::TYPE.fetch(:description),
+      required: true
     }.freeze
     ID_INPUT = {
-      description: "Recording id of the parent record."
+      description: "Recording id of the parent record.",
+      required: true
     }.freeze
     PROTOCOL_INPUT = {
       "type" => TYPE_INPUT,

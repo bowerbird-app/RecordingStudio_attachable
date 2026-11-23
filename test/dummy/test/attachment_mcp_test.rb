@@ -60,6 +60,12 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
     assert_includes upload.fetch("description"), "create_upload"
     assert_includes attach.fetch("description"), "create_upload"
     refute_match(/\bAccess\b/, upload.fetch("description"))
+    [upload, attach, import].each do |tool|
+      refute_match(/\bconfig\./, tool.fetch("description"))
+    end
+    assert upload_props.dig("type", "description").present?
+    assert_equal true, RecordingStudioAttachable::McpCopy::TYPE_INPUT.fetch(:required)
+    assert_includes import.fetch("description"), "host app"
   end
 
   test "create_upload through the named tool hits the action and Accessible role" do

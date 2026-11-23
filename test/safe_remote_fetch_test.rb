@@ -103,7 +103,7 @@ class SafeRemoteFetchTest < Minitest::Test
           fetch(uri: "https://api.example.test/file", allowed_hosts: ["api.example.test"])
         end
 
-        assert_equal "Remote download host is not allowed", error.message
+        assert_equal RecordingStudioAttachable::SafeRemoteFetch::HostGuard::HOST_NOT_ALLOWED, error.message
       end
     end
   end
@@ -138,7 +138,7 @@ class SafeRemoteFetchTest < Minitest::Test
       fetch(uri: "https://evil.example.test/file", allowed_hosts: ["api.example.test"])
     end
 
-    assert_equal "Remote download host is not allowed", error.message
+    assert_equal RecordingStudioAttachable::SafeRemoteFetch::HostGuard::HOST_NOT_ALLOWED, error.message
   end
 
   def test_private_ip_is_refused
@@ -178,7 +178,7 @@ class SafeRemoteFetchTest < Minitest::Test
       fetch(uri: "https://localhost/file", allowed_hosts: ["localhost"])
     end
 
-    assert_equal "Remote download host is not allowed", error.message
+    assert_equal RecordingStudioAttachable::SafeRemoteFetch::HostGuard::HOST_NOT_ALLOWED, error.message
   end
 
   def test_non_443_port_is_refused

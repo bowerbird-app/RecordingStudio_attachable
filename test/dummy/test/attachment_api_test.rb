@@ -85,7 +85,14 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
 
     call(:post, "/workspaces/#{@root.id}/actions/import_attachment", @editor_token, url: "https://evil.example.test/secret.png")
     assert_response :unprocessable_entity
-    assert_includes json.dig("error", "message"), "not allowed"
+    assert_includes action_error_text, RecordingStudioAttachable::SafeRemoteFetch::HostGuard::HOST_NOT_ALLOWED
+
+    previous = RecordingStudioAttachable.configuration.import_allowed_hosts.dup
+    RecordingStudioAttachable.configuration.import_allowed_hosts = []
+    call(:post, "/workspaces/#{@root.id}/actions/import_attachment", @editor_token, url: "https://files.example.test/door.png")
+    assert_response :unprocessable_entity
+    assert_includes action_error_text, RecordingStudioAttachable::SafeRemoteFetch::HostGuard::HOST_NOT_ALLOWED
+    RecordingStudioAttachable.configuration.import_allowed_hosts = previous
   end
 
   test "attach and import refuse an over cap image and leave no attachment" do
@@ -135,6 +142,7 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     call(:post, "/workspaces/#{@root.id}/actions/attach", @editor_token, signed_blob_id: "forged")
     assert_response :unprocessable_entity
     assert_equal "invalid_input", json.dig("error", "code")
+    assert_includes action_error_text, RecordingStudioAttachable::DirectUpload::SIGNED_BLOB_INVALID
 
     blob = ActiveStorage::Blob.create_before_direct_upload!(**upload_params("photo.png", "image/png", "bytes").slice(:filename, :byte_size, :checksum, :content_type))
     expired = blob.signed_id(expires_in: 1.minute)
@@ -142,6 +150,7 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
       call(:post, "/workspaces/#{@root.id}/actions/attach", @editor_token, signed_blob_id: expired)
       assert_response :unprocessable_entity
       assert_equal "invalid_input", json.dig("error", "code")
+      assert_includes action_error_text, RecordingStudioAttachable::DirectUpload::SIGNED_BLOB_INVALID
     end
   end
 
@@ -461,6 +470,11 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
 
   def json
     JSON.parse(response.body)
+  end
+
+  def action_error_text
+    payload = json.fetch("error")
+    [payload["message"], *Array(payload["details"])].join(" ")
   end
 
   def png_bytes

@@ -131,9 +131,8 @@ module RecordingStudioAttachable
           type: TYPE,
           url: {
             type: :string, required: true, allow_blank: false,
-            description: "Public HTTPS URL of the file to download. The host must be in " \
-                         "config.import_allowed_hosts, the port must be 443, and the address must be public. " \
-                         "The default allowlist is empty."
+            description: "Public HTTPS URL of the file to download. The port must be 443 and the address must be public. " \
+                         "The host app must allow that remote host for imports. By default no remote hosts are allowed."
           },
           name: {
             type: :string, required: false, allow_blank: true,
@@ -151,8 +150,8 @@ module RecordingStudioAttachable
         LIMITS =
           "Allowed types default to image/* and application/pdf. " \
           "image/* does not include image/svg+xml unless that type is named in the allow list. " \
-          "The default size cap is 25 MB (config.max_file_size). " \
-          "A batch can include up to 20 files (config.max_file_count). " \
+          "The default size cap is 25 MB. " \
+          "A batch can include up to 20 files. " \
           "A parent record can set a tighter type list, size cap, or batch cap. " \
           "An image over 40,000,000 pixels, or over 12,000 pixels on the longest side, is refused."
         ONE_RESULT =
@@ -174,17 +173,18 @@ module RecordingStudioAttachable
           "Use import_attachment when the file is already at an HTTPS URL. " \
           "Call create_upload, PUT the bytes to upload.url with upload.headers, then call attach with " \
           "signed_blob_id. This call adds nothing to the record. The parent record must already exist. " \
+          "If the host app sets a storage limit, the file must fit in the space left. " \
           "Returns signed_blob_id, upload.url, upload.headers, and expires_at. " \
           "signed_blob_id is the id attach accepts. upload.url is where you PUT the file bytes. " \
           "upload.headers are the headers for that PUT. " \
           "expires_at is the ISO 8601 time when the signed id stops working. " \
           "The signed id uses the attachable_upload purpose. " \
-          "It expires after config.direct_upload_expires_in, which defaults to 5 minutes. " \
-          "It is bound to this record and the actor that called create_upload. " \
+          "It expires after 5 minutes by default. " \
+          "It is bound to this record and the caller that called create_upload. " \
           "attach accepts it once, and only while the blob is still unattached. " \
           "The stored bytes are checked and must match content_type. " \
           "#{LIMITS} " \
-          "Unattached uploads for this actor on this root stop at config.pending_upload_limit, which defaults to 20.".freeze
+          "Unattached uploads for this caller on this root record stop at 20 by default.".freeze
         ATTACH_SUMMARY = "Link an uploaded file to this record as an attachment."
         ATTACH =
           "An attachment is an uploaded file linked to a record, such as a PDF, an image, or a document. " \
@@ -192,6 +192,8 @@ module RecordingStudioAttachable
           "Use import_attachment when the file is already at an HTTPS URL and you do not have the bytes. " \
           "Send one signed_blob_id, or send attachments to link several files in one call. Do not send both. " \
           "#{ITEM_NOTE} The parent record must already exist. " \
+          "Call create_upload first and PUT the bytes before you send signed_blob_id. " \
+          "If the host app sets a storage limit, the file must fit in the space left. " \
           "One signed_blob_id returns id, kind, name, and urls.file. " \
           "attachments returns a list named attachments, and each entry has those same fields. " \
           "#{ONE_RESULT} #{LIMITS}".freeze
@@ -202,9 +204,10 @@ module RecordingStudioAttachable
           "Use create_upload and then attach when you have the bytes. " \
           "This downloads the file and links it to the record. There is no create_upload step and no " \
           "signed_blob_id. #{ITEM_NOTE} The parent record must already exist. " \
+          "If the host app sets a storage limit, the file must fit in the space left. " \
+          "The host app must allow the remote host for imports. By default no remote hosts are allowed. " \
           "Returns id, kind, name, and urls.file. #{ONE_RESULT} " \
-          "url must be HTTPS on port 443. The host must be in config.import_allowed_hosts. " \
-          "The default list is empty. Private addresses are refused. #{LIMITS}".freeze
+          "url must be HTTPS on port 443. Private addresses are refused. #{LIMITS}".freeze
       end
     end
   end

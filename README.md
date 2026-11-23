@@ -293,7 +293,7 @@ RecordingStudioMcp.register_server(:public, api: :public) do
 end
 ```
 
-The three names are `create_upload`, `attach`, and `import_attachment`. They are typeless: send `type` and `id` of the parent record. Include generic `list` and `show` (or another typed tool) and `register_type` for each parent so those `type` values resolve. An operations server needs `allow_sensitive: true` when that named API marks the writes sensitive. Call `create_upload`, PUT the bytes, then `attach`. Use `import_attachment` when the file is already at an HTTPS URL. Do not include `capability_action` for these writes. Do not include the Metrics `attachments-*` tools from this gem; Metrics still owns those.
+The three names are `create_upload`, `attach`, and `import_attachment`. They are typeless: send `type` and `id` of the parent record. `type` is required. Include generic `list` and `show` (or another typed tool) and `register_type` for each parent so those `type` values resolve. An operations server needs `allow_sensitive: true` when that named API marks the writes sensitive. Call `create_upload`, PUT the bytes, then `attach`. Use `import_attachment` when the file is already at an HTTPS URL. The host app must allow that remote host for imports; the default list is empty. Do not include `capability_action` for these writes. Do not include the Metrics `attachments-*` tools from this gem; Metrics still owns those. Recording Studio MCP `describe` lists a named tool on a type only when `register_tool` sets that one `type`. These three tools stay typeless so one name works for every Attachable parent.
 
 3. Allow the actions on each parent type. Registration alone does not expose them.
 
@@ -360,7 +360,9 @@ The disk service builds that URL from the current request host. This gem include
 
 `attach` takes one file (`signed_blob_id`, and optional `name`, `description`, `caption`, `credit`, `alt_text`) or `attachments` as a list of those objects. The response is the new child attachment (`id`, `kind`, `name`, `urls.file`) or `{ attachments: [...] }` for a list. `kind` is `image` when the content type starts with `image/`, and `file` otherwise. `urls.file` is the delivery URL for the original file. The default `rails` mode returns the engine file path. `direct` mode returns the blob direct URL. The default batch cap is `config.max_file_count` (20).
 
-`import_attachment` takes `url`, and optional `name` and `description`. Set `config.import_allowed_hosts` to the HTTPS hosts the host app trusts. Private addresses, non-HTTPS URLs, and any other host are rejected. The fetch uses `SafeRemoteFetch`.
+`import_attachment` takes `url`, and optional `name` and `description`. The host app must configure which remote HTTPS hosts imports may download from. The default list is empty, so every remote host is refused until the host sets it. Localhost and cloud metadata endpoints are blocked even when listed. Private addresses, non-HTTPS URLs, and any other host are rejected. The fetch uses `SafeRemoteFetch`.
+
+A fake, expired, or tampered `signed_blob_id` on attach (API, MCP, and the browser attach flow) returns `signed_blob_id is invalid or expired. Call create_upload first and use the signed_blob_id it returns.` Uploaded bytes that fail the Active Storage checksum return `The uploaded bytes do not match the checksum. Call create_upload and PUT the exact file again.`
 
 Validation failures are `422` `invalid_input`. A caller without the upload role is `403`.
 

@@ -34,6 +34,10 @@ module RecordingStudioAttachable
         IPAddr.new("2002::/16")
       ].freeze
       BLOCKED_HOSTS = %w[localhost metadata.google.internal].freeze
+      HOST_NOT_ALLOWED =
+        "This remote download host is not allowed. The host app must configure which remote hosts imports may download from."
+      HOST_BLOCKED =
+        "This remote download host is blocked. Imports cannot use localhost or cloud metadata endpoints."
 
       def initialize(allowed_hosts)
         @allowed_hosts = Array(allowed_hosts)
@@ -43,7 +47,8 @@ module RecordingStudioAttachable
         raise Error, "Remote download must use HTTPS" unless uri.is_a?(URI::HTTPS)
         raise Error, "Remote download host is missing" if uri.host.blank?
         raise Error, "Remote download must use port 443" unless uri.port.nil? || uri.port == 443
-        raise Error, "Remote download host is not allowed" unless allowed?(uri.host) && !blocked?(uri.host)
+        raise Error, HOST_BLOCKED if blocked?(uri.host)
+        raise Error, HOST_NOT_ALLOWED unless allowed?(uri.host)
       end
 
       def public_ip(host)

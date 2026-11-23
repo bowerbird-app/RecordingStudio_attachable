@@ -54,6 +54,34 @@ class DirectUploadTest < Minitest::Test
     end
   end
 
+  def test_accept_maps_a_forged_or_missing_signed_id_to_a_clear_error
+    recording = recording_double("parent-1")
+    actor = Struct.new(:id).new("actor-1")
+
+    ActiveStorage::Blob.stub(:find_signed!, ->(*) { raise ActiveSupport::MessageVerifier::InvalidSignature }) do
+      error = assert_raises(ArgumentError) do
+        RecordingStudioAttachable::DirectUpload.accept!("forged", recording: recording, actor: actor)
+      end
+      assert_equal RecordingStudioAttachable::DirectUpload::SIGNED_BLOB_INVALID, error.message
+    end
+
+    ActiveStorage::Blob.stub(:find_signed!, ->(*) { raise ActiveRecord::RecordNotFound, "Blob" }) do
+      error = assert_raises(ArgumentError) do
+        RecordingStudioAttachable::DirectUpload.accept!("gone", recording: recording, actor: actor)
+      end
+      assert_equal RecordingStudioAttachable::DirectUpload::SIGNED_BLOB_INVALID, error.message
+    end
+  end
+
+  def test_sniff_maps_a_checksum_mismatch_to_a_clear_error
+    blob = issued_blob(recording_double("parent-1"), Struct.new(:id).new("actor-1"))
+    blob.define_singleton_method(:open) { raise ActiveStorage::IntegrityError }
+
+    error = assert_raises(ArgumentError) { RecordingStudioAttachable::DirectUpload.sniff!(blob, {}) }
+
+    assert_equal RecordingStudioAttachable::DirectUpload::CHECKSUM_MISMATCH, error.message
+  end
+
   def test_sniff_rejects_html_bytes_declared_as_png_and_accepts_a_real_png
     html = issued_blob(recording_double("parent-1"), Struct.new(:id).new("actor-1"))
     html.content_type = "image/png"

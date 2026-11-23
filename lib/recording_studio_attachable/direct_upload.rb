@@ -9,6 +9,10 @@ module RecordingStudioAttachable
     TAG = "recording_studio_attachable"
     PURPOSE = :attachable_upload
     INLINE_TYPES = %w[image/png image/jpeg image/gif image/webp application/pdf].freeze
+    SIGNED_BLOB_INVALID =
+      "signed_blob_id is invalid or expired. Call create_upload first and use the signed_blob_id it returns."
+    CHECKSUM_MISMATCH =
+      "The uploaded bytes do not match the checksum. Call create_upload and PUT the exact file again."
 
     module_function
 
@@ -49,7 +53,7 @@ module RecordingStudioAttachable
     end
 
     def accept!(signed_id, recording:, actor:)
-      blob = ActiveStorage::Blob.find_signed!(signed_id, purpose: PURPOSE)
+      blob = signed_blob(signed_id)
       raise ArgumentError, "Blob is already attached" if attached?(blob)
 
       verify_binding!(blob, recording, actor)
@@ -63,6 +67,8 @@ module RecordingStudioAttachable
       return if type_allowed?(sniffed, capability_options)
 
       raise ArgumentError, "Blob content type #{sniffed.inspect} is not allowed"
+    rescue *integrity_errors
+      raise ArgumentError, CHECKSUM_MISMATCH
     end
 
     def metadata_for(recording:, actor:)
@@ -122,6 +128,21 @@ module RecordingStudioAttachable
         Integer(byte_size)
       rescue ArgumentError, TypeError
         raise ArgumentError, "byte_size must be zero or more"
+      end
+
+      def signed_blob(signed_id)
+        ActiveStorage::Blob.find_signed!(signed_id, purpose: PURPOSE)
+      rescue *invalid_signed_blob_errors, ArgumentError
+        # find_signed! raises ArgumentError for a blank or malformed signed id, not only InvalidSignature.
+        raise ArgumentError, SIGNED_BLOB_INVALID
+      end
+
+      def invalid_signed_blob_errors
+        [ActiveSupport::MessageVerifier::InvalidSignature, ActiveRecord::RecordNotFound] + integrity_errors
+      end
+
+      def integrity_errors
+        defined?(ActiveStorage::IntegrityError) ? [ActiveStorage::IntegrityError] : []
       end
 
       def reject_type!(recording, content_type)

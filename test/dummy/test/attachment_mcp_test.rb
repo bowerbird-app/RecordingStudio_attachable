@@ -64,7 +64,6 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
       refute_match(/\bconfig\./, tool.fetch("description"))
     end
     assert upload_props.dig("type", "description").present?
-    assert_equal true, RecordingStudioAttachable::McpCopy::TYPE_INPUT.fetch(:required)
     assert_includes import.fetch("description"), "host app"
   end
 

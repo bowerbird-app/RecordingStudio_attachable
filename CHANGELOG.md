@@ -9,17 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.34.3] - 2026-11-23
 
+### Changed
+
+- Dummy `net-ssh` is `7.3.10`.
+
 ### Fixed
 
-- `create_upload` MCP registration marks `type` required (`McpCopy::TYPE_INPUT`). Recording Studio MCP 0.45.1 still builds `inputSchema.required` from the API input contract. That contract cannot require `type` because REST puts type in the path and MCP strips it before validating the action. MCP would need to add `type` to `required` for typeless action tools the same way it already adds `id`.
-- A fake, expired, or tampered `signed_blob_id` on attach returns `signed_blob_id is invalid or expired. Call create_upload first and use the signed_blob_id it returns.` instead of a digest or verifier error.
+- A fake, expired, or tampered `signed_blob_id` on attach returns `signed_blob_id is invalid or expired. Call create_upload first and use the signed_blob_id it returns.` instead of a digest or verifier error. The browser attach flow shows that same message.
+- Uploaded bytes that fail the Active Storage checksum return `The uploaded bytes do not match the checksum. Call create_upload and PUT the exact file again.`
 - `create_upload`, `attach`, and `import_attachment` descriptions use plain words. They no longer name `config.*` settings. Import copy says the host app must allow remote hosts, and the empty default still refuses every host.
-- Import refusal copy says the host app must configure which remote hosts imports may download from.
+- Import refusal copy says the host app must configure which remote hosts imports may download from. Built-in blocked hosts (localhost and cloud metadata endpoints) have their own refusal message.
+
+### Notes
+
+- Named MCP tools stay typeless. Recording Studio MCP 0.45.1 `describe` lists a tool on a type only when `register_tool` sets that one `type`, and tools are keyed by name, so this gem cannot attach `create_upload`, `attach`, and `import_attachment` to every Attachable parent. MCP would need a multi-type registration or `describe` to include typeless action tools for types that enable those capability actions.
 
 ### Upgrade Notes
 
 - Bump to `0.34.3`. Previous is `0.34.2`. This gem adds no migration of its own.
-- Named MCP tools stay typeless. Recording Studio MCP 0.45.1 `describe` lists a tool on a type only when `register_tool` sets that one `type`, and tools are keyed by name, so this gem cannot attach `create_upload`, `attach`, and `import_attachment` to every Attachable parent. MCP would need a multi-type registration or `describe` to include typeless action tools for types that enable those capability actions.
 
 ## [0.34.2] - 2026-11-21
 

@@ -360,7 +360,9 @@ The disk service builds that URL from the current request host. This gem include
 
 `attach` takes one file (`signed_blob_id`, and optional `name`, `description`, `caption`, `credit`, `alt_text`) or `attachments` as a list of those objects. The response is the new child attachment (`id`, `kind`, `name`, `urls.file`) or `{ attachments: [...] }` for a list. `kind` is `image` when the content type starts with `image/`, and `file` otherwise. `urls.file` is the delivery URL for the original file. The default `rails` mode returns the engine file path. `direct` mode returns the blob direct URL. The default batch cap is `config.max_file_count` (20).
 
-`import_attachment` takes `url`, and optional `name` and `description`. The host app must configure which remote HTTPS hosts imports may download from. The default list is empty, so every remote host is refused until the host sets it. Private addresses, non-HTTPS URLs, and any other host are rejected. The fetch uses `SafeRemoteFetch`.
+`import_attachment` takes `url`, and optional `name` and `description`. The host app must configure which remote HTTPS hosts imports may download from. The default list is empty, so every remote host is refused until the host sets it. Localhost and cloud metadata endpoints are blocked even when listed. Private addresses, non-HTTPS URLs, and any other host are rejected. The fetch uses `SafeRemoteFetch`.
+
+A fake, expired, or tampered `signed_blob_id` on attach (API, MCP, and the browser attach flow) returns `signed_blob_id is invalid or expired. Call create_upload first and use the signed_blob_id it returns.` Uploaded bytes that fail the Active Storage checksum return `The uploaded bytes do not match the checksum. Call create_upload and PUT the exact file again.`
 
 Validation failures are `422` `invalid_input`. A caller without the upload role is `403`.
 

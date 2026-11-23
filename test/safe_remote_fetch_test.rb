@@ -178,7 +178,15 @@ class SafeRemoteFetchTest < Minitest::Test
       fetch(uri: "https://localhost/file", allowed_hosts: ["localhost"])
     end
 
-    assert_equal RecordingStudioAttachable::SafeRemoteFetch::HostGuard::HOST_NOT_ALLOWED, error.message
+    assert_equal RecordingStudioAttachable::SafeRemoteFetch::HostGuard::HOST_BLOCKED, error.message
+  end
+
+  def test_metadata_endpoint_is_refused
+    error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
+      fetch(uri: "https://metadata.google.internal/file", allowed_hosts: ["metadata.google.internal"])
+    end
+
+    assert_equal RecordingStudioAttachable::SafeRemoteFetch::HostGuard::HOST_BLOCKED, error.message
   end
 
   def test_non_443_port_is_refused

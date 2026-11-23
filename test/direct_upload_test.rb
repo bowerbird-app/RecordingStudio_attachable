@@ -73,6 +73,16 @@ class DirectUploadTest < Minitest::Test
     end
   end
 
+  def test_sniff_maps_a_checksum_mismatch_to_a_clear_error
+    ensure_integrity_error!
+    blob = issued_blob(recording_double("parent-1"), Struct.new(:id).new("actor-1"))
+    blob.define_singleton_method(:open) { raise ActiveStorage::IntegrityError }
+
+    error = assert_raises(ArgumentError) { RecordingStudioAttachable::DirectUpload.sniff!(blob, {}) }
+
+    assert_equal RecordingStudioAttachable::DirectUpload::CHECKSUM_MISMATCH, error.message
+  end
+
   def test_sniff_rejects_html_bytes_declared_as_png_and_accepts_a_real_png
     html = issued_blob(recording_double("parent-1"), Struct.new(:id).new("actor-1"))
     html.content_type = "image/png"
@@ -219,6 +229,12 @@ class DirectUploadTest < Minitest::Test
     blob.define_singleton_method(:purged) { @purged == true }
     blob.define_singleton_method(:purge) { @purged = true }
     blob
+  end
+
+  def ensure_integrity_error!
+    return if defined?(ActiveStorage::IntegrityError)
+
+    ActiveStorage.const_set(:IntegrityError, Class.new(StandardError))
   end
 
   def ensure_blob!

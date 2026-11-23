@@ -173,7 +173,7 @@ module RecordingStudioAttachable
           "Use import_attachment when the file is already at an HTTPS URL. " \
           "Call create_upload, PUT the bytes to upload.url with upload.headers, then call attach with " \
           "signed_blob_id. This call adds nothing to the record. The parent record must already exist. " \
-          "The workspace needs a storage plan with room for the file. " \
+          "If the host app sets a storage limit, the file must fit in the space left. " \
           "Returns signed_blob_id, upload.url, upload.headers, and expires_at. " \
           "signed_blob_id is the id attach accepts. upload.url is where you PUT the file bytes. " \
           "upload.headers are the headers for that PUT. " \
@@ -184,7 +184,7 @@ module RecordingStudioAttachable
           "attach accepts it once, and only while the blob is still unattached. " \
           "The stored bytes are checked and must match content_type. " \
           "#{LIMITS} " \
-          "Unattached uploads for this caller on this workspace stop at 20 by default.".freeze
+          "Unattached uploads for this caller on this root record stop at 20 by default.".freeze
         ATTACH_SUMMARY = "Link an uploaded file to this record as an attachment."
         ATTACH =
           "An attachment is an uploaded file linked to a record, such as a PDF, an image, or a document. " \
@@ -193,7 +193,7 @@ module RecordingStudioAttachable
           "Send one signed_blob_id, or send attachments to link several files in one call. Do not send both. " \
           "#{ITEM_NOTE} The parent record must already exist. " \
           "Call create_upload first and PUT the bytes before you send signed_blob_id. " \
-          "The workspace needs a storage plan with room for the file. " \
+          "If the host app sets a storage limit, the file must fit in the space left. " \
           "One signed_blob_id returns id, kind, name, and urls.file. " \
           "attachments returns a list named attachments, and each entry has those same fields. " \
           "#{ONE_RESULT} #{LIMITS}".freeze
@@ -204,7 +204,7 @@ module RecordingStudioAttachable
           "Use create_upload and then attach when you have the bytes. " \
           "This downloads the file and links it to the record. There is no create_upload step and no " \
           "signed_blob_id. #{ITEM_NOTE} The parent record must already exist. " \
-          "The workspace needs a storage plan with room for the file. " \
+          "If the host app sets a storage limit, the file must fit in the space left. " \
           "The host app must allow the remote host for imports. By default no remote hosts are allowed. " \
           "Returns id, kind, name, and urls.file. #{ONE_RESULT} " \
           "url must be HTTPS on port 443. Private addresses are refused. #{LIMITS}".freeze

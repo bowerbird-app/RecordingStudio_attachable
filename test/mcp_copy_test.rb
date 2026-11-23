@@ -29,9 +29,10 @@ class McpCopyTest < Minitest::Test
     end
   end
 
-  def test_protocol_input_marks_type_required
-    assert_equal true, RecordingStudioAttachable::McpCopy::TYPE_INPUT.fetch(:required)
+  def test_protocol_input_uses_the_type_field_description
     assert_equal RecordingStudioAttachable::Api::AttachmentCopy::Fields::TYPE.fetch(:description),
                  RecordingStudioAttachable::McpCopy::TYPE_INPUT.fetch(:description)
+    refute RecordingStudioAttachable::McpCopy::TYPE_INPUT.key?(:required)
+    refute RecordingStudioAttachable::McpCopy::ID_INPUT.key?(:required)
   end
 end

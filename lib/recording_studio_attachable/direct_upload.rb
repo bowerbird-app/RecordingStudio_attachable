@@ -11,6 +11,8 @@ module RecordingStudioAttachable
     INLINE_TYPES = %w[image/png image/jpeg image/gif image/webp application/pdf].freeze
     SIGNED_BLOB_INVALID =
       "signed_blob_id is invalid or expired. Call create_upload first and use the signed_blob_id it returns."
+    CHECKSUM_MISMATCH =
+      "The uploaded bytes do not match the checksum. Call create_upload and PUT the exact file again."
 
     module_function
 
@@ -66,7 +68,7 @@ module RecordingStudioAttachable
 
       raise ArgumentError, "Blob content type #{sniffed.inspect} is not allowed"
     rescue *integrity_errors
-      raise ArgumentError, SIGNED_BLOB_INVALID
+      raise ArgumentError, CHECKSUM_MISMATCH
     end
 
     def metadata_for(recording:, actor:)
@@ -131,6 +133,7 @@ module RecordingStudioAttachable
       def signed_blob(signed_id)
         ActiveStorage::Blob.find_signed!(signed_id, purpose: PURPOSE)
       rescue *invalid_signed_blob_errors, ArgumentError
+        # find_signed! raises ArgumentError for a blank or malformed signed id, not only InvalidSignature.
         raise ArgumentError, SIGNED_BLOB_INVALID
       end
 

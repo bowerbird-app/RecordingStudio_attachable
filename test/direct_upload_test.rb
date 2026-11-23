@@ -74,7 +74,6 @@ class DirectUploadTest < Minitest::Test
   end
 
   def test_sniff_maps_a_checksum_mismatch_to_a_clear_error
-    ensure_integrity_error!
     blob = issued_blob(recording_double("parent-1"), Struct.new(:id).new("actor-1"))
     blob.define_singleton_method(:open) { raise ActiveStorage::IntegrityError }
 
@@ -229,12 +228,6 @@ class DirectUploadTest < Minitest::Test
     blob.define_singleton_method(:purged) { @purged == true }
     blob.define_singleton_method(:purge) { @purged = true }
     blob
-  end
-
-  def ensure_integrity_error!
-    return if defined?(ActiveStorage::IntegrityError)
-
-    ActiveStorage.const_set(:IntegrityError, Class.new(StandardError))
   end
 
   def ensure_blob!

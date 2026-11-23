@@ -20,10 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `create_upload`, `attach`, and `import_attachment` descriptions use plain words. They no longer name `config.*` settings. Import copy says the host app must allow remote hosts, and the empty default still refuses every host.
 - Import refusal copy says the host app must configure which remote hosts imports may download from. Built-in blocked hosts (localhost and cloud metadata endpoints) have their own refusal message.
 
-### Notes
-
-- Named MCP tools stay typeless. Recording Studio MCP 0.45.1 `describe` lists a tool on a type only when `register_tool` sets that one `type`, and tools are keyed by name, so this gem cannot attach `create_upload`, `attach`, and `import_attachment` to every Attachable parent. MCP would need a multi-type registration or `describe` to include typeless action tools for types that enable those capability actions.
-
 ### Upgrade Notes
 
 - Bump to `0.34.3`. Previous is `0.34.2`. This gem adds no migration of its own.

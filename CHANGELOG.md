@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.34.6] - 2026-11-24
+
+### Changed
+
+- `attach` and `import_attachment` descriptions now say that on a parent holding one attachment (such as a cover), the host's rules decide whether a new file replaces the existing one or is refused. They no longer say the call only sets a cover when none is set yet.
+
+### Upgrade Notes
+
+- Bump to 0.34.6. Previous is 0.34.5. No migration.
+
 ## [0.34.5] - 2026-11-23
 
 ### Fixed
@@ -921,7 +931,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.5...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.6...HEAD
+[0.34.6]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.5...v0.34.6
 [0.34.5]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.4...v0.34.5
 [0.34.4]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.3...v0.34.4
 [0.34.3]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.2...v0.34.3

@@ -165,8 +165,8 @@ module RecordingStudioAttachable
           "This links the file to the parent as a child attachment. " \
           "On an image section it appears as a gallery image. " \
           "On a file section it appears as a listed file. " \
-          "On a parent that holds one attachment, such as a cover, this sets that attachment when none is set yet. " \
-          "This call does not replace an existing one; the host may refuse a second file."
+          "On a parent that holds one attachment, such as a cover, the host's rules decide whether a new file " \
+          "replaces the existing one or is refused."
         CREATE_UPLOAD_SUMMARY = "Prepare a direct upload for a file you already have. This does not attach the file."
         CREATE_UPLOAD =
           "An attachment is an uploaded file linked to a record, such as a PDF, an image, or a document. " \

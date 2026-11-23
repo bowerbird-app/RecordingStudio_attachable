@@ -340,6 +340,12 @@ class AttachmentActionsTest < Minitest::Test
     refute_includes attach_description, "config."
     refute_includes import_description, "config."
     assert_includes import_description, "host app must allow"
+    [attach_description, import_description].each do |description|
+      assert_includes description, "gallery image"
+      assert_includes description, "listed file"
+      assert_includes description, "cover"
+      refute_includes description, "does not show the file as an item"
+    end
     [upload_description, attach_description, import_description].each do |description|
       assert_includes description, "If the host app sets a storage limit, the file must fit in the space left."
       refute_includes description, "workspace"

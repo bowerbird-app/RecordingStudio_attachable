@@ -4,14 +4,15 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.34.4", RecordingStudioAttachable::VERSION
+    assert_equal "0.34.5", RecordingStudioAttachable::VERSION
     changelog = File.read(File.expand_path("../CHANGELOG.md", __dir__))
     dummy_lock = File.read(File.expand_path("dummy/Gemfile.lock", __dir__))
     dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
     root_ruby = File.read(File.expand_path("../.ruby-version", __dir__))
     dummy_ruby = File.read(File.expand_path("dummy/.ruby-version", __dir__))
 
-    assert_includes changelog, "## [0.34.4]"
+    assert_includes changelog, "## [0.34.5]"
+    assert changelog.index("## [0.34.5]") < changelog.index("## [0.34.4]")
     assert changelog.index("## [0.34.4]") < changelog.index("## [0.34.3]")
     assert changelog.index("## [0.34.3]") < changelog.index("## [0.34.2]")
     assert changelog.index("## [0.34.2]") < changelog.index("## [0.34.1]")
@@ -21,6 +22,10 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes notes, "3.3.14"
     assert_includes notes, "CVE-2026-132825"
     assert_includes notes, "Previous is `0.34.0`"
+    assert_includes changelog, "compare/v0.34.4...v0.34.5"
+    notes_0345 = changelog[changelog.index("## [0.34.5]")...changelog.index("## [0.34.4]")]
+    assert_includes notes_0345, "Public type of the parent record. Call describe if you do not know it."
+    assert_includes notes_0345, "Previous is `0.34.4`"
     assert_includes changelog, "compare/v0.34.3...v0.34.4"
     assert_includes changelog, "compare/v0.34.2...v0.34.3"
     assert_includes changelog, "compare/v0.34.1...v0.34.2"

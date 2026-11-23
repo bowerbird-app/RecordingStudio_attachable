@@ -71,7 +71,7 @@ module RecordingStudioAttachable
           "Send this or signed_blob_id, not both. "
         TYPE = {
           type: :string, required: false, allow_blank: false,
-          description: "Public type of the parent record, such as Workspace. Call describe if you do not know it."
+          description: "Public type of the parent record. Call describe if you do not know it."
         }.freeze
         CREATE_UPLOAD = {
           type: TYPE,

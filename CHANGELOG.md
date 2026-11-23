@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.34.5] - 2026-11-23
+
+### Fixed
+
+- `create_upload`, `attach`, and `import_attachment` share one `type` field description: "Public type of the parent record. Call describe if you do not know it."
+
+### Upgrade Notes
+
+- Bump to `0.34.5`. Previous is `0.34.4`. This gem adds no migration of its own.
+
 ## [0.34.4] - 2026-11-23
 
 ### Fixed
@@ -911,7 +921,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.4...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.5...HEAD
+[0.34.5]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.4...v0.34.5
 [0.34.4]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.3...v0.34.4
 [0.34.3]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.2...v0.34.3
 [0.34.2]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.1...v0.34.2

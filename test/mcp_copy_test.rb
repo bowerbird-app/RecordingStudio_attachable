@@ -30,8 +30,14 @@ class McpCopyTest < Minitest::Test
   end
 
   def test_protocol_input_uses_the_type_field_description
-    assert_equal RecordingStudioAttachable::Api::AttachmentCopy::Fields::TYPE.fetch(:description),
-                 RecordingStudioAttachable::McpCopy::TYPE_INPUT.fetch(:description)
+    description = "Public type of the parent record. Call describe if you do not know it."
+    fields = RecordingStudioAttachable::Api::AttachmentCopy::Fields
+
+    assert_equal description, fields::TYPE.fetch(:description)
+    assert_equal description, fields::CREATE_UPLOAD.fetch(:type).fetch(:description)
+    assert_equal description, fields::ATTACH.fetch(:type).fetch(:description)
+    assert_equal description, fields::IMPORT.fetch(:type).fetch(:description)
+    assert_equal description, RecordingStudioAttachable::McpCopy::TYPE_INPUT.fetch(:description)
     refute RecordingStudioAttachable::McpCopy::TYPE_INPUT.key?(:required)
     refute RecordingStudioAttachable::McpCopy::ID_INPUT.key?(:required)
   end

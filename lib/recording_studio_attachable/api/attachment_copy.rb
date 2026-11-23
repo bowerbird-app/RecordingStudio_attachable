@@ -162,10 +162,11 @@ module RecordingStudioAttachable
           "The default rails mode returns the engine file path. " \
           "Direct mode returns the blob direct URL."
         ITEM_NOTE =
-          "This links the file to the record as an attachment. " \
-          "It does not show the file as an item in a list on the record. " \
-          "When the record has its own action for a file or image list, use that action if the file " \
-          "should appear as an item."
+          "This links the file to the parent as a child attachment. " \
+          "On an image section it appears as a gallery image. " \
+          "On a file section it appears as a listed file. " \
+          "On a parent that holds one attachment, such as a cover, this sets that attachment when none is set yet. " \
+          "This call does not replace an existing one; the host may refuse a second file."
         CREATE_UPLOAD_SUMMARY = "Prepare a direct upload for a file you already have. This does not attach the file."
         CREATE_UPLOAD =
           "An attachment is an uploaded file linked to a record, such as a PDF, an image, or a document. " \

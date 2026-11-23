@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.34.4] - 2026-11-23
+
+### Fixed
+
+- `attach` and `import_attachment` descriptions now match the write: a child attachment on the parent, a gallery image on an image section, a listed file on a file section, and a cover only when that parent has none yet. They no longer say the file stays off any list on the record.
+
+### Upgrade Notes
+
+- Bump to `0.34.4`. Previous is `0.34.3`. This gem adds no migration of its own.
+
 ## [0.34.3] - 2026-11-23
 
 ### Changed
@@ -901,7 +911,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.3...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.4...HEAD
+[0.34.4]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.3...v0.34.4
 [0.34.3]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.2...v0.34.3
 [0.34.2]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.1...v0.34.2
 [0.34.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.0...v0.34.1

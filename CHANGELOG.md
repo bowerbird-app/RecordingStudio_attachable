@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - URL and provider imports store the type detected from the bytes and the filename when the declared type is generic (`application/octet-stream`, `binary/octet-stream`, or blank) or disagrees with the bytes. The allow list then runs. `image/*` still excludes `image/svg+xml` unless that type is named.
 - MCP registration creates `<type>_create_upload`, `<type>_attach`, and `<type>_import_attachment` only when an API registration supports that action. Tool text names only those tools. `config.mcp_next_step(type, text)` appends one host-supplied next step.
 - Attachment payloads add `urls.file_url` in rails mode when a public host is known. `config.public_url_host` supplies it, then the app's `default_url_options`. `urls.file` is unchanged. Direct mode does not add the key.
-- File, download, and preview reads return 404 when the attachment, or an ancestor below the root, is trashed, unless the actor has admin on the parent. Unsigned requests can still read an attachment that is not hidden. A signed-in user still needs the view role.
+- File, download, and preview reads return 404 when the attachment, or an ancestor below the root, is trashed, unless the actor has admin on the parent. Those reads use the same authorization as every other attachment read: the role check, then `attachable_available_for?`.
 
 ### Upgrade Notes
 

@@ -35,13 +35,13 @@ class TrashedAttachmentReadTest < ActionDispatch::IntegrationTest
 
   teardown do
     Current.actor = @previous_actor
+    clear_public_reads!
   end
 
-  test "a live attachment is anonymously readable and a removed one is not" do
+  test "a published attachment is anonymously readable and a removed one is not" do
+    grant_public_reads!(true)
     sign_out @owner
-    get recording_studio_attachable.attachment_file_path(@attachment)
-    assert_response :success
-    assert_equal PNG, response.body
+    assert_public_bytes(@attachment)
 
     sign_in @owner
     Current.actor = @owner
@@ -63,6 +63,25 @@ class TrashedAttachmentReadTest < ActionDispatch::IntegrationTest
     get recording_studio_attachable.attachment_preview_file_path(@attachment, variant_name: "large")
     assert_response :success
     assert_operator response.body.bytesize, :>, 0
+  end
+
+  test "anonymous byte reads are refused when the owner is unpublished" do
+    grant_public_reads!(false)
+    sign_out @owner
+
+    each_byte(@attachment) do
+      assert_response :not_found
+      assert_not_equal PNG, response.body
+    end
+  end
+
+  test "anonymous byte reads are refused without a view role on a non-public owner" do
+    sign_out @owner
+
+    each_byte(@attachment) do
+      refute_equal 200, response.status
+      assert_not_equal PNG, response.body
+    end
   end
 
   test "a child under a trashed ancestor is not anonymously readable" do
@@ -120,6 +139,50 @@ class TrashedAttachmentReadTest < ActionDispatch::IntegrationTest
     raise "preview target missing" if target.blank?
 
     target.processed
+  end
+
+  def each_byte(recording)
+    [
+      recording_studio_attachable.attachment_file_path(recording),
+      recording_studio_attachable.download_attachment_path(recording),
+      recording_studio_attachable.attachment_preview_file_path(recording, variant_name: "large")
+    ].each do |path|
+      get path
+      yield
+    end
+  end
+
+  def assert_public_bytes(recording)
+    get recording_studio_attachable.attachment_file_path(recording)
+    assert_response :success
+    assert_equal PNG, response.body
+
+    get recording_studio_attachable.download_attachment_path(recording)
+    assert_response :success
+    assert_equal PNG, response.body
+
+    get recording_studio_attachable.attachment_preview_file_path(recording, variant_name: "large")
+    assert_response :success
+    assert_operator response.body.bytesize, :>, 0
+  end
+
+  def grant_public_reads!(published)
+    Workspace.define_method(:attachable_available_for?) { |**| published }
+    @previous_authorizer = RecordingStudioAttachable.configuration.authorize_with
+    RecordingStudioAttachable.configuration.authorize_with = lambda do |action:, actor:, recording:, role:|
+      if actor.blank?
+        %i[view download].include?(action.to_sym)
+      else
+        RecordingStudioAccessible::Authorization.allowed?(actor: actor, recording: recording, role: role)
+      end
+    end
+  end
+
+  def clear_public_reads!
+    RecordingStudioAttachable.configuration.authorize_with = @previous_authorizer if defined?(@previous_authorizer)
+    return unless Workspace.method_defined?(:attachable_available_for?)
+
+    Workspace.remove_method(:attachable_available_for?)
   end
 
   def bootstrap!(recording, actor)

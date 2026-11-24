@@ -46,7 +46,8 @@ module RecordingStudioAttachable
     attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode,
                 :max_image_pixels, :max_image_longest_side,
                 :upload_presentation, :import_allowed_hosts, :layout, :before_save,
-                :around_attach, :warn_on_active_storage_routes, :public_url_host, :mcp_next_steps
+                :around_attach, :warn_on_active_storage_routes, :public_url_host, :mcp_next_steps,
+                :inline_upload_max_bytes
 
     def layout=(value)
       @layout = RecordingStudio::Layout.accept(value)
@@ -215,6 +216,16 @@ module RecordingStudioAttachable
       raise ArgumentError, "Unknown upload presentation: #{value.inspect}. Use :page or :modal."
     end
 
+    def inline_upload_max_bytes=(value)
+      number = Integer(value)
+    rescue ArgumentError, TypeError
+      raise ArgumentError, "inline_upload_max_bytes must be a positive integer"
+    else
+      raise ArgumentError, "inline_upload_max_bytes must be greater than zero" unless number.positive?
+
+      @inline_upload_max_bytes = number
+    end
+
     def import_allowed_hosts=(hosts)
       if [:none, "none"].include?(hosts)
         @import_allowed_hosts = :none
@@ -278,6 +289,7 @@ module RecordingStudioAttachable
         max_file_size: max_file_size,
         max_file_count: max_file_count,
         pending_upload_limit: pending_upload_limit,
+        inline_upload_max_bytes: inline_upload_max_bytes,
         unattached_blob_ttl: unattached_blob_ttl,
         direct_upload_expires_in: direct_upload_expires_in,
         purge_unattached_blobs: purge_unattached_blobs,
@@ -335,6 +347,7 @@ module RecordingStudioAttachable
       @max_file_size = 25.megabytes
       @max_file_count = 20
       @pending_upload_limit = 20
+      @inline_upload_max_bytes = 2.megabytes
       @unattached_blob_ttl = 24.hours
       @direct_upload_expires_in = 5.minutes
       @purge_unattached_blobs = false

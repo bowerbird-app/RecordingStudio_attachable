@@ -29,6 +29,7 @@ class ConfigurationTest < Minitest::Test
     assert_equal ["image/*", "application/pdf"], @configuration.allowed_content_types
     assert_equal 20, @configuration.max_file_count
     assert_equal 20, @configuration.pending_upload_limit
+    assert_equal 2.megabytes, @configuration.inline_upload_max_bytes
     assert_equal 24.hours, @configuration.unattached_blob_ttl
     assert_equal 5.minutes, @configuration.direct_upload_expires_in
     assert_equal false, @configuration.purge_unattached_blobs
@@ -365,6 +366,7 @@ class ConfigurationTest < Minitest::Test
         max_file_size: 25.megabytes,
         max_file_count: 20,
         pending_upload_limit: 20,
+        inline_upload_max_bytes: 2.megabytes,
         unattached_blob_ttl: 24.hours,
         direct_upload_expires_in: 5.minutes,
         purge_unattached_blobs: false,
@@ -400,6 +402,16 @@ class ConfigurationTest < Minitest::Test
       },
       @configuration.to_h
     )
+  end
+
+  def test_inline_upload_max_bytes_must_be_a_positive_integer
+    @configuration.inline_upload_max_bytes = 1024
+    assert_equal 1024, @configuration.inline_upload_max_bytes
+
+    error = assert_raises(ArgumentError) { @configuration.inline_upload_max_bytes = 0 }
+    assert_includes error.message, "greater than zero"
+    error = assert_raises(ArgumentError) { @configuration.inline_upload_max_bytes = "nope" }
+    assert_includes error.message, "positive integer"
   end
 
   def test_import_allowed_hosts_none_turns_imports_off

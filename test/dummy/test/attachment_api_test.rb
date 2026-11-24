@@ -100,6 +100,46 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     RecordingStudioAttachable.configuration.import_allowed_hosts = previous
   end
 
+  test "create_upload from a url or inline data returns a signed id attach and replace accept" do
+    bytes = png_bytes
+    with_fetch(bytes, content_type: "image/png") do
+      denied = call(:post, "/workspaces/#{@root.id}/actions/create_upload", @viewer_token, url: "https://files.example.test/door.png")
+      assert_response :forbidden, denied.to_json
+
+      ticket = call(:post, "/workspaces/#{@root.id}/actions/create_upload", @editor_token, url: "https://files.example.test/door.png")
+      assert_response :success, response.body
+      assert ticket.fetch("signed_blob_id").present?
+      assert ticket.dig("upload", "url").present?
+
+      attached = call(:post, "/workspaces/#{@root.id}/actions/attach", @editor_token, signed_blob_id: ticket.fetch("signed_blob_id"), name: "Door")
+      assert_response :success, response.body
+      assert_equal "Door", attached.fetch("name")
+      assert_equal "image", attached.fetch("kind")
+
+      both = call(
+        :post, "/workspaces/#{@root.id}/actions/create_upload", @editor_token,
+        url: "https://files.example.test/door.png", data: Base64.strict_encode64(bytes), filename: "door.png"
+      )
+      assert_response :unprocessable_entity
+      assert_includes action_error_text, "not both"
+
+      replacement = call(
+        :post, "/workspaces/#{@root.id}/actions/create_upload", @editor_token,
+        data: "data:image/png;base64,#{Base64.strict_encode64(bytes)}", filename: "second.png"
+      )
+      assert_response :success, response.body
+      child = RecordingStudio::Recording.find(attached.fetch("id"))
+      actor = upload_actor(ticket.fetch("signed_blob_id"))
+      replaced = RecordingStudioAttachable::Services::ReplaceAttachmentFile.call(
+        attachment_recording: child,
+        signed_blob_id: replacement.fetch("signed_blob_id"),
+        actor: actor
+      )
+      assert replaced.success?, replaced.error.to_s
+      assert_equal "second.png", child.reload.recordable.original_filename
+    end
+  end
+
   test "attach and import refuse an over cap image and leave no attachment" do
     bomb = OversizedPng.bytes(13_000, 1, valid: true)
     before = @root.child_recordings.where(recordable_type: "RecordingStudioAttachable::Attachment").count
@@ -403,6 +443,11 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+  def upload_actor(signed_id)
+    blob = ActiveStorage::Blob.find_signed!(signed_id, purpose: RecordingStudioAttachable::DirectUpload::PURPOSE)
+    blob.metadata.fetch("actor_type").constantize.find(blob.metadata.fetch("actor_id"))
+  end
 
   def stored_blob_key(signed_id)
     ActiveStorage::Blob.find_signed!(signed_id, purpose: RecordingStudioAttachable::DirectUpload::PURPOSE).key

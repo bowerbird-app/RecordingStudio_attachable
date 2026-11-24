@@ -141,6 +141,10 @@ class ApplicationControllerTest < Minitest::Test
 
   def test_capability_options_for_delegates_to_recording_studio
     recording = FakeRecording.new(id: "rec-1", recordable_type: "Workspace")
+    singleton = RecordingStudio.singleton_class
+    had_method = singleton.method_defined?(:capability_options)
+    original = RecordingStudio.method(:capability_options) if had_method
+    singleton.send(:remove_method, :capability_options) if had_method
     RecordingStudio.define_singleton_method(:capability_options) { |_name, _for_type: nil, **| { max_file_size: 10.megabytes } }
 
     RecordingStudioAttachable::Authorization.stub(:owner_type_for, "Workspace") do
@@ -148,6 +152,10 @@ class ApplicationControllerTest < Minitest::Test
         assert_equal({ max_file_size: 10.megabytes }, @controller.send(:capability_options_for, recording))
       end
     end
+  ensure
+    singleton = RecordingStudio.singleton_class
+    singleton.send(:remove_method, :capability_options) if singleton.method_defined?(:capability_options)
+    RecordingStudio.define_singleton_method(:capability_options) { |*args, **kwargs| original.call(*args, **kwargs) } if had_method
   end
 
   def test_configured_attachable_option_falls_back_to_global_configuration

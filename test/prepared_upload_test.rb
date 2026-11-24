@@ -38,12 +38,14 @@ class PreparedUploadTest < Minitest::Test
     @original = RecordingStudioAttachable.instance_variable_get(:@configuration)
     RecordingStudioAttachable.instance_variable_set(:@configuration, RecordingStudioAttachable::Configuration.new)
     RecordingStudioAttachable.configuration.authorize_with = ->(**) { true }
+    pin_capability_options!
     @blob_methods = install_blob_methods
     ensure_attachment_class!
     ensure_api_errors!
   end
 
   def teardown
+    restore_capability_options!
     RecordingStudioAttachable.instance_variable_set(:@configuration, @original)
     remove_blob_methods(@blob_methods)
   end
@@ -455,6 +457,23 @@ class PreparedUploadTest < Minitest::Test
 
   def with_access(&)
     RecordingStudio.configuration.stub(:capability_enabled?, true, &)
+  end
+
+  def pin_capability_options!
+    singleton = RecordingStudio.singleton_class
+    @had_capability_options = singleton.method_defined?(:capability_options)
+    @original_capability_options = RecordingStudio.method(:capability_options) if @had_capability_options
+    singleton.send(:remove_method, :capability_options) if @had_capability_options
+    RecordingStudio.define_singleton_method(:capability_options) { |_name, _for_type: nil, **| {} }
+  end
+
+  def restore_capability_options!
+    singleton = RecordingStudio.singleton_class
+    singleton.send(:remove_method, :capability_options) if singleton.method_defined?(:capability_options)
+    return unless @had_capability_options
+
+    original = @original_capability_options
+    RecordingStudio.define_singleton_method(:capability_options) { |*args, **kwargs| original.call(*args, **kwargs) }
   end
 
   def with_pending(count, &)

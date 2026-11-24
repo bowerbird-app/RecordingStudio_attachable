@@ -10,9 +10,9 @@ module RecordingStudioAttachable
     PURPOSE = :attachable_upload
     INLINE_TYPES = %w[image/png image/jpeg image/gif image/webp application/pdf].freeze
     SIGNED_BLOB_INVALID =
-      "signed_blob_id is invalid or expired. Call create_upload first and use the signed_blob_id it returns."
+      "signed_blob_id is invalid or expired. Prepare an upload first and use the signed_blob_id it returns."
     CHECKSUM_MISMATCH =
-      "The uploaded bytes do not match the checksum. Call create_upload and PUT the exact file again."
+      "The uploaded bytes do not match the checksum. Prepare an upload and PUT the exact file again."
 
     module_function
 

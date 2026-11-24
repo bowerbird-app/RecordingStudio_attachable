@@ -17,10 +17,10 @@ end
 
 include_attachable_mcp = lambda do |*|
   RecordingStudioMcp.register_server(:public, api: :public) do
-    include_tools(:list, :show, *RecordingStudioAttachable::McpCopy.tool_names)
+    include_tools(:list, :show, *RecordingStudioAttachable::McpCopy.tool_names(api: :public))
   end
   RecordingStudioMcp.register_server(:operations, api: :operations, allow_sensitive: true) do
-    include_tools(*RecordingStudioAttachable::McpCopy.tool_names)
+    include_tools(*RecordingStudioAttachable::McpCopy.tool_names(api: :operations))
   end
 end
 

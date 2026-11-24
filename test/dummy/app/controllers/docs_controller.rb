@@ -270,8 +270,10 @@ class DocsController < ApplicationController
           download: :view
         }
 
-        # Hosts that import by URL list the HTTPS hosts SafeRemoteFetch may contact.
+        # Empty allows any public HTTPS host. A list allows only those hosts.
+        # :none turns imports off.
         # config.import_allowed_hosts = ["cdn.example.com"]
+        # config.public_url_host = "https://files.example.com"
         # PurgeUnattachedBlobsJob deletes unattached blobs older than this.
         # config.unattached_blob_ttl = 24.hours
       end

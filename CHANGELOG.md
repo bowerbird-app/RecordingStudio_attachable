@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-11-24
+
+### Changed
+
+- An empty `config.import_allowed_hosts` allows any public HTTPS host. A non-empty list still allows only those hosts. `config.import_allowed_hosts = :none` turns imports off. Blocked names now include hosts ending in `.internal`, `.local`, and `.localhost`, plus the documentation, discard, Teredo, and reserved ranges already refused as private addresses.
+- URL and provider imports store the type detected from the bytes and the filename when the declared type is generic (`application/octet-stream`, `binary/octet-stream`, or blank) or disagrees with the bytes. The allow list then runs. `image/*` still excludes `image/svg+xml` unless that type is named.
+- MCP registration creates `<type>_create_upload`, `<type>_attach`, and `<type>_import_attachment` only when an API registration supports that action. Tool text names only those tools. `config.mcp_next_step(type, text)` appends one host-supplied next step.
+- Attachment payloads add `urls.file_url` in rails mode when a public host is known. `config.public_url_host` supplies it, then the app's `default_url_options`. `urls.file` is unchanged. Direct mode does not add the key.
+- File, download, and preview reads return 404 when the attachment, or an ancestor below the root, is trashed, unless the actor has admin on the parent. Those reads use the same authorization as every other attachment read: the role check, then `attachable_available_for?`.
+
+### Upgrade Notes
+
+- Bump to 0.36.0. Previous is 0.35.1. No migration.
+- Empty `import_allowed_hosts` no longer refuses every host. Set `import_allowed_hosts = :none` to turn imports off, or set an explicit host list to keep an allowlist.
+- `include_tools` should keep passing `McpCopy.tool_names(api:)`. Tools for unsupported capability actions are no longer registered, and their names no longer appear in tool text. Call `config.mcp_next_step(type, text)` when a kit needs a next step such as `then call image_section_add`.
+- Read `urls.file_url` when a client needs an absolute file URL. `urls.file` stays a path in rails mode.
+- Set `config.public_url_host` when the app's `default_url_options` has no host.
+
 ## [0.35.1] - 2026-11-24
 
 ### Fixed
@@ -955,7 +973,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.35.1...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.36.0...HEAD
+[0.36.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.35.1...v0.36.0
 [0.35.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.35.0...v0.35.1
 [0.35.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.6...v0.35.0
 [0.34.6]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.5...v0.34.6

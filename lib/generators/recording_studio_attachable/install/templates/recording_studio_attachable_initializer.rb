@@ -13,8 +13,14 @@ RecordingStudioAttachable.configure do |config|
   config.max_file_count = 20
   # Cap on unattached direct uploads waiting for this actor on one root.
   # config.pending_upload_limit = 20
-  # Hosts that import by URL list the HTTPS hosts SafeRemoteFetch may contact.
+  # Empty allows any public HTTPS host. A list allows only those hosts.
+  # :none turns imports off.
   # config.import_allowed_hosts = ["cdn.example.com"]
+  # config.import_allowed_hosts = :none
+  # Absolute urls.file_url uses this host, then the app default_url_options.
+  # config.public_url_host = "https://files.example.com"
+  # Optional next step appended to that type's MCP upload tool text.
+  # config.mcp_next_step "ImageSection", "then call image_section_add"
   # Signed direct-upload URLs expire after this. Independent of Active Storage's
   # service URL expiry.
   # config.direct_upload_expires_in = 5.minutes

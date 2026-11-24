@@ -69,6 +69,12 @@ module RecordingStudioAttachable
     end
 
     def authorize_attachment_owner_action!(action, attachment_recording)
+      unless RecordingStudioAttachable::Authorization.visible_to?(
+        attachment_recording, actor: current_attachable_actor, action: action
+      )
+        raise RecordingStudioAttachable::Authorization::OwnerUnavailableError, "Not found"
+      end
+
       authorize_attachment_action!(
         action,
         attachable_owner_recording(attachment_recording),

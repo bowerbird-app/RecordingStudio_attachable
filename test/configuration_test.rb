@@ -34,6 +34,8 @@ class ConfigurationTest < Minitest::Test
     assert_equal false, @configuration.purge_unattached_blobs
     assert_equal true, @configuration.warn_on_active_storage_routes
     assert_equal [], @configuration.import_allowed_hosts
+    assert_nil @configuration.public_url_host
+    assert_equal({}, @configuration.mcp_next_steps)
     assert_nil @configuration.storage_limit
     assert_not @configuration.image_processing_enabled
     assert_equal 2560, @configuration.image_processing_max_width
@@ -368,6 +370,8 @@ class ConfigurationTest < Minitest::Test
         purge_unattached_blobs: false,
         warn_on_active_storage_routes: true,
         import_allowed_hosts: [],
+        public_url_host: nil,
+        mcp_next_steps: {},
         storage_limit: nil,
         image_processing_enabled: false,
         image_processing_max_width: 2560,
@@ -396,5 +400,24 @@ class ConfigurationTest < Minitest::Test
       },
       @configuration.to_h
     )
+  end
+
+  def test_import_allowed_hosts_none_turns_imports_off
+    @configuration.import_allowed_hosts = :none
+
+    assert_equal :none, @configuration.import_allowed_hosts
+
+    @configuration.import_allowed_hosts = []
+
+    assert_equal [], @configuration.import_allowed_hosts
+  end
+
+  def test_public_url_host_and_mcp_next_step
+    @configuration.public_url_host = " https://files.example.test "
+    @configuration.mcp_next_step("ImageSection", " then call image_section_add ")
+
+    assert_equal "https://files.example.test", @configuration.public_url_host
+    assert_equal "then call image_section_add", @configuration.mcp_next_step_for("ImageSection")
+    assert_nil @configuration.mcp_next_step_for("Other")
   end
 end

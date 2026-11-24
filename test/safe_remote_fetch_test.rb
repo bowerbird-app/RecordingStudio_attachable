@@ -378,6 +378,101 @@ class SafeRemoteFetchTest < Minitest::Test
     end
   end
 
+  def test_empty_allow_list_fetches_a_public_https_host
+    with_public_dns do
+      stub_http(lambda { |_host, _request|
+        FakeResponse.new(body: "bytes", code: "200", headers: { "content-type" => "application/pdf" }, success: true)
+      }) do
+        result = fetch(uri: "https://cdn.example.test/file.pdf", allowed_hosts: [])
+
+        assert_equal "bytes", result.io.read
+        assert_equal "application/pdf", result.content_type
+      end
+    end
+  end
+
+  def test_empty_allow_list_still_refuses_unsafe_targets
+    {
+      "http://cdn.example.test/file" => "Remote download must use HTTPS",
+      "https://printer.local/file" => RecordingStudioAttachable::SafeRemoteFetch::HostGuard::HOST_BLOCKED,
+      "https://files.internal/file" => RecordingStudioAttachable::SafeRemoteFetch::HostGuard::HOST_BLOCKED,
+      "https://app.localhost/file" => RecordingStudioAttachable::SafeRemoteFetch::HostGuard::HOST_BLOCKED
+    }.each do |uri, message|
+      error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
+        fetch(uri: uri, allowed_hosts: [])
+      end
+      assert_equal message, error.message
+    end
+
+    ["127.0.0.1", "10.1.1.1", "169.254.1.1", "192.0.2.1", "100.64.1.1", "0.1.2.3",
+     "240.1.2.3", "198.51.100.1", "203.0.113.1", "192.0.0.1", "::ffff:192.0.2.1",
+     "ff02::1", "2001:db8::1", "100::1", "2001:0:1::1"].each do |address|
+      Resolv.stub(:getaddresses, ->(_host) { [address] }) do
+        error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
+          fetch(uri: "https://cdn.example.test/file", allowed_hosts: [])
+        end
+        assert_equal "Remote download host resolves to a private address", error.message, address
+      end
+    end
+  end
+
+  def test_empty_allow_list_refuses_a_public_name_that_resolves_to_a_private_address
+    Resolv.stub(:getaddresses, ->(_host) { ["10.0.0.8"] }) do
+      error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
+        fetch(uri: "https://cdn.example.test/file", allowed_hosts: [])
+      end
+
+      assert_equal "Remote download host resolves to a private address", error.message
+    end
+  end
+
+  def test_empty_allow_list_refuses_a_redirect_to_a_private_address
+    redirect = FakeRedirectResponse.new(
+      body: "",
+      code: "302",
+      headers: { "location" => "https://cdn.example.test/file" }
+    )
+    addresses = {
+      "api.example.test" => ["8.8.8.8"],
+      "cdn.example.test" => ["192.168.1.9"]
+    }
+
+    Resolv.stub(:getaddresses, ->(host) { addresses.fetch(host) }) do
+      stub_http(->(_host, _request) { redirect }) do
+        error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
+          fetch(uri: "https://api.example.test/file", allowed_hosts: [])
+        end
+
+        assert_equal "Remote download host resolves to a private address", error.message
+      end
+    end
+  end
+
+  def test_a_non_empty_list_allows_only_listed_public_hosts
+    error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
+      fetch(uri: "https://other.example.test/file", allowed_hosts: ["cdn.example.test"])
+    end
+    assert_equal RecordingStudioAttachable::SafeRemoteFetch::HostGuard::HOST_NOT_ALLOWED, error.message
+
+    with_public_dns do
+      stub_http(lambda { |_host, _request|
+        FakeResponse.new(body: "ok", code: "200", headers: { "content-type" => "text/plain" }, success: true)
+      }) do
+        result = fetch(uri: "https://cdn.example.test/file", allowed_hosts: ["cdn.example.test"])
+
+        assert_equal "ok", result.io.read
+      end
+    end
+  end
+
+  def test_imports_off_refuses_every_host
+    error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
+      fetch(uri: "https://cdn.example.test/file", allowed_hosts: :none)
+    end
+
+    assert_equal RecordingStudioAttachable::SafeRemoteFetch::HostGuard::IMPORTS_OFF, error.message
+  end
+
   private
 
   def fetch(**attributes)

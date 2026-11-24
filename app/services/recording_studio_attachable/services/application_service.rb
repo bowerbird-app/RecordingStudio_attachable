@@ -124,8 +124,9 @@ module RecordingStudioAttachable
       end
 
       def create_imported_blob!(io:, filename:, content_type:, service_name: nil, metadata: nil)
+        stored_type = DirectUpload.import_content_type(io, filename: filename, declared: content_type)
         ActiveStorage::Blob.create_and_upload!(**{
-          io: io, filename: filename, content_type: content_type, identify: false,
+          io: io, filename: filename, content_type: stored_type, identify: false,
           service_name: service_name, metadata: metadata
         }.compact)
       end

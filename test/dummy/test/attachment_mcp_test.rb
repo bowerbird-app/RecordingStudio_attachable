@@ -29,6 +29,31 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
     RecordingStudioAttachable.configuration.import_allowed_hosts = @hosts
   end
 
+  test "a type with attach disabled does not register attach and shows a host hint" do
+    configuration = RecordingStudio.configuration
+    original = configuration.instance_variable_get(:@capabilities).transform_values(&:dup)
+    type = "HintSection"
+    configuration.enable_capability(:attachable, on: type)
+    RecordingStudioApi.register_recordable_type_api(
+      type,
+      capability_actions: %i[create_upload],
+      api: :public
+    )
+    RecordingStudioAttachable.configuration.mcp_next_step(type, "then call image_section_add")
+    RecordingStudioAttachable::McpCopy.register!
+
+    attach_name = RecordingStudioAttachable::McpCopy.tool_name(type, :attach)
+    upload = RecordingStudioMcp.configuration.tool(RecordingStudioAttachable::McpCopy.tool_name(type, :create_upload))
+    refute RecordingStudioMcp.configuration.tool(attach_name)
+    assert upload
+    assert_includes upload.description, "then call image_section_add"
+    refute_includes upload.description, attach_name
+    refute_includes RecordingStudioAttachable::McpCopy.tool_names(api: :public), attach_name
+  ensure
+    configuration.instance_variable_set(:@capabilities, original) if original
+    RecordingStudioAttachable.configuration.mcp_next_steps.delete("HintSection")
+  end
+
   test "tool names registers a type that became attachable after register!" do
     configuration = RecordingStudio.configuration
     original = configuration.instance_variable_get(:@capabilities).transform_values(&:dup)
@@ -63,8 +88,8 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
       assert_includes public_names, on_api
       refute_includes public_names, unsupported
       refute_includes public_names, missing
-      assert_includes every_name, unsupported
-      assert_includes every_name, missing
+      refute_includes every_name, unsupported
+      refute_includes every_name, missing
     end
   end
 
@@ -80,13 +105,13 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
     end
     RecordingStudioAttachable::McpCopy::ACTIONS.each do |action|
       name = RecordingStudioAttachable::McpCopy.tool_name("Page", action)
-      assert_includes RecordingStudioAttachable::McpCopy.tool_names, name
+      refute_includes RecordingStudioAttachable::McpCopy.tool_names, name
       refute by_name.key?(name), "#{name} is listed though Page does not enable that action"
     end
     site = "RecordingStudioSiteSettings::SiteSetting"
     RecordingStudioAttachable::McpCopy::ACTIONS.each do |action|
       name = RecordingStudioAttachable::McpCopy.tool_name(site, action)
-      assert_includes RecordingStudioAttachable::McpCopy.tool_names, name
+      refute_includes RecordingStudioAttachable::McpCopy.tool_names, name
       refute by_name.key?(name), "#{name} is on the public server, whose API does not register SiteSetting"
     end
     %w[create_upload attach import_attachment].each do |name|

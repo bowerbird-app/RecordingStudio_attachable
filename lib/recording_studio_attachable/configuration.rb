@@ -46,7 +46,7 @@ module RecordingStudioAttachable
     attr_reader :image_variants, :upload_providers, :storage_limit, :url_mode,
                 :max_image_pixels, :max_image_longest_side,
                 :upload_presentation, :import_allowed_hosts, :layout, :before_save,
-                :around_attach, :warn_on_active_storage_routes
+                :around_attach, :warn_on_active_storage_routes, :public_url_host, :mcp_next_steps
 
     def layout=(value)
       @layout = RecordingStudio::Layout.accept(value)
@@ -216,7 +216,24 @@ module RecordingStudioAttachable
     end
 
     def import_allowed_hosts=(hosts)
+      if [:none, "none"].include?(hosts)
+        @import_allowed_hosts = :none
+        return
+      end
+
       @import_allowed_hosts = Array(hosts).filter_map { |host| host.to_s.strip.downcase.presence }
+    end
+
+    def public_url_host=(value)
+      @public_url_host = value.to_s.strip.presence
+    end
+
+    def mcp_next_step(type, text)
+      mcp_next_steps[type.to_s] = text.to_s.strip.presence
+    end
+
+    def mcp_next_step_for(type)
+      mcp_next_steps[type.to_s]
     end
 
     def storage_limit=(value)
@@ -266,6 +283,8 @@ module RecordingStudioAttachable
         purge_unattached_blobs: purge_unattached_blobs,
         warn_on_active_storage_routes: warn_on_active_storage_routes,
         import_allowed_hosts: import_allowed_hosts,
+        public_url_host: public_url_host,
+        mcp_next_steps: mcp_next_steps,
         storage_limit: storage_limit,
         image_processing_enabled: image_processing_enabled,
         image_processing_max_width: image_processing_max_width,
@@ -321,6 +340,8 @@ module RecordingStudioAttachable
       @purge_unattached_blobs = false
       @warn_on_active_storage_routes = true
       @import_allowed_hosts = []
+      @public_url_host = nil
+      @mcp_next_steps = {}
       @storage_limit = nil
       @image_processing_enabled = false
       @image_processing_max_width = 2560

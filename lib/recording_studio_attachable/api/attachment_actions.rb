@@ -34,8 +34,8 @@ module RecordingStudioAttachable
         description: ATTACH_COPY,
         responses: {
           "200" => {
-            description: "One file returns id, kind, name, and urls.file. A list returns attachments, " \
-                         "an array of those objects.",
+            description: "One file returns id, kind, name, and urls.file. urls.file_url is the absolute URL " \
+                         "when a public host is known. A list returns attachments, an array of those objects.",
             content: {
               "application/json" => {
                 schema: { oneOf: [ATTACHMENT_ONE_SCHEMA, ATTACHMENT_MANY_SCHEMA] }
@@ -52,7 +52,8 @@ module RecordingStudioAttachable
         description: IMPORT_ATTACHMENT_COPY,
         responses: {
           "200" => {
-            description: "The new attachment. Returns id, kind, name, and urls.file.",
+            description: "The new attachment. Returns id, kind, name, and urls.file. urls.file_url is the " \
+                         "absolute URL when a public host is known.",
             content: {
               "application/json" => { schema: ATTACHMENT_ONE_SCHEMA }
             }

@@ -89,9 +89,14 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
 
     previous = RecordingStudioAttachable.configuration.import_allowed_hosts.dup
     RecordingStudioAttachable.configuration.import_allowed_hosts = []
+    with_fetch(body, content_type: "image/png") do
+      call(:post, "/workspaces/#{@root.id}/actions/import_attachment", @editor_token, url: "https://cdn.example.test/door.png", name: "Public")
+      assert_response :success, response.body
+    end
+    RecordingStudioAttachable.configuration.import_allowed_hosts = :none
     call(:post, "/workspaces/#{@root.id}/actions/import_attachment", @editor_token, url: "https://files.example.test/door.png")
     assert_response :unprocessable_entity
-    assert_includes action_error_text, RecordingStudioAttachable::SafeRemoteFetch::HostGuard::HOST_NOT_ALLOWED
+    assert_includes action_error_text, RecordingStudioAttachable::SafeRemoteFetch::HostGuard::IMPORTS_OFF
     RecordingStudioAttachable.configuration.import_allowed_hosts = previous
   end
 
@@ -196,10 +201,10 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     with_fetch("not-a-png", content_type: "image/png") do
       call(:post, "/workspaces/#{@root.id}/actions/import_attachment", @editor_token, url: "https://files.example.test/fake.png")
       assert_response :unprocessable_entity
-      assert_includes json.dig("error", "message"), "does not match"
+      assert_includes json.dig("error", "message"), "not allowed"
     end
 
-    with_fetch(png_bytes, content_type: "image/svg+xml") do
+    with_fetch('<svg xmlns="http://www.w3.org/2000/svg"></svg>', content_type: "image/svg+xml") do
       call(:post, "/workspaces/#{@root.id}/actions/import_attachment", @editor_token, url: "https://files.example.test/icon.svg")
       assert_response :unprocessable_entity
       assert_includes json.dig("error", "message"), "not allowed"

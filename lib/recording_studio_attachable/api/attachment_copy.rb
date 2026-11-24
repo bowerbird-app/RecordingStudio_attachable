@@ -125,7 +125,7 @@ module RecordingStudioAttachable
           url: {
             type: :string, required: true, allow_blank: false,
             description: "Public HTTPS URL of the file to download. The port must be 443 and the address must be public. " \
-                         "The host app must allow that remote host for imports. By default no remote hosts are allowed."
+                         "Public HTTPS hosts are allowed. The host app can limit which hosts imports may use, or turn imports off."
           },
           name: {
             type: :string, required: false, allow_blank: true,
@@ -153,7 +153,8 @@ module RecordingStudioAttachable
           "name is the attachment name. " \
           "urls.file is the delivery URL for the original file. " \
           "The default rails mode returns the engine file path. " \
-          "Direct mode returns the blob direct URL."
+          "urls.file_url is that path as an absolute URL when a public host is known. " \
+          "Direct mode returns the blob direct URL and does not add urls.file_url."
         ITEM_NOTE =
           "This links the file to the parent as a child attachment. " \
           "On an image section it appears as a gallery image. " \
@@ -199,7 +200,7 @@ module RecordingStudioAttachable
           "This downloads the file and links it to the record. There is no separate upload step and no " \
           "signed_blob_id. #{ITEM_NOTE} The parent record must already exist. " \
           "If the host app sets a storage limit, the file must fit in the space left. " \
-          "The host app must allow the remote host for imports. By default no remote hosts are allowed. " \
+          "Public HTTPS hosts are allowed. The host app can limit which hosts imports may use, or turn imports off. " \
           "Returns id, kind, name, and urls.file. #{ONE_RESULT} " \
           "url must be HTTPS on port 443. Private addresses are refused. #{LIMITS}".freeze
       end

@@ -19,7 +19,8 @@ module RecordingStudioAttachable
       @headers = attributes.fetch(:headers, {}).to_h
       @http_method = attributes.fetch(:http_method, :get).to_s.upcase
       @body = attributes[:body]
-      @allowed_hosts = Array(attributes.fetch(:allowed_hosts))
+      hosts = attributes.fetch(:allowed_hosts)
+      @allowed_hosts = hosts == :none ? :none : Array(hosts)
     end
 
     def assign_file(attributes)

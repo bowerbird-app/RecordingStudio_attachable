@@ -9,5 +9,8 @@ class SessionStoreTest < ActiveSupport::TestCase
     filtered = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
     assert_equal "[FILTERED]", filtered.filter(signed_blob_id: "secret-id", checksum: "abc")[:signed_blob_id]
     assert_equal "[FILTERED]", filtered.filter(checksum: "abc")[:checksum]
+    nested = filtered.filter(file: { download_url: "https://files.example.test/secret", file_id: "file_1" })
+    assert_equal "[FILTERED]", nested.dig(:file, :download_url)
+    assert_equal "file_1", nested.dig(:file, :file_id)
   end
 end

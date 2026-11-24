@@ -78,7 +78,11 @@ module RecordingStudioAttachable
         end
 
         def ticket
-          return server_ticket if server_source?
+          sources = server_sources
+          raise ArgumentError, "Send only one of url, data, or file" if sources.many? || (sources.any? && direct_fields_present?)
+          return file_ticket if sources == [:file]
+          return fetch_ticket if sources == [:url]
+          return inline_ticket if sources == [:data]
 
           DirectUpload.ticket(prepare)
         end
@@ -87,15 +91,8 @@ module RecordingStudioAttachable
 
         attr_reader :context, :params
 
-        def server_source?
-          params[:url].present? || params[:data].present?
-        end
-
-        def server_ticket
-          raise ArgumentError, "Send url or data, not both" if params[:url].present? && params[:data].present?
-          return fetch_ticket if params[:url].present?
-
-          inline_ticket
+        def server_sources
+          %i[url data file].select { |key| params[key].present? }
         end
 
         def fetch_ticket
@@ -116,6 +113,14 @@ module RecordingStudioAttachable
           )
         end
 
+        def file_ticket
+          PreparedUpload.fetch(
+            recording: context.recording,
+            actor: context.actor,
+            file: params[:file]
+          )
+        end
+
         def prepare
           require_direct_fields!
           DirectUpload.prepare!(
@@ -132,7 +137,7 @@ module RecordingStudioAttachable
           return if direct_fields_present?
 
           raise ArgumentError, "Send filename, byte_size, checksum, and content_type for a direct upload, " \
-                               "or send url, or send data and filename."
+                               "or send url, or send data and filename, or send file."
         end
 
         def direct_fields_present?

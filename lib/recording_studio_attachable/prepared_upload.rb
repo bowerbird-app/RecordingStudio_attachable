@@ -1,25 +1,27 @@
 # frozen_string_literal: true
 
 require "stringio"
+require_relative "attached_file"
 require_relative "inline_bytes"
 
 module RecordingStudioAttachable
   # Bytes already in hand, stored as the same tagged unattached blob a direct
   # upload ticket would have produced after the client PUT.
   module PreparedUpload
-    BAD_URL = "url must be a public https:// web address. For a file you have attached or saved locally, " \
-              "send its bytes as base64 data with filename instead."
+    BAD_URL = "url must be a public https:// web address. For a file attached in ChatGPT, send file. " \
+              "For a file you can send as bytes, send base64 data with filename."
     BAD_BASE64 = InlineBytes::BAD
 
     module_function
 
-    def fetch(recording:, actor:, url:, filename: nil)
+    def fetch(recording:, actor:, url: nil, filename: nil, file: nil)
+      raise ArgumentError, "Send url or file, not both" if url.present? && file.present?
+      raise ArgumentError, "url or file is required" if url.blank? && file.blank?
+
       ready!(recording, actor)
-      remote = remote_file(url, filename)
-      fetched = SafeRemoteFetch.call(remote, max_bytes: file_cap(recording))
-      ticket_for(recording, actor, fetched.io, remote.filename, fetched.content_type)
-    ensure
-      SafeRemoteFetch.close_io(fetched&.io)
+      return fetch_url(recording, actor, url, filename) if file.blank?
+
+      fetch_attached(recording, actor, file)
     end
 
     def inline(recording:, actor:, data:, filename:)
@@ -53,6 +55,21 @@ module RecordingStudioAttachable
     def denial(recording)
       type = recording.respond_to?(:recordable_type) ? recording.recordable_type : recording.class.name
       "Not authorized to upload attachments for #{type}"
+    end
+
+    def fetch_url(recording, actor, url, filename)
+      fetched = nil
+      remote = remote_file(url, filename)
+      fetched = SafeRemoteFetch.call(remote, max_bytes: file_cap(recording))
+      ticket_for(recording, actor, fetched.io, remote.filename, fetched.content_type)
+    ensure
+      SafeRemoteFetch.close_io(fetched&.io)
+    end
+
+    def fetch_attached(recording, actor, file)
+      AttachedFile.fetch(file, max_bytes: file_cap(recording), remote_file: method(:remote_file)) do |io, name, declared|
+        ticket_for(recording, actor, io, name, declared)
+      end
     end
 
     def remote_file(url, filename)
@@ -95,7 +112,7 @@ module RecordingStudioAttachable
     def configuration
       RecordingStudioAttachable.configuration
     end
-    private_class_method :ready!, :ticket_for, :authorize!, :denial, :remote_file, :parse_url, :chosen_filename,
-                         :decoded, :file_cap, :inline_cap, :configuration
+    private_class_method :ready!, :ticket_for, :authorize!, :denial, :fetch_url, :fetch_attached,
+                         :remote_file, :parse_url, :chosen_filename, :decoded, :file_cap, :inline_cap, :configuration
   end
 end

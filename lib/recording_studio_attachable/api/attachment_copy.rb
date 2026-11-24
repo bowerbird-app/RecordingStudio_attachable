@@ -73,43 +73,43 @@ module RecordingStudioAttachable
           filename: {
             type: :string, required: false, allow_blank: true,
             description: "File name to store, such as cover.jpg. Send it with data. A direct upload needs it too. " \
-                         "Optional when you send url. When omitted, the name comes from the url path."
+                         "Optional when you send url or file. When omitted on url, the name comes from the url path."
           },
           byte_size: {
             type: :integer, required: false,
-            description: "The file size in bytes. Required for a direct upload. Omit it when you send url or data. " \
+            description: "The file size in bytes. Required for a direct upload. Omit it when you send url, data, or file. " \
                          "Use zero or more. #{RECORD_LIMIT_NOTE}".freeze
           },
           checksum: {
             type: :string, required: false, allow_blank: true,
             description: "MD5 checksum of the file bytes, Base64-encoded, as Active Storage expects. " \
-                         "Required for a direct upload. Omit it when you send url or data."
+                         "Required for a direct upload. Omit it when you send url, data, or file."
           },
           content_type: {
             type: :string, required: false, allow_blank: true,
-            description: "The file's content type. Required for a direct upload. Omit it when you send url or data. " \
+            description: "The file's content type. Required for a direct upload. Omit it when you send url, data, or file. " \
                          "#{RECORD_LIMIT_NOTE} " \
                          "image/* does not include image/svg+xml unless that exact type is named in the allow list.".freeze
           },
           url: {
             type: :string, required: false, allow_blank: true,
-            description: "A public https:// web address of the file. Send this only when the file is already on the public web. " \
-                         "A file attached in the chat, or a path on disk, goes as base64 data with filename. Never put a local path in url."
+            description: "A public https:// web address of a file already on the public web. " \
+                         "For a file the user attached in ChatGPT, send file. Never put a local path in url."
           },
           data: {
             type: :string, required: false, allow_blank: true,
-            description: "Base64 file bytes, or a base64 data URI. Send this with filename for a file the user attached in chat " \
-                         "or that you have saved locally. Data uploads can be up to 2 MB. Send a public https url for a larger file."
+            description: "Base64 file bytes, or a base64 data URI. Send this with filename when the client can send the bytes."
           }
         }.freeze
 
         def self.create_upload
           shared = RecordingStudioAttachable::McpCopy.upload_source_fields
-          CREATE_UPLOAD.merge(
-            filename: with_source_description(:filename, shared),
-            url: with_source_description(:url, shared),
-            data: with_source_description(:data, shared)
-          )
+          file = RecordingStudioAttachable::McpCopy.upload_file_field
+          CREATE_UPLOAD.merge(filename: with_source_description(:filename, shared),
+                              url: with_source_description(:url, shared),
+                              data: with_source_description(:data, shared),
+                              file: { type: :hash, required: false, allow_blank: true,
+                                      description: file.fetch("description"), properties: file.fetch("properties") })
         end
 
         def self.with_source_description(name, shared)
@@ -194,18 +194,20 @@ module RecordingStudioAttachable
           "On a file section it appears as a listed file. " \
           "On a parent that holds one attachment, the host's rules decide whether a new file " \
           "replaces the existing one or is refused."
-        CREATE_UPLOAD_SUMMARY = "Prepare an upload ticket from file details, an HTTPS url, or base64 data. This does not attach the file."
+        CREATE_UPLOAD_SUMMARY = "Prepare an upload ticket from file details, a ChatGPT file, an HTTPS url, or base64 data. " \
+                                "This does not attach the file."
         CREATE_UPLOAD =
           "An attachment is an uploaded file linked to a record, such as a PDF, an image, or a document. " \
           "Use the create_upload action when you have the file bytes, an HTTPS url, or base64 data. " \
           "Use the import_attachment action when the file is already at an HTTPS URL and you want it attached in that call. " \
           "For a direct upload, call the create_upload action, PUT the bytes to upload.url with upload.headers, " \
           "then call the attach action with signed_blob_id. " \
-          "When you cannot PUT the bytes, send url or data on the create_upload action. " \
+          "When you cannot PUT the bytes, send file, url, or data on the create_upload action. " \
+          "For a file the user attached in ChatGPT, use file. For a public web image, use url. " \
+          "For clients that can send bytes, use data plus filename. " \
           "url is only a public https:// web address and follows the same host rules as import. " \
-          "A file attached in the chat is base64 data and filename. Never put a local path in url. " \
-          "data is base64 or a data URI and needs filename. " \
-          "url and data store the bytes and return the same signed_blob_id. You do not PUT those bytes. " \
+          "Never put a local path in url or in data. " \
+          "file, url, and data store the bytes and return the same signed_blob_id. You do not PUT those bytes. " \
           "This call adds nothing to the record. The parent record must already exist. " \
           "If the host app sets a storage limit, the file must fit in the space left. " \
           "Returns signed_blob_id, upload.url, upload.headers, and expires_at. " \
@@ -226,7 +228,7 @@ module RecordingStudioAttachable
           "Use the import_attachment action when the file is already at an HTTPS URL and you do not have the bytes. " \
           "Send one signed_blob_id, or send attachments to link several files in one call. Do not send both. " \
           "#{ITEM_NOTE} The parent record must already exist. " \
-          "Call the create_upload action first. PUT the bytes, or pass url or data on that call when you cannot PUT, " \
+          "Call the create_upload action first. PUT the bytes, or pass file, url, or data on that call when you cannot PUT, " \
           "before you send signed_blob_id. " \
           "If the host app sets a storage limit, the file must fit in the space left. " \
           "One signed_blob_id returns id, kind, name, and urls.file. " \

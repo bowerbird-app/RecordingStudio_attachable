@@ -121,7 +121,32 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
         url: "https://files.example.test/door.png", data: Base64.strict_encode64(bytes), filename: "door.png"
       )
       assert_response :unprocessable_entity
-      assert_includes action_error_text, "not both"
+      assert_includes action_error_text, "only one"
+
+      secret = "https://files.example.test/secret-token/door.png?sig=keep-me"
+      file_ticket = call(
+        :post, "/workspaces/#{@root.id}/actions/create_upload", @editor_token,
+        file: { download_url: secret, file_id: "file_123", mime_type: "image/jpeg", file_name: "images(1).jpeg" }
+      )
+      assert_response :success, response.body
+      refute_includes response.body, secret
+      file_attached = call(
+        :post, "/workspaces/#{@root.id}/actions/attach", @editor_token,
+        signed_blob_id: file_ticket.fetch("signed_blob_id"), name: "Chat file"
+      )
+      assert_response :success, response.body
+      assert_equal "Chat file", file_attached.fetch("name")
+      stored = RecordingStudio::Recording.find(file_attached.fetch("id")).recordable
+      assert_equal "images(1).jpeg", stored.original_filename
+      refute_includes stored.file.blob.metadata.to_s, secret
+      refute_includes file_attached.to_s, secret
+
+      path = "/mnt/data/images(1).jpeg"
+      call(:post, "/workspaces/#{@root.id}/actions/create_upload", @editor_token, data: path, filename: "images(1).jpeg")
+      assert_response :unprocessable_entity
+      assert_includes action_error_text, "send file"
+      assert_includes action_error_text, "https url"
+      refute_includes response.body, path
 
       replacement = call(
         :post, "/workspaces/#{@root.id}/actions/create_upload", @editor_token,

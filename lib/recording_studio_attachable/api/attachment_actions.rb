@@ -131,7 +131,8 @@ module RecordingStudioAttachable
         def require_direct_fields!
           return if direct_fields_present?
 
-          raise ArgumentError, "filename, byte_size, checksum, and content_type are required"
+          raise ArgumentError, "Send filename, byte_size, checksum, and content_type for a direct upload, " \
+                               "or send url, or send data and filename."
         end
 
         def direct_fields_present?

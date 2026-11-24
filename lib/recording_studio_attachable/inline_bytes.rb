@@ -7,7 +7,6 @@ module RecordingStudioAttachable
   module InlineBytes
     DATA_PREFIX = "data:"
     BASE64_PATTERN = %r{\A[A-Za-z0-9+/]*={0,2}\z}
-    TOO_BIG = "Inline upload exceeds inline_upload_max_bytes"
     BAD = "data is not valid base64"
 
     module_function
@@ -17,15 +16,22 @@ module RecordingStudioAttachable
       strict_decode(encoded)
     end
 
+    def size_words(bytes)
+      megabytes = bytes.to_f / 1.megabyte
+      return "#{bytes.to_i} bytes" if megabytes < 0.1
+
+      "#{format('%.1f', megabytes).sub(/\.0\z/, '')} MB"
+    end
+
     def payload(data, cap, inline_max)
       text = data.to_s
-      raise ArgumentError, message(cap + 1, inline_max) if text.bytesize > ceiling(cap)
+      raise ArgumentError, too_big_message(rough_bytes(text), cap, inline_max) if text.bytesize > ceiling(cap)
 
       compact = body(text).gsub(/\s+/, "")
       raise ArgumentError, BAD unless compact.match?(BASE64_PATTERN) && compact.present?
 
       estimate = estimated_bytes(compact)
-      raise ArgumentError, message(estimate, inline_max) if estimate > cap
+      raise ArgumentError, too_big_message(estimate, cap, inline_max) if estimate > cap
 
       compact
     end
@@ -47,10 +53,20 @@ module RecordingStudioAttachable
       ((encoded.length * 3) / 4) - encoded.count("=")
     end
 
-    def message(estimate, inline_max)
-      return TOO_BIG if estimate > inline_max
+    def rough_bytes(text)
+      encoded = text.lstrip
+      encoded = encoded.split(",", 2).last.to_s if encoded.start_with?(DATA_PREFIX)
+      estimated_bytes(encoded.gsub(/\s+/, ""))
+    end
 
-      "File exceeds maximum file size"
+    def too_big_message(byte_size, cap, inline_max)
+      size = size_words(byte_size)
+      limit = size_words(cap)
+      if cap < inline_max
+        "This file is #{size}; this record accepts files up to #{limit}."
+      else
+        "This file is #{size}; data uploads can be up to #{limit}. Send a public https url for larger files."
+      end
     end
 
     def strict_decode(encoded)
@@ -58,6 +74,6 @@ module RecordingStudioAttachable
     rescue ArgumentError
       raise ArgumentError, BAD
     end
-    private_class_method :payload, :ceiling, :body, :estimated_bytes, :message, :strict_decode
+    private_class_method :payload, :ceiling, :body, :estimated_bytes, :rough_bytes, :too_big_message, :strict_decode
   end
 end

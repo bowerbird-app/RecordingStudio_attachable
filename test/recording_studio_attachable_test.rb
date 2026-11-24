@@ -4,13 +4,19 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.37.0", RecordingStudioAttachable::VERSION
+    assert_equal "0.37.1", RecordingStudioAttachable::VERSION
     changelog = File.read(File.expand_path("../CHANGELOG.md", __dir__))
     dummy_lock = File.read(File.expand_path("dummy/Gemfile.lock", __dir__))
     dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
     root_ruby = File.read(File.expand_path("../.ruby-version", __dir__))
     dummy_ruby = File.read(File.expand_path("dummy/.ruby-version", __dir__))
 
+    assert_includes changelog, "## [0.37.1]"
+    assert changelog.index("## [0.37.1]") < changelog.index("## [0.37.0]")
+    assert_includes changelog, "compare/v0.37.0...v0.37.1"
+    notes_0371 = changelog[changelog.index("## [0.37.1]")...changelog.index("## [0.37.0]")]
+    assert_includes notes_0371, "upload_source_fields"
+    assert_includes notes_0371, "Bump to 0.37.1. Previous is 0.37.0. No migration."
     assert_includes changelog, "## [0.37.0]"
     assert changelog.index("## [0.37.0]") < changelog.index("## [0.36.0]")
     assert_includes changelog, "compare/v0.36.0...v0.37.0"

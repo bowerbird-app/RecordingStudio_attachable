@@ -373,7 +373,7 @@ class PreparedUploadTest < Minitest::Test
       end
       assert_includes both.message, "not both"
 
-      [ {}, { filename: "door.png" } ].each do |params|
+      [{}, { filename: "door.png" }].each do |params|
         missing = assert_raises(RecordingStudioApi::InvalidActionInputError) do
           handler.call(context(recording, actor, params))
         end

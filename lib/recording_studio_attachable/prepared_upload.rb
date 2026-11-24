@@ -7,7 +7,8 @@ module RecordingStudioAttachable
   # Bytes already in hand, stored as the same tagged unattached blob a direct
   # upload ticket would have produced after the client PUT.
   module PreparedUpload
-    INLINE_TOO_BIG = InlineBytes::TOO_BIG
+    BAD_URL = "url must be a public https:// web address. For a file you have attached or saved locally, " \
+              "send its bytes as base64 data with filename instead."
     BAD_BASE64 = InlineBytes::BAD
 
     module_function
@@ -65,9 +66,12 @@ module RecordingStudioAttachable
     end
 
     def parse_url(url)
-      URI.parse(url.to_s)
-    rescue URI::InvalidURIError
-      raise ArgumentError, "url must be an HTTPS URL"
+      uri = URI.parse(url.to_s)
+      return uri if uri.is_a?(URI::HTTPS) && !uri.host.to_s.strip.empty?
+
+      raise ArgumentError, BAD_URL
+    rescue URI::Error
+      raise ArgumentError, BAD_URL
     end
 
     def chosen_filename(filename, uri)

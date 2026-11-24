@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "api/attachment_actions"
+require_relative "inline_bytes"
 require_relative "mcp_copy/text"
 
 module RecordingStudioAttachable
@@ -9,8 +10,26 @@ module RecordingStudioAttachable
     ID_INPUT = {
       description: "Recording id of the parent record."
     }.freeze
+    URL_FIELD = "A public https:// web address of the file. Send this only when the file is already on the public web. " \
+                "A file attached in the chat, or a path on disk, goes as base64 data with filename. Never put a local path in url."
+    FILENAME_FIELD = "File name to store, such as cover.jpg. Send it with data. A direct upload needs it too. " \
+                     "Optional when you send url. When omitted, the name comes from the url path."
 
     module_function
+
+    def upload_source_fields
+      {
+        "url" => { "type" => "string", "description" => URL_FIELD },
+        "data" => { "type" => "string", "description" => data_field },
+        "filename" => { "type" => "string", "description" => FILENAME_FIELD }
+      }
+    end
+
+    def data_field
+      limit = InlineBytes.size_words(RecordingStudioAttachable.configuration.inline_upload_max_bytes)
+      "Base64 file bytes, or a base64 data URI. Send this with filename for a file the user attached in chat " \
+        "or that you have saved locally. Data uploads can be up to #{limit}. Send a public https url for a larger file."
+    end
 
     def register!
       return unless mcp_available?
@@ -99,7 +118,7 @@ module RecordingStudioAttachable
         next_step: RecordingStudioAttachable.configuration.mcp_next_step_for(type)
       )
     end
-    private_class_method :mcp_available?, :attachable_types, :type_token,
+    private_class_method :data_field, :mcp_available?, :attachable_types, :type_token,
                          :register_type_tools, :register_type_copy, :type_described?,
                          :register_action_tool, :description_for
   end

@@ -8,12 +8,11 @@ module RecordingStudioAttachable
       ATTACHMENT_ONE_SCHEMA = AttachmentCopy::Schemas::ONE
       ATTACHMENT_MANY_SCHEMA = AttachmentCopy::Schemas::MANY
       CREATE_UPLOAD_TICKET_SCHEMA = AttachmentCopy::Schemas::TICKET
-      CREATE_UPLOAD_FIELDS = AttachmentCopy::Fields::CREATE_UPLOAD
 
       module_function
 
       def create_upload
-        { reject_unknown: false, fields: CREATE_UPLOAD_FIELDS }
+        { reject_unknown: false, fields: AttachmentCopy::Fields.create_upload }
       end
 
       def attach

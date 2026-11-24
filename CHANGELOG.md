@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.37.1] - 2026-11-24
+
+### Fixed
+
+- `create_upload` rejects a `url` that is not an absolute https address with a host before any download. A local path, a file URL, an http URL, or an address with no host returns a clear invalid-input error that tells the caller to send base64 `data` and `filename` instead.
+- An inline upload that is too large states the file size and the limit that applies. That limit is the lower of the inline cap and the record's file size cap.
+- A `create_upload` call with no source says to send direct-upload fields, or `url`, or `data` and `filename`.
+
+### Added
+
+- `RecordingStudioAttachable::McpCopy.upload_source_fields` returns JSON Schema properties for `url`, `data`, and `filename`. The `data` text includes the current inline size limit. Attachable's own `create_upload` schema uses the same words.
+
+### Upgrade Notes
+
+- Bump to 0.37.1. Previous is 0.37.0. No migration.
+- Host tools that describe an upload can call `RecordingStudioAttachable::McpCopy.upload_source_fields` and merge those properties into their schema. Copying the old field sentences by hand will drift from the inline limit and from the local-file guidance.
+- Callers that matched the old inline error `Inline upload exceeds inline_upload_max_bytes` should match the new sentence. It names the file size and the limit.
+
 ## [0.37.0] - 2026-11-24
 
 ### Added
@@ -988,7 +1006,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.37.0...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.37.1...HEAD
+[0.37.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.37.0...v0.37.1
 [0.37.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.36.0...v0.37.0
 [0.36.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.35.1...v0.36.0
 [0.35.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.35.0...v0.35.1

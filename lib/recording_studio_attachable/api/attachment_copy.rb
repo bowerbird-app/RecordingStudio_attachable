@@ -72,8 +72,8 @@ module RecordingStudioAttachable
         CREATE_UPLOAD = {
           filename: {
             type: :string, required: false, allow_blank: true,
-            description: "The file name to store, such as cover.jpg. Required for a direct upload and for data. " \
-                         "Optional for url. When omitted, the name is taken from the URL path."
+            description: "File name to store, such as cover.jpg. Send it with data. A direct upload needs it too. " \
+                         "Optional when you send url. When omitted, the name comes from the url path."
           },
           byte_size: {
             type: :integer, required: false,
@@ -93,16 +93,29 @@ module RecordingStudioAttachable
           },
           url: {
             type: :string, required: false, allow_blank: true,
-            description: "HTTPS URL of a file to fetch on the server. Send this when you cannot PUT the bytes. " \
-                         "The port must be 443 and the address must be public. Send url or data, not both. " \
-                         "Omit byte_size, checksum, and content_type."
+            description: "A public https:// web address of the file. Send this only when the file is already on the public web. " \
+                         "A file attached in the chat, or a path on disk, goes as base64 data with filename. Never put a local path in url."
           },
           data: {
             type: :string, required: false, allow_blank: true,
-            description: "Base64 file bytes, or a data URI that uses base64. Send this with filename when you cannot " \
-                         "PUT the bytes. Send url or data, not both. Omit byte_size, checksum, and content_type."
+            description: "Base64 file bytes, or a base64 data URI. Send this with filename for a file the user attached in chat " \
+                         "or that you have saved locally. Data uploads can be up to 2 MB. Send a public https url for a larger file."
           }
         }.freeze
+
+        def self.create_upload
+          shared = RecordingStudioAttachable::McpCopy.upload_source_fields
+          CREATE_UPLOAD.merge(
+            filename: with_source_description(:filename, shared),
+            url: with_source_description(:url, shared),
+            data: with_source_description(:data, shared)
+          )
+        end
+
+        def self.with_source_description(name, shared)
+          CREATE_UPLOAD.fetch(name).merge(description: shared.fetch(name.to_s).fetch("description"))
+        end
+        private_class_method :with_source_description
         ATTACH = {
           signed_blob_id: {
             type: :string, required: false, allow_blank: true,
@@ -189,7 +202,8 @@ module RecordingStudioAttachable
           "For a direct upload, call the create_upload action, PUT the bytes to upload.url with upload.headers, " \
           "then call the attach action with signed_blob_id. " \
           "When you cannot PUT the bytes, send url or data on the create_upload action. " \
-          "url is an HTTPS address and follows the same host rules as import. " \
+          "url is only a public https:// web address and follows the same host rules as import. " \
+          "A file attached in the chat is base64 data and filename. Never put a local path in url. " \
           "data is base64 or a data URI and needs filename. " \
           "url and data store the bytes and return the same signed_blob_id. You do not PUT those bytes. " \
           "This call adds nothing to the record. The parent record must already exist. " \

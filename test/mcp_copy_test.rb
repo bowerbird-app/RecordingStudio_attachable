@@ -33,6 +33,41 @@ class McpCopyTest < Minitest::Test
     assert_includes text, "If you cannot PUT the bytes"
     assert_includes text, "url"
     assert_includes text, "data and filename"
+    assert_includes text, "local path"
+    assert_includes text, "base64"
+  end
+
+  def test_upload_source_fields_steer_chat_files_to_base64
+    original = RecordingStudioAttachable.configuration.inline_upload_max_bytes
+    RecordingStudioAttachable.configuration.inline_upload_max_bytes = 2.megabytes
+    fields = RecordingStudioAttachable::McpCopy.upload_source_fields
+
+    assert_equal %w[url data filename], fields.keys
+    url = fields.fetch("url")
+    data = fields.fetch("data")
+    filename = fields.fetch("filename")
+    assert_equal "string", url.fetch("type")
+    assert_equal "string", data.fetch("type")
+    assert_equal "string", filename.fetch("type")
+    assert_includes url.fetch("description"), "public https://"
+    assert_includes url.fetch("description"), "Never put a local path in url"
+    assert_includes data.fetch("description"), "base64"
+    assert_includes data.fetch("description"), "filename"
+    assert_includes data.fetch("description"), "2 MB"
+    refute_includes data.fetch("description"), "inline_upload_max_bytes"
+    assert_includes filename.fetch("description"), "cover.jpg"
+
+    contract = RecordingStudioAttachable::Api::AttachmentContracts.create_upload.fetch(:fields)
+    assert_equal url.fetch("description"), contract.dig(:url, :description)
+    assert_equal data.fetch("description"), contract.dig(:data, :description)
+    assert_equal filename.fetch("description"), contract.dig(:filename, :description)
+
+    RecordingStudioAttachable.configuration.inline_upload_max_bytes = 1.megabyte
+    tighter = RecordingStudioAttachable::McpCopy.upload_source_fields.fetch("data").fetch("description")
+    assert_includes tighter, "1 MB"
+    refute_includes tighter, "2 MB"
+  ensure
+    RecordingStudioAttachable.configuration.inline_upload_max_bytes = original
   end
 
   def test_import_description_does_not_call_a_single_file_parent_a_cover

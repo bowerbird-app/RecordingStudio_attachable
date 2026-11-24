@@ -27,8 +27,9 @@ module RecordingStudioAttachable
       end
 
       def without_put(upload)
-        "If you cannot PUT the bytes, call #{upload} with url, or with data and filename. " \
-          "url is an HTTPS address. data is base64 or a data URI. Both store the bytes and return the same signed_blob_id."
+        "If you cannot PUT the bytes, call #{upload} with a public https url, or with data and filename. " \
+          "A file attached in the chat is base64 data and filename. Never put a local path in url. " \
+          "url is only a public https:// web address. Both store the bytes and return the same signed_blob_id."
       end
       private_class_method :put_sentence, :without_put
     end

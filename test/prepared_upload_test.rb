@@ -38,12 +38,14 @@ class PreparedUploadTest < Minitest::Test
     @original = RecordingStudioAttachable.instance_variable_get(:@configuration)
     RecordingStudioAttachable.instance_variable_set(:@configuration, RecordingStudioAttachable::Configuration.new)
     RecordingStudioAttachable.configuration.authorize_with = ->(**) { true }
+    pin_capability_options!
     @blob_methods = install_blob_methods
     ensure_attachment_class!
     ensure_api_errors!
   end
 
   def teardown
+    restore_capability_options!
     RecordingStudioAttachable.instance_variable_set(:@configuration, @original)
     remove_blob_methods(@blob_methods)
   end
@@ -128,9 +130,36 @@ class PreparedUploadTest < Minitest::Test
     end
   end
 
-  def test_fetch_upload_refuses_a_non_https_url
-    refused("http://files.example.test/door.png") do |error|
-      assert_includes error.message, "HTTPS"
+  def test_fetch_upload_rejects_a_url_that_is_not_a_public_https_address
+    recording = recording_double("parent-1")
+    actor = actor_double
+    handler = RecordingStudioAttachable::Api::AttachmentActions::CreateUpload
+    urls = [
+      "/mnt/data/photo.jpg",
+      "file:///mnt/data/photo.jpg",
+      "http://files.example.test/door.png",
+      "not a url",
+      "https:///photo.jpg"
+    ]
+
+    urls.each do |url|
+      with_access do
+        with_pending(0) do
+          with_http(PNG, content_type: "image/png", fail_if_called: true) do
+            error = assert_raises(ArgumentError, url) do
+              RecordingStudioAttachable.fetch_upload(recording: recording, actor: actor, url: url)
+            end
+            assert_includes error.message, "public https://", url
+            assert_includes error.message, "base64 data with filename", url
+
+            api_error = assert_raises(RecordingStudioApi::InvalidActionInputError, url) do
+              handler.call(context(recording, actor, url: url))
+            end
+            assert_equal error.message, api_error.message
+            refute_kind_of RecordingStudioAttachable::SafeRemoteFetch::Error, api_error
+          end
+        end
+      end
     end
   end
 
@@ -247,9 +276,30 @@ class PreparedUploadTest < Minitest::Test
             filename: "door.png"
           )
         end
-        assert_equal RecordingStudioAttachable::PreparedUpload::INLINE_TOO_BIG, error.message
+        assert_includes error.message, "8 bytes"
+        assert_includes error.message, "data uploads can be up to"
+        refute_includes error.message, "inline_upload_max_bytes"
       end
     end
+  end
+
+  def test_inline_upload_states_the_megabyte_limit_and_the_record_cap
+    over_inline = assert_raises(ArgumentError) do
+      upload_inline(data: base64_for_megabytes(11.2))
+    end
+    assert_includes over_inline.message, "11.2 MB"
+    assert_includes over_inline.message, "data uploads can be up to 2 MB"
+    assert_includes over_inline.message, "public https url"
+    refute_includes over_inline.message, "inline_upload_max_bytes"
+
+    RecordingStudioAttachable.configuration.max_file_size = 1.megabyte
+    over_record = assert_raises(ArgumentError) do
+      upload_inline(data: base64_for_megabytes(1.5))
+    end
+    assert_includes over_record.message, "1.5 MB"
+    assert_includes over_record.message, "this record accepts files up to 1 MB"
+    refute_includes over_record.message, "2 MB"
+    refute_includes over_record.message, "inline_upload_max_bytes"
   end
 
   def test_inline_upload_refuses_bad_base64
@@ -325,10 +375,15 @@ class PreparedUploadTest < Minitest::Test
       end
       assert_includes both.message, "not both"
 
-      missing = assert_raises(RecordingStudioApi::InvalidActionInputError) do
-        handler.call(context(recording, actor, filename: "door.png"))
+      [{}, { filename: "door.png" }].each do |params|
+        missing = assert_raises(RecordingStudioApi::InvalidActionInputError) do
+          handler.call(context(recording, actor, params))
+        end
+        assert_includes missing.message, "filename, byte_size, checksum, and content_type"
+        assert_includes missing.message, "direct upload"
+        assert_includes missing.message, "or send url"
+        assert_includes missing.message, "data and filename"
       end
-      assert_includes missing.message, "required"
     end
   end
 
@@ -404,6 +459,23 @@ class PreparedUploadTest < Minitest::Test
     RecordingStudio.configuration.stub(:capability_enabled?, true, &)
   end
 
+  def pin_capability_options!
+    singleton = RecordingStudio.singleton_class
+    @had_capability_options = singleton.method_defined?(:capability_options)
+    @original_capability_options = RecordingStudio.method(:capability_options) if @had_capability_options
+    singleton.send(:remove_method, :capability_options) if @had_capability_options
+    RecordingStudio.define_singleton_method(:capability_options) { |_name, _for_type: nil, **| {} }
+  end
+
+  def restore_capability_options!
+    singleton = RecordingStudio.singleton_class
+    singleton.send(:remove_method, :capability_options) if singleton.method_defined?(:capability_options)
+    return unless @had_capability_options
+
+    original = @original_capability_options
+    RecordingStudio.define_singleton_method(:capability_options) { |*args, **kwargs| original.call(*args, **kwargs) }
+  end
+
   def with_pending(count, &)
     ActiveStorage::Blob.stub(:unattached, PendingScope.new(count), &)
   end
@@ -472,6 +544,25 @@ class PreparedUploadTest < Minitest::Test
 
   def actor_double
     Struct.new(:id).new("actor-1")
+  end
+
+  def upload_inline(data:)
+    with_access do
+      with_pending(0) do
+        RecordingStudioAttachable.inline_upload(
+          recording: recording_double("parent-1"),
+          actor: actor_double,
+          data: data,
+          filename: "door.png"
+        )
+      end
+    end
+  end
+
+  def base64_for_megabytes(megabytes)
+    bytes = (megabytes * 1.megabyte).round
+    bytes += (3 - (bytes % 3)) % 3
+    "A" * (bytes * 4 / 3)
   end
 
   def context(recording, actor, params)

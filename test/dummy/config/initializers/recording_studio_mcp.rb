@@ -15,25 +15,12 @@ end
   )
 end
 
-attachable_tools_on = lambda do |api|
-  RecordingStudio.configuration.enabled_recordable_types_for(:attachable).flat_map do |type|
-    registration = RecordingStudioApi.recordable_registration_for(type.to_s, api: api)
-    next [] unless registration
-
-    RecordingStudioAttachable::McpCopy::ACTIONS.filter_map do |action|
-      next unless registration.supports_capability_action?(action)
-
-      RecordingStudioAttachable::McpCopy.tool_name(type, action)
-    end
-  end
-end
-
 include_attachable_mcp = lambda do |*|
   RecordingStudioMcp.register_server(:public, api: :public) do
-    include_tools(:list, :show, *attachable_tools_on.call(:public))
+    include_tools(:list, :show, *RecordingStudioAttachable::McpCopy.tool_names(api: :public))
   end
   RecordingStudioMcp.register_server(:operations, api: :operations, allow_sensitive: true) do
-    include_tools(*attachable_tools_on.call(:operations))
+    include_tools(*RecordingStudioAttachable::McpCopy.tool_names(api: :operations))
   end
 end
 

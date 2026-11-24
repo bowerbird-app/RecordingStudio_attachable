@@ -285,25 +285,15 @@ RecordingStudioAttachable::Api.register!(apis: [:public, :operations])
 
 Configure a named API before you pass it. `register!` reads `config.auth_role_for(:upload)` at that moment. `import_attachment` uses `config.auth_roles[:import]` when that key exists, and `:upload` otherwise.
 
-The engine calls `RecordingStudioAttachable::McpCopy.register!` once per Attachable recordable type, with `type:` set to that recordable. Include the names for types that API registers. `tool_names` lists every Attachable type. A server that includes a type its API does not register fails to boot.
+The engine calls `RecordingStudioAttachable::McpCopy.register!` once per Attachable recordable type, with `type:` set to that recordable. Pass that server's API to `tool_names`. Without `api:`, `tool_names` lists every Attachable type.
 
 ```ruby
-tools = RecordingStudio.configuration.enabled_recordable_types_for(:attachable).flat_map do |type|
-  registration = RecordingStudioApi.recordable_registration_for(type.to_s, api: :public)
-  next [] unless registration
-
-  RecordingStudioAttachable::McpCopy::ACTIONS.filter_map do |action|
-    next unless registration.supports_capability_action?(action)
-
-    RecordingStudioAttachable::McpCopy.tool_name(type, action)
-  end
-end
 RecordingStudioMcp.register_server(:public, api: :public) do
-  include_tools(*tools)
+  include_tools(*RecordingStudioAttachable::McpCopy.tool_names(api: :public))
 end
 ```
 
-Each Attachable type gets `<type>_create_upload`, `<type>_attach`, and `<type>_import_attachment`. The type token is Recording Studio MCP's singular snake public name, so `Workspace` is `workspace_create_upload` and `PressKit` is `press_kit_create_upload`. Send `id`. Do not send `type`. The tool refuses a record of another type. A type without Attachable gets none of these tools. There is no typeless `create_upload`, `attach`, or `import_attachment` tool. Include generic `list` and `show` (or another typed tool) and `register_type` for each parent. An operations server needs `allow_sensitive: true` when that named API marks the writes sensitive. Call `<type>_create_upload`, PUT the bytes, then `<type>_attach`. Use `<type>_import_attachment` when the file is already at an HTTPS URL. The host app must allow that remote host for imports; the default list is empty. Do not include `capability_action` for these writes. Do not include the Metrics `attachments-*` tools from this gem; Metrics still owns those. `describe`, `tools/list`, and the docs groups list these tools on that type.
+Each Attachable type gets `<type>_create_upload`, `<type>_attach`, and `<type>_import_attachment`. The token is the same one Recording Studio MCP already uses for that type's other tools, such as `show_<token>`. `Workspace` is `workspace_create_upload`. Send `id`. Do not send `type`. The tool refuses a record of another type. A type without Attachable gets none of these tools. There is no typeless `create_upload`, `attach`, or `import_attachment` tool. Include generic `list` and `show` (or another typed tool) and `register_type` for each parent. An operations server needs `allow_sensitive: true` when that named API marks the writes sensitive. Call `<type>_create_upload`, PUT the bytes, then `<type>_attach`. Use `<type>_import_attachment` when the file is already at an HTTPS URL. The host app must allow that remote host for imports; the default list is empty. Do not include `capability_action` for these writes. Do not include the Metrics `attachments-*` tools from this gem; Metrics still owns those. `describe`, `tools/list`, and the docs groups list these tools on that type.
 
 3. Allow the actions on each parent type. Registration alone does not expose them.
 

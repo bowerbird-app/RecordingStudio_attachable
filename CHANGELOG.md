@@ -11,13 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- MCP upload tools are registered once per Attachable recordable type. `create_upload` becomes `<type>_create_upload`, `attach` becomes `<type>_attach`, and `import_attachment` becomes `<type>_import_attachment`. The type token is Recording Studio MCP's singular snake public name. `Workspace` is `workspace_create_upload`. `PressKit` is `press_kit_create_upload`. Each tool takes `id` and does not take `type`. A tool refuses a record of another type. A type without Attachable gets none of these tools. REST action names and routes are unchanged.
+- MCP upload tools are registered once per Attachable recordable type. `create_upload` becomes `<type>_create_upload`, `attach` becomes `<type>_attach`, and `import_attachment` becomes `<type>_import_attachment`. The token is the same one Recording Studio MCP already uses for that type's other tools. `Workspace` is `workspace_create_upload`. Each tool takes `id` and does not take `type`. A tool refuses a record of another type. A type without Attachable gets none of these tools. REST action names and routes are unchanged.
 
 ### Upgrade Notes
 
 - Bump to 0.35.0. Previous is 0.34.6. No migration.
 - Replace MCP calls. `create_upload` becomes `<type>_create_upload`. `attach` becomes `<type>_attach`. `import_attachment` becomes `<type>_import_attachment`. Drop the `type` argument and keep `id`.
-- Include each type's tools on an API that registers that type. `McpCopy.tool_names` lists every Attachable type. A server that includes a type its API does not register fails to boot. Update any `include_tools` list, guide, or skill that still names `create_upload`, `attach`, or `import_attachment` as MCP tools.
+- Pass the API to `McpCopy.tool_names`. `include_tools(*RecordingStudioAttachable::McpCopy.tool_names(api: :public))` lists tools for types that API registers and actions that registration supports. `tool_names` without `api:` still lists every Attachable type. Update any `include_tools` list, guide, or skill that still names `create_upload`, `attach`, or `import_attachment` as MCP tools.
 - `recording_studio_mcp` stays `>= 0.45.1, < 0.46`. This gem reads the type token through `RecordingStudioMcp.tool_name`. No MCP release is required.
 
 ## [0.34.6] - 2026-11-24

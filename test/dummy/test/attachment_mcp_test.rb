@@ -29,6 +29,23 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
     RecordingStudioAttachable.configuration.import_allowed_hosts = @hosts
   end
 
+  test "tool names for an api follow that api's registrations" do
+    public_names = RecordingStudioAttachable::McpCopy.tool_names(api: :public)
+    every_name = RecordingStudioAttachable::McpCopy.tool_names
+
+    RecordingStudioAttachable::McpCopy::ACTIONS.each do |action|
+      on_api = RecordingStudioAttachable::McpCopy.tool_name("Workspace", action)
+      unsupported = RecordingStudioAttachable::McpCopy.tool_name("Page", action)
+      missing = RecordingStudioAttachable::McpCopy.tool_name("RecordingStudioSiteSettings::SiteSetting", action)
+
+      assert_includes public_names, on_api
+      refute_includes public_names, unsupported
+      refute_includes public_names, missing
+      assert_includes every_name, unsupported
+      assert_includes every_name, missing
+    end
+  end
+
   test "tools list has one upload set per attachable type and no typeless tools" do
     listed = rpc(@editor_token, "tools/list")
     tools = listed.dig("result", "tools")

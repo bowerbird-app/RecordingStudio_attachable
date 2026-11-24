@@ -119,7 +119,8 @@ class RecordingStudioAttachableTest < Minitest::Test
     assert_includes root_lock, "recording_studio_mcp (0.45.1)"
     assert_includes dummy_lock, "recording_studio_mcp (0.45.1)"
     dummy_initializer = File.read(File.expand_path("dummy/config/initializers/recording_studio_mcp.rb", __dir__))
-    assert_includes dummy_initializer, "RecordingStudioAttachable::McpCopy.tool_name(type, action)"
+    assert_includes dummy_initializer, "RecordingStudioAttachable::McpCopy.tool_names(api: :public)"
+    assert_includes dummy_initializer, "RecordingStudioAttachable::McpCopy.tool_names(api: :operations)"
   end
 
   def test_metrics_dependency_is_0_9_through_pre_1

@@ -18,10 +18,10 @@ module RecordingStudioAttachable
       attachable_types.each { |type| register_type_tools(type) }
     end
 
-    def tool_names
+    def tool_names(api: nil)
       return [] unless mcp_available?
 
-      attachable_types.flat_map { |type| names_for(type) }
+      Names.list(attachable_types, api: api)
     end
 
     def tool_name(type, action)
@@ -97,3 +97,5 @@ module RecordingStudioAttachable
                          :register_action_tool, :description_for
   end
 end
+
+require_relative "mcp_copy/names"

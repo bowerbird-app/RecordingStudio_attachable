@@ -287,7 +287,7 @@ class AttachmentActionsTest < Minitest::Test
 
     assert_equal "The file name to store, such as cover.jpg. Required. Send the name you want on the blob.", fields.dig(:filename, :description)
     assert_equal "The file size in bytes. Required. Use zero or more. It must match this record type's allowed content types and size and count limits, as shown in the action description.", fields.dig(:byte_size, :description)
-    assert_equal "MD5 checksum of the file bytes, Base64-encoded, as Active Storage expects. Required. Compute it from the bytes before you call create_upload.", fields.dig(:checksum, :description)
+    assert_equal "MD5 checksum of the file bytes, Base64-encoded, as Active Storage expects. Required. Compute it from the bytes before you prepare the upload.", fields.dig(:checksum, :description)
     assert_equal "The file's content type. Required. It must match this record type's allowed content types and size and count limits, as shown in the action description. image/* does not include image/svg+xml unless that exact type is named in the allow list.", fields.dig(:content_type, :description)
   end
 
@@ -331,7 +331,7 @@ class AttachmentActionsTest < Minitest::Test
     assert_includes attach_description, "kind"
     assert_includes attach_description, "urls.file"
     assert_includes import_description, "urls.file"
-    assert_includes attach.fetch(:signed_blob_id).fetch(:description), "create_upload"
+    assert_includes attach.fetch(:signed_blob_id).fetch(:description), "upload you prepared"
     assert_includes attach.fetch(:attachments).fetch(:description), "signed_blob_id"
     assert_includes import.fetch(:url).fetch(:description), "HTTPS"
     assert_includes import.fetch(:url).fetch(:description), "host app"
@@ -397,7 +397,7 @@ class AttachmentActionsTest < Minitest::Test
       attachments: RecordingStudioAttachable::Api::AttachmentContracts.attach.dig(:fields, :attachments, :description)
     }
 
-    assert_equal "List of files to attach in one call. Each item has signed_blob_id from its own create_upload call, plus optional name, description, caption, credit, and alt_text. Send this or signed_blob_id, not both. It must match this record type's allowed content types and size and count limits, as shown in the action description.", fields.fetch(:attachments)
+    assert_equal "List of files to attach in one call. Each item has signed_blob_id from its own upload, plus optional name, description, caption, credit, and alt_text. Send this or signed_blob_id, not both. It must match this record type's allowed content types and size and count limits, as shown in the action description.", fields.fetch(:attachments)
 
     fields.each do |name, text|
       refute_includes text, "application/pdf", "#{name} names application/pdf"
@@ -420,7 +420,7 @@ class AttachmentActionsTest < Minitest::Test
 
       assert_equal "The file type, such as image/png. Required. This record allows image/*. image/* does not include image/svg+xml.", content_type
       assert_equal "The file size in bytes. Required. Use zero or more. The size cap is 8 MB.", byte_size
-      assert_equal "List of files to attach in one call. Each item has signed_blob_id from its own create_upload call, plus optional name, description, caption, credit, and alt_text. Send this or signed_blob_id, not both. A batch can include up to 3 files.", attachments
+      assert_equal "List of files to attach in one call. Each item has signed_blob_id from its own upload, plus optional name, description, caption, credit, and alt_text. Send this or signed_blob_id, not both. A batch can include up to 3 files.", attachments
       texts.each { |text| refute_includes text, "application/pdf" }
     end
   end

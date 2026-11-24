@@ -24,8 +24,10 @@
     `attachments-uploads_over_time`, `attachments-by_kind`, and
     `attachments-by_content_type`. Only `attachments.uploads_over_time` takes
     `from`, `to`, and `interval`. For the upload, attach, and import writes,
-    MCP `>= 0.45.1, < 0.46` needs `include_tools(*RecordingStudioAttachable::McpCopy.tool_names)`
-    on the same named APIs you passed to `Api.register!`. Typeless tools need 0.45.1.
+    MCP `>= 0.45.1, < 0.46` needs each type's tools on an API that registers that type.
+    Build the names with `RecordingStudioAttachable::McpCopy.tool_name(type, action)`.
+    `Workspace` is `workspace_create_upload`. There is no typeless `create_upload` tool.
+    `tool_names` lists every Attachable type. Do not include a type the API does not register.
 12. To leave Rails' anonymous `POST /rails/active_storage/direct_uploads` undrawn, rerun the generator with `--restrict-active-storage-routes`, or apply the same edits by hand. The flag is off by default. Existing apps keep Rails' routes.
     - Set `config.active_storage.draw_routes = false`.
     - Set `ActiveStorage.draw_routes = false` in that same class body. Devise reloads routes from `before_eager_load`, and Active Storage copies the config later. The module attribute is what that reload reads. Do not copy it from an initializer `before` edge. That edge reshuffles boot.

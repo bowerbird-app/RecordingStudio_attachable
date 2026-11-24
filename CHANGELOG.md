@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-11-24
+
+### Changed
+
+- MCP upload tools are registered once per Attachable recordable type. `create_upload` becomes `<type>_create_upload`, `attach` becomes `<type>_attach`, and `import_attachment` becomes `<type>_import_attachment`. The type token is Recording Studio MCP's singular snake public name. `Workspace` is `workspace_create_upload`. `PressKit` is `press_kit_create_upload`. Each tool takes `id` and does not take `type`. A tool refuses a record of another type. A type without Attachable gets none of these tools. REST action names and routes are unchanged.
+
+### Upgrade Notes
+
+- Bump to 0.35.0. Previous is 0.34.6. No migration.
+- Replace MCP calls. `create_upload` becomes `<type>_create_upload`. `attach` becomes `<type>_attach`. `import_attachment` becomes `<type>_import_attachment`. Drop the `type` argument and keep `id`.
+- Include each type's tools on an API that registers that type. `McpCopy.tool_names` lists every Attachable type. A server that includes a type its API does not register fails to boot. Update any `include_tools` list, guide, or skill that still names `create_upload`, `attach`, or `import_attachment` as MCP tools.
+- `recording_studio_mcp` stays `>= 0.45.1, < 0.46`. This gem reads the type token through `RecordingStudioMcp.tool_name`. No MCP release is required.
+
 ## [0.34.6] - 2026-11-24
 
 ### Changed
@@ -931,7 +944,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.6...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.35.0...HEAD
+[0.35.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.6...v0.35.0
 [0.34.6]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.5...v0.34.6
 [0.34.5]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.4...v0.34.5
 [0.34.4]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.3...v0.34.4

@@ -14,6 +14,7 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
     Current.actor = @owner
     @workspace = Workspace.create!(name: "MCP #{SecureRandom.hex(4)}")
     @root = RecordingStudio.create_root_recording!(@workspace, actor: @owner)
+    @page = @root.record(Page, actor: @owner) { |page| page.title = "Notes" }
     @owner_access = bootstrap!(@root, @owner)
     @editor_access = grant!(@editor, :edit)
     @viewer_access = grant!(@viewer, :view)
@@ -28,80 +29,116 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
     RecordingStudioAttachable.configuration.import_allowed_hosts = @hosts
   end
 
-  test "named tools are listed with id type and action inputs" do
+  test "tools list has one upload set per attachable type and no typeless tools" do
     listed = rpc(@editor_token, "tools/list")
     tools = listed.dig("result", "tools")
     flunk listed.to_json if tools.nil?
     by_name = tools.to_h { |tool| [tool.fetch("name"), tool] }
 
-    RecordingStudioAttachable::McpCopy.tool_names.each do |name|
+    RecordingStudioAttachable::McpCopy::ACTIONS.each do |action|
+      name = RecordingStudioAttachable::McpCopy.tool_name("Workspace", action)
       assert by_name.key?(name), "missing #{name} in #{by_name.keys.sort}"
+    end
+    RecordingStudioAttachable::McpCopy::ACTIONS.each do |action|
+      name = RecordingStudioAttachable::McpCopy.tool_name("Page", action)
+      assert_includes RecordingStudioAttachable::McpCopy.tool_names, name
+      refute by_name.key?(name), "#{name} is listed though Page does not enable that action"
+    end
+    site = "RecordingStudioSiteSettings::SiteSetting"
+    RecordingStudioAttachable::McpCopy::ACTIONS.each do |action|
+      name = RecordingStudioAttachable::McpCopy.tool_name(site, action)
+      assert_includes RecordingStudioAttachable::McpCopy.tool_names, name
+      refute by_name.key?(name), "#{name} is on the public server, whose API does not register SiteSetting"
+    end
+    %w[create_upload attach import_attachment].each do |name|
+      refute by_name.key?(name), "typeless #{name} is still listed"
+    end
+    %w[chat_thread_create_upload chat_thread_attach chat_thread_import_attachment].each do |name|
+      refute by_name.key?(name), "#{name} is listed for a type without Attachable"
     end
     refute by_name.key?("capability_action")
     refute by_name.key?("attachments-storage_used")
 
-    upload = by_name.fetch("create_upload")
-    attach = by_name.fetch("attach")
-    import = by_name.fetch("import_attachment")
+    upload = by_name.fetch("workspace_create_upload")
+    attach = by_name.fetch("workspace_attach")
+    import = by_name.fetch("workspace_import_attachment")
     upload_props = properties(upload)
     attach_props = properties(attach)
     import_props = properties(import)
 
     [upload, attach, import].each do |tool|
       schema = tool.fetch("inputSchema")
-      refute_empty schema
       refute_empty schema.fetch("properties")
+      refute schema.fetch("properties").key?("type"), tool.fetch("name")
+      assert schema.fetch("properties").key?("id"), tool.fetch("name")
     end
-    %w[id type filename byte_size checksum content_type].each { |key| assert upload_props.key?(key), key }
-    %w[id type signed_blob_id attachments name description caption credit alt_text].each do |key|
+    %w[id filename byte_size checksum content_type].each { |key| assert upload_props.key?(key), key }
+    %w[id signed_blob_id attachments name description caption credit alt_text].each do |key|
       assert attach_props.key?(key), key
     end
-    %w[id type url name description].each { |key| assert import_props.key?(key), key }
-    assert_includes upload.fetch("description"), "create_upload"
-    assert_includes attach.fetch("description"), "create_upload"
+    %w[id url name description].each { |key| assert import_props.key?(key), key }
+    assert_includes upload.fetch("description"), "workspace_create_upload"
+    assert_includes attach.fetch("description"), "workspace_create_upload"
     refute_match(/\bAccess\b/, upload.fetch("description"))
     [upload, attach, import].each do |tool|
       refute_match(/\bconfig\./, tool.fetch("description"))
     end
-    assert upload_props.dig("type", "description").present?
     assert_includes import.fetch("description"), "host app"
+
+    described = rpc(@editor_token, "tools/call", name: "describe", arguments: { type: "Workspace" })
+    refute described.dig("result", "isError"), described.to_json
+    body = described.to_json
+    %w[workspace_create_upload workspace_attach workspace_import_attachment].each do |name|
+      assert_includes body, name
+    end
+    refute_includes body, "chat_thread_create_upload"
   end
 
-  test "create_upload through the named tool hits the action and Accessible role" do
+  test "workspace_create_upload hits the action and refuses a viewer or another type" do
     bytes = png_bytes
-    created = rpc(
-      @editor_token,
-      "tools/call",
-      name: "create_upload",
-      arguments: upload_arguments(bytes)
-    )
+    created = rpc(@editor_token, "tools/call", name: "workspace_create_upload", arguments: upload_arguments(bytes))
     refute created.dig("result", "isError"), created.to_json
     ticket = payload(created)
     assert ticket.fetch("signed_blob_id").present?
     assert ticket.dig("upload", "url").present?
 
-    denied = rpc(
-      @viewer_token,
-      "tools/call",
-      name: "create_upload",
-      arguments: upload_arguments(bytes)
-    )
+    denied = rpc(@viewer_token, "tools/call", name: "workspace_create_upload", arguments: upload_arguments(bytes))
     assert denied.dig("result", "isError"), denied.to_json
+
+    other = rpc(
+      @editor_token,
+      "tools/call",
+      name: "workspace_create_upload",
+      arguments: upload_arguments(bytes, id: @page.id)
+    )
+    assert other.dig("result", "isError"), other.to_json
+    assert_includes other.to_json, "does not match"
   end
 
-  test "attach through the named tool records a child and Accessible denies a viewer" do
+  test "workspace_attach records a child and refuses a viewer or another type" do
     bytes = png_bytes
-    created = rpc(@editor_token, "tools/call", name: "create_upload", arguments: upload_arguments(bytes))
+    created = rpc(@editor_token, "tools/call", name: "workspace_create_upload", arguments: upload_arguments(bytes))
     refute created.dig("result", "isError"), created.to_json
     ticket = payload(created)
     put_upload(ticket, bytes)
 
+    denied = rpc(
+      @viewer_token,
+      "tools/call",
+      name: "workspace_attach",
+      arguments: {
+        id: @root.id.to_s,
+        signed_blob_id: ticket.fetch("signed_blob_id"),
+        name: "Nope"
+      }
+    )
+    assert denied.dig("result", "isError"), denied.to_json
+
     attached = rpc(
       @editor_token,
       "tools/call",
-      name: "attach",
+      name: "workspace_attach",
       arguments: {
-        type: "Workspace",
         id: @root.id.to_s,
         signed_blob_id: ticket.fetch("signed_blob_id"),
         name: "Door"
@@ -113,28 +150,39 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
     assert_equal "image", row.fetch("kind")
     assert row.dig("urls", "file").present?
 
-    denied = rpc(
-      @viewer_token,
+    other = rpc(
+      @editor_token,
       "tools/call",
-      name: "attach",
+      name: "workspace_attach",
       arguments: {
-        type: "Workspace",
-        id: @root.id.to_s,
+        id: @page.id.to_s,
         signed_blob_id: ticket.fetch("signed_blob_id"),
-        name: "Nope"
+        name: "Wrong"
       }
     )
-    assert denied.dig("result", "isError"), denied.to_json
+    assert other.dig("result", "isError"), other.to_json
+    assert_includes other.to_json, "does not match"
   end
 
-  test "import_attachment through the named tool fetches a url and Accessible denies a viewer" do
+  test "workspace_import_attachment fetches a url and refuses a viewer or another type" do
     with_fetch(png_bytes, content_type: "image/png") do
+      denied = rpc(
+        @viewer_token,
+        "tools/call",
+        name: "workspace_import_attachment",
+        arguments: {
+          id: @root.id.to_s,
+          url: "https://files.example.test/secret.png",
+          name: "Secret"
+        }
+      )
+      assert denied.dig("result", "isError"), denied.to_json
+
       imported = rpc(
         @editor_token,
         "tools/call",
-        name: "import_attachment",
+        name: "workspace_import_attachment",
         arguments: {
-          type: "Workspace",
           id: @root.id.to_s,
           url: "https://files.example.test/door.png",
           name: "Door"
@@ -144,20 +192,20 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
       row = payload(imported)
       assert_equal "Door", row.fetch("name")
       assert_equal "image", row.fetch("kind")
-    end
 
-    denied = rpc(
-      @viewer_token,
-      "tools/call",
-      name: "import_attachment",
-      arguments: {
-        type: "Workspace",
-        id: @root.id.to_s,
-        url: "https://files.example.test/secret.png",
-        name: "Secret"
-      }
-    )
-    assert denied.dig("result", "isError"), denied.to_json
+      other = rpc(
+        @editor_token,
+        "tools/call",
+        name: "workspace_import_attachment",
+        arguments: {
+          id: @page.id.to_s,
+          url: "https://files.example.test/other.png",
+          name: "Wrong"
+        }
+      )
+      assert other.dig("result", "isError"), other.to_json
+      assert_includes other.to_json, "does not match"
+    end
   end
 
   private
@@ -166,10 +214,9 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
     tool.fetch("inputSchema").fetch("properties").transform_keys(&:to_s)
   end
 
-  def upload_arguments(bytes)
+  def upload_arguments(bytes, id: @root.id)
     {
-      type: "Workspace",
-      id: @root.id.to_s,
+      id: id.to_s,
       filename: "photo.png",
       byte_size: bytes.bytesize,
       checksum: Base64.strict_encode64(Digest::MD5.digest(bytes)),

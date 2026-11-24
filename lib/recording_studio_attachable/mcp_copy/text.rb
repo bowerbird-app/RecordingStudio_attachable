@@ -104,7 +104,7 @@ module RecordingStudioAttachable
         sentences = [INTRO]
         sentences.concat(import_routes(names))
         sentences << "This downloads the file and links it to the record. There is no upload step and no signed_blob_id."
-        sentences << Api::AttachmentCopy::Text::ITEM_NOTE
+        sentences << Api::AttachmentCopy::Text::IMPORT_ITEM_NOTE
         sentences.concat(import_limits(limits))
         sentences.join(" ")
       end

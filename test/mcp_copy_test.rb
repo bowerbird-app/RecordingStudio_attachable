@@ -37,8 +37,13 @@ class McpCopyTest < Minitest::Test
 
   def test_import_description_does_not_call_a_single_file_parent_a_cover
     copy = RecordingStudioAttachable::Api::AttachmentCopy::Text::IMPORT
+    names = { create_upload: "workspace_create_upload", attach: "workspace_attach", import_attachment: "workspace_import_attachment" }
+    import_text = RecordingStudioAttachable::McpCopy::Text.for(:import_attachment, names: names, limits: "Limits.")
+    attach_text = RecordingStudioAttachable::McpCopy::Text.for(:attach, names: names, limits: "Limits.")
 
     refute_includes copy, "such as a cover"
+    refute_includes import_text, "such as a cover"
+    assert_includes attach_text, "such as a cover"
   end
 
   def test_contract_fields_do_not_take_a_type

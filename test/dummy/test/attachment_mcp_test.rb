@@ -136,7 +136,7 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
       refute schema.fetch("properties").key?("type"), tool.fetch("name")
       assert schema.fetch("properties").key?("id"), tool.fetch("name")
     end
-    %w[id filename byte_size checksum content_type].each { |key| assert upload_props.key?(key), key }
+    %w[id filename byte_size checksum content_type url data].each { |key| assert upload_props.key?(key), key }
     %w[id signed_blob_id attachments name description caption credit alt_text].each do |key|
       assert attach_props.key?(key), key
     end

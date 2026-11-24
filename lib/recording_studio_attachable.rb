@@ -32,6 +32,14 @@ module RecordingStudioAttachable
     def direct_urls_available?
       configuration.direct_url_host.present?
     end
+
+    def fetch_upload(recording:, actor:, url:, filename: nil)
+      PreparedUpload.fetch(recording: recording, actor: actor, url: url, filename: filename)
+    end
+
+    def inline_upload(recording:, actor:, data:, filename:)
+      PreparedUpload.inline(recording: recording, actor: actor, data: data, filename: filename)
+    end
   end
 end
 
@@ -60,6 +68,7 @@ require "recording_studio_attachable/remote_file"
 require "recording_studio_attachable/safe_remote_fetch"
 require "recording_studio_attachable/authorization"
 require "recording_studio_attachable/direct_upload"
+require "recording_studio_attachable/prepared_upload"
 require "recording_studio_attachable/active_storage_routes"
 require "recording_studio_attachable/api"
 require "recording_studio_attachable/mcp_copy"

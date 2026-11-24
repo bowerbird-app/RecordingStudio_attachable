@@ -78,6 +78,8 @@ module RecordingStudioAttachable
         end
 
         def ticket
+          return server_ticket if server_source?
+
           DirectUpload.ticket(prepare)
         end
 
@@ -85,7 +87,37 @@ module RecordingStudioAttachable
 
         attr_reader :context, :params
 
+        def server_source?
+          params[:url].present? || params[:data].present?
+        end
+
+        def server_ticket
+          raise ArgumentError, "Send url or data, not both" if params[:url].present? && params[:data].present?
+          return fetch_ticket if params[:url].present?
+
+          inline_ticket
+        end
+
+        def fetch_ticket
+          RecordingStudioAttachable.fetch_upload(
+            recording: context.recording,
+            actor: context.actor,
+            url: params[:url],
+            filename: params[:filename]
+          )
+        end
+
+        def inline_ticket
+          RecordingStudioAttachable.inline_upload(
+            recording: context.recording,
+            actor: context.actor,
+            data: params[:data],
+            filename: params[:filename]
+          )
+        end
+
         def prepare
+          require_direct_fields!
           DirectUpload.prepare!(
             recording: context.recording,
             actor: context.actor,
@@ -94,6 +126,17 @@ module RecordingStudioAttachable
             checksum: params[:checksum],
             content_type: params[:content_type]
           )
+        end
+
+        def require_direct_fields!
+          return if direct_fields_present?
+
+          raise ArgumentError, "filename, byte_size, checksum, and content_type are required"
+        end
+
+        def direct_fields_present?
+          params[:filename].present? && !params[:byte_size].nil? &&
+            params[:checksum].present? && params[:content_type].present?
         end
       end
 
@@ -244,6 +287,8 @@ module RecordingStudioAttachable
           yield
         rescue *INPUT_ERRORS => e
           invalid!(e)
+        rescue RecordingStudioAttachable::Authorization::NotAuthorizedError => e
+          raise ::RecordingStudioApi::AuthorizationError, e.message
         rescue StandardError => e
           raise unless plan_limit?(e)
 

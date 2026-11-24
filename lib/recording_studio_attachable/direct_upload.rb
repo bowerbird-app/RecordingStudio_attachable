@@ -27,6 +27,27 @@ module RecordingStudioAttachable
       reserve!(recording, create_blob!(recording, actor, filename, size, checksum, content_type))
     end
 
+    def ensure_pending!(recording, actor)
+      raise ArgumentError, "Actor is required" if actor.blank?
+
+      reject_pending!(recording, actor)
+    end
+
+    def prepare_from_io!(recording:, actor:, io:, filename:, declared_type:)
+      raise ArgumentError, "Actor is required" if actor.blank?
+      raise ArgumentError, "filename is required" if filename.blank?
+
+      stored_type = import_content_type(io, filename: filename, declared: declared_type)
+      reject_type!(recording, stored_type)
+      reject_size!(recording, io_bytesize(io))
+      reject_pending!(recording, actor)
+      reserve!(recording, uploaded_blob!(recording, actor, io, filename, stored_type))
+    end
+
+    def max_file_size_for(recording)
+      recording_option(recording, :max_file_size)
+    end
+
     def ticket(blob)
       ttl = expires_in
       {
@@ -184,6 +205,26 @@ module RecordingStudioAttachable
           content_type: content_type,
           metadata: metadata_for(recording: recording, actor: actor)
         )
+      end
+
+      def uploaded_blob!(recording, actor, io, filename, content_type)
+        rewind_io(io)
+        ActiveStorage::Blob.create_and_upload!(
+          io: io,
+          filename: filename,
+          content_type: content_type,
+          identify: false,
+          metadata: metadata_for(recording: recording, actor: actor)
+        )
+      end
+
+      def io_bytesize(io)
+        rewind_io(io)
+        return io.size if io.respond_to?(:size)
+
+        bytes = io.read.to_s.bytesize
+        rewind_io(io)
+        bytes
       end
 
       def reserve!(recording, blob)

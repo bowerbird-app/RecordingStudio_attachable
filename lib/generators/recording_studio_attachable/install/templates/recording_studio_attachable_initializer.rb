@@ -13,6 +13,9 @@ RecordingStudioAttachable.configure do |config|
   config.max_file_count = 20
   # Cap on unattached direct uploads waiting for this actor on one root.
   # config.pending_upload_limit = 20
+  # Decoded cap for inline base64 uploads. The record's max_file_size still applies
+  # when it is lower.
+  # config.inline_upload_max_bytes = 2.megabytes
   # Empty allows any public HTTPS host. A list allows only those hosts.
   # :none turns imports off.
   # config.import_allowed_hosts = ["cdn.example.com"]

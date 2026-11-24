@@ -285,10 +285,12 @@ class AttachmentActionsTest < Minitest::Test
     contract = RecordingStudioAttachable::Api::AttachmentContracts.create_upload
     fields = contract.fetch(:fields)
 
-    assert_equal "The file name to store, such as cover.jpg. Required. Send the name you want on the blob.", fields.dig(:filename, :description)
-    assert_equal "The file size in bytes. Required. Use zero or more. It must match this record type's allowed content types and size and count limits, as shown in the action description.", fields.dig(:byte_size, :description)
-    assert_equal "MD5 checksum of the file bytes, Base64-encoded, as Active Storage expects. Required. Compute it from the bytes before you prepare the upload.", fields.dig(:checksum, :description)
-    assert_equal "The file's content type. Required. It must match this record type's allowed content types and size and count limits, as shown in the action description. image/* does not include image/svg+xml unless that exact type is named in the allow list.", fields.dig(:content_type, :description)
+    assert_equal "The file name to store, such as cover.jpg. Required for a direct upload and for data. Optional for url. When omitted, the name is taken from the URL path.", fields.dig(:filename, :description)
+    assert_equal "The file size in bytes. Required for a direct upload. Omit it when you send url or data. Use zero or more. It must match this record type's allowed content types and size and count limits, as shown in the action description.", fields.dig(:byte_size, :description)
+    assert_equal "MD5 checksum of the file bytes, Base64-encoded, as Active Storage expects. Required for a direct upload. Omit it when you send url or data.", fields.dig(:checksum, :description)
+    assert_equal "The file's content type. Required for a direct upload. Omit it when you send url or data. It must match this record type's allowed content types and size and count limits, as shown in the action description. image/* does not include image/svg+xml unless that exact type is named in the allow list.", fields.dig(:content_type, :description)
+    assert_includes fields.dig(:url, :description), "HTTPS URL"
+    assert_includes fields.dig(:data, :description), "Base64"
   end
 
   def test_tool_description_is_printed_once_and_covers_inputs_and_returns
@@ -343,12 +345,13 @@ class AttachmentActionsTest < Minitest::Test
     [attach_description, import_description].each do |description|
       assert_includes description, "gallery image"
       assert_includes description, "listed file"
-      assert_includes description, "cover"
       assert_includes description, "the host's rules decide whether a new file replaces the existing one or is refused"
       refute_includes description, "does not show the file as an item"
       refute_includes description, "when none is set yet"
       refute_includes description, "does not replace an existing one"
     end
+    assert_includes attach_description, "such as a cover"
+    refute_includes import_description, "such as a cover"
     [upload_description, attach_description, import_description].each do |description|
       assert_includes description, "If the host app sets a storage limit, the file must fit in the space left."
       refute_includes description, "workspace"

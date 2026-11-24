@@ -12,6 +12,12 @@ module RecordingStudioAttachable
         trashed_node?(recording, {})
       end
 
+      def owner_trashed?(recording)
+        return false unless recording.respond_to?(:trashed_at)
+
+        trashed_node?(recording, {})
+      end
+
       def trashed_node?(node, seen)
         return false if stop?(node, seen)
 

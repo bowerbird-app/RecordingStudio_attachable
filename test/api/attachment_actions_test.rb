@@ -344,7 +344,10 @@ class AttachmentActionsTest < Minitest::Test
       assert_includes description, "gallery image"
       assert_includes description, "listed file"
       assert_includes description, "cover"
+      assert_includes description, "the host's rules decide whether a new file replaces the existing one or is refused"
       refute_includes description, "does not show the file as an item"
+      refute_includes description, "when none is set yet"
+      refute_includes description, "does not replace an existing one"
     end
     [upload_description, attach_description, import_description].each do |description|
       assert_includes description, "If the host app sets a storage limit, the file must fit in the space left."

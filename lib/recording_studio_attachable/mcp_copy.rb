@@ -29,10 +29,6 @@ module RecordingStudioAttachable
       "#{type_token(type)}_#{action}"
     end
 
-    def names_for(type)
-      ACTIONS.map { |action| tool_name(type, action) }
-    end
-
     def mcp_available?
       defined?(::RecordingStudioMcp) &&
         ::RecordingStudioMcp.respond_to?(:register_tool) &&
@@ -58,8 +54,11 @@ module RecordingStudioAttachable
     end
 
     def register_type_tools(type)
+      actions = Names.actions_for(type, nil)
+      return if actions.empty?
+
       register_type_copy(type)
-      ACTIONS.each { |action| register_action_tool(type, action) }
+      actions.each { |action| register_action_tool(type, action) }
     end
 
     def register_type_copy(type)
@@ -90,10 +89,17 @@ module RecordingStudioAttachable
     end
 
     def description_for(type, action)
-      upload, attach, import = names_for(type)
-      Text.for(action, upload: upload, attach: attach, import: import, limits: Api::UploadRules.limits_paragraph(type))
+      actions = Names.actions_for(type, nil)
+      actions = [action] if actions.empty?
+      names = actions.to_h { |item| [item, tool_name(type, item)] }
+      Text.for(
+        action,
+        names: names,
+        limits: Api::UploadRules.limits_paragraph(type),
+        next_step: RecordingStudioAttachable.configuration.mcp_next_step_for(type)
+      )
     end
-    private_class_method :names_for, :mcp_available?, :attachable_types, :type_token,
+    private_class_method :mcp_available?, :attachable_types, :type_token,
                          :register_type_tools, :register_type_copy, :type_described?,
                          :register_action_tool, :description_for
   end

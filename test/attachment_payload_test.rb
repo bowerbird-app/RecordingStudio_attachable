@@ -31,6 +31,27 @@ class AttachmentPayloadTest < Minitest::Test
     assert_equal "Cover", payload[:name]
     assert_equal "/attachments/9/file", payload.dig(:urls, :file)
     assert_equal %i[id kind name urls], payload.keys
+    assert_nil payload.dig(:urls, :file_url)
+  end
+
+  def test_file_url_is_absolute_when_a_public_host_is_configured
+    RecordingStudioAttachable.configuration.public_url_host = "files.example.test"
+    payload = payload_for(actor_allowed: true, rails_url: "/attachments/9/file")
+
+    assert_equal "/attachments/9/file", payload.dig(:urls, :file)
+    assert_equal "https://files.example.test/attachments/9/file", payload.dig(:urls, :file_url)
+  end
+
+  def test_file_url_is_omitted_without_a_host_and_in_direct_mode
+    payload = payload_for(actor_allowed: true, rails_url: "/attachments/9/file")
+    assert_nil payload.dig(:urls, :file_url)
+
+    RecordingStudioAttachable.configuration.public_url_host = "files.example.test"
+    RecordingStudioAttachable.configuration.direct_url_host = "images.example.test"
+    direct = payload_for(actor_allowed: true, url: :direct, url_mode: :direct, rails_url: "/attachments/9/file")
+
+    assert_equal "https://images.example.test/blob-key", direct.dig(:urls, :file)
+    assert_nil direct.dig(:urls, :file_url)
   end
 
   def test_unauthorized_viewer_receives_no_file_url

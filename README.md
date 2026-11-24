@@ -162,6 +162,10 @@ RecordingStudioAttachable.configure do |config|
   config.max_file_size = 25.megabytes
   # Maximum number of files accepted in a single upload or import request.
   config.max_file_count = 20
+  # Empty allows any public HTTPS host. A list allows only those hosts. :none turns imports off.
+  # config.import_allowed_hosts = ["cdn.example.com"]
+  # Absolute urls.file_url uses this host, then the app's default_url_options.
+  # config.public_url_host = "https://files.example.com"
   # Optional. Runs after a blob is accepted in RecordAttachmentUpload, so import
   # and batch attach use the same check. Raise ArgumentError to refuse.
   # config.before_save = ->(parent_recording:, actor:, blob:) { }
@@ -285,7 +289,7 @@ RecordingStudioAttachable::Api.register!(apis: [:public, :operations])
 
 Configure a named API before you pass it. `register!` reads `config.auth_role_for(:upload)` at that moment. `import_attachment` uses `config.auth_roles[:import]` when that key exists, and `:upload` otherwise.
 
-The engine calls `RecordingStudioAttachable::McpCopy.register!` once per Attachable recordable type, with `type:` set to that recordable. Pass that server's API to `tool_names`. Without `api:`, `tool_names` lists every Attachable type.
+The engine calls `RecordingStudioAttachable::McpCopy.register!` for each Attachable recordable type. It registers a tool only when an API registration supports that capability action. Pass that server's API to `tool_names`. Without `api:`, `tool_names` lists those supported tools. `register!` and `tool_names` stay safe to call again after a type appears.
 
 ```ruby
 RecordingStudioMcp.register_server(:public, api: :public) do
@@ -293,7 +297,7 @@ RecordingStudioMcp.register_server(:public, api: :public) do
 end
 ```
 
-Each Attachable type gets `<type>_create_upload`, `<type>_attach`, and `<type>_import_attachment`. The token is the same one Recording Studio MCP already uses for that type's other tools, such as `show_<token>`. `Workspace` is `workspace_create_upload`. Send `id`. Do not send `type`. The tool refuses a record of another type. A type without Attachable gets none of these tools. There is no typeless `create_upload`, `attach`, or `import_attachment` tool. Include generic `list` and `show` (or another typed tool) and `register_type` for each parent. An operations server needs `allow_sensitive: true` when that named API marks the writes sensitive. Call `<type>_create_upload`, PUT the bytes, then `<type>_attach`. Use `<type>_import_attachment` when the file is already at an HTTPS URL. The host app must allow that remote host for imports; the default list is empty. Do not include `capability_action` for these writes. Do not include the Metrics `attachments-*` tools from this gem; Metrics still owns those. `describe`, `tools/list`, and the docs groups list these tools on that type.
+Each Attachable type gets the tools its API registration supports among `<type>_create_upload`, `<type>_attach`, and `<type>_import_attachment`. The token is the same one Recording Studio MCP already uses for that type's other tools, such as `show_<token>`. `Workspace` is `workspace_create_upload`. Send `id`. Do not send `type`. The tool refuses a record of another type. A type without Attachable gets none of these tools. There is no typeless `create_upload`, `attach`, or `import_attachment` tool. Include generic `list` and `show` (or another typed tool) and `register_type` for each parent. An operations server needs `allow_sensitive: true` when that named API marks the writes sensitive. Call `<type>_create_upload`, PUT the bytes, then `<type>_attach`. Use `<type>_import_attachment` when the file is already at an HTTPS URL. Public HTTPS hosts are allowed for imports. Set `config.import_allowed_hosts` to a list to limit hosts, or to `:none` to turn imports off. Do not include `capability_action` for these writes. Do not include the Metrics `attachments-*` tools from this gem; Metrics still owns those. `describe`, `tools/list`, and the docs groups list these tools on that type.
 
 3. Allow the actions on each parent type. Registration alone does not expose them.
 
@@ -323,7 +327,7 @@ RecordingStudioApi.register_recordable_type_api(
 
 A type that leaves those names off `capability_actions` does not show the actions in OpenAPI. Calling one returns the Recording Studio API's unsupported-action response.
 
-The three actions are different steps. `create_upload` prepares a direct upload and returns an upload URL plus a `signed_blob_id`; it adds nothing to the record yet. `attach` links already-uploaded blobs to the record and comes from RecordingStudio Attachable. `import_attachment` fetches a file from a URL and attaches it. The parent record must already exist. OpenAPI titles are type-neutral (`Upload`, `Attach`, `Import`). Each action has a short summary and a longer description for API developers. MCP tool text is separate, in `RecordingStudioAttachable::McpCopy`, and names that type's tools. The API description says what the action does, when to call it, each input and where the value comes from, the fields it returns, and the limits. `content_type`, `byte_size`, and the limits paragraph come from that recordable type's Attachable options (`allowed_content_types`, `max_file_size`, `max_file_count`, and `enabled_attachment_kinds`). A missing option uses the global config. A type with none of those options keeps the global default text (`image/*` and `application/pdf`, 25 MB, 20 files per batch). `image/*` does not include `image/svg+xml` unless that type is named. The text does not name another product's tools. `attach` and `import_attachment` link a file to the parent as a child attachment. On an image section that is a gallery image. On a file section that is a listed file. On a parent that holds one attachment, such as a cover, the host's rules decide whether a new file replaces the existing one or is refused.
+The three actions are different steps. `create_upload` prepares a direct upload and returns an upload URL plus a `signed_blob_id`; it adds nothing to the record yet. `attach` links already-uploaded blobs to the record and comes from RecordingStudio Attachable. `import_attachment` fetches a file from a URL and attaches it. The parent record must already exist. OpenAPI titles are type-neutral (`Upload`, `Attach`, `Import`). Each action has a short summary and a longer description for API developers. MCP tool text is separate, in `RecordingStudioAttachable::McpCopy`, and names only the tools that type has. `config.mcp_next_step(type, text)` appends one host-supplied next step, such as `then call image_section_add`. Core does not name that tool. The API description says what the action does, when to call it, each input and where the value comes from, the fields it returns, and the limits. `content_type`, `byte_size`, and the limits paragraph come from that recordable type's Attachable options (`allowed_content_types`, `max_file_size`, `max_file_count`, and `enabled_attachment_kinds`). A missing option uses the global config. A type with none of those options keeps the global default text (`image/*` and `application/pdf`, 25 MB, 20 files per batch). `image/*` does not include `image/svg+xml` unless that type is named. The text does not name another product's tools. `attach` and `import_attachment` link a file to the parent as a child attachment. On an image section that is a gallery image. On a file section that is a listed file. On a parent that holds one attachment, such as a cover, the host's rules decide whether a new file replaces the existing one or is refused.
 
 A host gem can set title, summary, and description for one recordable type without changing other types or the generic summary and description strings (`CREATE_UPLOAD_SUMMARY`, `CREATE_UPLOAD_COPY`, `ATTACH_SUMMARY`, `ATTACH_COPY`, `IMPORT_ATTACHMENT_SUMMARY`, `IMPORT_ATTACHMENT_COPY`):
 
@@ -339,14 +343,14 @@ RecordingStudioAttachable::Api.override_openapi(
 
 `RecordingStudioAttachable::Api.openapi_for(type:, action:)` returns the merged hash for that type. Attachable registers that method as `openapi_for:` on each capability action, so Recording Studio API OpenAPI and the MCP catalog use the per-type copy. Leave the hook unset to keep the generic copy. Requires `recording_studio_api >= 1.1.0, < 2.0`.
 
-`import_attachment` 200 and a single `attach` 200 use `RecordingStudioAttachable.attachment_payload`. The hash is `id`, `kind`, `name`, and `urls.file`. `create_upload` 200 is the DirectUpload ticket: `signed_blob_id`, `upload.url`, `upload.headers`, `expires_at`.
+`import_attachment` 200 and a single `attach` 200 use `RecordingStudioAttachable.attachment_payload`. The hash is `id`, `kind`, `name`, and `urls`. `urls.file` is always present when the viewer can see the file. `urls.file_url` is added in rails mode when a public host is known. `create_upload` 200 is the DirectUpload ticket: `signed_blob_id`, `upload.url`, `upload.headers`, `expires_at`.
 
 ```ruby
 RecordingStudioAttachable.attachment_payload(attachment_recording, actor: viewer)
 RecordingStudioAttachable.attachment_payload(attachment_recording, actor: viewer, url_mode: :direct)
 ```
 
-`recording` is the attachment recording. `actor` is the viewer. `urls.file` follows `config.url_mode`, or `url_mode:` when you pass it. The value is nil when that viewer cannot view the attachment. Omit `rails_url:` and the helper uses the engine file route. Pass `rails_url:` when you already have that path. `attach` and `import_attachment` call this method. Do not build the hash by hand.
+`recording` is the attachment recording. `actor` is the viewer. `urls.file` follows `config.url_mode`, or `url_mode:` when you pass it. The value is nil when that viewer cannot view the attachment, including when the attachment or an ancestor below the root is trashed and the viewer is not an admin. In rails mode, `urls.file_url` is the same path as an absolute URL. The host comes from `config.public_url_host`, then the app's `default_url_options`. The key is omitted when no host is known. Direct mode leaves the payload as it is and does not add `urls.file_url`. Omit `rails_url:` and the helper uses the engine file route. Pass `rails_url:` when you already have that path. `attach` and `import_attachment` call this method. Do not build the hash by hand.
 
 `create_upload` takes `filename`, `byte_size`, `checksum`, and `content_type`. The checksum is the base64 MD5 of the bytes. The response is `signed_blob_id`, `upload` (`url` and `headers`), and `expires_at`. PUT the bytes to `upload.url` with `upload.headers`. The signed id uses the `:attachable_upload` purpose and expires after `config.direct_upload_expires_in` (default 5 minutes). It is bound to the parent recording and the actor that asked for it. `attach` accepts it once, and only while the blob is still unattached. The file bytes are sniffed and must match the declared content type.
 
@@ -358,9 +362,9 @@ Request logs filter `signed_blob_id` and `checksum`. This gem does not write the
 
 The disk service builds that URL from the current request host. This gem includes `ActiveStorage::SetCurrent` on `RecordingStudioApi::ApiController` and `RecordingStudioMcp::McpController` so the host is set. An S3 service returns a presigned URL and does not use the app host.
 
-`attach` takes one file (`signed_blob_id`, and optional `name`, `description`, `caption`, `credit`, `alt_text`) or `attachments` as a list of those objects. The response is the new child attachment (`id`, `kind`, `name`, `urls.file`) or `{ attachments: [...] }` for a list. `kind` is `image` when the content type starts with `image/`, and `file` otherwise. `urls.file` is the delivery URL for the original file. The default `rails` mode returns the engine file path. `direct` mode returns the blob direct URL. The default batch cap is `config.max_file_count` (20).
+`attach` takes one file (`signed_blob_id`, and optional `name`, `description`, `caption`, `credit`, `alt_text`) or `attachments` as a list of those objects. The response is the new child attachment (`id`, `kind`, `name`, `urls.file`) or `{ attachments: [...] }` for a list. `kind` is `image` when the content type starts with `image/`, and `file` otherwise. `urls.file` is the delivery URL for the original file. The default `rails` mode returns the engine file path. `urls.file_url` is that path as an absolute URL when a public host is known. `direct` mode returns the blob direct URL and does not add `urls.file_url`. Unsigned `file`, `download`, and `preview` requests can read an attachment that is not in the trash. A signed-in user still needs the view role. A trashed attachment, or an attachment under a trashed ancestor below the root, returns 404 unless the user has admin on the parent. The default batch cap is `config.max_file_count` (20).
 
-`import_attachment` takes `url`, and optional `name` and `description`. The host app must configure which remote HTTPS hosts imports may download from. The default list is empty, so every remote host is refused until the host sets it. Localhost and cloud metadata endpoints are blocked even when listed. Private addresses, non-HTTPS URLs, and any other host are rejected. The fetch uses `SafeRemoteFetch`.
+`import_attachment` takes `url`, and optional `name` and `description`. An empty `config.import_allowed_hosts` allows any public HTTPS host. A non-empty list allows only those hosts. `config.import_allowed_hosts = :none` turns imports off. Localhost, names ending in `.internal`, `.local`, or `.localhost`, and cloud metadata endpoints are blocked even when listed. Private, loopback, link-local, and other non-public addresses are rejected, including when a public name resolves to one. The fetch uses `SafeRemoteFetch`. The stored type comes from the downloaded bytes and the filename when the response type is generic or disagrees with the bytes. `image/*` still excludes `image/svg+xml` unless that type is named.
 
 A fake, expired, or tampered `signed_blob_id` on attach (API, MCP, and the browser attach flow) returns `signed_blob_id is invalid or expired. Prepare an upload first and use the signed_blob_id it returns.` Uploaded bytes that fail the Active Storage checksum return `The uploaded bytes do not match the checksum. Prepare an upload and PUT the exact file again.`
 
@@ -706,7 +710,7 @@ Each import payload supports:
 
 - `io`: readable IO object for the provider file
 - `filename`: original filename to store in Active Storage
-- `content_type`: declared MIME type. It is stored as given and must match the type sniffed from the bytes
+- `content_type`: declared MIME type. The stored type comes from the bytes and the filename when this value is generic or disagrees with the bytes, then the allow list runs
 - `name`, `description`: optional attachment metadata overrides
 - `actor`, `impersonator`: optional audit actors
 - `source`: metadata source label stored on the recording event, defaults to `provider_import`; use this only in trusted direct service calls

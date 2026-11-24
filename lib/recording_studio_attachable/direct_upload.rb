@@ -9,6 +9,7 @@ module RecordingStudioAttachable
     TAG = "recording_studio_attachable"
     PURPOSE = :attachable_upload
     INLINE_TYPES = %w[image/png image/jpeg image/gif image/webp application/pdf].freeze
+    GENERIC_CONTENT_TYPES = %w[application/octet-stream binary/octet-stream].freeze
     SIGNED_BLOB_INVALID =
       "signed_blob_id is invalid or expired. Prepare an upload first and use the signed_blob_id it returns."
     CHECKSUM_MISMATCH =
@@ -58,6 +59,16 @@ module RecordingStudioAttachable
 
       verify_binding!(blob, recording, actor)
       blob
+    end
+
+    def import_content_type(io, filename:, declared:)
+      detected = detect_type(io, filename)
+      declared_type = normalized_type(declared)
+      return detected if declared_type.blank? || GENERIC_CONTENT_TYPES.include?(declared_type) || declared_type != detected
+
+      declared_type
+    ensure
+      rewind_io(io)
     end
 
     def sniff!(blob, capability_options)
@@ -218,17 +229,25 @@ module RecordingStudioAttachable
       end
 
       def identified_type(blob)
-        blob.open do |io|
-          magic = Marcel::Magic.by_magic(io)
-          return normalized_type(magic.type) if magic
-
-          guessed = normalized_type(Marcel::Magic.by_path(blob.filename.to_s)&.type)
-          return guessed if guessed.present? && !magic_required?(guessed)
-
-          "application/octet-stream"
-        end
+        blob.open { |io| detect_type(io, blob.filename.to_s) }
       rescue ActiveStorage::FileNotFoundError
         raise ArgumentError, "File has not been uploaded"
+      end
+
+      def detect_type(io, filename)
+        rewind_io(io)
+        magic = Marcel::Magic.by_magic(io)
+        rewind_io(io)
+        return normalized_type(magic.type) if magic
+
+        guessed = normalized_type(Marcel::Magic.by_path(filename.to_s)&.type)
+        return guessed if guessed.present? && !magic_required?(guessed)
+
+        "application/octet-stream"
+      end
+
+      def rewind_io(io)
+        io.rewind if io.respond_to?(:rewind)
       end
 
       def magic_required?(type)

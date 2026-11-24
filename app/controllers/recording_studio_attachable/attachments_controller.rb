@@ -4,6 +4,8 @@ module RecordingStudioAttachable
   class AttachmentsController < ApplicationController
     include AttachmentFileButtonResponses
 
+    skip_before_action :authenticate_user!, only: %i[file download preview], raise: false
+
     def show
       @attachment_recording = find_attachment_recording
       authorize_attachment_owner_action!(:view, @attachment_recording)

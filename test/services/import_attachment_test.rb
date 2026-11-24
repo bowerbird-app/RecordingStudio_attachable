@@ -76,7 +76,7 @@ class ImportAttachmentTest < Minitest::Test
     assert_not blob.purged
   end
 
-  def test_import_attachment_keeps_the_declared_content_type
+  def test_import_attachment_stores_the_detected_type_when_the_header_disagrees
     parent = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: FakeRecording.new(id: "root-1"))
     blob = FakeBlob.new(signed_id: "signed-blob", content_type: "image/png", byte_size: 512)
     captured_blob_kwargs = nil
@@ -100,6 +100,7 @@ class ImportAttachmentTest < Minitest::Test
     end
 
     assert_equal false, captured_blob_kwargs[:identify]
+    assert_equal "image/svg+xml", captured_blob_kwargs[:content_type]
   end
 
   def test_import_attachment_rejects_invalid_content_types_and_purges_blob

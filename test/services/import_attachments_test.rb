@@ -75,6 +75,8 @@ class ImportAttachmentsTest < Minitest::Test
     assert_equal false, captured_creates.last[:identify]
     assert_equal "one.svg", captured_creates.first[:filename]
     assert_equal "two.svg", captured_creates.last[:filename]
+    assert_equal "image/svg+xml", captured_creates.first[:content_type]
+    assert_equal "image/svg+xml", captured_creates.last[:content_type]
   end
 
   def test_import_attachments_rejects_batches_larger_than_the_configured_limit

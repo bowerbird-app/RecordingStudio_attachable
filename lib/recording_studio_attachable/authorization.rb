@@ -1,14 +1,22 @@
 # frozen_string_literal: true
 
+require_relative "authorization/trash_visibility"
+require_relative "authorization/owner_availability"
+
 module RecordingStudioAttachable
   module Authorization
     class NotAuthorizedError < RecordingStudioAttachable::Error; end
     class CapabilityNotEnabledError < NotAuthorizedError; end
     class OwnerUnavailableError < NotAuthorizedError; end
 
+    READ_ACTIONS = %i[view download].freeze
+
     class << self
       def authorize!(action:, actor:, recording:, capability_options: nil)
         assert_attachable_enabled!(recording: recording, capability_options: capability_options)
+        raise OwnerUnavailableError, denial_message(action, recording) unless visible_to?(
+          recording, actor: actor, action: action
+        )
         raise NotAuthorizedError, denial_message(action, recording) unless role_allowed?(
           action: action, actor: actor, recording: recording, capability_options: capability_options
         )
@@ -19,6 +27,7 @@ module RecordingStudioAttachable
 
       def allowed?(action:, actor:, recording:, capability_options: nil)
         return false unless attachable_enabled?(recording: recording, capability_options: capability_options)
+        return false unless visible_to?(recording, actor: actor, action: action)
         return false unless role_allowed?(
           action: action, actor: actor, recording: recording, capability_options: capability_options
         )
@@ -65,10 +74,26 @@ module RecordingStudioAttachable
         owner_recording_for(recording)&.recordable_type
       end
 
+      def visible_to?(recording, actor:, action:)
+        return true unless READ_ACTIONS.include?(action.to_sym)
+        return true unless TrashVisibility.hidden?(recording)
+
+        admin_on_parent?(actor, recording)
+      end
+
       private
 
       def role_allowed?(action:, actor:, recording:, capability_options: nil)
-        role = required_role_for(action, capability_options: capability_options)
+        holds_role?(
+          actor: actor,
+          recording: recording,
+          role: required_role_for(action, capability_options: capability_options),
+          capability_options: capability_options,
+          action: action
+        )
+      end
+
+      def holds_role?(actor:, recording:, role:, capability_options: nil, action: :view)
         return false if role.blank?
 
         adapter = authorization_adapter(capability_options)
@@ -78,46 +103,15 @@ module RecordingStudioAttachable
         RecordingStudioAccessible::Authorization.allowed?(actor: actor, recording: recording, role: role)
       end
 
+      def admin_on_parent?(actor, recording)
+        parent = owner_recording_for(recording)
+        return false if actor.blank? || parent.blank?
+
+        holds_role?(actor: actor, recording: parent, role: :admin, action: :view)
+      end
+
       def owner_available?(action:, actor:, recording:)
-        owner = owner_recording_for(recording)
-        recordable_class = owner_recordable_class(owner)
-        return true unless recordable_class.is_a?(Module)
-        return availability_allowed?(owner, action, actor) if recordable_class.public_method_defined?(:attachable_available_for?)
-        return false if availability_method_hidden?(recordable_class)
-
-        true
-      end
-
-      # Only boolean true. false, nil, and any other object refuse.
-      def availability_allowed?(owner, action, actor)
-        result = owner.recordable.attachable_available_for?(actor: actor, action: action, recording: owner)
-        result.equal?(true)
-      rescue StandardError => e
-        log_availability_error(e)
-        false
-      end
-
-      def availability_method_hidden?(recordable_class)
-        recordable_class.private_method_defined?(:attachable_available_for?) ||
-          recordable_class.protected_method_defined?(:attachable_available_for?)
-      end
-
-      def owner_recordable_class(owner)
-        return unless owner.respond_to?(:recordable_type)
-
-        name = owner.recordable_type.to_s
-        return if name.blank?
-
-        name.safe_constantize
-      end
-
-      def log_availability_error(error)
-        line = "RecordingStudioAttachable owner availability check failed (#{error.class})"
-        if defined?(Rails) && Rails.respond_to?(:logger) && Rails.logger
-          Rails.logger.warn(line)
-        else
-          warn(line)
-        end
+        OwnerAvailability.allowed?(action: action, actor: actor, recording: recording)
       end
 
       def denial_message(action, recording)

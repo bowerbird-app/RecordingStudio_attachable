@@ -14,9 +14,27 @@ module RecordingStudioAttachable
       end
 
       def actions_for(type, api)
-        return McpCopy::ACTIONS if api.nil?
+        return supported_anywhere(type) if api.nil?
 
         McpCopy::ACTIONS.select { |action| supported?(type, action, api) }
+      end
+
+      def supported_anywhere(type)
+        return McpCopy::ACTIONS unless defined?(::RecordingStudioApi)
+
+        apis = api_names
+        return McpCopy::ACTIONS if apis.empty?
+
+        McpCopy::ACTIONS.select { |action| apis.any? { |api| supported?(type, action, api) } }
+      end
+
+      def api_names
+        return [] unless ::RecordingStudioApi.respond_to?(:configuration)
+
+        config = ::RecordingStudioApi.configuration
+        return [] unless config.respond_to?(:api_names)
+
+        Array(config.api_names)
       end
 
       def supported?(type, action, api)

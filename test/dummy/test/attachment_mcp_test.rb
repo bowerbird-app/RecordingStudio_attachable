@@ -29,6 +29,28 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
     RecordingStudioAttachable.configuration.import_allowed_hosts = @hosts
   end
 
+  test "tool names registers a type that became attachable after register!" do
+    configuration = RecordingStudio.configuration
+    original = configuration.instance_variable_get(:@capabilities).transform_values(&:dup)
+    type = "LateFileSection"
+    configuration.enable_capability(:attachable, on: type)
+    RecordingStudioApi.register_recordable_type_api(
+      type,
+      capability_actions: RecordingStudioAttachable::McpCopy::ACTIONS,
+      api: :public
+    )
+
+    names = RecordingStudioAttachable::McpCopy.tool_names(api: :public)
+    RecordingStudioAttachable::McpCopy::ACTIONS.each do |action|
+      name = RecordingStudioAttachable::McpCopy.tool_name(type, action)
+      assert_includes names, name
+      assert RecordingStudioMcp.configuration.tool(name), "MCP server public includes unknown tool #{name}"
+    end
+    assert_includes RecordingStudioAttachable::McpCopy.tool_names, "late_file_section_create_upload"
+  ensure
+    configuration.instance_variable_set(:@capabilities, original) if original
+  end
+
   test "tool names for an api follow that api's registrations" do
     public_names = RecordingStudioAttachable::McpCopy.tool_names(api: :public)
     every_name = RecordingStudioAttachable::McpCopy.tool_names

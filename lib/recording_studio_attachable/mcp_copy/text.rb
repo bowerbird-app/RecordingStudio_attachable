@@ -27,9 +27,10 @@ module RecordingStudioAttachable
       end
 
       def without_put(upload)
-        "If you cannot PUT the bytes, call #{upload} with a public https url, or with data and filename. " \
-          "A file attached in the chat is base64 data and filename. Never put a local path in url. " \
-          "url is only a public https:// web address. Both store the bytes and return the same signed_blob_id."
+        "If you cannot PUT the bytes, call #{upload} with file, url, or data and filename. " \
+          "For a file the user attached in ChatGPT, use file. For a public web image, use url. " \
+          "For clients that can send bytes, use data plus filename. " \
+          "Each of those stores the bytes and returns the same signed_blob_id."
       end
       private_class_method :put_sentence, :without_put
     end
@@ -59,7 +60,7 @@ module RecordingStudioAttachable
         upload = names[:create_upload]
         attach = names[:attach]
         sentences = [INTRO]
-        sentences << "Call #{upload} when you have the file bytes, an HTTPS url, or base64 data." if upload
+        sentences << "Call #{upload} when you have the file bytes, a ChatGPT file, an HTTPS url, or base64 data." if upload
         sentences.concat(UploadSentences.for(names))
         sentences << "#{attach} accepts it once, and only while the blob is still unattached." if attach
         sentences << "#{limits} Unattached uploads for this caller on this root record stop at 20 by default."
@@ -79,7 +80,7 @@ module RecordingStudioAttachable
       def create_upload_first(upload)
         return if upload.blank?
 
-        "Call #{upload} first. PUT the bytes, or pass url or data on that call when you cannot PUT, before you send signed_blob_id."
+        "Call #{upload} first. PUT the bytes, or pass file, url, or data on that call when you cannot PUT, before you send signed_blob_id."
       end
 
       def attach_routes(names)

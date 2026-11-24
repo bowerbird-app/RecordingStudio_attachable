@@ -136,6 +136,7 @@ class PreparedUploadTest < Minitest::Test
     handler = RecordingStudioAttachable::Api::AttachmentActions::CreateUpload
     urls = [
       "/mnt/data/photo.jpg",
+      "/mnt/data/images(1).jpeg",
       "file:///mnt/data/photo.jpg",
       "http://files.example.test/door.png",
       "not a url",
@@ -151,6 +152,8 @@ class PreparedUploadTest < Minitest::Test
             end
             assert_includes error.message, "public https://", url
             assert_includes error.message, "base64 data with filename", url
+            assert_includes error.message, "send file", url
+            refute_includes error.message, url, url
 
             api_error = assert_raises(RecordingStudioApi::InvalidActionInputError, url) do
               handler.call(context(recording, actor, url: url))
@@ -373,7 +376,7 @@ class PreparedUploadTest < Minitest::Test
       both = assert_raises(RecordingStudioApi::InvalidActionInputError) do
         handler.call(context(recording, actor, url: "https://files.example.test/door.png", data: "aaaa"))
       end
-      assert_includes both.message, "not both"
+      assert_includes both.message, "only one"
 
       [{}, { filename: "door.png" }].each do |params|
         missing = assert_raises(RecordingStudioApi::InvalidActionInputError) do
@@ -383,6 +386,159 @@ class PreparedUploadTest < Minitest::Test
         assert_includes missing.message, "direct upload"
         assert_includes missing.message, "or send url"
         assert_includes missing.message, "data and filename"
+        assert_includes missing.message, "or send file"
+      end
+
+      path = "/mnt/data/images(1).jpeg"
+      with_pending(0) do
+        sandbox = assert_raises(RecordingStudioApi::InvalidActionInputError) do
+          handler.call(context(recording, actor, data: path, filename: "images(1).jpeg"))
+        end
+        assert_includes sandbox.message, "send file"
+        assert_includes sandbox.message, "https url"
+        refute_includes sandbox.message, path
+      end
+    end
+  end
+
+  def test_file_upload_returns_a_signed_id_that_attach_and_replace_accept
+    recording = recording_double("parent-1")
+    actor = actor_double
+    blob = ticket_blob(recording, actor)
+    secret = "https://files.example.test/secret-token/door.png?sig=keep-me"
+    created = nil
+
+    with_access do
+      with_pending(0) do
+        with_http(PNG, content_type: "application/octet-stream") do
+          ActiveStorage::Blob.stub(:create_and_upload!, lambda { |**attributes|
+            created = attributes
+            blob.metadata = attributes[:metadata]
+            blob.content_type = attributes[:content_type]
+            blob.filename = attributes[:filename]
+            blob
+          }) do
+            ticket = RecordingStudioAttachable::PreparedUpload.fetch(
+              recording: recording,
+              actor: actor,
+              file: {
+                download_url: secret,
+                file_id: "file_123",
+                mime_type: "image/jpeg",
+                file_name: "images(1).jpeg"
+              }
+            )
+
+            assert_equal "signed-attachable_upload", ticket[:signed_blob_id]
+            assert_equal "images(1).jpeg", created[:filename]
+            assert_equal "image/png", created[:content_type]
+            assert_services_accept(ticket[:signed_blob_id], recording, actor, blob)
+            refute_includes ticket.to_s, secret
+            refute_includes created[:metadata].to_s, secret
+            refute_includes created[:filename].to_s, secret
+          end
+        end
+      end
+    end
+  end
+
+  def test_file_upload_refuses_a_private_host_http_oversize_wrong_type_and_no_edit_role
+    secret = "https://files.example.test/secret-token/door.png?sig=keep-me"
+    recording = recording_double("parent-1")
+    actor = actor_double
+    file = { download_url: secret, file_id: "file_123", file_name: "door.png" }
+
+    with_access do
+      with_pending(0) do
+        with_http(PNG, content_type: "image/png", addresses: ["10.1.2.3"], fail_if_called: true) do
+          error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
+            RecordingStudioAttachable::PreparedUpload.fetch(recording: recording, actor: actor, file: file)
+          end
+          assert_includes error.message, "could not be downloaded"
+          assert_includes error.message, "private address"
+          refute_includes error.message, secret
+          assert_nil error.cause
+        end
+      end
+    end
+
+    http_secret = "http://files.example.test/secret-token/door.png?sig=keep-me"
+    with_access do
+      with_pending(0) do
+        with_http(PNG, content_type: "image/png", fail_if_called: true) do
+          error = assert_raises(ArgumentError) do
+            RecordingStudioAttachable::PreparedUpload.fetch(
+              recording: recording, actor: actor, file: file.merge(download_url: http_secret)
+            )
+          end
+          assert_includes error.message, "https"
+          refute_includes error.message, http_secret
+        end
+      end
+    end
+
+    RecordingStudioAttachable.configuration.max_file_size = 4
+    with_access do
+      with_pending(0) do
+        with_http(PNG, content_type: "image/png") do
+          error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
+            RecordingStudioAttachable::PreparedUpload.fetch(recording: recording, actor: actor, file: file)
+          end
+          assert_includes error.message, "could not be downloaded"
+          assert_includes error.message, "maximum file size"
+          refute_includes error.message, secret
+        end
+      end
+    end
+    RecordingStudioAttachable.configuration.max_file_size = 25.megabytes
+
+    with_access do
+      with_pending(0) do
+        with_http(ZIP, content_type: "application/zip") do
+          ActiveStorage::Blob.stub(:create_and_upload!, ->(**) { flunk "created a blob" }) do
+            error = assert_raises(ArgumentError) do
+              RecordingStudioAttachable::PreparedUpload.fetch(
+                recording: recording, actor: actor, file: file.merge(file_name: "virus.zip", mime_type: "image/png")
+              )
+            end
+            assert_includes error.message, "not allowed"
+            refute_includes error.message, secret
+          end
+        end
+      end
+    end
+
+    RecordingStudioAttachable.configuration.authorize_with = ->(**) { false }
+    with_access do
+      with_http(PNG, content_type: "image/png", fail_if_called: true) do
+        error = assert_raises(Auth::NotAuthorizedError) do
+          RecordingStudioAttachable::PreparedUpload.fetch(recording: recording, actor: actor, file: file)
+        end
+        assert_equal Auth::NotAuthorizedError, error.class
+        refute_includes error.message, secret
+      end
+    end
+  end
+
+  def test_create_upload_refuses_mixed_sources_and_keeps_the_download_url_out_of_the_reply
+    recording = recording_double("parent-1")
+    actor = actor_double
+    handler = RecordingStudioAttachable::Api::AttachmentActions::CreateUpload
+    secret = "https://files.example.test/secret-token/door.png?sig=keep-me"
+    file = { download_url: secret, file_id: "file_123", mime_type: "image/png", file_name: "door.png" }
+
+    with_access do
+      [
+        { url: "https://files.example.test/door.png", file: file },
+        { data: "aaaa", file: file, filename: "door.png" },
+        { url: "https://files.example.test/door.png", data: "aaaa", file: file },
+        { filename: "door.png", byte_size: 12, checksum: "abc", content_type: "image/png", file: file }
+      ].each do |params|
+        error = assert_raises(RecordingStudioApi::InvalidActionInputError) do
+          handler.call(context(recording, actor, params))
+        end
+        assert_includes error.message, "only one"
+        refute_includes error.message, secret
       end
     end
   end

@@ -289,9 +289,9 @@ class AttachmentActionsTest < Minitest::Test
     assert_equal shared.fetch("filename").fetch("description"), fields.dig(:filename, :description)
     assert_equal shared.fetch("url").fetch("description"), fields.dig(:url, :description)
     assert_equal shared.fetch("data").fetch("description"), fields.dig(:data, :description)
-    assert_equal "The file size in bytes. Required for a direct upload. Omit it when you send url or data. Use zero or more. It must match this record type's allowed content types and size and count limits, as shown in the action description.", fields.dig(:byte_size, :description)
-    assert_equal "MD5 checksum of the file bytes, Base64-encoded, as Active Storage expects. Required for a direct upload. Omit it when you send url or data.", fields.dig(:checksum, :description)
-    assert_equal "The file's content type. Required for a direct upload. Omit it when you send url or data. It must match this record type's allowed content types and size and count limits, as shown in the action description. image/* does not include image/svg+xml unless that exact type is named in the allow list.", fields.dig(:content_type, :description)
+    assert_equal "The file size in bytes. Required for a direct upload. Omit it when you send url, data, or file. Use zero or more. It must match this record type's allowed content types and size and count limits, as shown in the action description.", fields.dig(:byte_size, :description)
+    assert_equal "MD5 checksum of the file bytes, Base64-encoded, as Active Storage expects. Required for a direct upload. Omit it when you send url, data, or file.", fields.dig(:checksum, :description)
+    assert_equal "The file's content type. Required for a direct upload. Omit it when you send url, data, or file. It must match this record type's allowed content types and size and count limits, as shown in the action description. image/* does not include image/svg+xml unless that exact type is named in the allow list.", fields.dig(:content_type, :description)
     assert_includes fields.dig(:url, :description), "https://"
     assert_includes fields.dig(:url, :description), "local path"
     assert_includes fields.dig(:data, :description), "base64"

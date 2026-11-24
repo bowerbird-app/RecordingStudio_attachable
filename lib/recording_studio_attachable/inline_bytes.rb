@@ -7,7 +7,7 @@ module RecordingStudioAttachable
   module InlineBytes
     DATA_PREFIX = "data:"
     BASE64_PATTERN = %r{\A[A-Za-z0-9+/]*={0,2}\z}
-    BAD = "data is not valid base64"
+    BAD = "data is not valid base64. For a file attached in ChatGPT, send file. For a public image, send an https url."
 
     module_function
 

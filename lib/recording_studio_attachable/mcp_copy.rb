@@ -10,10 +10,12 @@ module RecordingStudioAttachable
     ID_INPUT = {
       description: "Recording id of the parent record."
     }.freeze
-    URL_FIELD = "A public https:// web address of the file. Send this only when the file is already on the public web. " \
-                "A file attached in the chat, or a path on disk, goes as base64 data with filename. Never put a local path in url."
+    FILE_PARAMS = ["file"].freeze
+    FILE_PARAMS_KEY = "openai/fileParams"
+    URL_FIELD = "A public https:// web address of a file already on the public web. " \
+                "For a file the user attached in ChatGPT, send file. Never put a local path in url."
     FILENAME_FIELD = "File name to store, such as cover.jpg. Send it with data. A direct upload needs it too. " \
-                     "Optional when you send url. When omitted, the name comes from the url path."
+                     "Optional when you send url or file. When omitted on url, the name comes from the url path."
 
     module_function
 
@@ -25,10 +27,14 @@ module RecordingStudioAttachable
       }
     end
 
+    def upload_file_field
+      FileField.schema
+    end
+
     def data_field
       limit = InlineBytes.size_words(RecordingStudioAttachable.configuration.inline_upload_max_bytes)
-      "Base64 file bytes, or a base64 data URI. Send this with filename for a file the user attached in chat " \
-        "or that you have saved locally. Data uploads can be up to #{limit}. Send a public https url for a larger file."
+      "Base64 file bytes, or a base64 data URI. Send this with filename when the client can send the bytes. " \
+        "Data uploads can be up to #{limit}. For a file attached in ChatGPT, send file. For a public web image, send url."
     end
 
     def register!
@@ -124,4 +130,5 @@ module RecordingStudioAttachable
   end
 end
 
+require_relative "mcp_copy/file_field"
 require_relative "mcp_copy/names"

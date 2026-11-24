@@ -32,7 +32,7 @@ module RecordingStudioAttachable
     end
 
     initializer "recording_studio_attachable.filter_parameters" do |app|
-      app.config.filter_parameters += %i[signed_blob_id checksum data]
+      app.config.filter_parameters += %i[signed_blob_id checksum data download_url]
     end
 
     initializer "recording_studio_attachable.api" do

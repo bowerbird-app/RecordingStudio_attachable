@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-11-24
+
+### Added
+
+- `create_upload` accepts an optional `file` object for a file the user attached in ChatGPT: `download_url`, `file_id`, and optional `mime_type` and `file_name`. The server fetches `download_url` through `PreparedUpload.fetch` and `SafeRemoteFetch`, the same guards as `url`. `mime_type` is a hint. The bytes decide the stored type. `file_name` becomes the filename, or `upload` when it is blank. Send only one of a direct upload, `url`, `data`, or `file`. `url` and `data` still work.
+- `RecordingStudioAttachable::McpCopy.upload_file_field` returns the JSON Schema object for `file`. `FILE_PARAMS` is `["file"]`. `FILE_PARAMS_KEY` is `openai/fileParams`. Attachable's `create_upload` input schema uses `upload_file_field`.
+
+### Upgrade Notes
+
+- Bump to 0.38.0. Previous is 0.37.1. No migration.
+- For a file the user attached in ChatGPT, send `file`. For a public web image, send `url`. For clients that can send bytes, send `data` plus `filename`. A non-base64 `data` value, including a sandbox path, is invalid input and names those choices.
+- Hosts with a non-empty `import_allowed_hosts` must add `files.oaiusercontent.com`. An empty list still allows any public HTTPS host. `:none` still turns fetches off.
+- `download_url` is a short-lived bearer URL. It is filtered from logs. It is not stored on the blob and it is not returned in errors. A failed file fetch says `The attached file could not be downloaded` and the reason, without the URL.
+- Recording Studio MCP 0.48 does not store per-tool `_meta`. `<type>_create_upload` will emit `openai/fileParams` once that gem supports per-tool `_meta`. This release does not change the MCP gem.
+
 ## [0.37.1] - 2026-11-24
 
 ### Fixed
@@ -1006,7 +1021,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.37.1...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.38.0...HEAD
+[0.38.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.37.1...v0.38.0
 [0.37.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.37.0...v0.37.1
 [0.37.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.36.0...v0.37.0
 [0.36.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.35.1...v0.36.0

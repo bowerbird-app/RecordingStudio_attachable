@@ -31,13 +31,12 @@ class McpCopyTest < Minitest::Test
     )
 
     assert_includes text, "If you cannot PUT the bytes"
-    assert_includes text, "url"
-    assert_includes text, "data and filename"
-    assert_includes text, "local path"
-    assert_includes text, "base64"
+    assert_includes text, "use file"
+    assert_includes text, "use url"
+    assert_includes text, "data plus filename"
   end
 
-  def test_upload_source_fields_steer_chat_files_to_base64
+  def test_upload_source_fields_and_the_chatgpt_file_object
     original = RecordingStudioAttachable.configuration.inline_upload_max_bytes
     RecordingStudioAttachable.configuration.inline_upload_max_bytes = 2.megabytes
     fields = RecordingStudioAttachable::McpCopy.upload_source_fields
@@ -51,8 +50,10 @@ class McpCopyTest < Minitest::Test
     assert_equal "string", filename.fetch("type")
     assert_includes url.fetch("description"), "public https://"
     assert_includes url.fetch("description"), "Never put a local path in url"
+    assert_includes url.fetch("description"), "send file"
     assert_includes data.fetch("description"), "base64"
     assert_includes data.fetch("description"), "filename"
+    assert_includes data.fetch("description"), "send file"
     assert_includes data.fetch("description"), "2 MB"
     refute_includes data.fetch("description"), "inline_upload_max_bytes"
     assert_includes filename.fetch("description"), "cover.jpg"
@@ -66,6 +67,21 @@ class McpCopyTest < Minitest::Test
     tighter = RecordingStudioAttachable::McpCopy.upload_source_fields.fetch("data").fetch("description")
     assert_includes tighter, "1 MB"
     refute_includes tighter, "2 MB"
+
+    schema = RecordingStudioAttachable::McpCopy.upload_file_field
+    assert_equal "object", schema.fetch("type")
+    assert_equal %w[download_url file_id], schema.fetch("required")
+    assert_equal ["file"], RecordingStudioAttachable::McpCopy::FILE_PARAMS
+    assert_equal "openai/fileParams", RecordingStudioAttachable::McpCopy::FILE_PARAMS_KEY
+    %w[download_url file_id mime_type file_name].each do |key|
+      property = schema.fetch("properties").fetch(key)
+      assert_equal "string", property.fetch("type")
+      assert property.fetch("description").present?, key
+    end
+    assert_equal :hash, contract.dig(:file, :type)
+    assert_equal false, contract.dig(:file, :required)
+    assert_equal schema.fetch("description"), contract.dig(:file, :description)
+    assert_equal schema.fetch("properties"), contract.dig(:file, :properties)
   ensure
     RecordingStudioAttachable.configuration.inline_upload_max_bytes = original
   end

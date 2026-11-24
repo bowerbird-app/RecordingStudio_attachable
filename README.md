@@ -21,8 +21,8 @@ Optional Recording Studio addon gem for uploading and managing images/files as c
 - RecordingStudio Accessible installed for the default authorization adapter
 - RecordingStudio Trashable installed if you want restore support for removed attachments
 - RecordingStudio Metrics `>= 0.9.0, < 1.0` (CI tested with GitHub tag `v0.10.0`) for operations-API storage and upload metrics
-- RecordingStudio API `>= 1.1.0, < 2.0` (CI tested with GitHub tag `v1.21.3`)
-- RecordingStudio MCP `>= 0.45.1, < 0.46` (CI tested with GitHub tag `v0.45.1`) when the host mounts MCP. The engine registers one upload tool set per Attachable type. Hosts still list those names on `include_tools`.
+- RecordingStudio API `>= 1.1.0, < 2.0` (CI tested with GitHub tag `v1.22.0`)
+- RecordingStudio MCP `>= 0.45.1, < 0.49` (CI tested with GitHub tag `v0.48.0`) when the host mounts MCP. The engine registers one upload tool set per Attachable type. Hosts still list those names on `include_tools`.
 - Optional cloud import: a separate provider gem that registers with `register_upload_provider`. Attachable does not depend on provider gems at runtime.
 
 ## Quick start

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.35.1] - 2026-11-24
+
+### Fixed
+
+- `McpCopy.tool_names` registers any Attachable type that showed up after `register!`. A host `include_tools(*McpCopy.tool_names(api: :public))` no longer fails boot with `includes unknown tool` for that type.
+
+### Upgrade Notes
+
+- Bump to 0.35.1. Previous is 0.35.0. No migration. No change to `include_tools`.
+- Dev pins move to `recording_studio_mcp` tag `v0.48.0` (`>= 0.45.1, < 0.49`). That tag needs `recording_studio_api` `v1.22.0`. 0.45.1 still works. MCP stays out of the gemspec.
+
 ## [0.35.0] - 2026-11-24
 
 ### Changed
@@ -944,7 +955,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.35.0...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.35.1...HEAD
+[0.35.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.35.0...v0.35.1
 [0.35.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.6...v0.35.0
 [0.34.6]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.5...v0.34.6
 [0.34.5]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.34.4...v0.34.5

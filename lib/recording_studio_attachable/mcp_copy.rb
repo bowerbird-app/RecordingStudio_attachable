@@ -21,6 +21,7 @@ module RecordingStudioAttachable
     def tool_names(api: nil)
       return [] unless mcp_available?
 
+      register!
       Names.list(attachable_types, api: api)
     end
 

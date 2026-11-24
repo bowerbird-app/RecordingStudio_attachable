@@ -285,12 +285,16 @@ class AttachmentActionsTest < Minitest::Test
     contract = RecordingStudioAttachable::Api::AttachmentContracts.create_upload
     fields = contract.fetch(:fields)
 
-    assert_equal "The file name to store, such as cover.jpg. Required for a direct upload and for data. Optional for url. When omitted, the name is taken from the URL path.", fields.dig(:filename, :description)
+    shared = RecordingStudioAttachable::McpCopy.upload_source_fields
+    assert_equal shared.fetch("filename").fetch("description"), fields.dig(:filename, :description)
+    assert_equal shared.fetch("url").fetch("description"), fields.dig(:url, :description)
+    assert_equal shared.fetch("data").fetch("description"), fields.dig(:data, :description)
     assert_equal "The file size in bytes. Required for a direct upload. Omit it when you send url or data. Use zero or more. It must match this record type's allowed content types and size and count limits, as shown in the action description.", fields.dig(:byte_size, :description)
     assert_equal "MD5 checksum of the file bytes, Base64-encoded, as Active Storage expects. Required for a direct upload. Omit it when you send url or data.", fields.dig(:checksum, :description)
     assert_equal "The file's content type. Required for a direct upload. Omit it when you send url or data. It must match this record type's allowed content types and size and count limits, as shown in the action description. image/* does not include image/svg+xml unless that exact type is named in the allow list.", fields.dig(:content_type, :description)
-    assert_includes fields.dig(:url, :description), "HTTPS URL"
-    assert_includes fields.dig(:data, :description), "Base64"
+    assert_includes fields.dig(:url, :description), "https://"
+    assert_includes fields.dig(:url, :description), "local path"
+    assert_includes fields.dig(:data, :description), "base64"
   end
 
   def test_tool_description_is_printed_once_and_covers_inputs_and_returns
@@ -339,6 +343,7 @@ class AttachmentActionsTest < Minitest::Test
     assert_includes import.fetch(:url).fetch(:description), "host app"
     refute_includes import.fetch(:url).fetch(:description), "config."
     refute_includes upload_description, "config."
+    assert_includes upload_description, "local path"
     refute_includes attach_description, "config."
     refute_includes import_description, "config."
     assert_includes import_description, "host app can limit"

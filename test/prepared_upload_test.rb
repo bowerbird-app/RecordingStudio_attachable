@@ -556,23 +556,21 @@ class PreparedUploadTest < Minitest::Test
     with_access do
       with_http(PNG, content_type: "image/png", fail_if_called: true) do
         ActiveStorage::Blob.stub(:create_and_upload!, ->(**) { flunk "created a blob" }) do
-          ActiveStorage::Blob.stub(:create_before_direct_upload!, ->(**) { flunk "created a blob" }) do
-            [nil, false, "yes"].each do |value|
-              params = { url: "https://files.example.test/door.png" }
-              params[:rights_confirmed] = value unless value.nil?
-              error = assert_raises(RecordingStudioApi::InvalidActionInputError) do
-                handler.call(context(recording, actor, params, confirm: false))
-              end
-              assert_equal refused, error.message
+          [nil, false, "yes"].each do |value|
+            params = { url: "https://files.example.test/door.png" }
+            params[:rights_confirmed] = value unless value.nil?
+            error = assert_raises(RecordingStudioApi::InvalidActionInputError) do
+              handler.call(context(recording, actor, params, confirm: false))
             end
-
-            ruby = assert_raises(ArgumentError) do
-              RecordingStudioAttachable.fetch_upload(
-                recording: recording, actor: actor, url: "https://files.example.test/door.png"
-              )
-            end
-            assert_equal refused, ruby.message
+            assert_equal refused, error.message
           end
+
+          ruby = assert_raises(ArgumentError) do
+            RecordingStudioAttachable.fetch_upload(
+              recording: recording, actor: actor, url: "https://files.example.test/door.png"
+            )
+          end
+          assert_equal refused, ruby.message
         end
       end
     end

@@ -298,6 +298,7 @@ class AttachmentActionsTest < Minitest::Test
     assert_includes fields.dig(:url, :description), "https://"
     assert_includes fields.dig(:url, :description), "local path"
     assert_includes fields.dig(:data, :description), "base64"
+    assert_includes fields.dig(:file, :description), RecordingStudioAttachable::McpCopy::FileField::ATTACH_FAIL_URL_FALLBACK
     assert_equal RecordingStudioAttachable::UploadRights::FIELD_DESCRIPTION, fields.dig(:rights_confirmed, :description)
     assert_equal :boolean, fields.dig(:rights_confirmed, :type)
     assert_equal "boolean", RecordingStudioAttachable::McpCopy.rights_confirmed_field.fetch("type")

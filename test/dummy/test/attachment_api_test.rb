@@ -338,6 +338,7 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     actions = RecordingStudioAttachable::Api::AttachmentActions
     assert_equal actions::CREATE_UPLOAD_SUMMARY, create_upload.fetch("summary")
     assert_includes create_upload.fetch("description"), "text/plain"
+    assert_includes create_upload.fetch("description"), "UNREGISTERED_FILE_REFERENCE"
     assert_includes create_upload.fetch("description"), "image/*"
     assert_includes create_upload.fetch("description"), "application/pdf"
     assert_includes create_upload.fetch("description"), "25 MB"
@@ -368,6 +369,7 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     upload_fields = create_upload.dig("requestBody", "content", "application/json", "schema", "properties")
     contract = RecordingStudioAttachable::Api::AttachmentContracts.create_upload.fetch(:fields)
     assert_equal contract.dig(:filename, :description), upload_fields.dig("filename", "description")
+    assert_includes upload_fields.dig("file", "description"), "UNREGISTERED_FILE_REFERENCE"
     assert_equal contract.dig(:checksum, :description), upload_fields.dig("checksum", "description")
     assert_includes upload_fields.dig("byte_size", "description"), "25 MB"
     assert_includes upload_fields.dig("content_type", "description"), "text/plain"

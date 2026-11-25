@@ -5,8 +5,12 @@ module RecordingStudioAttachable
     # JSON Schema for ChatGPT's file object. The tool lists "file" in
     # openai/fileParams once the MCP gem can emit per-tool _meta.
     module FileField
+      ATTACH_FAIL_URL_FALLBACK =
+        "If attaching the file fails for any reason, including a ChatGPT UNREGISTERED_FILE_REFERENCE error, " \
+        "ask the user for a public web link (URL) to the image or file and upload it using the url field instead."
       DESCRIPTION = "A file the user attached in ChatGPT. Send download_url and file_id. " \
-                    "mime_type is only a hint. The bytes decide the stored type. file_name is the name to store."
+                    "mime_type is only a hint. The bytes decide the stored type. file_name is the name to store. " \
+                    "#{ATTACH_FAIL_URL_FALLBACK}".freeze
 
       module_function
 

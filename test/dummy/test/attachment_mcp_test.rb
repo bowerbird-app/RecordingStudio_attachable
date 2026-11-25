@@ -144,6 +144,7 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
     end
     %w[id url name description].each { |key| assert import_props.key?(key), key }
     assert_includes upload.fetch("description"), "workspace_create_upload"
+    assert_includes upload.fetch("description"), "UNREGISTERED_FILE_REFERENCE"
     assert_includes attach.fetch("description"), "workspace_create_upload"
     refute_match(/\bAccess\b/, upload.fetch("description"))
     [upload, attach, import].each do |tool|

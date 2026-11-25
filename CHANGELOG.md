@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.39.1] - 2026-11-25
+
+### Fixed
+
+- MCP/API `file` field copy and `create_upload` tool/OpenAPI descriptions tell the client: if attaching the file fails for any reason, including a ChatGPT `UNREGISTERED_FILE_REFERENCE` error, ask the user for a public web link (URL) to the image or file and upload it using the `url` field instead. Rights-confirmation question text is unchanged.
+
+### Upgrade Notes
+
+- None required.
+
 ## [0.39.0] - 2026-11-25
 
 ### Added
@@ -1034,7 +1044,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.39.0...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.39.1...HEAD
+[0.39.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.39.0...v0.39.1
 [0.39.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.38.0...v0.39.0
 [0.38.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.37.1...v0.38.0
 [0.37.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.37.0...v0.37.1

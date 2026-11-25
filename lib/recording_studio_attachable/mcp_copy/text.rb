@@ -30,6 +30,7 @@ module RecordingStudioAttachable
         "If you cannot PUT the bytes, call #{upload} with file, url, or data and filename. " \
           "For a file the user attached in ChatGPT, use file. For a public web image, use url. " \
           "For clients that can send bytes, use data plus filename. " \
+          "#{FileField::ATTACH_FAIL_URL_FALLBACK} " \
           "Send rights_confirmed true only after the user answers yes to: " \
           "#{RecordingStudioAttachable::UploadRights::QUESTION} " \
           "Each of those stores the bytes and returns the same signed_blob_id."

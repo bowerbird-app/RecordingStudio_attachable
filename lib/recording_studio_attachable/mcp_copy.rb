@@ -2,6 +2,7 @@
 
 require_relative "api/attachment_actions"
 require_relative "inline_bytes"
+require_relative "mcp_copy/file_field"
 require_relative "mcp_copy/text"
 
 module RecordingStudioAttachable
@@ -134,5 +135,4 @@ module RecordingStudioAttachable
   end
 end
 
-require_relative "mcp_copy/file_field"
 require_relative "mcp_copy/names"

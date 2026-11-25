@@ -1,19 +1,29 @@
 # frozen_string_literal: true
 
+require_relative "upload_rights"
+
 module RecordingStudioAttachable
   # ChatGPT's file object. download_url is a bearer secret: it is fetched, then
   # dropped. It is never stored, and it is stripped from any error we raise.
   module AttachedFile
     SHAPE = "file must be an object with download_url and file_id"
+    CHATGPT_MISSING =
+      "ChatGPT didn't send the attached file. This is a known ChatGPT problem with attached files. " \
+      "For now, add images or files by giving a web link (URL) instead."
     LEAD = "The attached file could not be downloaded"
     DEFAULT_NAME = "upload"
     Source = Struct.new(:url, :mime, :name)
 
     module_function
 
-    def fetch(file, max_bytes:, remote_file:)
+    def assert_shape!(file, client: nil)
+      parsed(file, client: client)
+      nil
+    end
+
+    def fetch(file, max_bytes:, remote_file:, client: nil)
       downloaded = nil
-      source = parsed(file)
+      source = parsed(file, client: client)
       remote = remote_file.call(source.url, source.name)
       downloaded = SafeRemoteFetch.call(remote, max_bytes: max_bytes)
       yield downloaded.io, source.name, source.mime.presence || downloaded.content_type
@@ -23,12 +33,23 @@ module RecordingStudioAttachable
       SafeRemoteFetch.close_io(downloaded&.io)
     end
 
-    def parsed(file)
+    def parsed(file, client: nil)
       values = hash_values(file)
-      url = values[:download_url].to_s.strip
-      raise ArgumentError, SHAPE if url.empty? || values[:file_id].to_s.strip.empty?
+      url = download_url(values, client)
+      raise ArgumentError, SHAPE if values[:file_id].to_s.strip.empty?
 
       Source.new(url, values[:mime_type].to_s.strip, filename(values[:file_name]))
+    end
+
+    def download_url(values, client)
+      url = values[:download_url].to_s.strip
+      raise ArgumentError, missing_download_url_message(client) if url.empty?
+
+      url
+    end
+
+    def missing_download_url_message(client)
+      UploadRights.chatgpt_client(client) == false ? SHAPE : CHATGPT_MISSING
     end
 
     def hash_values(file)
@@ -78,7 +99,7 @@ module RecordingStudioAttachable
       needle = secret.to_s
       needle.empty? ? text : text.split(needle).join
     end
-    private_class_method :parsed, :hash_values, :filename, :without_secret, :secret_in?, :leaked_path?,
-                         :scrubbed, :request_uri, :strip
+    private_class_method :parsed, :download_url, :missing_download_url_message, :hash_values, :filename,
+                         :without_secret, :secret_in?, :leaked_path?, :scrubbed, :request_uri, :strip
   end
 end

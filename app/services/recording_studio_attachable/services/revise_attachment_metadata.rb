@@ -38,7 +38,9 @@ module RecordingStudioAttachable
           credit: written_text(credit, attachment.credit),
           alt_text: written_text(alt_text, attachment.alt_text),
           validation_options: capability_validation_options(capability_options),
-          root_recording: root_recording
+          root_recording: root_recording,
+          rights_confirmed_at: attachment.try(:rights_confirmed_at),
+          rights_confirmed_by: attachment.try(:rights_confirmed_by)
         )
         event = RecordingStudio.record!(
           action: "attachment_metadata_revised",

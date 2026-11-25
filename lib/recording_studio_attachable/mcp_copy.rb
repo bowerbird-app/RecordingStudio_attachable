@@ -5,7 +5,7 @@ require_relative "inline_bytes"
 require_relative "mcp_copy/text"
 
 module RecordingStudioAttachable
-  module McpCopy
+  module McpCopy # rubocop:disable Metrics/ModuleLength
     ACTIONS = %i[create_upload attach import_attachment].freeze
     ID_INPUT = {
       description: "Recording id of the parent record."
@@ -29,6 +29,10 @@ module RecordingStudioAttachable
 
     def upload_file_field
       FileField.schema
+    end
+
+    def rights_confirmed_field
+      UploadRights.field
     end
 
     def data_field

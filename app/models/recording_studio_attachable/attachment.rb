@@ -51,7 +51,7 @@ module RecordingStudioAttachable
           original_filename: blob.filename.to_s,
           content_type: content_type,
           byte_size: blob.byte_size
-        }
+        }.merge(UploadRights.attachment_attributes(blob, **presentation.slice(:rights_confirmed_at, :rights_confirmed_by)))
       end
 
       def assign_root_recording(attachment, root_recording)

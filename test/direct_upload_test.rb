@@ -126,6 +126,9 @@ class DirectUploadTest < Minitest::Test
         assert_equal "1", created.dig(:metadata, RecordingStudioAttachable::DirectUpload::TAG)
         assert_equal "parent-1", created.dig(:metadata, "parent_recording_id")
         assert_equal "actor-1", created.dig(:metadata, "actor_id")
+        refute created[:metadata].key?("rights_confirmed")
+        refute created[:metadata].key?("rights_confirmed_at")
+        refute created[:metadata].key?("rights_confirmed_by")
       end
     end
 

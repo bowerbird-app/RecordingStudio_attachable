@@ -78,6 +78,8 @@ module RecordingStudioAttachable
         end
 
         def ticket
+          check_file_object!
+          UploadRights.require!(params[:rights_confirmed])
           sources = server_sources
           raise ArgumentError, "Send only one of url, data, or file" if sources.many? || (sources.any? && direct_fields_present?)
           return file_ticket if sources == [:file]
@@ -100,7 +102,8 @@ module RecordingStudioAttachable
             recording: context.recording,
             actor: context.actor,
             url: params[:url],
-            filename: params[:filename]
+            filename: params[:filename],
+            rights_confirmed: params[:rights_confirmed]
           )
         end
 
@@ -109,7 +112,8 @@ module RecordingStudioAttachable
             recording: context.recording,
             actor: context.actor,
             data: params[:data],
-            filename: params[:filename]
+            filename: params[:filename],
+            rights_confirmed: params[:rights_confirmed]
           )
         end
 
@@ -117,7 +121,9 @@ module RecordingStudioAttachable
           PreparedUpload.fetch(
             recording: context.recording,
             actor: context.actor,
-            file: params[:file]
+            file: params[:file],
+            rights_confirmed: params[:rights_confirmed],
+            client: context
           )
         end
 
@@ -129,8 +135,15 @@ module RecordingStudioAttachable
             filename: params[:filename],
             byte_size: params[:byte_size],
             checksum: params[:checksum],
-            content_type: params[:content_type]
+            content_type: params[:content_type],
+            rights: UploadRights.stamp(context.actor)
           )
+        end
+
+        def check_file_object!
+          return unless params[:file].present? && params[:url].blank? && params[:data].blank? && !direct_fields_present?
+
+          AttachedFile.assert_shape!(params[:file], client: context)
         end
 
         def require_direct_fields!
@@ -224,6 +237,7 @@ module RecordingStudioAttachable
         end
 
         def call
+          UploadRights.require!(params[:rights_confirmed])
           @fetched = fetch
           Payload.one(Errors.finish!(record), actor: context.actor)
         ensure
@@ -239,7 +253,7 @@ module RecordingStudioAttachable
         end
 
         def record
-          Services::ImportAttachment.call(**import_arguments)
+          Services::ImportAttachment.call(**import_arguments, rights: UploadRights.stamp(context.actor))
         end
 
         def import_arguments

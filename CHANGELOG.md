@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-11-25
+
+### Added
+
+- MCP/API uploads require `rights_confirmed: true` on `create_upload` (direct fields, `url`, `data`, and `file`), `import_attachment`, and the Ruby entry points `RecordingStudioAttachable.fetch_upload`, `inline_upload`, and `PreparedUpload`. Missing, false, or any other value is invalid input: `Upload refused: you must confirm you have the right to upload this image or file.` The shared `McpCopy.rights_confirmed_field` description tells the client to ask the user `Do you confirm you have the right to upload this image or file?` and to send true only if they say yes. Confirmation is stored on blob metadata (`rights_confirmed`, `rights_confirmed_at`, `rights_confirmed_by`) and copied onto the Attachment (`rights_confirmed_at`, `rights_confirmed_by`) when that blob is attached. Metadata revisions copy those columns. Browser Stimulus direct uploads are unchanged and leave the columns null.
+- When a `file` object has a blank `download_url`, ChatGPT clients (`clientInfo` name containing `openai` or `chatgpt`) get this invalid-input message: `ChatGPT didn't send the attached file. This is a known ChatGPT problem with attached files. For now, add images or files by giving a web link (URL) instead.` Attachable's action context does not currently expose MCP `clientInfo`, so the same message is used whenever `file` arrives without `download_url`, unless a client name is present and is not ChatGPT. Other errors are unchanged. `download_url` is still never logged, stored, or returned.
+
+### Upgrade Notes
+
+- Bump to 0.39.0. Previous is 0.38.0. This is a breaking contract change.
+- Run `rails generate recording_studio_attachable:migrations` and `rails db:migrate`. The new columns are `rights_confirmed_at` and `rights_confirmed_by` on `recording_studio_attachable_attachments`.
+- MCP and API clients must send `rights_confirmed: true` on every upload and import. Browser uploads do not send this field.
+
 ## [0.38.0] - 2026-11-24
 
 ### Added
@@ -1021,7 +1034,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.38.0...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.39.0...HEAD
+[0.39.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.38.0...v0.39.0
 [0.38.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.37.1...v0.38.0
 [0.37.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.37.0...v0.37.1
 [0.37.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.36.0...v0.37.0

@@ -66,7 +66,7 @@ class PreparedUploadTest < Minitest::Test
             blob.filename = attributes[:filename]
             blob
           }) do
-            ticket = RecordingStudioAttachable.fetch_upload(
+            ticket = confirmed_fetch(
               recording: recording,
               actor: actor,
               url: "https://files.example.test/photos/door.png"
@@ -82,6 +82,9 @@ class PreparedUploadTest < Minitest::Test
             assert_equal "1", created.dig(:metadata, RecordingStudioAttachable::DirectUpload::TAG)
             assert_equal "parent-1", created.dig(:metadata, "parent_recording_id")
             assert_equal actor.id, created.dig(:metadata, "actor_id")
+            assert_equal true, created.dig(:metadata, "rights_confirmed")
+            assert created.dig(:metadata, "rights_confirmed_at").present?
+            assert_includes created.dig(:metadata, "rights_confirmed_by").to_s, actor.id.to_s
             assert_services_accept(ticket[:signed_blob_id], recording, actor, blob)
           end
         end
@@ -105,10 +108,10 @@ class PreparedUploadTest < Minitest::Test
           blob.filename = attributes[:filename]
           blob
         }) do
-          raw = RecordingStudioAttachable.inline_upload(
+          raw = confirmed_inline(
             recording: recording, actor: actor, data: encoded, filename: "raw.png"
           )
-          uri = RecordingStudioAttachable.inline_upload(
+          uri = confirmed_inline(
             recording: recording,
             actor: actor,
             data: "data:image/png;base64,#{encoded}",
@@ -148,7 +151,7 @@ class PreparedUploadTest < Minitest::Test
         with_pending(0) do
           with_http(PNG, content_type: "image/png", fail_if_called: true) do
             error = assert_raises(ArgumentError, url) do
-              RecordingStudioAttachable.fetch_upload(recording: recording, actor: actor, url: url)
+              confirmed_fetch(recording: recording, actor: actor, url: url)
             end
             assert_includes error.message, "public https://", url
             assert_includes error.message, "base64 data with filename", url
@@ -189,7 +192,7 @@ class PreparedUploadTest < Minitest::Test
       with_pending(0) do
         with_http(PNG, content_type: "image/png") do
           error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
-            RecordingStudioAttachable.fetch_upload(recording: recording_double("parent-1"), actor: actor_double, url: "https://files.example.test/door.png")
+            confirmed_fetch(recording: recording_double("parent-1"), actor: actor_double, url: "https://files.example.test/door.png")
           end
           assert_includes error.message, "maximum file size"
         end
@@ -216,7 +219,7 @@ class PreparedUploadTest < Minitest::Test
       with_pending(1) do
         with_http(PNG, content_type: "image/png", fail_if_called: true) do
           error = assert_raises(ArgumentError) do
-            RecordingStudioAttachable.fetch_upload(recording: recording_double("parent-1"), actor: actor_double, url: "https://files.example.test/door.png")
+            confirmed_fetch(recording: recording_double("parent-1"), actor: actor_double, url: "https://files.example.test/door.png")
           end
           assert_includes error.message, "pending"
         end
@@ -230,7 +233,7 @@ class PreparedUploadTest < Minitest::Test
     with_access do
       with_http(PNG, content_type: "image/png", fail_if_called: true) do
         error = assert_raises(Auth::NotAuthorizedError) do
-          RecordingStudioAttachable.fetch_upload(recording: recording_double("parent-1"), actor: actor_double, url: "https://files.example.test/door.png")
+          confirmed_fetch(recording: recording_double("parent-1"), actor: actor_double, url: "https://files.example.test/door.png")
         end
         assert_equal Auth::NotAuthorizedError, error.class
       end
@@ -243,7 +246,7 @@ class PreparedUploadTest < Minitest::Test
     with_access do
       with_http(PNG, content_type: "image/png", fail_if_called: true) do
         error = assert_raises(Auth::OwnerUnavailableError) do
-          RecordingStudioAttachable.fetch_upload(recording: recording, actor: actor_double, url: "https://files.example.test/door.png")
+          confirmed_fetch(recording: recording, actor: actor_double, url: "https://files.example.test/door.png")
         end
         assert_includes error.message, "Not authorized"
       end
@@ -260,7 +263,7 @@ class PreparedUploadTest < Minitest::Test
     with_access do
       with_http(PNG, content_type: "image/png", fail_if_called: true) do
         assert_raises(Auth::OwnerUnavailableError) do
-          RecordingStudioAttachable.fetch_upload(recording: recording, actor: actor_double, url: "https://files.example.test/door.png")
+          confirmed_fetch(recording: recording, actor: actor_double, url: "https://files.example.test/door.png")
         end
       end
     end
@@ -272,7 +275,7 @@ class PreparedUploadTest < Minitest::Test
     with_access do
       with_pending(0) do
         error = assert_raises(ArgumentError) do
-          RecordingStudioAttachable.inline_upload(
+          confirmed_inline(
             recording: recording_double("parent-1"),
             actor: actor_double,
             data: Base64.strict_encode64(PNG),
@@ -310,7 +313,7 @@ class PreparedUploadTest < Minitest::Test
       with_pending(0) do
         ["@@@@", "data:text/plain,hello"].each do |data|
           error = assert_raises(ArgumentError) do
-            RecordingStudioAttachable.inline_upload(
+            confirmed_inline(
               recording: recording_double("parent-1"), actor: actor_double, data: data, filename: "door.png"
             )
           end
@@ -324,7 +327,7 @@ class PreparedUploadTest < Minitest::Test
     with_access do
       with_pending(0) do
         error = assert_raises(ArgumentError) do
-          RecordingStudioAttachable.inline_upload(
+          confirmed_inline(
             recording: recording_double("parent-1"),
             actor: actor_double,
             data: Base64.strict_encode64(ZIP),
@@ -341,7 +344,7 @@ class PreparedUploadTest < Minitest::Test
 
     with_access do
       error = assert_raises(Auth::NotAuthorizedError) do
-        RecordingStudioAttachable.inline_upload(
+        confirmed_inline(
           recording: recording_double("parent-1"),
           actor: actor_double,
           data: Base64.strict_encode64(PNG),
@@ -421,6 +424,7 @@ class PreparedUploadTest < Minitest::Test
             ticket = RecordingStudioAttachable::PreparedUpload.fetch(
               recording: recording,
               actor: actor,
+              rights_confirmed: true,
               file: {
                 download_url: secret,
                 file_id: "file_123",
@@ -452,7 +456,7 @@ class PreparedUploadTest < Minitest::Test
       with_pending(0) do
         with_http(PNG, content_type: "image/png", addresses: ["10.1.2.3"], fail_if_called: true) do
           error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
-            RecordingStudioAttachable::PreparedUpload.fetch(recording: recording, actor: actor, file: file)
+            RecordingStudioAttachable::PreparedUpload.fetch(recording: recording, actor: actor, rights_confirmed: true, file: file)
           end
           assert_includes error.message, "could not be downloaded"
           assert_includes error.message, "private address"
@@ -468,7 +472,7 @@ class PreparedUploadTest < Minitest::Test
         with_http(PNG, content_type: "image/png", fail_if_called: true) do
           error = assert_raises(ArgumentError) do
             RecordingStudioAttachable::PreparedUpload.fetch(
-              recording: recording, actor: actor, file: file.merge(download_url: http_secret)
+              recording: recording, actor: actor, rights_confirmed: true, file: file.merge(download_url: http_secret)
             )
           end
           assert_includes error.message, "https"
@@ -482,7 +486,7 @@ class PreparedUploadTest < Minitest::Test
       with_pending(0) do
         with_http(PNG, content_type: "image/png") do
           error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
-            RecordingStudioAttachable::PreparedUpload.fetch(recording: recording, actor: actor, file: file)
+            RecordingStudioAttachable::PreparedUpload.fetch(recording: recording, actor: actor, rights_confirmed: true, file: file)
           end
           assert_includes error.message, "could not be downloaded"
           assert_includes error.message, "maximum file size"
@@ -498,7 +502,7 @@ class PreparedUploadTest < Minitest::Test
           ActiveStorage::Blob.stub(:create_and_upload!, ->(**) { flunk "created a blob" }) do
             error = assert_raises(ArgumentError) do
               RecordingStudioAttachable::PreparedUpload.fetch(
-                recording: recording, actor: actor, file: file.merge(file_name: "virus.zip", mime_type: "image/png")
+                recording: recording, actor: actor, rights_confirmed: true, file: file.merge(file_name: "virus.zip", mime_type: "image/png")
               )
             end
             assert_includes error.message, "not allowed"
@@ -512,7 +516,7 @@ class PreparedUploadTest < Minitest::Test
     with_access do
       with_http(PNG, content_type: "image/png", fail_if_called: true) do
         error = assert_raises(Auth::NotAuthorizedError) do
-          RecordingStudioAttachable::PreparedUpload.fetch(recording: recording, actor: actor, file: file)
+          RecordingStudioAttachable::PreparedUpload.fetch(recording: recording, actor: actor, rights_confirmed: true, file: file)
         end
         assert_equal Auth::NotAuthorizedError, error.class
         refute_includes error.message, secret
@@ -543,6 +547,69 @@ class PreparedUploadTest < Minitest::Test
     end
   end
 
+  def test_mcp_upload_refuses_without_rights_before_any_fetch
+    recording = recording_double("parent-1")
+    actor = actor_double
+    handler = RecordingStudioAttachable::Api::AttachmentActions::CreateUpload
+    refused = RecordingStudioAttachable::UploadRights::REFUSED
+
+    with_access do
+      with_http(PNG, content_type: "image/png", fail_if_called: true) do
+        ActiveStorage::Blob.stub(:create_and_upload!, ->(**) { flunk "created a blob" }) do
+          ActiveStorage::Blob.stub(:create_before_direct_upload!, ->(**) { flunk "created a blob" }) do
+            [nil, false, "yes"].each do |value|
+              params = { url: "https://files.example.test/door.png" }
+              params[:rights_confirmed] = value unless value.nil?
+              error = assert_raises(RecordingStudioApi::InvalidActionInputError) do
+                handler.call(context(recording, actor, params, confirm: false))
+              end
+              assert_equal refused, error.message
+            end
+
+            ruby = assert_raises(ArgumentError) do
+              RecordingStudioAttachable.fetch_upload(
+                recording: recording, actor: actor, url: "https://files.example.test/door.png"
+              )
+            end
+            assert_equal refused, ruby.message
+          end
+        end
+      end
+    end
+  end
+
+  def test_chatgpt_file_without_download_url_is_a_known_client_problem
+    recording = recording_double("parent-1")
+    actor = actor_double
+    handler = RecordingStudioAttachable::Api::AttachmentActions::CreateUpload
+    message = RecordingStudioAttachable::AttachedFile::CHATGPT_MISSING
+    missing = { file_id: "file_123", mime_type: "image/png", file_name: "door.png" }
+
+    with_access do
+      with_http(PNG, content_type: "image/png", fail_if_called: true) do
+        error = assert_raises(RecordingStudioApi::InvalidActionInputError) do
+          handler.call(context(recording, actor, { file: missing, rights_confirmed: true }))
+        end
+        assert_equal message, error.message
+        refute_includes error.message, "download_url"
+
+        openai = context(recording, actor, { file: missing, rights_confirmed: true })
+        openai.client_info = { name: "openai-mcp" }
+        openai_error = assert_raises(RecordingStudioApi::InvalidActionInputError) do
+          handler.call(openai)
+        end
+        assert_equal message, openai_error.message
+
+        other = context(recording, actor, { file: missing, rights_confirmed: true })
+        other.client_info = { name: "Cursor" }
+        shape = assert_raises(RecordingStudioApi::InvalidActionInputError) do
+          handler.call(other)
+        end
+        assert_equal RecordingStudioAttachable::AttachedFile::SHAPE, shape.message
+      end
+    end
+  end
+
   private
 
   def refused(url, addresses: ["8.8.8.8"])
@@ -550,7 +617,7 @@ class PreparedUploadTest < Minitest::Test
       with_pending(0) do
         with_http(PNG, content_type: "image/png", addresses: addresses, fail_if_called: true) do
           error = assert_raises(RecordingStudioAttachable::SafeRemoteFetch::Error) do
-            RecordingStudioAttachable.fetch_upload(recording: recording_double("parent-1"), actor: actor_double, url: url)
+            confirmed_fetch(recording: recording_double("parent-1"), actor: actor_double, url: url)
           end
           yield error
         end
@@ -564,7 +631,7 @@ class PreparedUploadTest < Minitest::Test
         with_http(body, content_type: content_type) do
           ActiveStorage::Blob.stub(:create_and_upload!, ->(**) { flunk "created a blob" }) do
             error = assert_raises(ArgumentError) do
-              RecordingStudioAttachable.fetch_upload(recording: recording_double("parent-1"), actor: actor_double, url: url)
+              confirmed_fetch(recording: recording_double("parent-1"), actor: actor_double, url: url)
             end
             yield error
           end
@@ -705,7 +772,7 @@ class PreparedUploadTest < Minitest::Test
   def upload_inline(data:)
     with_access do
       with_pending(0) do
-        RecordingStudioAttachable.inline_upload(
+        confirmed_inline(
           recording: recording_double("parent-1"),
           actor: actor_double,
           data: data,
@@ -721,8 +788,20 @@ class PreparedUploadTest < Minitest::Test
     "A" * (bytes * 4 / 3)
   end
 
-  def context(recording, actor, params)
-    Struct.new(:recording, :actor, :params).new(recording, actor, params)
+  def context(recording, actor, params = {}, confirm: true, **fields)
+    payload = params.to_h.merge(fields)
+    payload = { rights_confirmed: true }.merge(payload) if confirm && !payload.key?(:rights_confirmed)
+    Struct.new(:recording, :actor, :params, :client_info, keyword_init: true).new(
+      recording: recording, actor: actor, params: payload
+    )
+  end
+
+  def confirmed_fetch(**kwargs)
+    RecordingStudioAttachable.fetch_upload(rights_confirmed: true, **kwargs)
+  end
+
+  def confirmed_inline(**kwargs)
+    RecordingStudioAttachable.inline_upload(rights_confirmed: true, **kwargs)
   end
 
   def install_blob_methods

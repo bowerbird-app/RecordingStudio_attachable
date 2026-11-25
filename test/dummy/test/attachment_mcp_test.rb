@@ -286,7 +286,8 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
       filename: "photo.png",
       byte_size: bytes.bytesize,
       checksum: Base64.strict_encode64(Digest::MD5.digest(bytes)),
-      content_type: "image/png"
+      content_type: "image/png",
+      rights_confirmed: true
     }
   end
 
@@ -342,6 +343,11 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
   end
 
   def rpc(token, method, **params)
+    if method == "tools/call" && params[:name].to_s.match?(/create_upload|import_attachment/)
+      arguments = (params[:arguments] || {}).dup
+      arguments = { rights_confirmed: true }.merge(arguments) unless arguments.key?(:rights_confirmed)
+      params = params.merge(arguments: arguments)
+    end
     post "/recording_studio_mcp",
          params: { jsonrpc: "2.0", id: SecureRandom.random_number(1_000), method: method, params: params }.to_json,
          headers: {

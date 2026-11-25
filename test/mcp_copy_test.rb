@@ -82,6 +82,13 @@ class McpCopyTest < Minitest::Test
     assert_equal false, contract.dig(:file, :required)
     assert_equal schema.fetch("description"), contract.dig(:file, :description)
     assert_equal schema.fetch("properties"), contract.dig(:file, :properties)
+
+    rights = RecordingStudioAttachable::McpCopy.rights_confirmed_field
+    assert_equal "boolean", rights.fetch("type")
+    assert_includes rights.fetch("description"), RecordingStudioAttachable::UploadRights::QUESTION
+    assert_equal rights.fetch("description"), contract.dig(:rights_confirmed, :description)
+    import = RecordingStudioAttachable::Api::AttachmentContracts.import_attachment.fetch(:fields)
+    assert_equal rights.fetch("description"), import.dig(:rights_confirmed, :description)
   ensure
     RecordingStudioAttachable.configuration.inline_upload_max_bytes = original
   end

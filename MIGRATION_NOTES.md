@@ -6,6 +6,12 @@ This file is a historical note for the repository migration from private-gem ass
 
 The migration described here has already been completed in this repository. The old checklist is intentionally not treated as current setup guidance.
 
+## 0.39.0 schema and MCP/API contract
+
+Hosts on 0.39.0 must run the attachable migrations generator and migrate. That adds nullable `rights_confirmed_at` (datetime) and `rights_confirmed_by` (string actor reference) on `recording_studio_attachable_attachments`. Browser uploads leave both null.
+
+MCP and API upload callers must send `rights_confirmed: true` on `create_upload` and `import_attachment`, and on `fetch_upload` / `inline_upload` / `PreparedUpload`. A value other than JSON/Ruby `true` is refused before any download. The field description tells the client to ask: `Do you confirm you have the right to upload this image or file?`
+
 ## What changed
 
 1. Removed repository access entries from `.devcontainer/devcontainer.json`.

@@ -61,7 +61,7 @@ module RecordingStudioAttachable
         }.freeze
       end
 
-      module Fields
+      module Fields # rubocop:disable Metrics/ModuleLength
         RECORD_LIMIT_NOTE =
           "It must match this record type's allowed content types and size and count limits, " \
           "as shown in the action description."
@@ -109,13 +109,24 @@ module RecordingStudioAttachable
                               url: with_source_description(:url, shared),
                               data: with_source_description(:data, shared),
                               file: { type: :hash, required: false, allow_blank: true,
-                                      description: file.fetch("description"), properties: file.fetch("properties") })
+                                      description: file.fetch("description"), properties: file.fetch("properties") },
+                              **rights_confirmed_contract)
         end
 
         def self.with_source_description(name, shared)
           CREATE_UPLOAD.fetch(name).merge(description: shared.fetch(name.to_s).fetch("description"))
         end
-        private_class_method :with_source_description
+
+        def self.rights_confirmed_contract
+          field = RecordingStudioAttachable::McpCopy.rights_confirmed_field
+          {
+            rights_confirmed: {
+              type: :boolean, required: false,
+              description: field.fetch("description")
+            }
+          }
+        end
+        private_class_method :with_source_description, :rights_confirmed_contract
         ATTACH = {
           signed_blob_id: {
             type: :string, required: false, allow_blank: true,
@@ -153,6 +164,10 @@ module RecordingStudioAttachable
             type: :string, required: true, allow_blank: false,
             description: "Public HTTPS URL of the file to download. The port must be 443 and the address must be public. " \
                          "Public HTTPS hosts are allowed. The host app can limit which hosts imports may use, or turn imports off."
+          },
+          rights_confirmed: {
+            type: :boolean, required: false,
+            description: RecordingStudioAttachable::UploadRights::FIELD_DESCRIPTION
           },
           name: {
             type: :string, required: false, allow_blank: true,
@@ -205,6 +220,8 @@ module RecordingStudioAttachable
           "When you cannot PUT the bytes, send file, url, or data on the create_upload action. " \
           "For a file the user attached in ChatGPT, use file. For a public web image, use url. " \
           "For clients that can send bytes, use data plus filename. " \
+          "Send rights_confirmed true only after the user answers yes to: " \
+          "#{RecordingStudioAttachable::UploadRights::QUESTION} " \
           "url is only a public https:// web address and follows the same host rules as import. " \
           "Never put a local path in url or in data. " \
           "file, url, and data store the bytes and return the same signed_blob_id. You do not PUT those bytes. " \
@@ -238,6 +255,8 @@ module RecordingStudioAttachable
         IMPORT =
           "An attachment is an uploaded file linked to a record, such as a PDF, an image, or a document. " \
           "Use the import_attachment action when the file is already at an HTTPS URL. " \
+          "Send rights_confirmed true only after the user answers yes to: " \
+          "#{RecordingStudioAttachable::UploadRights::QUESTION} " \
           "Use the create_upload action and then the attach action when you have the bytes. " \
           "This downloads the file and links it to the record. There is no separate upload step and no " \
           "signed_blob_id. #{IMPORT_ITEM_NOTE} The parent record must already exist. " \

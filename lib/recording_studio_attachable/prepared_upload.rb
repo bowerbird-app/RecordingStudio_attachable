@@ -3,6 +3,7 @@
 require "stringio"
 require_relative "attached_file"
 require_relative "inline_bytes"
+require_relative "upload_rights"
 
 module RecordingStudioAttachable
   # Bytes already in hand, stored as the same tagged unattached blob a direct
@@ -14,31 +15,32 @@ module RecordingStudioAttachable
 
     module_function
 
-    def fetch(recording:, actor:, url: nil, filename: nil, file: nil)
+    def fetch(recording:, actor:, url: nil, filename: nil, file: nil, rights_confirmed: nil, client: nil) # rubocop:disable Metrics/ParameterLists
       raise ArgumentError, "Send url or file, not both" if url.present? && file.present?
       raise ArgumentError, "url or file is required" if url.blank? && file.blank?
 
-      ready!(recording, actor)
+      authorize!(recording, actor)
+      AttachedFile.assert_shape!(file, client: client) if file.present?
+      UploadRights.require!(rights_confirmed)
+      DirectUpload.ensure_pending!(recording, actor)
       return fetch_url(recording, actor, url, filename) if file.blank?
 
-      fetch_attached(recording, actor, file)
+      fetch_attached(recording, actor, file, client: client)
     end
 
-    def inline(recording:, actor:, data:, filename:)
+    def inline(recording:, actor:, data:, filename:, rights_confirmed: nil)
       raise ArgumentError, "filename is required" if filename.blank?
 
-      ready!(recording, actor)
-      ticket_for(recording, actor, StringIO.new(decoded(data, recording)), filename, "application/octet-stream")
-    end
-
-    def ready!(recording, actor)
       authorize!(recording, actor)
+      UploadRights.require!(rights_confirmed)
       DirectUpload.ensure_pending!(recording, actor)
+      ticket_for(recording, actor, StringIO.new(decoded(data, recording)), filename, "application/octet-stream")
     end
 
     def ticket_for(recording, actor, io, filename, declared_type)
       blob = DirectUpload.prepare_from_io!(
-        recording: recording, actor: actor, io: io, filename: filename, declared_type: declared_type
+        recording: recording, actor: actor, io: io, filename: filename, declared_type: declared_type,
+        rights: UploadRights.stamp(actor)
       )
       DirectUpload.ticket(blob)
     end
@@ -66,8 +68,10 @@ module RecordingStudioAttachable
       SafeRemoteFetch.close_io(fetched&.io)
     end
 
-    def fetch_attached(recording, actor, file)
-      AttachedFile.fetch(file, max_bytes: file_cap(recording), remote_file: method(:remote_file)) do |io, name, declared|
+    def fetch_attached(recording, actor, file, client: nil)
+      AttachedFile.fetch(
+        file, max_bytes: file_cap(recording), remote_file: method(:remote_file), client: client
+      ) do |io, name, declared|
         ticket_for(recording, actor, io, name, declared)
       end
     end
@@ -112,7 +116,7 @@ module RecordingStudioAttachable
     def configuration
       RecordingStudioAttachable.configuration
     end
-    private_class_method :ready!, :ticket_for, :authorize!, :denial, :fetch_url, :fetch_attached,
+    private_class_method :ticket_for, :authorize!, :denial, :fetch_url, :fetch_attached,
                          :remote_file, :parse_url, :chosen_filename, :decoded, :file_cap, :inline_cap, :configuration
   end
 end

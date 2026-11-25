@@ -25,7 +25,8 @@
     `attachments-by_content_type`. Only `attachments.uploads_over_time` takes
     `from`, `to`, and `interval`. For the upload, attach, and import writes,
     MCP `>= 0.45.1, < 0.49` needs `include_tools(*RecordingStudioAttachable::McpCopy.tool_names(api: :public))`
-    on that named API. `Workspace` is `workspace_create_upload`. There is no typeless `create_upload` tool.
+    on that named API. MCP/API upload and import callers must send `rights_confirmed: true`.
+    Browser uploads do not. `Workspace` is `workspace_create_upload`. There is no typeless `create_upload` tool.
     `tool_names` without `api:` lists every Attachable type.
 12. To leave Rails' anonymous `POST /rails/active_storage/direct_uploads` undrawn, rerun the generator with `--restrict-active-storage-routes`, or apply the same edits by hand. The flag is off by default. Existing apps keep Rails' routes.
     - Set `config.active_storage.draw_routes = false`.

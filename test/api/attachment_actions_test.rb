@@ -7,7 +7,7 @@ require_relative "../../app/services/recording_studio_attachable/services/record
 require_relative "../../app/services/recording_studio_attachable/services/import_attachment"
 
 class AttachmentActionsTest < Minitest::Test
-  FakeContext = Struct.new(:recording, :params, :actor, keyword_init: true)
+  FakeContext = Struct.new(:recording, :params, :actor, :client_info, keyword_init: true)
   FakeRecording = Struct.new(:id, :recordable_type, :root_recording, keyword_init: true)
   FakeBlob = Struct.new(:id, :persisted, :purged, keyword_init: true) do
     def persisted?
@@ -85,6 +85,9 @@ class AttachmentActionsTest < Minitest::Test
         assert_equal "parent-1", created.dig(:metadata, "parent_recording_id")
         assert_equal "Symbol", created.dig(:metadata, "actor_type")
         assert_equal "actor", created.dig(:metadata, "actor_id")
+        assert_equal true, created.dig(:metadata, "rights_confirmed")
+        assert created.dig(:metadata, "rights_confirmed_at").present?
+        assert created.dig(:metadata, "rights_confirmed_by").present?
         assert_match(/\Asigned-attachable_upload-/, ticket[:signed_blob_id])
         assert_match(%r{\Ahttps://uploads\.example\.test/}, ticket.dig(:upload, :url))
         assert_equal "image/png", ticket.dig(:upload, :headers, "Content-Type")
@@ -295,6 +298,11 @@ class AttachmentActionsTest < Minitest::Test
     assert_includes fields.dig(:url, :description), "https://"
     assert_includes fields.dig(:url, :description), "local path"
     assert_includes fields.dig(:data, :description), "base64"
+    assert_equal RecordingStudioAttachable::UploadRights::FIELD_DESCRIPTION, fields.dig(:rights_confirmed, :description)
+    assert_equal :boolean, fields.dig(:rights_confirmed, :type)
+    assert_equal "boolean", RecordingStudioAttachable::McpCopy.rights_confirmed_field.fetch("type")
+    assert_equal false, fields.dig(:rights_confirmed, :required)
+    assert_includes fields.dig(:rights_confirmed, :description), RecordingStudioAttachable::UploadRights::QUESTION
   end
 
   def test_tool_description_is_printed_once_and_covers_inputs_and_returns
@@ -494,6 +502,26 @@ class AttachmentActionsTest < Minitest::Test
     end
   end
 
+  def test_import_refuses_without_rights_before_any_fetch
+    fetched = false
+    RecordingStudioAttachable::SafeRemoteFetch.stub(:call, ->(*) { fetched = true }) do
+      missing = assert_raises(RecordingStudioApi::InvalidActionInputError) do
+        import.call(context_for({ url: "https://files.example.test/door.png" }, confirm: false))
+      end
+      falsey = assert_raises(RecordingStudioApi::InvalidActionInputError) do
+        import.call(context_for(url: "https://files.example.test/door.png", rights_confirmed: false))
+      end
+      yes = assert_raises(RecordingStudioApi::InvalidActionInputError) do
+        import.call(context_for(url: "https://files.example.test/door.png", rights_confirmed: "yes"))
+      end
+
+      assert_equal RecordingStudioAttachable::UploadRights::REFUSED, missing.message
+      assert_equal RecordingStudioAttachable::UploadRights::REFUSED, falsey.message
+      assert_equal RecordingStudioAttachable::UploadRights::REFUSED, yes.message
+      assert_equal false, fetched
+    end
+  end
+
   private
 
   def create_upload
@@ -514,7 +542,10 @@ class AttachmentActionsTest < Minitest::Test
     FakeContext.new(
       recording: recording,
       actor: :actor,
-      params: { filename: "photo.png", byte_size: byte_size, checksum: "checksum", content_type: content_type }
+      params: {
+        filename: "photo.png", byte_size: byte_size, checksum: "checksum", content_type: content_type,
+        rights_confirmed: true
+      }
     )
   end
 
@@ -561,14 +592,19 @@ class AttachmentActionsTest < Minitest::Test
     FakeContext.new(
       recording: recording,
       actor: :actor,
-      params: { filename: "cover.svg", byte_size: byte_size, checksum: "checksum", content_type: content_type }
+      params: {
+        filename: "cover.svg", byte_size: byte_size, checksum: "checksum", content_type: content_type,
+        rights_confirmed: true
+      }
     )
   end
 
-  def context_for(params)
+  def context_for(params = {}, confirm: true, **fields)
     root = FakeRecording.new(id: "root-1", recordable_type: "Workspace")
     recording = FakeRecording.new(id: "parent-1", recordable_type: "Workspace", root_recording: root)
-    FakeContext.new(recording: recording, actor: :actor, params: params)
+    payload = params.to_h.merge(fields)
+    payload = { rights_confirmed: true }.merge(payload) if confirm && !payload.key?(:rights_confirmed)
+    FakeContext.new(recording: recording, actor: :actor, params: payload)
   end
 
   def ensure_blob!

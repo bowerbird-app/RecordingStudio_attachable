@@ -30,6 +30,8 @@ module RecordingStudioAttachable
         "If you cannot PUT the bytes, call #{upload} with file, url, or data and filename. " \
           "For a file the user attached in ChatGPT, use file. For a public web image, use url. " \
           "For clients that can send bytes, use data plus filename. " \
+          "Send rights_confirmed true only after the user answers yes to: " \
+          "#{RecordingStudioAttachable::UploadRights::QUESTION} " \
           "Each of those stores the bytes and returns the same signed_blob_id."
       end
       private_class_method :put_sentence, :without_put
@@ -105,6 +107,8 @@ module RecordingStudioAttachable
       def import_text(names, limits)
         sentences = [INTRO]
         sentences.concat(import_routes(names))
+        sentences << "Send rights_confirmed true only after the user answers yes to: " \
+                     "#{RecordingStudioAttachable::UploadRights::QUESTION}"
         sentences << "This downloads the file and links it to the record. There is no upload step and no signed_blob_id."
         sentences << Api::AttachmentCopy::Text::IMPORT_ITEM_NOTE
         sentences.concat(import_limits(limits))

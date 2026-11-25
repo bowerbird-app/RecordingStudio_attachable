@@ -17,14 +17,14 @@ module RecordingStudioAttachable
 
     module_function
 
-    def prepare!(recording:, actor:, filename:, byte_size:, checksum:, content_type:)
+    def prepare!(recording:, actor:, filename:, byte_size:, checksum:, content_type:, rights: nil)
       raise ArgumentError, "Actor is required" if actor.blank?
 
       size = byte_count(byte_size)
       reject_type!(recording, content_type)
       reject_size!(recording, size)
       reject_pending!(recording, actor)
-      reserve!(recording, create_blob!(recording, actor, filename, size, checksum, content_type))
+      reserve!(recording, create_blob!(recording, actor, filename, size, checksum, content_type, rights))
     end
 
     def ensure_pending!(recording, actor)
@@ -33,7 +33,7 @@ module RecordingStudioAttachable
       reject_pending!(recording, actor)
     end
 
-    def prepare_from_io!(recording:, actor:, io:, filename:, declared_type:)
+    def prepare_from_io!(recording:, actor:, io:, filename:, declared_type:, rights: nil)
       raise ArgumentError, "Actor is required" if actor.blank?
       raise ArgumentError, "filename is required" if filename.blank?
 
@@ -41,7 +41,7 @@ module RecordingStudioAttachable
       reject_type!(recording, stored_type)
       reject_size!(recording, io_bytesize(io))
       reject_pending!(recording, actor)
-      reserve!(recording, uploaded_blob!(recording, actor, io, filename, stored_type))
+      reserve!(recording, uploaded_blob!(recording, actor, io, filename, stored_type, rights))
     end
 
     def max_file_size_for(recording)
@@ -103,14 +103,16 @@ module RecordingStudioAttachable
       raise ArgumentError, CHECKSUM_MISMATCH
     end
 
-    def metadata_for(recording:, actor:)
-      {
+    def metadata_for(recording:, actor:, rights: nil)
+      tagged = {
         TAG => "1",
         "parent_recording_id" => recording.id.to_s,
         "root_recording_id" => root_id(recording),
         "actor_type" => actor_type(actor),
         "actor_id" => actor_id(actor)
       }
+      extra = rights.to_h.stringify_keys
+      extra.empty? ? tagged : tagged.merge(extra)
     end
 
     def delivery_disposition(requested, content_type)
@@ -197,24 +199,24 @@ module RecordingStudioAttachable
         raise ArgumentError, "Too many pending uploads"
       end
 
-      def create_blob!(recording, actor, filename, size, checksum, content_type)
+      def create_blob!(recording, actor, filename, size, checksum, content_type, rights)
         ActiveStorage::Blob.create_before_direct_upload!(
           filename: filename,
           byte_size: size,
           checksum: checksum,
           content_type: content_type,
-          metadata: metadata_for(recording: recording, actor: actor)
+          metadata: metadata_for(recording: recording, actor: actor, rights: rights)
         )
       end
 
-      def uploaded_blob!(recording, actor, io, filename, content_type)
+      def uploaded_blob!(recording, actor, io, filename, content_type, rights)
         rewind_io(io)
         ActiveStorage::Blob.create_and_upload!(
           io: io,
           filename: filename,
           content_type: content_type,
           identify: false,
-          metadata: metadata_for(recording: recording, actor: actor)
+          metadata: metadata_for(recording: recording, actor: actor, rights: rights)
         )
       end
 

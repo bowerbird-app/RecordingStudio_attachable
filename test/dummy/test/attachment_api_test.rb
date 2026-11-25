@@ -49,6 +49,41 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     assert_equal "RecordingStudioAttachable::Attachment", child.recordable_type
     assert_equal "Front", child.recordable.caption
     assert child.events.exists?(action: "attachment_uploaded")
+    attachment = child.recordable
+    assert attachment.rights_confirmed_at.present?
+    assert attachment.rights_confirmed_by.present?
+    blob = attachment.file.blob
+    confirmed = blob.metadata.to_h.stringify_keys["rights_confirmed"]
+    assert confirmed == true || confirmed == "true"
+    refute_includes blob.metadata.to_s, "download_url"
+  end
+
+  test "mcp api upload refuses rights that are missing false or yes and records true" do
+    refused = RecordingStudioAttachable::UploadRights::REFUSED
+    with_fetch(png_bytes, content_type: "image/png", fail_if_called: true) do
+      call(:post, "/workspaces/#{@root.id}/actions/create_upload", @editor_token, url: "https://files.example.test/door.png", omit_rights: true)
+      assert_response :unprocessable_entity
+      assert_includes action_error_text, refused
+
+      call(:post, "/workspaces/#{@root.id}/actions/create_upload", @editor_token, url: "https://files.example.test/door.png", rights_confirmed: false)
+      assert_response :unprocessable_entity
+      assert_includes action_error_text, refused
+
+      call(:post, "/workspaces/#{@root.id}/actions/create_upload", @editor_token, url: "https://files.example.test/door.png", rights_confirmed: "yes")
+      assert_response :unprocessable_entity
+      assert_includes action_error_text, "boolean"
+    end
+  end
+
+  test "chatgpt file without download_url returns the known client problem" do
+    call(
+      :post, "/workspaces/#{@root.id}/actions/create_upload", @editor_token,
+      file: { file_id: "file_123", mime_type: "image/png", file_name: "door.png" },
+      rights_confirmed: true
+    )
+    assert_response :unprocessable_entity
+    assert_equal RecordingStudioAttachable::AttachedFile::CHATGPT_MISSING, json.dig("error", "message")
+    refute_includes response.body, "download_url"
   end
 
   test "attach accepts a batch of uploaded files" do
@@ -70,31 +105,31 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
   test "import_attachment fetches an allowed url and rejects a private or disallowed host" do
     body = png_bytes
     with_fetch(body, content_type: "image/png") do
-      imported = call(:post, "/workspaces/#{@root.id}/actions/import_attachment", @editor_token, url: "https://files.example.test/door.png", name: "Door")
+      imported = call(:post, "/workspaces/#{@root.id}/actions/import_attachment", @editor_token, url: "https://files.example.test/door.png", name: "Door", rights_confirmed: true)
       assert_response :success, response.body
       assert_equal "Door", imported.fetch("name")
       assert_equal "image", imported.fetch("kind")
     end
 
     with_fetch(body, content_type: "image/png", addresses: ["127.0.0.1"]) do
-      call(:post, "/workspaces/#{@root.id}/actions/import_attachment", @editor_token, url: "https://files.example.test/local.png")
+      call(:post, "/workspaces/#{@root.id}/actions/import_attachment", @editor_token, url: "https://files.example.test/local.png", rights_confirmed: true)
       assert_response :unprocessable_entity
       assert_equal "invalid_input", json.dig("error", "code")
       assert_includes json.dig("error", "message"), "private address"
     end
 
-    call(:post, "/workspaces/#{@root.id}/actions/import_attachment", @editor_token, url: "https://evil.example.test/secret.png")
+    call(:post, "/workspaces/#{@root.id}/actions/import_attachment", @editor_token, url: "https://evil.example.test/secret.png", rights_confirmed: true)
     assert_response :unprocessable_entity
     assert_includes action_error_text, RecordingStudioAttachable::SafeRemoteFetch::HostGuard::HOST_NOT_ALLOWED
 
     previous = RecordingStudioAttachable.configuration.import_allowed_hosts.dup
     RecordingStudioAttachable.configuration.import_allowed_hosts = []
     with_fetch(body, content_type: "image/png") do
-      call(:post, "/workspaces/#{@root.id}/actions/import_attachment", @editor_token, url: "https://cdn.example.test/door.png", name: "Public")
+      call(:post, "/workspaces/#{@root.id}/actions/import_attachment", @editor_token, url: "https://cdn.example.test/door.png", name: "Public", rights_confirmed: true)
       assert_response :success, response.body
     end
     RecordingStudioAttachable.configuration.import_allowed_hosts = :none
-    call(:post, "/workspaces/#{@root.id}/actions/import_attachment", @editor_token, url: "https://files.example.test/door.png")
+    call(:post, "/workspaces/#{@root.id}/actions/import_attachment", @editor_token, url: "https://files.example.test/door.png", rights_confirmed: true)
     assert_response :unprocessable_entity
     assert_includes action_error_text, RecordingStudioAttachable::SafeRemoteFetch::HostGuard::IMPORTS_OFF
     RecordingStudioAttachable.configuration.import_allowed_hosts = previous
@@ -343,9 +378,10 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     %w[signed_blob_id name description caption credit alt_text attachments].each do |field|
       assert attach_fields.dig(field, "description").present?, "#{field} has no description"
     end
-    %w[url name description].each do |field|
+    %w[url name description rights_confirmed].each do |field|
       assert import_fields.dig(field, "description").present?, "#{field} has no description"
     end
+    assert_equal RecordingStudioAttachable::UploadRights::FIELD_DESCRIPTION, upload_fields.dig("rights_confirmed", "description")
   end
 
   test "the actions are registered on the public and operations APIs" do
@@ -537,6 +573,11 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
   end
 
   def call(method, path, token, params = {})
+    params = params.dup
+    omit_rights = params.delete(:omit_rights)
+    if !omit_rights && (path.include?("create_upload") || path.include?("import_attachment"))
+      params = { rights_confirmed: true }.merge(params) unless params.key?(:rights_confirmed)
+    end
     send(method, "#{BASE}#{path}", params: params, headers: headers(token), as: :json)
     response.media_type.to_s.include?("json") ? JSON.parse(response.body) : {}
   rescue JSON::ParserError
@@ -561,7 +602,8 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
       filename: filename,
       byte_size: byte_size,
       checksum: Base64.strict_encode64(Digest::MD5.digest(bytes)),
-      content_type: content_type
+      content_type: content_type,
+      rights_confirmed: true
     }
   end
 
@@ -575,7 +617,7 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     assert_response :no_content, response.body
   end
 
-  def with_fetch(body, content_type:, addresses: ["8.8.8.8"])
+  def with_fetch(body, content_type:, addresses: ["8.8.8.8"], fail_if_called: false)
     response = Struct.new(:body, :code, :headers, keyword_init: true) do
       def is_a?(klass)
         klass == Net::HTTPSuccess
@@ -592,7 +634,8 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     end.new(body: body, code: "200", headers: { "content-type" => content_type })
 
     with_stub(Resolv, :getaddresses, ->(_host) { addresses }) do
-      with_stub(Net::HTTP, :start, lambda { |_host, _port, **_options, &http_block|
+      with_stub(Net::HTTP, :start, lambda { |host, _port, **_options, &http_block|
+        flunk "HTTP was called for #{host}" if fail_if_called
         http = Object.new
         http.define_singleton_method(:request) do |_request, &request_block|
           request_block ? request_block.call(response) : response

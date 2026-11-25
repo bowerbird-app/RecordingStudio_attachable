@@ -34,6 +34,8 @@ class McpCopyTest < Minitest::Test
     assert_includes text, "use file"
     assert_includes text, "use url"
     assert_includes text, "data plus filename"
+    assert_includes text, RecordingStudioAttachable::McpCopy::FileField::ATTACH_FAIL_URL_FALLBACK
+    assert_includes text, RecordingStudioAttachable::UploadRights::QUESTION
   end
 
   def test_upload_source_fields_and_the_chatgpt_file_object
@@ -81,6 +83,7 @@ class McpCopyTest < Minitest::Test
     assert_equal :hash, contract.dig(:file, :type)
     assert_equal false, contract.dig(:file, :required)
     assert_equal schema.fetch("description"), contract.dig(:file, :description)
+    assert_includes schema.fetch("description"), RecordingStudioAttachable::McpCopy::FileField::ATTACH_FAIL_URL_FALLBACK
     assert_equal schema.fetch("properties"), contract.dig(:file, :properties)
 
     rights = RecordingStudioAttachable::McpCopy.rights_confirmed_field
@@ -94,6 +97,10 @@ class McpCopyTest < Minitest::Test
   end
 
   def test_import_description_does_not_call_a_single_file_parent_a_cover
+    openapi = RecordingStudioAttachable::Api::AttachmentCopy::Text::CREATE_UPLOAD
+    assert_includes openapi, RecordingStudioAttachable::McpCopy::FileField::ATTACH_FAIL_URL_FALLBACK
+    assert_includes openapi, RecordingStudioAttachable::UploadRights::QUESTION
+
     copy = RecordingStudioAttachable::Api::AttachmentCopy::Text::IMPORT
     names = { create_upload: "workspace_create_upload", attach: "workspace_attach", import_attachment: "workspace_import_attachment" }
     import_text = RecordingStudioAttachable::McpCopy::Text.for(:import_attachment, names: names, limits: "Limits.")

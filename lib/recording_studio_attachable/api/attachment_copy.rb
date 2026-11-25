@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../mcp_copy/file_field"
+
 module RecordingStudioAttachable
   module Api
     module AttachmentCopy
@@ -220,6 +222,7 @@ module RecordingStudioAttachable
           "When you cannot PUT the bytes, send file, url, or data on the create_upload action. " \
           "For a file the user attached in ChatGPT, use file. For a public web image, use url. " \
           "For clients that can send bytes, use data plus filename. " \
+          "#{RecordingStudioAttachable::McpCopy::FileField::ATTACH_FAIL_URL_FALLBACK} " \
           "Send rights_confirmed true only after the user answers yes to: " \
           "#{RecordingStudioAttachable::UploadRights::QUESTION} " \
           "url is only a public https:// web address and follows the same host rules as import. " \

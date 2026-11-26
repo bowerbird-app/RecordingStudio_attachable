@@ -169,6 +169,21 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
     assert ticket.fetch("signed_blob_id").present?
     assert ticket.dig("upload", "url").present?
 
+    with_fetch(bytes, content_type: "image/png") do
+      linked = rpc(
+        @editor_token,
+        "tools/call",
+        name: "workspace_create_upload",
+        arguments: { id: @root.id.to_s, url: "https://files.example.test/door.png", rights_confirmed: true }
+      )
+      refute linked.dig("result", "isError"), linked.to_json
+      row = payload(linked)
+      assert_equal "door", row.fetch("name")
+      assert_equal "image", row.fetch("kind")
+      assert row.fetch("id").present?
+      %w[signed_blob_id signed_id upload blob].each { |key| refute row.key?(key), key }
+    end
+
     denied = rpc(@viewer_token, "tools/call", name: "workspace_create_upload", arguments: upload_arguments(bytes))
     assert denied.dig("result", "isError"), denied.to_json
 
@@ -216,6 +231,7 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
     assert_equal "Door", row.fetch("name")
     assert_equal "image", row.fetch("kind")
     assert row.dig("urls", "file").present?
+    %w[signed_blob_id signed_id upload blob].each { |key| refute row.key?(key), key }
 
     other = rpc(
       @editor_token,
@@ -259,6 +275,8 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
       row = payload(imported)
       assert_equal "Door", row.fetch("name")
       assert_equal "image", row.fetch("kind")
+      assert row.fetch("id").present?
+      %w[signed_blob_id signed_id upload blob].each { |key| refute row.key?(key), key }
 
       other = rpc(
         @editor_token,

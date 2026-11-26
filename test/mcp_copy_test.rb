@@ -36,6 +36,9 @@ class McpCopyTest < Minitest::Test
     assert_includes text, "data plus filename"
     assert_includes text, RecordingStudioAttachable::McpCopy::FileField::ATTACH_FAIL_URL_FALLBACK
     assert_includes text, RecordingStudioAttachable::UploadRights::QUESTION
+    assert_includes text, "A url attaches in that call"
+    assert_includes text, "id, kind, name, and urls.file"
+    refute_includes text, "Each of those stores the bytes and returns the same signed_blob_id"
   end
 
   def test_upload_source_fields_and_the_chatgpt_file_object

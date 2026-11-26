@@ -211,8 +211,8 @@ module RecordingStudioAttachable
           "On a file section it appears as a listed file. " \
           "On a parent that holds one attachment, the host's rules decide whether a new file " \
           "replaces the existing one or is refused."
-        CREATE_UPLOAD_SUMMARY = "Prepare an upload ticket from file details, a ChatGPT file, an HTTPS url, or base64 data. " \
-                                "This does not attach the file."
+        CREATE_UPLOAD_SUMMARY = "Prepare an upload ticket from file details, a ChatGPT file, or base64 data, " \
+                                "or attach a public HTTPS file from a url in one call."
         CREATE_UPLOAD =
           "An attachment is an uploaded file linked to a record, such as a PDF, an image, or a document. " \
           "Use the create_upload action when you have the file bytes, an HTTPS url, or base64 data. " \
@@ -227,10 +227,12 @@ module RecordingStudioAttachable
           "#{RecordingStudioAttachable::UploadRights::QUESTION} " \
           "url is only a public https:// web address and follows the same host rules as import. " \
           "Never put a local path in url or in data. " \
-          "file, url, and data store the bytes and return the same signed_blob_id. You do not PUT those bytes. " \
-          "This call adds nothing to the record. The parent record must already exist. " \
+          "A url downloads the file and links it to the record. It returns id, kind, name, and urls.file, " \
+          "the same object as attach and import_attachment. It does not return signed_blob_id. " \
+          "file and data store the bytes and return signed_blob_id. You do not PUT those bytes. " \
+          "Direct fields do not attach the file. The parent record must already exist. " \
           "If the host app sets a storage limit, the file must fit in the space left. " \
-          "Returns signed_blob_id, upload.url, upload.headers, and expires_at. " \
+          "Direct fields, file, and data return signed_blob_id, upload.url, upload.headers, and expires_at. " \
           "signed_blob_id is the id the attach action accepts. upload.url is where you PUT the file bytes. " \
           "upload.headers are the headers for that PUT. " \
           "expires_at is the ISO 8601 time when the signed id stops working. " \
@@ -248,8 +250,8 @@ module RecordingStudioAttachable
           "Use the import_attachment action when the file is already at an HTTPS URL and you do not have the bytes. " \
           "Send one signed_blob_id, or send attachments to link several files in one call. Do not send both. " \
           "#{ITEM_NOTE} The parent record must already exist. " \
-          "Call the create_upload action first. PUT the bytes, or pass file, url, or data on that call when you cannot PUT, " \
-          "before you send signed_blob_id. " \
+          "Call the create_upload action first. PUT the bytes, or pass file or data on that call when you cannot PUT, " \
+          "before you send signed_blob_id. A url on create_upload attaches in that call. " \
           "If the host app sets a storage limit, the file must fit in the space left. " \
           "One signed_blob_id returns id, kind, name, and urls.file. " \
           "attachments returns a list named attachments, and each entry has those same fields. " \

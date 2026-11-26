@@ -18,10 +18,13 @@ module RecordingStudioAttachable
         description: CREATE_UPLOAD_COPY,
         responses: {
           "200" => {
-            description: "Direct-upload ticket. Returns signed_blob_id, upload.url, upload.headers, " \
-                         "and expires_at. This step does not attach the file.",
+            description: "A public web url attaches in this call and returns id, kind, name, and urls.file, " \
+                         "the same object as attach and import_attachment. Direct fields, file, and data return " \
+                         "signed_blob_id, upload.url, upload.headers, and expires_at. Those paths do not attach.",
             content: {
-              "application/json" => { schema: CREATE_UPLOAD_TICKET_SCHEMA }
+              "application/json" => {
+                schema: { oneOf: [ATTACHMENT_ONE_SCHEMA, CREATE_UPLOAD_TICKET_SCHEMA] }
+              }
             }
           }
         }
@@ -83,7 +86,7 @@ module RecordingStudioAttachable
           sources = server_sources
           raise ArgumentError, "Send only one of url, data, or file" if sources.many? || (sources.any? && direct_fields_present?)
           return file_ticket if sources == [:file]
-          return fetch_ticket if sources == [:url]
+          return url_attachment if sources == [:url]
           return inline_ticket if sources == [:data]
 
           DirectUpload.ticket(prepare)
@@ -93,18 +96,12 @@ module RecordingStudioAttachable
 
         attr_reader :context, :params
 
-        def server_sources
-          %i[url data file].select { |key| params[key].present? }
+        def url_attachment
+          ImportAttachment.call(context)
         end
 
-        def fetch_ticket
-          RecordingStudioAttachable.fetch_upload(
-            recording: context.recording,
-            actor: context.actor,
-            url: params[:url],
-            filename: params[:filename],
-            rights_confirmed: params[:rights_confirmed]
-          )
+        def server_sources
+          %i[url data file].select { |key| params[key].present? }
         end
 
         def inline_ticket
@@ -281,13 +278,16 @@ module RecordingStudioAttachable
         end
 
         def parsed_url
-          URI.parse(params[:url].to_s)
-        rescue URI::InvalidURIError => e
-          Errors.invalid!(e)
+          uri = URI.parse(params[:url].to_s)
+          return uri if uri.is_a?(URI::HTTPS) && !uri.host.to_s.strip.empty?
+
+          raise ArgumentError, PreparedUpload::BAD_URL
+        rescue URI::Error
+          raise ArgumentError, PreparedUpload::BAD_URL
         end
 
         def filename
-          File.basename(parsed_url.path.presence || "download")
+          params[:filename].to_s.strip.presence || File.basename(parsed_url.path.presence || "download")
         end
       end
 

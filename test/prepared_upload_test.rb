@@ -370,8 +370,12 @@ class PreparedUploadTest < Minitest::Test
             blob.filename = attributes[:filename]
             blob
           }) do
-            ticket = handler.call(context(recording, actor, url: "https://files.example.test/door.png"))
-            assert_equal "signed-attachable_upload", ticket[:signed_blob_id]
+            payload = { id: "att-1", kind: "image", name: "door", urls: { file: "/file" } }
+            RecordingStudioAttachable::Api::AttachmentActions::ImportAttachment.stub(:call, payload) do
+              result = handler.call(context(recording, actor, url: "https://files.example.test/door.png"))
+              assert_equal payload, result
+              refute result.key?(:signed_blob_id)
+            end
           end
         end
       end

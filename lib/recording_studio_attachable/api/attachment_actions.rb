@@ -68,8 +68,15 @@ module RecordingStudioAttachable
       end
 
       class CreateUpload
+        URL_NOT_ALLOWED =
+          "create_upload does not take url. Call import_attachment for a public web link."
+
         def self.call(context)
-          Errors.wrap { new(context).ticket }
+          Errors.wrap do
+            raise ArgumentError, URL_NOT_ALLOWED if context.params[:url].present?
+
+            new(context).ticket
+          end
         end
 
         def initialize(context)
@@ -81,9 +88,8 @@ module RecordingStudioAttachable
           check_file_object!
           UploadRights.require!(params[:rights_confirmed])
           sources = server_sources
-          raise ArgumentError, "Send only one of url, data, or file" if sources.many? || (sources.any? && direct_fields_present?)
+          raise ArgumentError, "Send only one of data or file" if sources.many? || (sources.any? && direct_fields_present?)
           return file_ticket if sources == [:file]
-          return fetch_ticket if sources == [:url]
           return inline_ticket if sources == [:data]
 
           DirectUpload.ticket(prepare)
@@ -94,17 +100,7 @@ module RecordingStudioAttachable
         attr_reader :context, :params
 
         def server_sources
-          %i[url data file].select { |key| params[key].present? }
-        end
-
-        def fetch_ticket
-          RecordingStudioAttachable.fetch_upload(
-            recording: context.recording,
-            actor: context.actor,
-            url: params[:url],
-            filename: params[:filename],
-            rights_confirmed: params[:rights_confirmed]
-          )
+          %i[data file].select { |key| params[key].present? }
         end
 
         def inline_ticket
@@ -141,7 +137,7 @@ module RecordingStudioAttachable
         end
 
         def check_file_object!
-          return unless params[:file].present? && params[:url].blank? && params[:data].blank? && !direct_fields_present?
+          return unless params[:file].present? && params[:data].blank? && !direct_fields_present?
 
           AttachedFile.assert_shape!(params[:file], client: context)
         end
@@ -150,7 +146,7 @@ module RecordingStudioAttachable
           return if direct_fields_present?
 
           raise ArgumentError, "Send filename, byte_size, checksum, and content_type for a direct upload, " \
-                               "or send url, or send data and filename, or send file."
+                               "or send data and filename, or send file. For a public web link, call import_attachment."
         end
 
         def direct_fields_present?

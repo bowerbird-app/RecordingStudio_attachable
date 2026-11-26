@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-11-26
+
+### Changed
+
+- `create_upload` returns only a direct-upload ticket (`signed_blob_id`, `upload.url`, `upload.headers`, `expires_at`) from direct fields, `file`, or `data`. OpenAPI for that action is the ticket schema again, not a `oneOf`.
+- `import_attachment` is the only API or MCP action that attaches a file from a public web link. It still returns `attachment_payload` (`id`, `kind`, `name`, `urls.file`).
+
+### Removed
+
+- `url` on API and MCP `create_upload`. The param is gone from the input contract and OpenAPI. A leftover `url` raises invalid input that tells the caller to use `import_attachment`.
+
+### Upgrade Notes
+
+- Bump to 0.40.0. Previous is 0.39.1. No migration. This is a breaking contract change.
+- Clients that sent `url` to `create_upload` must call `import_attachment` instead.
+
 ## [0.39.1] - 2026-11-25
 
 ### Fixed
@@ -1044,7 +1060,8 @@ Cloud Agent Builds fetch Cursor skills at install. A warm snapshot skips apt and
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.39.1...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.40.0...HEAD
+[0.40.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.39.1...v0.40.0
 [0.39.1]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.39.0...v0.39.1
 [0.39.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.38.0...v0.39.0
 [0.38.0]: https://github.com/bowerbird-app/RecordingStudio_attachable/compare/v0.37.1...v0.38.0

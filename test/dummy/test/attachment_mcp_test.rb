@@ -136,7 +136,8 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
       refute schema.fetch("properties").key?("type"), tool.fetch("name")
       assert schema.fetch("properties").key?("id"), tool.fetch("name")
     end
-    %w[id filename byte_size checksum content_type url data file].each { |key| assert upload_props.key?(key), key }
+    %w[id filename byte_size checksum content_type data file].each { |key| assert upload_props.key?(key), key }
+    refute upload_props.key?("url")
     assert_equal "object", upload_props.dig("file", "type")
     assert upload_props.dig("file", "properties", "download_url", "description").present?
     %w[id signed_blob_id attachments name description caption credit alt_text].each do |key|
@@ -169,20 +170,14 @@ class AttachmentMcpTest < ActionDispatch::IntegrationTest
     assert ticket.fetch("signed_blob_id").present?
     assert ticket.dig("upload", "url").present?
 
-    with_fetch(bytes, content_type: "image/png") do
-      linked = rpc(
-        @editor_token,
-        "tools/call",
-        name: "workspace_create_upload",
-        arguments: { id: @root.id.to_s, url: "https://files.example.test/door.png", rights_confirmed: true }
-      )
-      refute linked.dig("result", "isError"), linked.to_json
-      row = payload(linked)
-      assert_equal "door", row.fetch("name")
-      assert_equal "image", row.fetch("kind")
-      assert row.fetch("id").present?
-      %w[signed_blob_id signed_id upload blob].each { |key| refute row.key?(key), key }
-    end
+    leftover = rpc(
+      @editor_token,
+      "tools/call",
+      name: "workspace_create_upload",
+      arguments: { id: @root.id.to_s, url: "https://files.example.test/door.png", rights_confirmed: true }
+    )
+    assert leftover.dig("result", "isError"), leftover.to_json
+    assert_includes leftover.to_json, "import_attachment"
 
     denied = rpc(@viewer_token, "tools/call", name: "workspace_create_upload", arguments: upload_arguments(bytes))
     assert denied.dig("result", "isError"), denied.to_json

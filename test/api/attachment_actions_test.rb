@@ -276,16 +276,13 @@ class AttachmentActionsTest < Minitest::Test
 
   def test_create_upload_200_schema_documents_the_ticket
     schema = RecordingStudioAttachable::Api::AttachmentActions::CREATE_UPLOAD_OPENAPI.dig(:responses, "200", :content, "application/json", :schema)
-    variants = schema.fetch(:oneOf)
-    ticket = variants.find { |item| item.dig(:properties, :signed_blob_id) }
-    attached = variants.find { |item| item.dig(:properties, :kind) }
-    import = RecordingStudioAttachable::Api::AttachmentActions::IMPORT_ATTACHMENT_OPENAPI.dig(:responses, "200", :content, "application/json", :schema)
+    properties = schema.fetch(:properties)
 
-    assert ticket[:properties].key?(:signed_blob_id)
-    assert ticket.dig(:properties, :upload, :properties).key?(:url)
-    assert ticket.dig(:properties, :upload, :properties).key?(:headers)
-    assert ticket[:properties].key?(:expires_at)
-    assert_equal import.fetch(:properties).keys, attached.fetch(:properties).keys
+    assert properties.key?(:signed_blob_id)
+    assert properties.dig(:upload, :properties).key?(:url)
+    assert properties.dig(:upload, :properties).key?(:headers)
+    assert properties.key?(:expires_at)
+    refute schema.key?(:oneOf)
   end
 
   def test_create_upload_contract_has_approved_field_wording
@@ -294,13 +291,11 @@ class AttachmentActionsTest < Minitest::Test
 
     shared = RecordingStudioAttachable::McpCopy.upload_source_fields
     assert_equal shared.fetch("filename").fetch("description"), fields.dig(:filename, :description)
-    assert_equal shared.fetch("url").fetch("description"), fields.dig(:url, :description)
+    refute fields.key?(:url)
     assert_equal shared.fetch("data").fetch("description"), fields.dig(:data, :description)
-    assert_equal "The file size in bytes. Required for a direct upload. Omit it when you send url, data, or file. Use zero or more. It must match this record type's allowed content types and size and count limits, as shown in the action description.", fields.dig(:byte_size, :description)
-    assert_equal "MD5 checksum of the file bytes, Base64-encoded, as Active Storage expects. Required for a direct upload. Omit it when you send url, data, or file.", fields.dig(:checksum, :description)
-    assert_equal "The file's content type. Required for a direct upload. Omit it when you send url, data, or file. It must match this record type's allowed content types and size and count limits, as shown in the action description. image/* does not include image/svg+xml unless that exact type is named in the allow list.", fields.dig(:content_type, :description)
-    assert_includes fields.dig(:url, :description), "https://"
-    assert_includes fields.dig(:url, :description), "local path"
+    assert_equal "The file size in bytes. Required for a direct upload. Omit it when you send data or file. Use zero or more. It must match this record type's allowed content types and size and count limits, as shown in the action description.", fields.dig(:byte_size, :description)
+    assert_equal "MD5 checksum of the file bytes, Base64-encoded, as Active Storage expects. Required for a direct upload. Omit it when you send data or file.", fields.dig(:checksum, :description)
+    assert_equal "The file's content type. Required for a direct upload. Omit it when you send data or file. It must match this record type's allowed content types and size and count limits, as shown in the action description. image/* does not include image/svg+xml unless that exact type is named in the allow list.", fields.dig(:content_type, :description)
     assert_includes fields.dig(:data, :description), "base64"
     assert_includes fields.dig(:file, :description), RecordingStudioAttachable::McpCopy::FileField::ATTACH_FAIL_URL_FALLBACK
     assert_equal RecordingStudioAttachable::UploadRights::FIELD_DESCRIPTION, fields.dig(:rights_confirmed, :description)

@@ -161,7 +161,8 @@ class PreparedUploadTest < Minitest::Test
             api_error = assert_raises(RecordingStudioApi::InvalidActionInputError, url) do
               handler.call(context(recording, actor, url: url))
             end
-            assert_equal error.message, api_error.message
+            assert_includes api_error.message, "does not take url", url
+            assert_includes api_error.message, "import_attachment", url
             refute_kind_of RecordingStudioAttachable::SafeRemoteFetch::Error, api_error
           end
         end
@@ -355,35 +356,23 @@ class PreparedUploadTest < Minitest::Test
     end
   end
 
-  def test_create_upload_accepts_url_and_rejects_both_sources_or_a_partial_direct_upload
+  def test_create_upload_rejects_url_and_rejects_both_sources_or_a_partial_direct_upload
     recording = recording_double("parent-1")
     actor = actor_double
-    blob = ticket_blob(recording, actor)
     handler = RecordingStudioAttachable::Api::AttachmentActions::CreateUpload
 
     with_access do
-      with_pending(0) do
-        with_http(PNG, content_type: "image/png") do
-          ActiveStorage::Blob.stub(:create_and_upload!, lambda { |**attributes|
-            blob.metadata = attributes[:metadata]
-            blob.content_type = attributes[:content_type]
-            blob.filename = attributes[:filename]
-            blob
-          }) do
-            payload = { id: "att-1", kind: "image", name: "door", urls: { file: "/file" } }
-            RecordingStudioAttachable::Api::AttachmentActions::ImportAttachment.stub(:call, payload) do
-              result = handler.call(context(recording, actor, url: "https://files.example.test/door.png"))
-              assert_equal payload, result
-              refute result.key?(:signed_blob_id)
-            end
-          end
-        end
+      leftover = assert_raises(RecordingStudioApi::InvalidActionInputError) do
+        handler.call(context(recording, actor, url: "https://files.example.test/door.png"))
       end
+      assert_includes leftover.message, "does not take url"
+      assert_includes leftover.message, "import_attachment"
 
       both = assert_raises(RecordingStudioApi::InvalidActionInputError) do
         handler.call(context(recording, actor, url: "https://files.example.test/door.png", data: "aaaa"))
       end
-      assert_includes both.message, "only one"
+      assert_includes both.message, "does not take url"
+      assert_includes both.message, "import_attachment"
 
       [{}, { filename: "door.png" }].each do |params|
         missing = assert_raises(RecordingStudioApi::InvalidActionInputError) do
@@ -391,9 +380,10 @@ class PreparedUploadTest < Minitest::Test
         end
         assert_includes missing.message, "filename, byte_size, checksum, and content_type"
         assert_includes missing.message, "direct upload"
-        assert_includes missing.message, "or send url"
+        refute_includes missing.message, "or send url"
         assert_includes missing.message, "data and filename"
         assert_includes missing.message, "or send file"
+        assert_includes missing.message, "import_attachment"
       end
 
       path = "/mnt/data/images(1).jpeg"
@@ -537,15 +527,25 @@ class PreparedUploadTest < Minitest::Test
 
     with_access do
       [
-        { url: "https://files.example.test/door.png", file: file },
         { data: "aaaa", file: file, filename: "door.png" },
-        { url: "https://files.example.test/door.png", data: "aaaa", file: file },
         { filename: "door.png", byte_size: 12, checksum: "abc", content_type: "image/png", file: file }
       ].each do |params|
         error = assert_raises(RecordingStudioApi::InvalidActionInputError) do
           handler.call(context(recording, actor, params))
         end
         assert_includes error.message, "only one"
+        refute_includes error.message, secret
+      end
+
+      [
+        { url: "https://files.example.test/door.png", file: file },
+        { url: "https://files.example.test/door.png", data: "aaaa", file: file }
+      ].each do |params|
+        error = assert_raises(RecordingStudioApi::InvalidActionInputError) do
+          handler.call(context(recording, actor, params))
+        end
+        assert_includes error.message, "does not take url"
+        assert_includes error.message, "import_attachment"
         refute_includes error.message, secret
       end
     end
@@ -561,7 +561,7 @@ class PreparedUploadTest < Minitest::Test
       with_http(PNG, content_type: "image/png", fail_if_called: true) do
         ActiveStorage::Blob.stub(:create_and_upload!, ->(**) { flunk "created a blob" }) do
           [nil, false, "yes"].each do |value|
-            params = { url: "https://files.example.test/door.png" }
+            params = { data: Base64.strict_encode64(PNG), filename: "door.png" }
             params[:rights_confirmed] = value unless value.nil?
             error = assert_raises(RecordingStudioApi::InvalidActionInputError) do
               handler.call(context(recording, actor, params, confirm: false))

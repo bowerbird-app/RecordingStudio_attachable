@@ -4,8 +4,8 @@ module RecordingStudioAttachable
   module McpCopy
     module UploadSentences
       TICKET_LINES = [
-        "The parent record must already exist.",
-        "Direct fields, file, and data return signed_blob_id, upload.url, upload.headers, and expires_at, and do not attach.",
+        "This call adds nothing to the record. The parent record must already exist.",
+        "Returns signed_blob_id, upload.url, upload.headers, and expires_at.",
         "The signed id expires after 5 minutes by default and is bound to this record and this caller."
       ].freeze
 
@@ -27,14 +27,14 @@ module RecordingStudioAttachable
       end
 
       def without_put(upload)
-        "If you cannot PUT the bytes, call #{upload} with file, url, or data and filename. " \
-          "For a file the user attached in ChatGPT, use file. For a public web image, use url. " \
+        "If you cannot PUT the bytes, call #{upload} with file or data and filename. " \
+          "For a file the user attached in ChatGPT, use file. " \
           "For clients that can send bytes, use data plus filename. " \
           "#{FileField::ATTACH_FAIL_URL_FALLBACK} " \
           "Send rights_confirmed true only after the user answers yes to: " \
           "#{RecordingStudioAttachable::UploadRights::QUESTION} " \
-          "A url attaches in that call and returns id, kind, name, and urls.file. " \
-          "file and data store the bytes and return signed_blob_id."
+          "file and data store the bytes and return signed_blob_id. " \
+          "#{upload} does not take url."
       end
       private_class_method :put_sentence, :without_put
     end
@@ -64,9 +64,9 @@ module RecordingStudioAttachable
         upload = names[:create_upload]
         attach = names[:attach]
         sentences = [INTRO]
-        sentences << "Call #{upload} when you have the file bytes, a ChatGPT file, an HTTPS url, or base64 data." if upload
+        sentences << "Call #{upload} to get a ticket for file bytes, a ChatGPT file, or base64 data, then call attach." if upload
         sentences.concat(UploadSentences.for(names))
-        sentences << "#{attach} accepts a signed_blob_id once, and only while the blob is still unattached." if attach
+        sentences << "#{attach} accepts it once, and only while the blob is still unattached." if attach
         sentences << "#{limits} Unattached uploads for this caller on this root record stop at 20 by default."
         sentences.join(" ")
       end
@@ -84,8 +84,7 @@ module RecordingStudioAttachable
       def create_upload_first(upload)
         return if upload.blank?
 
-        "Call #{upload} first. PUT the bytes, or pass file or data on that call when you cannot PUT, before you send signed_blob_id. " \
-          "A url on #{upload} attaches in that call."
+        "Call #{upload} first. PUT the bytes, or pass file or data on that call when you cannot PUT, before you send signed_blob_id."
       end
 
       def attach_routes(names)

@@ -75,28 +75,23 @@ module RecordingStudioAttachable
           filename: {
             type: :string, required: false, allow_blank: true,
             description: "File name to store, such as cover.jpg. Send it with data. A direct upload needs it too. " \
-                         "Optional when you send url or file. When omitted on url, the name comes from the url path."
+                         "Optional when you send file."
           },
           byte_size: {
             type: :integer, required: false,
-            description: "The file size in bytes. Required for a direct upload. Omit it when you send url, data, or file. " \
+            description: "The file size in bytes. Required for a direct upload. Omit it when you send data or file. " \
                          "Use zero or more. #{RECORD_LIMIT_NOTE}".freeze
           },
           checksum: {
             type: :string, required: false, allow_blank: true,
             description: "MD5 checksum of the file bytes, Base64-encoded, as Active Storage expects. " \
-                         "Required for a direct upload. Omit it when you send url, data, or file."
+                         "Required for a direct upload. Omit it when you send data or file."
           },
           content_type: {
             type: :string, required: false, allow_blank: true,
-            description: "The file's content type. Required for a direct upload. Omit it when you send url, data, or file. " \
+            description: "The file's content type. Required for a direct upload. Omit it when you send data or file. " \
                          "#{RECORD_LIMIT_NOTE} " \
                          "image/* does not include image/svg+xml unless that exact type is named in the allow list.".freeze
-          },
-          url: {
-            type: :string, required: false, allow_blank: true,
-            description: "A public https:// web address of a file already on the public web. " \
-                         "For a file the user attached in ChatGPT, send file. Never put a local path in url."
           },
           data: {
             type: :string, required: false, allow_blank: true,
@@ -108,7 +103,6 @@ module RecordingStudioAttachable
           shared = RecordingStudioAttachable::McpCopy.upload_source_fields
           file = RecordingStudioAttachable::McpCopy.upload_file_field
           CREATE_UPLOAD.merge(filename: with_source_description(:filename, shared),
-                              url: with_source_description(:url, shared),
                               data: with_source_description(:data, shared),
                               file: { type: :hash, required: false, allow_blank: true,
                                       description: file.fetch("description"), properties: file.fetch("properties") },
@@ -211,34 +205,31 @@ module RecordingStudioAttachable
           "On a file section it appears as a listed file. " \
           "On a parent that holds one attachment, the host's rules decide whether a new file " \
           "replaces the existing one or is refused."
-        CREATE_UPLOAD_SUMMARY = "Prepare an upload ticket from file details, a ChatGPT file, or base64 data, " \
-                                "or attach a public HTTPS file from a url in one call."
+        CREATE_UPLOAD_SUMMARY = "Get a ticket to upload file bytes, then call attach. This does not attach the file."
         CREATE_UPLOAD =
           "An attachment is an uploaded file linked to a record, such as a PDF, an image, or a document. " \
-          "Use the create_upload action when you have the file bytes, an HTTPS url, or base64 data. " \
-          "Use the import_attachment action when the file is already at an HTTPS URL and you want it attached in that call. " \
-          "For a direct upload, call the create_upload action, PUT the bytes to upload.url with upload.headers, " \
-          "then call the attach action with signed_blob_id. " \
-          "When you cannot PUT the bytes, send file, url, or data on the create_upload action. " \
-          "For a file the user attached in ChatGPT, use file. For a public web image, use url. " \
+          "Use create_upload to get a ticket for file bytes, then PUT those bytes and call attach. " \
+          "Use import_attachment when the file is already at a public web link and you want it attached in that call. " \
+          "create_upload does not take url. " \
+          "For a direct upload, call create_upload, PUT the bytes to upload.url with upload.headers, " \
+          "then call attach with signed_blob_id. " \
+          "When you cannot PUT the bytes, send file or data on create_upload. " \
+          "For a file the user attached in ChatGPT, use file. " \
           "For clients that can send bytes, use data plus filename. " \
           "#{RecordingStudioAttachable::McpCopy::FileField::ATTACH_FAIL_URL_FALLBACK} " \
           "Send rights_confirmed true only after the user answers yes to: " \
           "#{RecordingStudioAttachable::UploadRights::QUESTION} " \
-          "url is only a public https:// web address and follows the same host rules as import. " \
-          "Never put a local path in url or in data. " \
-          "A url downloads the file and links it to the record. It returns id, kind, name, and urls.file, " \
-          "the same object as attach and import_attachment. It does not return signed_blob_id. " \
+          "Never put a local path in data. " \
           "file and data store the bytes and return signed_blob_id. You do not PUT those bytes. " \
-          "Direct fields do not attach the file. The parent record must already exist. " \
+          "This call adds nothing to the record. The parent record must already exist. " \
           "If the host app sets a storage limit, the file must fit in the space left. " \
-          "Direct fields, file, and data return signed_blob_id, upload.url, upload.headers, and expires_at. " \
+          "Returns signed_blob_id, upload.url, upload.headers, and expires_at. " \
           "signed_blob_id is the id the attach action accepts. upload.url is where you PUT the file bytes. " \
           "upload.headers are the headers for that PUT. " \
           "expires_at is the ISO 8601 time when the signed id stops working. " \
           "The signed id uses the attachable_upload purpose. " \
           "It expires after 5 minutes by default. " \
-          "It is bound to this record and the caller that called the create_upload action. " \
+          "It is bound to this record and the caller that called create_upload. " \
           "The attach action accepts it once, and only while the blob is still unattached. " \
           "The stored bytes are checked and must match content_type. " \
           "#{LIMITS} " \
@@ -250,8 +241,8 @@ module RecordingStudioAttachable
           "Use the import_attachment action when the file is already at an HTTPS URL and you do not have the bytes. " \
           "Send one signed_blob_id, or send attachments to link several files in one call. Do not send both. " \
           "#{ITEM_NOTE} The parent record must already exist. " \
-          "Call the create_upload action first. PUT the bytes, or pass file or data on that call when you cannot PUT, " \
-          "before you send signed_blob_id. A url on create_upload attaches in that call. " \
+          "Call create_upload first. PUT the bytes, or pass file or data on that call when you cannot PUT, " \
+          "before you send signed_blob_id. For a public web link, call import_attachment. " \
           "If the host app sets a storage limit, the file must fit in the space left. " \
           "One signed_blob_id returns id, kind, name, and urls.file. " \
           "attachments returns a list named attachments, and each entry has those same fields. " \

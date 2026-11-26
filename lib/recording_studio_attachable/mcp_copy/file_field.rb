@@ -7,7 +7,7 @@ module RecordingStudioAttachable
     module FileField
       ATTACH_FAIL_URL_FALLBACK =
         "If attaching the file fails for any reason, including a ChatGPT UNREGISTERED_FILE_REFERENCE error, " \
-        "ask the user for a public web link (URL) to the image or file and upload it using the url field instead."
+        "ask the user for a public web link (URL) to the image or file and call import_attachment."
       DESCRIPTION = "A file the user attached in ChatGPT. Send download_url and file_id. " \
                     "mime_type is only a hint. The bytes decide the stored type. file_name is the name to store. " \
                     "#{ATTACH_FAIL_URL_FALLBACK}".freeze

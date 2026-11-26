@@ -4,20 +4,20 @@ require "test_helper"
 
 class RecordingStudioAttachableTest < Minitest::Test
   def test_version_matches_the_current_release
-    assert_equal "0.39.2", RecordingStudioAttachable::VERSION
+    assert_equal "0.40.0", RecordingStudioAttachable::VERSION
     changelog = File.read(File.expand_path("../CHANGELOG.md", __dir__))
     dummy_lock = File.read(File.expand_path("dummy/Gemfile.lock", __dir__))
     dummy_gemfile = File.read(File.expand_path("dummy/Gemfile", __dir__))
     root_ruby = File.read(File.expand_path("../.ruby-version", __dir__))
     dummy_ruby = File.read(File.expand_path("dummy/.ruby-version", __dir__))
 
-    assert_includes changelog, "## [0.39.2]"
-    assert changelog.index("## [0.39.2]") < changelog.index("## [0.39.1]")
-    assert_includes changelog, "compare/v0.39.1...v0.39.2"
-    notes_0392 = changelog[changelog.index("## [0.39.2]")...changelog.index("## [0.39.1]")]
-    assert_includes notes_0392, "attachment_payload"
-    assert_includes notes_0392, "signed_blob_id"
-    assert_includes notes_0392, "Bump to 0.39.2. Previous is 0.39.1."
+    assert_includes changelog, "## [0.40.0]"
+    assert changelog.index("## [0.40.0]") < changelog.index("## [0.39.1]")
+    assert_includes changelog, "compare/v0.39.1...v0.40.0"
+    notes_0400 = changelog[changelog.index("## [0.40.0]")...changelog.index("## [0.39.1]")]
+    assert_includes notes_0400, "leftover `url`"
+    assert_includes notes_0400, "import_attachment"
+    assert_includes notes_0400, "Bump to 0.40.0. Previous is 0.39.1."
     assert_includes changelog, "## [0.39.1]"
     assert changelog.index("## [0.39.1]") < changelog.index("## [0.39.0]")
     assert_includes changelog, "compare/v0.39.0...v0.39.1"

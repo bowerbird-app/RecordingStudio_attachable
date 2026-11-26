@@ -60,19 +60,18 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
 
   test "mcp api upload refuses rights that are missing false or yes and records true" do
     refused = RecordingStudioAttachable::UploadRights::REFUSED
-    with_fetch(png_bytes, content_type: "image/png", fail_if_called: true) do
-      call(:post, "/workspaces/#{@root.id}/actions/create_upload", @editor_token, url: "https://files.example.test/door.png", omit_rights: true)
-      assert_response :unprocessable_entity
-      assert_includes action_error_text, refused
+    data = Base64.strict_encode64(png_bytes)
+    call(:post, "/workspaces/#{@root.id}/actions/create_upload", @editor_token, data: data, filename: "door.png", omit_rights: true)
+    assert_response :unprocessable_entity
+    assert_includes action_error_text, refused
 
-      call(:post, "/workspaces/#{@root.id}/actions/create_upload", @editor_token, url: "https://files.example.test/door.png", rights_confirmed: false)
-      assert_response :unprocessable_entity
-      assert_includes action_error_text, refused
+    call(:post, "/workspaces/#{@root.id}/actions/create_upload", @editor_token, data: data, filename: "door.png", rights_confirmed: false)
+    assert_response :unprocessable_entity
+    assert_includes action_error_text, refused
 
-      call(:post, "/workspaces/#{@root.id}/actions/create_upload", @editor_token, url: "https://files.example.test/door.png", rights_confirmed: "yes")
-      assert_response :unprocessable_entity
-      assert_includes action_error_text, "boolean"
-    end
+    call(:post, "/workspaces/#{@root.id}/actions/create_upload", @editor_token, data: data, filename: "door.png", rights_confirmed: "yes")
+    assert_response :unprocessable_entity
+    assert_includes action_error_text, "boolean"
   end
 
   test "chatgpt file without download_url returns the known client problem" do
@@ -134,24 +133,33 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     RecordingStudioAttachable.configuration.import_allowed_hosts = previous
   end
 
-  test "create_upload from a url or inline data returns a signed id attach and replace accept" do
+  test "create_upload from inline data returns a signed id attach and replace accept" do
     bytes = png_bytes
     with_fetch(bytes, content_type: "image/png") do
-      denied = call(:post, "/workspaces/#{@root.id}/actions/create_upload", @viewer_token, url: "https://files.example.test/door.png")
-      assert_response :forbidden, denied.to_json
+      leftover = call(:post, "/workspaces/#{@root.id}/actions/create_upload", @editor_token, url: "https://files.example.test/door.png")
+      assert_response :unprocessable_entity, leftover.to_json
+      assert_includes action_error_text, "does not take url"
+      assert_includes action_error_text, "import_attachment"
 
-      imported = call(:post, "/workspaces/#{@root.id}/actions/create_upload", @editor_token, url: "https://files.example.test/door.png")
+      ticket = call(
+        :post, "/workspaces/#{@root.id}/actions/create_upload", @editor_token,
+        data: Base64.strict_encode64(bytes), filename: "door.png"
+      )
       assert_response :success, response.body
-      assert_attachment_payload imported, name: "door"
-
-      attached = imported
+      assert ticket.fetch("signed_blob_id").present?
+      attached = call(
+        :post, "/workspaces/#{@root.id}/actions/attach", @editor_token,
+        signed_blob_id: ticket.fetch("signed_blob_id"), name: "Door"
+      )
+      assert_response :success, response.body
+      assert_attachment_payload attached, name: "Door"
 
       both = call(
         :post, "/workspaces/#{@root.id}/actions/create_upload", @editor_token,
         url: "https://files.example.test/door.png", data: Base64.strict_encode64(bytes), filename: "door.png"
       )
       assert_response :unprocessable_entity
-      assert_includes action_error_text, "only one"
+      assert_includes action_error_text, "does not take url"
 
       secret = "https://files.example.test/secret-token/door.png?sig=keep-me"
       file_ticket = call(
@@ -362,18 +370,15 @@ class AttachmentApiTest < ActionDispatch::IntegrationTest
     } || attach.dig("responses", "200", "content", "application/json", "schema")
     %w[id kind name urls].each { |key| assert attach_one.dig("properties").key?(key), key }
 
-    upload_schema = create_upload.dig("responses", "200", "content", "application/json", "schema")
-    variants = upload_schema["oneOf"] || [upload_schema]
-    ticket = variants.find { |schema| schema.dig("properties", "signed_blob_id") }
-    attached = variants.find { |schema| schema.dig("properties", "kind") }
-    assert ticket.dig("properties", "signed_blob_id")
-    assert ticket.dig("properties", "upload", "properties", "url")
-    assert ticket.dig("properties", "upload", "properties", "headers")
-    assert ticket.dig("properties", "expires_at")
-    %w[id kind name urls].each { |key| assert attached.dig("properties").key?(key), key }
-    refute attached.dig("properties").key?("signed_blob_id")
+    upload_schema = create_upload.dig("responses", "200", "content", "application/json", "schema", "properties")
+    assert upload_schema.key?("signed_blob_id")
+    assert upload_schema.dig("upload", "properties").key?("url")
+    assert upload_schema.dig("upload", "properties").key?("headers")
+    assert upload_schema.key?("expires_at")
+    refute create_upload.dig("responses", "200", "content", "application/json", "schema").key?("oneOf")
 
     upload_fields = create_upload.dig("requestBody", "content", "application/json", "schema", "properties")
+    refute upload_fields.key?("url")
     contract = RecordingStudioAttachable::Api::AttachmentContracts.create_upload.fetch(:fields)
     assert_equal contract.dig(:filename, :description), upload_fields.dig("filename", "description")
     assert_includes upload_fields.dig("file", "description"), "UNREGISTERED_FILE_REFERENCE"

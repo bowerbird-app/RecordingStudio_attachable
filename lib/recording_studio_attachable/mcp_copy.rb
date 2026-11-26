@@ -14,9 +14,10 @@ module RecordingStudioAttachable
     FILE_PARAMS = ["file"].freeze
     FILE_PARAMS_KEY = "openai/fileParams"
     URL_FIELD = "A public https:// web address of a file already on the public web. " \
-                "For a file the user attached in ChatGPT, send file. Never put a local path in url."
+                "For a file the user attached in ChatGPT, send file. create_upload does not take url. " \
+                "Call import_attachment. Never put a local path in url."
     FILENAME_FIELD = "File name to store, such as cover.jpg. Send it with data. A direct upload needs it too. " \
-                     "Optional when you send url or file. When omitted on url, the name comes from the url path."
+                     "Optional when you send file."
 
     module_function
 
@@ -39,7 +40,8 @@ module RecordingStudioAttachable
     def data_field
       limit = InlineBytes.size_words(RecordingStudioAttachable.configuration.inline_upload_max_bytes)
       "Base64 file bytes, or a base64 data URI. Send this with filename when the client can send the bytes. " \
-        "Data uploads can be up to #{limit}. For a file attached in ChatGPT, send file. For a public web image, send url."
+        "Data uploads can be up to #{limit}. For a file attached in ChatGPT, send file. " \
+        "For a public web image, call import_attachment."
     end
 
     def register!

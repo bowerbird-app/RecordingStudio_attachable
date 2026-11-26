@@ -18,13 +18,10 @@ module RecordingStudioAttachable
         description: CREATE_UPLOAD_COPY,
         responses: {
           "200" => {
-            description: "A public web url attaches in this call and returns id, kind, name, and urls.file, " \
-                         "the same object as attach and import_attachment. Direct fields, file, and data return " \
-                         "signed_blob_id, upload.url, upload.headers, and expires_at. Those paths do not attach.",
+            description: "Direct-upload ticket. Returns signed_blob_id, upload.url, upload.headers, " \
+                         "and expires_at. This step does not attach the file.",
             content: {
-              "application/json" => {
-                schema: { oneOf: [ATTACHMENT_ONE_SCHEMA, CREATE_UPLOAD_TICKET_SCHEMA] }
-              }
+              "application/json" => { schema: CREATE_UPLOAD_TICKET_SCHEMA }
             }
           }
         }
@@ -71,8 +68,15 @@ module RecordingStudioAttachable
       end
 
       class CreateUpload
+        URL_NOT_ALLOWED =
+          "create_upload does not take url. Call import_attachment for a public web link."
+
         def self.call(context)
-          Errors.wrap { new(context).ticket }
+          Errors.wrap do
+            raise ArgumentError, URL_NOT_ALLOWED if context.params[:url].present?
+
+            new(context).ticket
+          end
         end
 
         def initialize(context)
@@ -84,9 +88,8 @@ module RecordingStudioAttachable
           check_file_object!
           UploadRights.require!(params[:rights_confirmed])
           sources = server_sources
-          raise ArgumentError, "Send only one of url, data, or file" if sources.many? || (sources.any? && direct_fields_present?)
+          raise ArgumentError, "Send only one of data or file" if sources.many? || (sources.any? && direct_fields_present?)
           return file_ticket if sources == [:file]
-          return url_attachment if sources == [:url]
           return inline_ticket if sources == [:data]
 
           DirectUpload.ticket(prepare)
@@ -96,12 +99,8 @@ module RecordingStudioAttachable
 
         attr_reader :context, :params
 
-        def url_attachment
-          ImportAttachment.call(context)
-        end
-
         def server_sources
-          %i[url data file].select { |key| params[key].present? }
+          %i[data file].select { |key| params[key].present? }
         end
 
         def inline_ticket
@@ -138,7 +137,7 @@ module RecordingStudioAttachable
         end
 
         def check_file_object!
-          return unless params[:file].present? && params[:url].blank? && params[:data].blank? && !direct_fields_present?
+          return unless params[:file].present? && params[:data].blank? && !direct_fields_present?
 
           AttachedFile.assert_shape!(params[:file], client: context)
         end
@@ -147,7 +146,7 @@ module RecordingStudioAttachable
           return if direct_fields_present?
 
           raise ArgumentError, "Send filename, byte_size, checksum, and content_type for a direct upload, " \
-                               "or send url, or send data and filename, or send file."
+                               "or send data and filename, or send file. For a public web link, call import_attachment."
         end
 
         def direct_fields_present?
@@ -278,16 +277,13 @@ module RecordingStudioAttachable
         end
 
         def parsed_url
-          uri = URI.parse(params[:url].to_s)
-          return uri if uri.is_a?(URI::HTTPS) && !uri.host.to_s.strip.empty?
-
-          raise ArgumentError, PreparedUpload::BAD_URL
-        rescue URI::Error
-          raise ArgumentError, PreparedUpload::BAD_URL
+          URI.parse(params[:url].to_s)
+        rescue URI::InvalidURIError => e
+          Errors.invalid!(e)
         end
 
         def filename
-          params[:filename].to_s.strip.presence || File.basename(parsed_url.path.presence || "download")
+          File.basename(parsed_url.path.presence || "download")
         end
       end
 

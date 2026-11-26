@@ -32,13 +32,13 @@ class McpCopyTest < Minitest::Test
 
     assert_includes text, "If you cannot PUT the bytes"
     assert_includes text, "use file"
-    assert_includes text, "use url"
     assert_includes text, "data plus filename"
     assert_includes text, RecordingStudioAttachable::McpCopy::FileField::ATTACH_FAIL_URL_FALLBACK
     assert_includes text, RecordingStudioAttachable::UploadRights::QUESTION
-    assert_includes text, "A url attaches in that call"
-    assert_includes text, "id, kind, name, and urls.file"
-    refute_includes text, "Each of those stores the bytes and returns the same signed_blob_id"
+    assert_includes text, "does not take url"
+    assert_includes text, "import_attachment"
+    refute_includes text, "use url"
+    refute_includes text, "A url attaches in that call"
   end
 
   def test_upload_source_fields_and_the_chatgpt_file_object
@@ -64,9 +64,10 @@ class McpCopyTest < Minitest::Test
     assert_includes filename.fetch("description"), "cover.jpg"
 
     contract = RecordingStudioAttachable::Api::AttachmentContracts.create_upload.fetch(:fields)
-    assert_equal url.fetch("description"), contract.dig(:url, :description)
+    refute contract.key?(:url)
     assert_equal data.fetch("description"), contract.dig(:data, :description)
     assert_equal filename.fetch("description"), contract.dig(:filename, :description)
+    assert_includes url.fetch("description"), "import_attachment"
 
     RecordingStudioAttachable.configuration.inline_upload_max_bytes = 1.megabyte
     tighter = RecordingStudioAttachable::McpCopy.upload_source_fields.fetch("data").fetch("description")

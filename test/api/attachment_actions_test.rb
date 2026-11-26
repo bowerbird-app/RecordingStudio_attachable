@@ -281,10 +281,10 @@ class AttachmentActionsTest < Minitest::Test
     attached = variants.find { |item| item.dig(:properties, :kind) }
     import = RecordingStudioAttachable::Api::AttachmentActions::IMPORT_ATTACHMENT_OPENAPI.dig(:responses, "200", :content, "application/json", :schema)
 
-    assert ticket.dig(:properties).key?(:signed_blob_id)
+    assert ticket[:properties].key?(:signed_blob_id)
     assert ticket.dig(:properties, :upload, :properties).key?(:url)
     assert ticket.dig(:properties, :upload, :properties).key?(:headers)
-    assert ticket.dig(:properties).key?(:expires_at)
+    assert ticket[:properties].key?(:expires_at)
     assert_equal import.fetch(:properties).keys, attached.fetch(:properties).keys
   end
 
